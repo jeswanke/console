@@ -4,7 +4,10 @@ import { PageSection } from '@patternfly/react-core'
 import { AcmDrawerContext } from '../../../../ui-components'
 import { cloneDeep } from 'lodash'
 import { useContext, useEffect, useState } from 'react'
-import Topology from '../../../../components/Topology/Topology'
+//import Topology from '../../../../components/Topology/Topology'
+//import { Topology } from './topology/Topology'
+import { TopologyDemo } from './topology/TopologyDemo'
+//import { Topology } from './topology/TopologyDemo/Topology'
 import { useTranslation } from '../../../../lib/acm-i18next'
 import { ApplicationDataType } from '../ApplicationDetails'
 import './ApplicationTopology.css'
@@ -142,7 +145,11 @@ export function ApplicationTopologyPageContent(props: {
                     </svg>
                 </span>
             </div>
-            <Topology
+            <TopologyDemo />
+            {/* <div className="pf-topology-container">
+                <Topology />
+            </div> */}
+            {/* <Topology
                 diagramViewer={DiagramViewer}
                 elements={elements}
                 canUpdateStatuses={canUpdateStatuses}
@@ -152,7 +159,7 @@ export function ApplicationTopologyPageContent(props: {
                 argoAppDetailsContainerControl={argoAppDetailsContainerControl}
                 setDrawerContent={setDrawerContent}
                 t={t}
-            />
+            /> */}
         </PageSection>
     )
 }
