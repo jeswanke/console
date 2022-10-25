@@ -4,10 +4,12 @@ import { PageSection } from '@patternfly/react-core'
 import { AcmDrawerContext } from '../../../../ui-components'
 import { cloneDeep } from 'lodash'
 import { useContext, useEffect, useState } from 'react'
+
+
 //import Topology from '../../../../components/Topology/Topology'
-//import { Topology } from './topology/Topology'
-import { TopologyDemo } from './topology/TopologyDemo'
-//import { Topology } from './topology/TopologyDemo/Topology'
+import { Topology } from './topology/Topology'
+
+
 import { useTranslation } from '../../../../lib/acm-i18next'
 import { ApplicationDataType } from '../ApplicationDetails'
 import './ApplicationTopology.css'
@@ -145,7 +147,9 @@ export function ApplicationTopologyPageContent(props: {
                     </svg>
                 </span>
             </div>
-            <TopologyDemo />
+            <Topology 
+                elements={elements}
+            />
             {/* <div className="pf-topology-container">
                 <Topology />
             </div> */}

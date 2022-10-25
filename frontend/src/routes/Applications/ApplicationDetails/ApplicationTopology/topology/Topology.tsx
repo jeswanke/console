@@ -1,32 +1,20 @@
 /* Copyright Contributors to the Open Cluster Management project */
-import * as React from 'react'
+import React from 'react'
 import { action } from 'mobx'
-import _ from 'lodash'
+import size from 'lodash/size'
 import {
     TopologyView,
     TopologySideBar,
     TopologyControlBar,
     createTopologyControlButtons,
     defaultControlButtonsOptions,
-    EdgeModel,
-    Model,
-    ModelKind,
-    NodeModel,
-    Controller,
-    Visualization,
-    withPanZoom,
-    GraphComponent,
-    withDragNode,
-    withContextMenu,
-    ContextMenuItem,
-    ContextSubMenuItem,
-    ContextMenuSeparator,
     VisualizationSurface,
     SELECTION_EVENT,
     SelectionEventListener,
-    withSelection,
-    VisualizationProvider,
     useEventListener,
+    Controller,
+    Visualization,
+    VisualizationProvider,
 } from '@patternfly/react-topology'
 import {
     ToolbarItem,
@@ -39,136 +27,58 @@ import {
     Button,
     Tooltip,
 } from '@patternfly/react-core'
-import defaultLayoutFactory from './layouts/defaultLayoutFactory'
-import data from './reasonable'
-import GroupHull from './components/GroupHull'
-import Group from './components/DefaultGroup'
-import Node from './components/DefaultNode'
-import Edge from './components/DefaultEdge'
-
+import layoutFactory from './layoutFactory'
+import getLayoutModel from './layoutModel'
 import '@patternfly/patternfly/patternfly.css'
 import '@patternfly/patternfly/patternfly-addons.css'
+import componentFactory from './componentFactory'
 
-const contextMenuItem = (label: string, i: number): React.ReactElement => {
-    if (label === '-') {
-        return <ContextMenuSeparator key={`separator:${i.toString()}`} />
+interface TopologyProps {
+    elements: {
+        nodes: any[]
+        links: any[]
     }
-    if (label.includes('->')) {
-        const parent = label.slice(0, label.indexOf('->'))
-        const children = label.slice(label.indexOf('->') + 2).split(',')
+//    title?: string
+    // diagramViewer: any
+    // options?: any
+    // searchName?: string
+    // fetchControl?: {
+    //     isLoaded: boolean | undefined
+    //     isFailed: boolean | undefined
+    //     isReloading: boolean | undefined
+    // }
+    // channelControl: {
+    //     allChannels: [string] | undefined
+    //     activeChannel: string | undefined
+    //     changeTheChannel: (fetchChannel: string) => void
+    // }
+    // argoAppDetailsContainerControl: {
+    //     argoAppDetailsContainerData: ArgoAppDetailsContainerData
+    //     handleArgoAppDetailsContainerUpdate: React.Dispatch<React.SetStateAction<ArgoAppDetailsContainerData>>
+    //     handleErrorMsg: () => void
+    // }
+    // canUpdateStatuses?: boolean
+    // processActionLink?: (resource: any, toggleLoading: boolean) => void
+    // searchUrl?: string
+    // setDrawerContent?: (
+    //     title: string,
+    //     isInline: boolean,
+    //     isResizable: boolean,
+    //     disableDrawerHead: boolean,
+    //     drawerPanelBodyHasNoPadding: boolean,
+    //     panelContent: React.ReactNode | React.ReactNode[],
+    //     closeDrawer: boolean
+    // ) => void
+    // t: (key: any) => string
+} //: JSX.Element
 
-        return (
-            <ContextSubMenuItem label={parent} key={parent}>
-                {children.map((child, j) => contextMenuItem(child.trim(), j))}
-            </ContextSubMenuItem>
-        )
-    }
-    return (
-        // eslint-disable-next-line no-alert
-        <ContextMenuItem key={label} onClick={() => alert(`Selected: ${label}`)}>
-            {label}
-        </ContextMenuItem>
-    )
-}
 
-const createContextMenuItems = (...labels: string[]): React.ReactElement[] => labels.map(contextMenuItem)
-
-const defaultMenu = createContextMenuItems(
-    'First',
-    'Second',
-    'Third',
-    '-',
-    'Fourth',
-    'Sub Menu-> Child1, Child2, Child3, -, Child4'
-)
-
-const getModel = (layout: string): Model => {
-    // create nodes from data
-    const nodes: NodeModel[] = data.nodes.map((d) => {
-        // randomize size somewhat
-        const width = 50 + d.id.length + 40
-        const height = 50 + d.id.length
-        return {
-            id: d.id,
-            type: 'node',
-            width,
-            height,
-            data: d,
-        }
-    })
-
-    // create groups from data
-    const groupNodes: NodeModel[] = _.map(
-        _.groupBy(nodes, (n) => n.data.group),
-        (v, k) => ({
-            type: 'group-hull',
-            id: k,
-            group: true,
-            children: v.map((n: NodeModel) => n.id),
-            label: `group-${k}`,
-            style: {
-                padding: 10,
-            },
-        })
-    )
-
-    // create links from data
-    const edges = data.links.map(
-        (d): EdgeModel => ({
-            data: d,
-            source: d.source,
-            target: d.target,
-            id: `${d.source}_${d.target}`,
-            type: 'edge',
-        })
-    )
-
-    // create topology model
-    const model: Model = {
-        graph: {
-            id: 'g1',
-            type: 'graph',
-            layout,
-        },
-        nodes: [...nodes, ...groupNodes],
-        edges,
-    }
-
-    return model
-}
-
-const getVisualization = (model: Model): Visualization => {
-    const vis = new Visualization()
-
-    vis.registerLayoutFactory(defaultLayoutFactory)
-    vis.registerComponentFactory((kind, type) => {
-        if (kind === ModelKind.graph) {
-            return withPanZoom()(GraphComponent)
-        }
-        if (type === 'group-hull') {
-            return withDragNode({ canCancel: false })(GroupHull)
-        }
-        if (type === 'group') {
-            return withDragNode({ canCancel: false })(Group)
-        }
-        if (kind === ModelKind.node) {
-            return withDragNode({ canCancel: false })(withSelection()(withContextMenu(() => defaultMenu)(Node)))
-        }
-        if (kind === ModelKind.edge) {
-            return Edge
-        }
-    })
-    vis.fromModel(model)
-
-    return vis
-}
-
-interface TopologyViewComponentProps {
-    vis: Controller
+interface TopologyViewComponentsProps {
+    controller: Controller
     useSidebar: boolean
 }
 
-const TopologyViewComponent: React.FC<TopologyViewComponentProps> = ({ vis, useSidebar }) => {
+export const TopologyViewComponents: React.FC<TopologyViewComponentsProps> = ({ controller, useSidebar }) => {
     const [selectedIds, setSelectedIds] = React.useState<string[]>()
     const [layoutDropdownOpen, setLayoutDropdownOpen] = React.useState(false)
     const [layout, setLayout] = React.useState('Force')
@@ -185,9 +95,9 @@ const TopologyViewComponent: React.FC<TopologyViewComponentProps> = ({ vis, useS
 
     const updateLayout = (newLayout: string) => {
         // FIXME reset followed by layout causes a flash of the reset prior to the layout
-        vis.getGraph().reset()
-        vis.getGraph().setLayout(newLayout)
-        vis.getGraph().layout()
+        controller.getGraph().reset()
+        controller.getGraph().setLayout(newLayout)
+        controller.getGraph().layout()
         setLayout(newLayout)
         setLayoutDropdownOpen(false)
     }
@@ -245,17 +155,17 @@ const TopologyViewComponent: React.FC<TopologyViewComponentProps> = ({ vis, useS
                     controlButtons={createTopologyControlButtons({
                         ...defaultControlButtonsOptions,
                         zoomInCallback: action(() => {
-                            vis.getGraph().scaleBy(4 / 3)
+                            controller.getGraph().scaleBy(4 / 3)
                         }),
                         zoomOutCallback: action(() => {
-                            vis.getGraph().scaleBy(0.75)
+                            controller.getGraph().scaleBy(0.75)
                         }),
                         fitToScreenCallback: action(() => {
-                            vis.getGraph().fit(80)
+                            controller.getGraph().fit(80)
                         }),
                         resetViewCallback: action(() => {
-                            vis.getGraph().reset()
-                            vis.getGraph().layout()
+                            controller.getGraph().reset()
+                            controller.getGraph().layout()
                         }),
                         legend: false,
                     })}
@@ -263,19 +173,26 @@ const TopologyViewComponent: React.FC<TopologyViewComponentProps> = ({ vis, useS
             }
             viewToolbar={viewToolbar}
             sideBar={useSidebar && topologySideBar}
-            sideBarOpen={useSidebar && _.size(selectedIds) > 0}
+            sideBarOpen={useSidebar && size(selectedIds) > 0}
         >
             <VisualizationSurface state={{ selectedIds }} />
         </TopologyView>
     )
 }
 
-export const Topology = () => {
-    const vis: Visualization = getVisualization(getModel('Force'))
+export const Topology = (props: TopologyProps) => {
+    const controllerRef = React.useRef<Controller>();
+    let controller = controllerRef.current
+    if (!controller) {
+      controller = controllerRef.current = new Visualization();
+      controller.registerLayoutFactory(layoutFactory)
+      controller.registerComponentFactory(componentFactory)
+    }
+    controller.fromModel(getLayoutModel(props.elements, 'Force'))
 
     return (
-        <VisualizationProvider controller={vis}>
-            <TopologyViewComponent useSidebar={false} vis={vis} />
+        <VisualizationProvider controller={controller}>
+            <TopologyViewComponents  controller={controller} useSidebar={false} />
         </VisualizationProvider>
     )
 }
