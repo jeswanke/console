@@ -27,18 +27,19 @@ import {
     Button,
     Tooltip,
 } from '@patternfly/react-core'
-import layoutFactory from './layoutFactory'
-import getLayoutModel from './layoutModel'
+import layoutFactory from './layout/layoutFactory'
+import getLayoutModel from './layout/layoutModel'
 import '@patternfly/patternfly/patternfly.css'
 import '@patternfly/patternfly/patternfly-addons.css'
-import componentFactory from './componentFactory'
+import componentFactory from './components/componentFactory'
+import { ComponentShapes } from './components/componentShapes'
 
 interface TopologyProps {
     elements: {
         nodes: any[]
         links: any[]
     }
-//    title?: string
+    //    title?: string
     // diagramViewer: any
     // options?: any
     // searchName?: string
@@ -71,7 +72,6 @@ interface TopologyProps {
     // ) => void
     // t: (key: any) => string
 } //: JSX.Element
-
 
 interface TopologyViewComponentsProps {
     controller: Controller
@@ -181,18 +181,19 @@ export const TopologyViewComponents: React.FC<TopologyViewComponentsProps> = ({ 
 }
 
 export const Topology = (props: TopologyProps) => {
-    const controllerRef = React.useRef<Controller>();
+    const controllerRef = React.useRef<Controller>()
     let controller = controllerRef.current
     if (!controller) {
-      controller = controllerRef.current = new Visualization();
-      controller.registerLayoutFactory(layoutFactory)
-      controller.registerComponentFactory(componentFactory)
+        controller = controllerRef.current = new Visualization()
+        controller.registerLayoutFactory(layoutFactory)
+        controller.registerComponentFactory(componentFactory)
     }
     controller.fromModel(getLayoutModel(props.elements, 'Force'))
 
     return (
         <VisualizationProvider controller={controller}>
-            <TopologyViewComponents  controller={controller} useSidebar={false} />
+            <ComponentShapes />
+            <TopologyViewComponents controller={controller} useSidebar={false} />
         </VisualizationProvider>
     )
 }

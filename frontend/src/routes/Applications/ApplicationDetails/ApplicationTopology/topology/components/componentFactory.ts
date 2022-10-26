@@ -9,9 +9,10 @@ import {
     withDragNode,
     DefaultNode,
     DefaultEdge,
-//    withContextMenu,
+    //    withContextMenu,
     withSelection,
 } from '@patternfly/react-topology'
+import { withAppearance } from './withAppearance'
 
 // const contextMenuItem = (label: string, i: number): React.ReactElement => {
 //     if (label === '-') {
@@ -46,17 +47,13 @@ import {
 //     'Sub Menu-> Child1, Child2, Child3, -, Child4'
 // )
 
-
-
-const defaultComponentFactory: ComponentFactory = (
-    kind: ModelKind,
-): ComponentType<{ element: GraphElement }> => {
+const defaultComponentFactory: ComponentFactory = (kind: ModelKind): ComponentType<{ element: GraphElement }> => {
     switch (kind) {
         case ModelKind.graph:
             return withPanZoom()(GraphComponent)
         case ModelKind.node:
             //return withDragNode({ canCancel: false })(withSelection()(withContextMenu(() => defaultMenu)(Node)))
-            return withDragNode({ canCancel: false })(withSelection()(DefaultNode))
+            return withDragNode({ canCancel: false })(withSelection()(withAppearance()(DefaultNode)))
         case ModelKind.edge:
             return DefaultEdge
         default:
