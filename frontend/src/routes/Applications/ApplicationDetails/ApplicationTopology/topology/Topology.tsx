@@ -32,7 +32,7 @@ import getLayoutModel from './layout/layoutModel'
 import '@patternfly/patternfly/patternfly.css'
 import '@patternfly/patternfly/patternfly-addons.css'
 import componentFactory from './components/componentFactory'
-import { ComponentShapes } from './components/componentShapes'
+import { StyledNodeIcons } from './components/StyledNodeIcons'
 
 interface TopologyProps {
     elements: {
@@ -192,7 +192,7 @@ export const Topology = (props: TopologyProps) => {
 
     return (
         <VisualizationProvider controller={controller}>
-            <ComponentShapes />
+            <StyledNodeIcons />
             <TopologyViewComponents controller={controller} useSidebar={false} />
         </VisualizationProvider>
     )

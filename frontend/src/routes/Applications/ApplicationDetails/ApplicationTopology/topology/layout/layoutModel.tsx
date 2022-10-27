@@ -1,7 +1,7 @@
 /* Copyright Contributors to the Open Cluster Management project */
-import { Model, NodeModel, EdgeModel, NodeStatus } from '@patternfly/react-topology'
-import HrefShape, { withHref } from '../components/HrefShape'
-import { typeToShapesMap } from '../components/componentShapesMap'
+import { Model, NodeModel, EdgeModel } from '@patternfly/react-topology'
+import { typeToShapesMap } from '../components/componentIconMap'
+import { getStatus, getLabel, getSecondaryLabel } from '../components/utilities'
 
 // className?: string;
 // scaleNode?: boolean; // Whether or not to scale the node, best on hover of node at lowest scale level
@@ -34,10 +34,15 @@ import { typeToShapesMap } from '../components/componentShapesMap'
 
 // getCustomShape?: (node: Node) => React.FunctionComponent<ShapeProps>;
 
-const getNodeAppearance = (d: { type: string | number }) => {
+const getNodeStyles = (d: { type: string; name: string }) => {
+    let type = d.type
+    if (type.indexOf('application') !== -1) {
+        type = 'application'
+    }
+    const shape = typeToShapesMap[type]?.shape || 'customresource'
     return {
-        getCustomShape: () =>
-            withHref(`#componentShape_${typeToShapesMap[d.type]?.shape || 'customresource'}`)(HrefShape),
+        iconHref: `#componentShape_${shape}`,
+        secondaryLabel: getSecondaryLabel(d),
     }
 }
 
@@ -46,15 +51,15 @@ const getLayoutModel = (elements: { nodes: any[]; links: any[] }, layout: string
     const nodes: NodeModel[] = elements.nodes.map((d) => {
         const width = 50
         const height = 50
-        d.appearance = getNodeAppearance(d)
+        const { status, isDisabled, isWaiting } = getStatus(d)
         return {
             id: d.id,
             type: 'node',
             width,
             height,
-            label: d.name,
-            data: d,
-            status: NodeStatus.success, //NodeStatus.danger //NodeStatus.warning//
+            label: getLabel(d.type),
+            data: getNodeStyles(d),
+            status,
         }
     })
 

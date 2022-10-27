@@ -1,5 +1,5 @@
 /* Copyright Contributors to the Open Cluster Management project */
-export const ComponentShapes = () => (
+export const StyledNodeIcons = () => (
     <svg xmlns="http://www.w3.org/2000/svg" xmlnsXlink="http://www.w3.org/1999/xlink" width="0" height="0">
         <symbol viewBox="0 0 64 46" id="diagramIcons_selectMultiplier">
             <rect x="2" y="2" width="60px" height="44px" rx="22px" ry="22px" />
@@ -467,7 +467,7 @@ export const ComponentShapes = () => (
             </g>
         </symbol>
         <symbol viewBox="0 0 32 32" id="componentShape_subscription">
-            <g transform="translate(0)" fillRule="evenodd">
+            <g transform="translate(0)" fillRule="evenodd" stroke="none" fill="#000000">
                 <g transform="matrix(1.7034 0 0 1.7034 7.3454 7.5036)">
                     <path
                         id="Fill"
