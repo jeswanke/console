@@ -70,7 +70,7 @@ const getStatus = (node: {
 
     // status icon
     let status
-    let statusIcon = statusToIconMap['pending']
+    let statusIcon //= statusToIconMap['pending']
     let disabled = false
     if (type === 'cluster') {
         // determine icon
@@ -101,7 +101,7 @@ const getStatus = (node: {
             break
         case 'orange':
             status = NodeStatus.default
-            statusIcon = statusToIconMap['pending']
+            //statusIcon = statusToIconMap['pending']
             break
         case 'green':
             status = NodeStatus.success

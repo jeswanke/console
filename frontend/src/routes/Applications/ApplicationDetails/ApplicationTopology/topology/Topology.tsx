@@ -3,6 +3,7 @@ import React from 'react'
 import { action } from 'mobx'
 import size from 'lodash/size'
 import head from 'lodash/head'
+import { useTranslation } from '../../../../../lib/acm-i18next'
 import {
     TopologyView,
     TopologySideBar,
@@ -82,9 +83,8 @@ interface TopologyViewComponentsProps {
 }
 
 export const TopologyViewComponents: React.FC<TopologyViewComponentsProps> = ({ controller, useSidebar }) => {
+    const { t } = useTranslation()
     const [selectedIds, setSelectedIds] = React.useState<string[]>()
-    const [layoutDropdownOpen, setLayoutDropdownOpen] = React.useState(false)
-    const [layout, setLayout] = React.useState('Force')
 
     useEventListener<SelectionEventListener>(SELECTION_EVENT, (ids) => {
         setSelectedIds(ids)
@@ -96,57 +96,43 @@ export const TopologyViewComponents: React.FC<TopologyViewComponentsProps> = ({ 
         </TopologySideBar>
     )
 
-    const updateLayout = (newLayout: string) => {
-        // FIXME reset followed by layout causes a flash of the reset prior to the layout
-        controller.getGraph().reset()
-        controller.getGraph().setLayout(newLayout)
-        controller.getGraph().layout()
-        setLayout(newLayout)
-        setLayoutDropdownOpen(false)
-    }
-
-    const layoutDropdown = (
-        <Split>
-            <SplitItem>
-                <label className="pf-u-display-inline-block pf-u-mr-md pf-u-mt-sm">Layout</label>
-            </SplitItem>
-            <SplitItem>
-                <Dropdown
-                    position={DropdownPosition.right}
-                    toggle={
-                        <DropdownToggle onToggle={() => setLayoutDropdownOpen(!layoutDropdownOpen)}>
-                            {layout}
-                        </DropdownToggle>
-                    }
-                    isOpen={layoutDropdownOpen}
-                    dropdownItems={[
-                        <DropdownItem key={1} onClick={() => updateLayout('Force')}>
-                            Force
-                        </DropdownItem>,
-                        <DropdownItem key={2} onClick={() => updateLayout('Dagre')}>
-                            Dagre
-                        </DropdownItem>,
-                        <DropdownItem key={3} onClick={() => updateLayout('Cola')}>
-                            Cola
-                        </DropdownItem>,
-                        <DropdownItem key={3} onClick={() => updateLayout('ColaNoForce')}>
-                            ColaNoForce
-                        </DropdownItem>,
-                    ]}
-                />
-            </SplitItem>
-        </Split>
-    )
-
     const viewToolbar = (
         <>
-            <ToolbarItem>{layoutDropdown}</ToolbarItem>
             <ToolbarItem>
                 <Tooltip content="Layout info saved" trigger="manual">
                     <Button variant="secondary" onClick={() => {}}>
                         Button
                     </Button>
                 </Tooltip>
+            </ToolbarItem>
+            <ToolbarItem>
+                <div className="diagram-title">
+                    <span
+                        className="how-to-read-text"
+                        tabIndex={0}
+                        onClick={
+                            () => {}
+                            // setDrawerContent(
+                            //     t('How to read topology'),
+                            //     false,
+                            //     false,
+                            //     false,
+                            //     false,
+                            //     <LegendView t={t} />,
+                            //     false
+                            // )
+                        }
+                        onKeyPress={() => {
+                            // noop function
+                        }}
+                        role="button"
+                    >
+                        {t('How to read topology')}
+                        <svg className="how-to-read-icon">
+                            <use href={'#diagramIcons_sidecar'} />
+                        </svg>
+                    </span>
+                </div>
             </ToolbarItem>
         </>
     )
@@ -174,9 +160,8 @@ export const TopologyViewComponents: React.FC<TopologyViewComponentsProps> = ({ 
                     })}
                 />
             }
-            // viewToolbar={viewToolbar}
+            viewToolbar={viewToolbar}
             sideBarResizable
-            //contextToolbar={<div id="test-context-bar">wow</div>}
             sideBar={useSidebar && topologySideBar}
             sideBarOpen={useSidebar && size(selectedIds) > 0}
         >

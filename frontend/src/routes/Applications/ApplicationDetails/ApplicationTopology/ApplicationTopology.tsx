@@ -118,33 +118,7 @@ export function ApplicationTopologyPageContent(props: {
     }, [refreshTime])
 
     return (
-        <PageSection>
-            <div className="diagram-title">
-                <span
-                    className="how-to-read-text"
-                    tabIndex={0}
-                    onClick={() =>
-                        setDrawerContent(
-                            t('How to read topology'),
-                            false,
-                            false,
-                            false,
-                            false,
-                            <LegendView t={t} />,
-                            false
-                        )
-                    }
-                    onKeyPress={() => {
-                        // noop function
-                    }}
-                    role="button"
-                >
-                    {t('How to read topology')}
-                    <svg className="how-to-read-icon">
-                        <use href={'#diagramIcons_sidecar'} />
-                    </svg>
-                </span>
-            </div>
+        <>
             <Topology elements={elements} />
             {/* <Topology
                 diagramViewer={DiagramViewer}
@@ -157,6 +131,6 @@ export function ApplicationTopologyPageContent(props: {
                 setDrawerContent={setDrawerContent}
                 t={t}
             /> */}
-        </PageSection>
+        </>
     )
 }
