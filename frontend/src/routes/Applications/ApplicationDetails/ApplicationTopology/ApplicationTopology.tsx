@@ -1,18 +1,17 @@
 /* Copyright Contributors to the Open Cluster Management project */
 
-import { PageSection } from '@patternfly/react-core'
 import { AcmDrawerContext } from '../../../../ui-components'
 import { cloneDeep } from 'lodash'
 import { useContext, useEffect, useState } from 'react'
 
-//import Topology from '../../../../components/Topology/Topology'
-import { Topology } from './topology/Topology'
+import Topology from '../../../../components/Topology/Topology'
+//import { Topology } from './topology/Topology'
 
 import { useTranslation } from '../../../../lib/acm-i18next'
 import { ApplicationDataType } from '../ApplicationDetails'
 import './ApplicationTopology.css'
 import DiagramViewer from './components/DiagramViewer'
-import LegendView from './components/LegendView'
+//import LegendView from './components/LegendView'
 import { processResourceActionLink } from './helpers/diagram-helpers'
 import { getDiagramElements } from './model/topology'
 import { getOptions } from './options'
@@ -119,8 +118,8 @@ export function ApplicationTopologyPageContent(props: {
 
     return (
         <>
-            <Topology elements={elements} />
-            {/* <Topology
+            {/* <Topology elements={elements} /> */}
+            <Topology
                 diagramViewer={DiagramViewer}
                 elements={elements}
                 canUpdateStatuses={canUpdateStatuses}
@@ -130,7 +129,7 @@ export function ApplicationTopologyPageContent(props: {
                 argoAppDetailsContainerControl={argoAppDetailsContainerControl}
                 setDrawerContent={setDrawerContent}
                 t={t}
-            /> */}
+            />
         </>
     )
 }
