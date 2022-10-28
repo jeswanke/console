@@ -8,7 +8,6 @@ import {
     getDefaultShapeDecoratorCenter,
     Layer,
     Node,
-    NodeStatus,
     observer,
     ScaleDetailsLevel,
     ShapeProps,
@@ -20,11 +19,6 @@ import {
     WithDragNodeProps,
     WithSelectionProps,
 } from '@patternfly/react-topology'
-
-import FolderOpenIcon from '@patternfly/react-icons/dist/esm/icons/folder-open-icon'
-import BlueprintIcon from '@patternfly/react-icons/dist/esm/icons/blueprint-icon'
-import PauseCircle from '@patternfly/react-icons/dist/esm/icons/pause-circle-icon'
-import Thumbtack from '@patternfly/react-icons/dist/esm/icons/thumbtack-icon'
 
 import useDetailsLevel from '@patternfly/react-topology/dist/esm/hooks/useDetailsLevel'
 
@@ -47,7 +41,7 @@ type StyledNodeProps = {
 const renderDecorator = (
     element: Node,
     quadrant: TopologyQuadrant,
-    icon: React.ReactNode,
+    statusIcon: { icon: string; classType: string; width: number; height: number },
     getShapeDecoratorCenter?: (
         quadrant: TopologyQuadrant,
         node: Node,
@@ -60,13 +54,14 @@ const renderDecorator = (
     const { x, y } = getShapeDecoratorCenter
         ? getShapeDecoratorCenter(quadrant, element)
         : getDefaultShapeDecoratorCenter(quadrant, element)
-
-    return <Decorator x={x} y={y} radius={DEFAULT_DECORATOR_RADIUS} showBackground icon={icon} />
+    const { icon, classType, width, height } = statusIcon
+    const use = <use href={`#nodeStatusIcon_${icon}`} width={width} height={height} className={classType} />
+    return <Decorator x={x} y={y} radius={DEFAULT_DECORATOR_RADIUS} showBackground icon={use} />
 }
 
 const renderDecorators = (
     element: Node,
-    data: { showDecorators?: boolean },
+    data: { statusIcon?: { icon: string; classType: string; width: number; height: number } },
     getShapeDecoratorCenter?: (
         quadrant: TopologyQuadrant,
         node: Node
@@ -75,19 +70,10 @@ const renderDecorators = (
         y: number
     }
 ): React.ReactNode => {
-    if (!data.showDecorators) {
-        return null
-    }
-    const nodeStatus = element.getNodeStatus()
     return (
-        <>
-            {!nodeStatus || nodeStatus === NodeStatus.default
-                ? renderDecorator(element, TopologyQuadrant.upperLeft, <FolderOpenIcon />, getShapeDecoratorCenter)
-                : null}
-            {renderDecorator(element, TopologyQuadrant.upperRight, <BlueprintIcon />, getShapeDecoratorCenter)}
-            {renderDecorator(element, TopologyQuadrant.lowerLeft, <PauseCircle />, getShapeDecoratorCenter)}
-            {renderDecorator(element, TopologyQuadrant.lowerRight, <Thumbtack />, getShapeDecoratorCenter)}
-        </>
+        data.statusIcon && (
+            <>{renderDecorator(element, TopologyQuadrant.lowerLeft, data.statusIcon, getShapeDecoratorCenter)}</>
+        )
     )
 }
 
@@ -145,7 +131,7 @@ const StyledNode: React.FunctionComponent<StyledNodeProps> = ({
                     labelIcon={LabelIcon && <LabelIcon noVerticalAlign />}
                     attachments={renderDecorators(element, passedData, rest.getShapeDecoratorCenter)}
                 >
-                    <use href={data.iconHref} width={width} height={height} />
+                    <use href={`#nodeIcon_${data.shape}`} width={width} height={height} />
                 </DefaultNode>
             </g>
         </Layer>
@@ -153,3 +139,34 @@ const StyledNode: React.FunctionComponent<StyledNodeProps> = ({
 }
 
 export default observer(StyledNode)
+
+// className?: string;
+// scaleNode?: boolean; // Whether or not to scale the node, best on hover of node at lowest scale level
+
+// label?: string; // Defaults to element.getLabel()
+// secondaryLabel?: string;
+// showLabel?: boolean; // Defaults to true
+// labelClassName?: string;
+// scaleLabel?: boolean; // Whether or not to scale the label, best at lower scale levels
+// labelPosition?: LabelPosition; // Defaults to element.getLabelPosition() right, bottom
+// truncateLength?: number; // Defaults to 13
+// labelIconClass?: string; // Icon to show in label
+// labelIcon?: React.ReactNode;
+// labelIconPadding?: number;
+
+// badge?: string;
+// badgeColor?: string;
+// badgeTextColor?: string;
+// badgeBorderColor?: string;
+// badgeClassName?: string;
+// badgeLocation?: BadgeLocation; inner/below
+
+// attachments?: React.ReactNode; // ie. decorators
+
+// showStatusBackground?: boolean;
+// showStatusDecorator?: boolean;
+// statusDecoratorTooltip?: React.ReactNode;
+// onStatusDecoratorClick?: (event: React.MouseEvent<SVGGElement, MouseEvent>, element: GraphElement) => void;
+// getShapeDecoratorCenter?: (quadrant: TopologyQuadrant, node: Node) => { x: number; y: number };
+
+// getCustomShape?: (node: Node) => React.FunctionComponent<ShapeProps>;

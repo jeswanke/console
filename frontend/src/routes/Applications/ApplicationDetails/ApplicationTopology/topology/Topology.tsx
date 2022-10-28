@@ -2,6 +2,7 @@
 import React from 'react'
 import { action } from 'mobx'
 import size from 'lodash/size'
+import head from 'lodash/head'
 import {
     TopologyView,
     TopologySideBar,
@@ -32,7 +33,9 @@ import getLayoutModel from './layout/layoutModel'
 import '@patternfly/patternfly/patternfly.css'
 import '@patternfly/patternfly/patternfly-addons.css'
 import componentFactory from './components/componentFactory'
-import { StyledNodeIcons } from './components/StyledNodeIcons'
+import { NodeIcons } from './components/nodeIcons'
+import { NodeStatusIcons } from './components/nodeStatusIcons'
+import { isAnythingWaiting } from './components/nodeStyle'
 
 interface TopologyProps {
     elements: {
@@ -88,8 +91,8 @@ export const TopologyViewComponents: React.FC<TopologyViewComponentsProps> = ({ 
     })
 
     const topologySideBar = (
-        <TopologySideBar show={_.size(selectedIds) > 0} onClose={() => setSelectedIds([])}>
-            <div style={{ marginTop: 27, marginLeft: 20 }}>{_.head(selectedIds)}</div>
+        <TopologySideBar show={size(selectedIds) > 0} onClose={() => setSelectedIds([])}>
+            <div style={{ marginTop: 27, marginLeft: 20 }}>{head(selectedIds)}</div>
         </TopologySideBar>
     )
 
@@ -171,7 +174,9 @@ export const TopologyViewComponents: React.FC<TopologyViewComponentsProps> = ({ 
                     })}
                 />
             }
-            viewToolbar={viewToolbar}
+            // viewToolbar={viewToolbar}
+            sideBarResizable
+            //contextToolbar={<div id="test-context-bar">wow</div>}
             sideBar={useSidebar && topologySideBar}
             sideBarOpen={useSidebar && size(selectedIds) > 0}
         >
@@ -188,12 +193,20 @@ export const Topology = (props: TopologyProps) => {
         controller.registerLayoutFactory(layoutFactory)
         controller.registerComponentFactory(componentFactory)
     }
-    controller.fromModel(getLayoutModel(props.elements, 'Force'))
-
+    controller.fromModel(getLayoutModel(props.elements))
     return (
         <VisualizationProvider controller={controller}>
-            <StyledNodeIcons />
-            <TopologyViewComponents controller={controller} useSidebar={false} />
+            <NodeIcons />
+            <NodeStatusIcons />
+            {isAnythingWaiting(props.elements) && (
+                <svg width="0" height="0">
+                    <symbol className="spinner" viewBox="0 0 40 40" id="nodeStatusIcon_spinner">
+                        <circle cx="20" cy="20" r="18" fill="white"></circle>
+                        <circle className="swirly" cx="20" cy="20" r="18"></circle>
+                    </symbol>
+                </svg>
+            )}
+            <TopologyViewComponents controller={controller} useSidebar={true} />
         </VisualizationProvider>
     )
 }

@@ -2,10 +2,36 @@
 import { NodeStatus } from '@patternfly/react-topology'
 import capitalize from 'lodash/capitalize'
 import get from 'lodash/get'
+import { typeToIconMap } from './nodeIconsMap'
+import { statusToIconMap } from './nodeStatusIconMap'
+import './nodeStatusIcons.css'
 
 const MAX_LABEL_WIDTH = 18
 
-export function getLabel(type: string | undefined) {
+export const getNodeStyle = (d: { type: string; name: string }) => {
+    let type = d.type
+    if (type.indexOf('application') !== -1) {
+        type = 'application'
+    }
+    const width = 65
+    const height = 65
+    const label = getLabel(d.type)
+    const secondaryLabel = getSecondaryLabel(d)
+    const { status, statusIcon, isDisabled } = getStatus(d)
+    const shape = typeToIconMap[type]?.shape || 'customresource'
+    return {
+        width,
+        height,
+        status,
+        statusIcon,
+        shape,
+        label,
+        secondaryLabel,
+        isDisabled,
+    }
+}
+
+function getLabel(type: string | undefined) {
     if (type !== undefined) {
         const label = capitalize(type)
             .replace('Ocpa', 'OCP A')
@@ -23,7 +49,7 @@ export function getLabel(type: string | undefined) {
     }
 }
 
-export function getSecondaryLabel(node: { name: any }) {
+function getSecondaryLabel(node: { name: any }) {
     let label = ''
     if (get(node, 'type', '') !== 'cluster' || get(node, 'specs.clusterNames', []).length === 1) {
         label = node?.name ?? ''
@@ -34,7 +60,7 @@ export function getSecondaryLabel(node: { name: any }) {
     return label
 }
 
-export const getStatus = (node: {
+const getStatus = (node: {
     type: any
     specs?:
         | { clusterStatus: { hasWarning: any; hasFailure: any; isDisabled: any; hasViolations: any; isOffline: any } }
@@ -44,9 +70,8 @@ export const getStatus = (node: {
 
     // status icon
     let status
+    let statusIcon = statusToIconMap['pending']
     let disabled = false
-    let waiting = false
-
     if (type === 'cluster') {
         // determine icon
         if (specs?.clusterStatus) {
@@ -54,8 +79,10 @@ export const getStatus = (node: {
             status = NodeStatus.success
             if (hasFailure || hasViolations || isOffline) {
                 status = NodeStatus.danger
+                statusIcon = statusToIconMap['error']
             } else if (hasWarning) {
                 status = NodeStatus.warning
+                statusIcon = statusToIconMap['warning']
             }
             disabled = isDisabled
         }
@@ -66,25 +93,35 @@ export const getStatus = (node: {
     switch (pulse) {
         case 'red':
             status = NodeStatus.danger
+            statusIcon = statusToIconMap['error']
             break
         case 'yellow':
             status = NodeStatus.warning
+            statusIcon = statusToIconMap['warning']
             break
         case 'orange':
             status = NodeStatus.default
+            statusIcon = statusToIconMap['pending']
             break
         case 'green':
             status = NodeStatus.success
+            statusIcon = statusToIconMap['success']
             break
         case 'spinner':
             status = NodeStatus.default
-            waiting = true
+            statusIcon = statusToIconMap['spinner']
             break
         default:
             break
     }
 
-    return { status, isDisabled: disabled, isWaiting: waiting }
+    return { status, statusIcon, isDisabled: disabled }
+}
+
+export const isAnythingWaiting = (elements: { nodes: any[] }) => {
+    return elements.nodes.some((node) => {
+        return get(node, 'specs.pulse', '') === 'spinner'
+    })
 }
 
 // export const getType = (type: string | undefined) => {
@@ -102,14 +139,4 @@ export const getStatus = (node: {
 //     }
 
 //     return label
-// }
-
-// //as scale decreases from max to min, return a counter zoomed value from min to max
-// export const counterZoom = (scale, scaleMin, scaleMax, valueMin, valueMax) => {
-//     if (scale >= scaleMax) {
-//         return valueMin
-//     } else if (scale <= scaleMin) {
-//         return valueMax
-//     }
-//     return valueMin + (1 - (scale - scaleMin) / (scaleMax - scaleMin)) * (valueMax - valueMin)
 // }

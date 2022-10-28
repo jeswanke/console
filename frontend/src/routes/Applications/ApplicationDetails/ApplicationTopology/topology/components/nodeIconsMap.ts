@@ -1,9 +1,9 @@
 /* Copyright Contributors to the Open Cluster Management project */
-interface TypeToShapes {
+interface TypeToIcon {
     [key: string]: { shape: string; className: string }
 }
 
-export const typeToShapesMap: TypeToShapes = Object.freeze({
+export const typeToIconMap: TypeToIcon = Object.freeze({
     application: {
         shape: 'application',
         className: 'design',

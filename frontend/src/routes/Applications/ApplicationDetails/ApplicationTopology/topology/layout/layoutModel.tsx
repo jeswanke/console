@@ -1,65 +1,19 @@
 /* Copyright Contributors to the Open Cluster Management project */
 import { Model, NodeModel, EdgeModel } from '@patternfly/react-topology'
-import { typeToShapesMap } from '../components/componentIconMap'
-import { getStatus, getLabel, getSecondaryLabel } from '../components/utilities'
+import { getNodeStyle } from '../components/nodeStyle'
 
-// className?: string;
-// scaleNode?: boolean; // Whether or not to scale the node, best on hover of node at lowest scale level
-
-// label?: string; // Defaults to element.getLabel()
-// secondaryLabel?: string;
-// showLabel?: boolean; // Defaults to true
-// labelClassName?: string;
-// scaleLabel?: boolean; // Whether or not to scale the label, best at lower scale levels
-// labelPosition?: LabelPosition; // Defaults to element.getLabelPosition() right, bottom
-// truncateLength?: number; // Defaults to 13
-// labelIconClass?: string; // Icon to show in label
-// labelIcon?: React.ReactNode;
-// labelIconPadding?: number;
-
-// badge?: string;
-// badgeColor?: string;
-// badgeTextColor?: string;
-// badgeBorderColor?: string;
-// badgeClassName?: string;
-// badgeLocation?: BadgeLocation; inner/below
-
-// attachments?: React.ReactNode; // ie. decorators
-
-// showStatusBackground?: boolean;
-// showStatusDecorator?: boolean;
-// statusDecoratorTooltip?: React.ReactNode;
-// onStatusDecoratorClick?: (event: React.MouseEvent<SVGGElement, MouseEvent>, element: GraphElement) => void;
-// getShapeDecoratorCenter?: (quadrant: TopologyQuadrant, node: Node) => { x: number; y: number };
-
-// getCustomShape?: (node: Node) => React.FunctionComponent<ShapeProps>;
-
-const getNodeStyles = (d: { type: string; name: string }) => {
-    let type = d.type
-    if (type.indexOf('application') !== -1) {
-        type = 'application'
-    }
-    const shape = typeToShapesMap[type]?.shape || 'customresource'
-    return {
-        iconHref: `#componentShape_${shape}`,
-        secondaryLabel: getSecondaryLabel(d),
-    }
-}
-
-const getLayoutModel = (elements: { nodes: any[]; links: any[] }, layout: string): Model => {
+const getLayoutModel = (elements: { nodes: any[]; links: any[] }): Model => {
     // create nodes from data
     const nodes: NodeModel[] = elements.nodes.map((d) => {
-        const width = 50
-        const height = 50
-        const { status, isDisabled, isWaiting } = getStatus(d)
+        const data = getNodeStyle(d)
         return {
             id: d.id,
             type: 'node',
-            width,
-            height,
-            label: getLabel(d.type),
-            data: getNodeStyles(d),
-            status,
+            data,
+            width: data.width,
+            height: data.height,
+            label: data.label,
+            status: data.status,
         }
     })
 
@@ -79,7 +33,7 @@ const getLayoutModel = (elements: { nodes: any[]; links: any[] }, layout: string
         graph: {
             id: 'graph',
             type: 'graph',
-            layout,
+            layout: 'ColaNoForce',
         },
         nodes,
         edges,

@@ -1,14 +1,14 @@
 /* Copyright Contributors to the Open Cluster Management project */
-export const StyledNodeIcons = () => (
+export const NodeIcons = () => (
     <svg xmlns="http://www.w3.org/2000/svg" xmlnsXlink="http://www.w3.org/1999/xlink" width="0" height="0">
-        <symbol viewBox="0 0 64 46" id="diagramIcons_selectMultiplier">
+        <symbol viewBox="0 0 64 46" id="nodeIcon_selectMultiplier">
             <rect x="2" y="2" width="60px" height="44px" rx="22px" ry="22px" />
         </symbol>
-        <symbol viewBox="0 0 32 32" id="componentShape_multiplier">
+        <symbol viewBox="0 0 32 32" id="nodeIcon_multiplier">
             <circle cx="25.795" cy="15.795" r="15.093" fill="#F0F0F0" stroke="#c7c7c7" strokeWidth="1" />
             <circle cx="20.795" cy="15.795" r="15.093" fill="#F0F0F0" stroke="#c7c7c7" strokeWidth="1" />
         </symbol>
-        <symbol viewBox="0 0 32 32" id="componentShape_application">
+        <symbol viewBox="0 0 32 32" id="nodeIcon_application">
             <g id="Application" fill="none" fillRule="evenodd">
                 <g id="02_Software/App/App_outline" transform="matrix(1.6379 0 0 1.6379 7.9512 7.8634)" stroke="none">
                     <path
@@ -19,7 +19,7 @@ export const StyledNodeIcons = () => (
                 </g>
             </g>
         </symbol>
-        <symbol viewBox="0 0 32 32" id="componentShape_ansiblejob">
+        <symbol viewBox="0 0 32 32" id="nodeIcon_ansiblejob">
             <g transform="translate(0)" fill="none" fillRule="evenodd">
                 <g transform="matrix(1.4248 0 0 1.4248 6.7502 6.7876)" fillRule="nonzero" stroke="none">
                     <ellipse
@@ -39,7 +39,7 @@ export const StyledNodeIcons = () => (
                 </g>
             </g>
         </symbol>
-        <symbol viewBox="0 0 32 32" id="componentShape_chart">
+        <symbol viewBox="0 0 32 32" id="nodeIcon_chart">
             <g id="HelmChart" transform="translate(0)" fillRule="evenodd">
                 <path
                     id="Combined-Shape"
@@ -50,7 +50,7 @@ export const StyledNodeIcons = () => (
                 />
             </g>
         </symbol>
-        <symbol viewBox="0 0 32 32" id="componentShape_cluster">
+        <symbol viewBox="0 0 32 32" id="nodeIcon_cluster">
             <g id="Cluster" transform="translate(0)" fillRule="evenodd">
                 <g transform="matrix(1.8606 0 0 1.8606 6.8571 6.8572)" fill="#000000" stroke="none">
                     <path
@@ -60,7 +60,7 @@ export const StyledNodeIcons = () => (
                 </g>
             </g>
         </symbol>
-        <symbol viewBox="0 0 32 32" id="componentShape_configmap">
+        <symbol viewBox="0 0 32 32" id="nodeIcon_configmap">
             <g id="ConfigMap" fill="none" fillRule="evenodd" stroke="none">
                 <g
                     id="Organization-/-File-/-catalog-/-32"
@@ -74,7 +74,7 @@ export const StyledNodeIcons = () => (
                 </g>
             </g>
         </symbol>
-        <symbol viewBox="0 0 32 32" id="componentShape_container">
+        <symbol viewBox="0 0 32 32" id="nodeIcon_container">
             <g id="Container" fill="none" fillRule="evenodd">
                 <g
                     id="02_Software/Containerized-app/Containerized-app_outline"
@@ -90,7 +90,7 @@ export const StyledNodeIcons = () => (
                 </g>
             </g>
         </symbol>
-        <symbol viewBox="0 0 32 32" id="componentShape_customresource">
+        <symbol viewBox="0 0 32 32" id="nodeIcon_customresource">
             <g id="CustomResource" transform="translate(0)" fillRule="evenodd">
                 <g transform="matrix(1.6446 0 0 1.6446 7.7571 7.9767)" stroke="none" fill="#000000">
                     <g id="Actions-/-Controls-/-settings-/-32-Copy">
@@ -105,7 +105,7 @@ export const StyledNodeIcons = () => (
                 </g>
             </g>
         </symbol>
-        <symbol viewBox="0 0 32 32" id="componentShape_daemonset">
+        <symbol viewBox="0 0 32 32" id="nodeIcon_daemonset">
             <g id="DaemonSet" transform="translate(0)" fill="none" fillRule="evenodd">
                 <g transform="matrix(1.7806 0 0 1.7806 8.625 8.625)">
                     <g fill="#000" fillRule="nonzero" stroke="none">
@@ -134,7 +134,7 @@ export const StyledNodeIcons = () => (
                 </g>
             </g>
         </symbol>
-        <symbol viewBox="0 0 32 32" id="componentShape_deployment">
+        <symbol viewBox="0 0 32 32" id="nodeIcon_deployment">
             <g id="Deployment" transform="translate(0)" fillRule="evenodd">
                 <g
                     id="Shape"
@@ -147,7 +147,7 @@ export const StyledNodeIcons = () => (
                 </g>
             </g>
         </symbol>
-        <symbol viewBox="0 0 32 32" id="componentShape_deploymentconfig">
+        <symbol viewBox="0 0 32 32" id="nodeIcon_deploymentconfig">
             <g id="DeploymentConfig" transform="translate(0)" fill="none" fillRule="evenodd">
                 <g transform="matrix(1.3031 0 0 1.3031 -4.7627 -4.5173)">
                     <circle
@@ -170,7 +170,7 @@ export const StyledNodeIcons = () => (
                 </g>
             </g>
         </symbol>
-        <symbol viewBox="0 0 32 32" id="componentShape_host">
+        <symbol viewBox="0 0 32 32" id="nodeIcon_host">
             <g id="Host" transform="translate(0)" fill="none" fillRule="evenodd">
                 <g
                     id="01_Hardware/Server-stack/Server-stack_outline"
@@ -186,7 +186,7 @@ export const StyledNodeIcons = () => (
                 </g>
             </g>
         </symbol>
-        <symbol viewBox="0 0 32 32" id="componentShape_ingress">
+        <symbol viewBox="0 0 32 32" id="nodeIcon_ingress">
             <g id="Ingress" transform="translate(0)" fill="none" fillRule="evenodd">
                 <g transform="matrix(1.3371 0 0 1.3371 8.4693 10.969)" stroke="none">
                     <path
@@ -209,7 +209,7 @@ export const StyledNodeIcons = () => (
                 </g>
             </g>
         </symbol>
-        <symbol viewBox="0 0 32 32" id="componentShape_namespace">
+        <symbol viewBox="0 0 32 32" id="nodeIcon_namespace">
             <g id="Topology" stroke="none" strokeWidth="1" fill="none" fillRule="evenodd">
                 <g id="Artboard" transform="translate(-1245.000000, -1091.000000)">
                     <g id="Namespace" transform="translate(1245.000000, 1091.000000)">
@@ -237,7 +237,7 @@ export const StyledNodeIcons = () => (
                 </g>
             </g>
         </symbol>
-        <symbol viewBox="0 0 32 32" id="componentShape_namespace">
+        <symbol viewBox="0 0 32 32" id="nodeIcon_namespace">
             <g id="Namespace" transform="translate(0)" fillRule="evenodd">
                 <g transform="matrix(1.8606 0 0 1.8606 6.8571 6.7143)" stroke="none" fill="#000000">
                     <path
@@ -247,7 +247,7 @@ export const StyledNodeIcons = () => (
                 </g>
             </g>
         </symbol>
-        <symbol viewBox="0 0 32 32" id="componentShape_node">
+        <symbol viewBox="0 0 32 32" id="nodeIcon_node">
             <g id="Node" transform="translate(0)" fillRule="evenodd">
                 <g transform="matrix(1.3709 -1.3709 1.3709 1.3709 2.5263 16)" stroke="none" fill="#000000">
                     <path
@@ -257,7 +257,7 @@ export const StyledNodeIcons = () => (
                 </g>
             </g>
         </symbol>
-        <symbol viewBox="0 0 32 32" id="componentShape_other">
+        <symbol viewBox="0 0 32 32" id="nodeIcon_other">
             <g id="Other" transform="translate(0)" fillRule="evenodd">
                 <g transform="matrix(1.628 0 0 1.628 -9.7143 -9.8571)" stroke="none" fill="#000000">
                     <g transform="translate(10.881,11.583)">
@@ -274,7 +274,7 @@ export const StyledNodeIcons = () => (
                 </g>
             </g>
         </symbol>
-        <symbol viewBox="0 0 32 32" id="componentShape_placement">
+        <symbol viewBox="0 0 32 32" id="nodeIcon_placement">
             <g id="Placement" transform="translate(0)" fillRule="evenodd">
                 <g transform="matrix(1.8606 0 0 1.8606 6.8571 6.3571)" stroke="none" fill="#000000">
                     <path
@@ -284,7 +284,7 @@ export const StyledNodeIcons = () => (
                 </g>
             </g>
         </symbol>
-        <symbol viewBox="0 0 32 32" id="componentShape_pod">
+        <symbol viewBox="0 0 32 32" id="nodeIcon_pod">
             <g id="Pod" transform="translate(0)" fillRule="evenodd">
                 <path
                     id="Combined-Shape"
@@ -296,7 +296,7 @@ export const StyledNodeIcons = () => (
                 />
             </g>
         </symbol>
-        <symbol viewBox="0 0 32 32" id="componentShape_policy">
+        <symbol viewBox="0 0 32 32" id="nodeIcon_policy">
             <g id="Policy" transform="translate(0)" fill="none" fillRule="evenodd">
                 <g
                     id="10_Objects/Shield/Shield_outline"
@@ -313,7 +313,7 @@ export const StyledNodeIcons = () => (
                 </g>
             </g>
         </symbol>
-        <symbol viewBox="0 0 32 32" id="componentShape_replicaset">
+        <symbol viewBox="0 0 32 32" id="nodeIcon_replicaset">
             <g id="ReplicaSet" transform="translate(0)" fillRule="evenodd">
                 <g transform="matrix(1.628 0 0 1.628 6.8573 6.8572)" stroke="none" fill="#000000">
                     <path
@@ -323,7 +323,7 @@ export const StyledNodeIcons = () => (
                 </g>
             </g>
         </symbol>
-        <symbol viewBox="0 0 32 32" id="componentShape_replicationcontroller">
+        <symbol viewBox="0 0 32 32" id="nodeIcon_replicationcontroller">
             <g id="ReplicationController" transform="translate(0)" fill="none" fillRule="evenodd">
                 <g transform="matrix(1.3031 0 0 1.3031 -4.8148 -4.8065)">
                     <circle
@@ -344,7 +344,7 @@ export const StyledNodeIcons = () => (
                 </g>
             </g>
         </symbol>
-        <symbol viewBox="0 0 32 32" id="componentShape_route">
+        <symbol viewBox="0 0 32 32" id="nodeIcon_route">
             <g transform="translate(0)" fillRule="evenodd">
                 <g transform="matrix(1.6422 0 0 1.6422 8 8.5)" stroke="none" fill="#000000">
                     <g transform="translate(0 .702)">
@@ -365,7 +365,7 @@ export const StyledNodeIcons = () => (
                 </g>
             </g>
         </symbol>
-        <symbol viewBox="0 0 32 32" id="componentShape_placements">
+        <symbol viewBox="0 0 32 32" id="nodeIcon_placements">
             <g transform="translate(0)" fill="none" fillRule="evenodd">
                 <g transform="matrix(1.8993 0 0 1.8993 8.6667 8.6667)">
                     <g stroke="none" fill="#000000" fillRule="nonzero">
@@ -404,7 +404,7 @@ export const StyledNodeIcons = () => (
                 </g>
             </g>
         </symbol>
-        <symbol viewBox="0 0 32 32" id="componentShape_secret">
+        <symbol viewBox="0 0 32 32" id="nodeIcon_secret">
             <g id="Secret" transform="translate(0)" fillRule="evenodd">
                 <g transform="matrix(1.9509 0 0 1.9509 6.8587 6.8589)" stroke="none" fill="#000000">
                     <path
@@ -414,7 +414,7 @@ export const StyledNodeIcons = () => (
                 </g>
             </g>
         </symbol>
-        <symbol viewBox="0 0 32 32" id="componentShape_service">
+        <symbol viewBox="0 0 32 32" id="nodeIcon_service">
             <g id="Service" transform="translate(0)" fillRule="evenodd">
                 <g transform="matrix(1.924 0 0 1.924 8.5 8.5)" fillRule="nonzero" stroke="none" fill="#000000">
                     <circle cx="1.8715" cy="1.4524" r="1" />
@@ -425,7 +425,7 @@ export const StyledNodeIcons = () => (
                 </g>
             </g>
         </symbol>
-        <symbol viewBox="0 0 32 32" id="componentShape_statefulset">
+        <symbol viewBox="0 0 32 32" id="nodeIcon_statefulset">
             <g id="StatefulSet" transform="translate(0)" fillRule="evenodd">
                 <g
                     id="Statefulset"
@@ -449,7 +449,7 @@ export const StyledNodeIcons = () => (
                 </g>
             </g>
         </symbol>
-        <symbol viewBox="0 0 32 32" id="componentShape_storageclass">
+        <symbol viewBox="0 0 32 32" id="nodeIcon_storageclass">
             <g id="StorageClass" transform="translate(0)" fill="none" fillRule="evenodd">
                 <g
                     id="01_Hardware/Storage-stack/Storage-stack_outline"
@@ -466,7 +466,7 @@ export const StyledNodeIcons = () => (
                 </g>
             </g>
         </symbol>
-        <symbol viewBox="0 0 32 32" id="componentShape_subscription">
+        <symbol viewBox="0 0 32 32" id="nodeIcon_subscription">
             <g transform="translate(0)" fillRule="evenodd" stroke="none" fill="#000000">
                 <g transform="matrix(1.7034 0 0 1.7034 7.3454 7.5036)">
                     <path
@@ -481,7 +481,7 @@ export const StyledNodeIcons = () => (
                 />
             </g>
         </symbol>
-        <symbol viewBox="0 0 32 32" id="componentShape_subscriptionblocked">
+        <symbol viewBox="0 0 32 32" id="nodeIcon_subscriptionblocked">
             <g id="SubscriptionBlocked" transform="translate(0)" fill="none" fillRule="evenodd">
                 <g transform="matrix(1.4984 0 0 1.4984 -8.013 -6.858)" stroke="none">
                     <g transform="translate(11.713 11.713)" fill="#000">
@@ -497,7 +497,7 @@ export const StyledNodeIcons = () => (
                 </g>
             </g>
         </symbol>
-        <symbol viewBox="0 0 406 149" id="componentShape_legend">
+        <symbol viewBox="0 0 406 149" id="nodeIcon_legend">
             <defs>
                 <circle id="path-1" cx="47.6343391" cy="46.9487385" r="46.9487385"></circle>
                 <filter
