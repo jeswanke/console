@@ -1,11 +1,13 @@
 /* Copyright Contributors to the Open Cluster Management project */
 import { Model, NodeModel, EdgeModel } from '@patternfly/react-topology'
 import { getNodeStyle } from '../components/nodeStyle'
+import { calculateNodeOffsets } from './TreeLayout'
 
 const getLayoutModel = (elements: { nodes: any[]; links: any[] }): Model => {
     // create nodes from data
+    const { nodeOffsetMap } = calculateNodeOffsets(elements)
     const nodes: NodeModel[] = elements.nodes.map((d) => {
-        const data = getNodeStyle(d)
+        const data = getNodeStyle(d, nodeOffsetMap[d.id])
         return {
             id: d.id,
             type: 'node',
@@ -33,7 +35,7 @@ const getLayoutModel = (elements: { nodes: any[]; links: any[] }): Model => {
         graph: {
             id: 'graph',
             type: 'graph',
-            layout: 'ColaNoForce',
+            layout: 'TreeLayout',
         },
         nodes,
         edges,

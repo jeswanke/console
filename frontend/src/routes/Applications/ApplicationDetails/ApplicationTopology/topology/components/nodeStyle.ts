@@ -8,7 +8,7 @@ import './nodeStatusIcons.css'
 
 const MAX_LABEL_WIDTH = 18
 
-export const getNodeStyle = (d: { type: string; name: string }) => {
+export const getNodeStyle = (d: { type: string; name: string }, offset: { dx: number; dy: number }) => {
     let type = d.type
     if (type.indexOf('application') !== -1) {
         type = 'application'
@@ -19,7 +19,11 @@ export const getNodeStyle = (d: { type: string; name: string }) => {
     const secondaryLabel = getSecondaryLabel(d)
     const { status, statusIcon, isDisabled } = getStatus(d)
     const shape = typeToIconMap[type]?.shape || 'customresource'
+
+    const { dx, dy } = offset
     return {
+        dx,
+        dy,
         width,
         height,
         status,
