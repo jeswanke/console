@@ -6,6 +6,8 @@ import { typeToIconMap } from './nodeIconsMap'
 import { statusToIconMap } from './nodeStatusIconMap'
 import './nodeStatusIcons.css'
 
+export const NODE_WIDTH = 65
+export const NODE_HEIGHT = 65
 const MAX_LABEL_WIDTH = 18
 
 export const getNodeStyle = (d: { type: string; name: string }, offset: { dx: number; dy: number }) => {
@@ -13,8 +15,6 @@ export const getNodeStyle = (d: { type: string; name: string }, offset: { dx: nu
     if (type.indexOf('application') !== -1) {
         type = 'application'
     }
-    const width = 65
-    const height = 65
     const label = getLabel(d.type)
     const secondaryLabel = getSecondaryLabel(d)
     const { status, statusIcon, isDisabled } = getStatus(d)
@@ -24,8 +24,8 @@ export const getNodeStyle = (d: { type: string; name: string }, offset: { dx: nu
     return {
         dx,
         dy,
-        width,
-        height,
+        width: NODE_WIDTH,
+        height: NODE_HEIGHT,
         status,
         statusIcon,
         shape,
