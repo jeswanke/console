@@ -8,9 +8,10 @@ const getLayoutModel = (elements: { nodes: any[]; links: any[] }): Model => {
     const { nodeOffsetMap } = calculateNodeOffsets(elements, {
         maxColumns: 20,
         xSpacer: 70,
-        ySpacer: 65,
+        ySpacer: 60,
         nodeWidth: NODE_WIDTH,
         nodeHeight: NODE_HEIGHT,
+        sortRowsBy: ['specs.resourceCount', 'type', 'name'],
     })
     const nodes: NodeModel[] = elements.nodes.map((d) => {
         const data = getNodeStyle(d, nodeOffsetMap[d.id])

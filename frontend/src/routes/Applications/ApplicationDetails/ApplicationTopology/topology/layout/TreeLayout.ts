@@ -1,18 +1,16 @@
 import { Graph, ColaLayout, LayoutNode, NodeModel } from '@patternfly/react-topology'
+import get from 'lodash/get'
 import chunk from 'lodash/chunk'
 import uniqBy from 'lodash/uniqBy'
 
-export interface TreeLayoutFilter {
-    name?: string
-    type?: string
-}
 export interface TreeLayoutOptions {
     xSpacer: number
     ySpacer: number
     nodeWidth: number
     nodeHeight: number
     maxColumns?: number
-    filter?: TreeLayoutFilter
+    sortRowsBy?: string[]
+    filterBy?: string[]
 }
 interface LayoutNodeModel extends NodeModel {
     cycles: boolean
@@ -202,7 +200,7 @@ function addRootsLeavesToConnectedGroups(metrics: MetricsType) {
 /////////////////   Loop through each group creating rows (breadth first)
 function sortConnectedGroupsIntoRows(metrics: MetricsType, options: TreeLayoutOptions) {
     const { connected } = metrics
-    const { maxColumns = 16 } = options
+    const { maxColumns = 16, sortRowsBy } = options
     connected.forEach((group) => {
         const { nodeMap, roots, rows } = group
         let groupIds = Object.keys(nodeMap)
@@ -235,17 +233,42 @@ function sortConnectedGroupsIntoRows(metrics: MetricsType, options: TreeLayoutOp
                     }
                 })
 
-                // sort nodes in this row by type then name
-                ;[endsHere, continuesOn].forEach((arr) => {
-                    arr.sort((a, b) => {
-                        const r = a.type.localeCompare(b.type)
-                        if (r !== 0) {
-                            return r
-                        } else {
-                            return (a?.label || '').localeCompare(b?.label || '')
-                        }
+                // sort nodes in this row by array of property names
+                if (sortRowsBy) {
+                    ;[endsHere, continuesOn].forEach((arr) => {
+                        arr.sort((a: LayoutNodeModel, b: LayoutNodeModel) => {
+                            let ret = 0
+                            sortRowsBy.some((property) => {
+                                const av = get(a, property)
+                                const bv = get(b, property)
+                                const at = typeof av
+                                const bt = typeof bv
+                                if (at === bt) {
+                                    switch (at) {
+                                        case 'string':
+                                            ret = av.localeCompare(bv)
+                                            break
+                                        case 'number':
+                                            ret = av - bv
+                                            break
+                                    }
+                                } else if (av && !bv) {
+                                    ret = -1
+                                } else if (!av && bv) {
+                                    ret = 1
+                                }
+                                return ret !== 0
+                            })
+                            return ret
+                            // const r = a.type.localeCompare(b.type)
+                            // if (r !== 0) {
+                            //     return r
+                            // } else {
+                            //     return (a?.label || '').localeCompare(b?.label || '')
+                            // }
+                        })
                     })
-                })
+                }
 
                 // reinsert continuesOn in the middle
                 let inx = endsHere.length / 2
