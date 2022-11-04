@@ -72,7 +72,7 @@ const renderDecorators = (
 ): React.ReactNode => {
     return (
         data.statusIcon && (
-            <>{renderDecorator(element, TopologyQuadrant.lowerLeft, data.statusIcon, getShapeDecoratorCenter)}</>
+            <>{renderDecorator(element, TopologyQuadrant.upperLeft, data.statusIcon, getShapeDecoratorCenter)}</>
         )
     )
 }

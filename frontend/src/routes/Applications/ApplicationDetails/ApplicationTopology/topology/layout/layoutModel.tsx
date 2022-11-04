@@ -6,7 +6,7 @@ import { calculateNodeOffsets } from './TreeLayout'
 const getLayoutModel = (elements: { nodes: any[]; links: any[] }): Model => {
     // create nodes from data
     const { nodeOffsetMap } = calculateNodeOffsets(elements, {
-        maxColumns: 10,
+        maxColumns: 20,
         xSpacer: 70,
         ySpacer: 65,
         nodeWidth: NODE_WIDTH,

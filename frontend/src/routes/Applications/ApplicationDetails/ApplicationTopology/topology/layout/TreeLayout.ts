@@ -1,5 +1,6 @@
 import { Graph, ColaLayout, LayoutNode, NodeModel } from '@patternfly/react-topology'
 import chunk from 'lodash/chunk'
+import uniqBy from 'lodash/uniqBy'
 
 export interface TreeLayoutFilter {
     name?: string
@@ -51,16 +52,11 @@ type NodeOffsetMapType = {
 }
 
 class TreeLayout extends ColaLayout {
-    protected initializeLayout(): void {
-        super.initializeLayout()
-
-        //this.d3Cola.flowLayout('y', 60 * 1.2)
-    }
-
     protected initializeNodePositions(nodes: LayoutNode[], graph: Graph): void {
         const { width, height } = graph.getBounds()
         const cx = width / 2
         const cy = height / 2
+        //        this.d3Cola.flowLayout('y', 70 * 1.2)
 
         nodes.forEach((node: LayoutNode) => {
             const { dx = 0, dy = 0 } = node.element.getData()
@@ -182,12 +178,18 @@ function addRootsLeavesToConnectedGroups(metrics: MetricsType) {
     const { connected, sourceMap, targetMap, allNodeMap } = metrics
     connected.forEach(({ nodeMap, roots, leaves }) => {
         Object.entries(nodeMap).forEach(([id, node]) => {
-            node.incoming = (sourceMap[id] || []).map((link: { source: string | number }) => {
-                return allNodeMap[link.source]
-            })
-            node.outgoing = (targetMap[id] || []).map((link: { target: string | number }) => {
-                return allNodeMap[link.target]
-            })
+            node.incoming = uniqBy(
+                (sourceMap[id] || []).map((link: { source: string | number }) => {
+                    return allNodeMap[link.source]
+                }),
+                'id'
+            )
+            node.outgoing = uniqBy(
+                (targetMap[id] || []).map((link: { target: string | number }) => {
+                    return allNodeMap[link.target]
+                }),
+                'id'
+            )
             if (node.incoming.length === 0) {
                 roots.push(node)
             } else if (node.outgoing.length === 0) {
@@ -250,7 +252,8 @@ function sortConnectedGroupsIntoRows(metrics: MetricsType, options: TreeLayoutOp
                 if (newRow.row.length > maxColumns) {
                     // if we're chunking it, what's the index of the middle of the last row
                     const lr = chunk(newRow.row, (maxColumns * 5) / 6).pop()
-                    inx = lr ? newRow.row.length - lr.length / 2 : inx
+                    inx = lr ? endsHere.length - (lr.length - continuesOn.length) / 2 : inx
+                    if (inx < 0) inx = endsHere.length
                 }
                 newRow.row = endsHere
                 endsHere.splice(inx, 0, ...continuesOn)
@@ -282,11 +285,12 @@ function sortConnectedGroupsIntoRows(metrics: MetricsType, options: TreeLayoutOp
                 lastRow = newRow
             }
 
-            // find bridges between big groupings
+            // TODO find bridges between big groupings
             //   if this is a row of 1 node and that node has >1 outgoing and each has >1 outgoing
             //           and rows.length >3
             //           make a clone as the root of a new group and start over
             //            add secondary line between them
+
             groupIds = groupIds.filter((id) => !set.has(id))
 
             // if all nodes used but outgoings aren't emtpy, mark them cycles
@@ -310,12 +314,13 @@ function addOffsetsToNodeMap(metrics: MetricsType, nodeOffsetMap: NodeOffsetMapT
         group.height = rows.length * nodeHeight + (rows.length - 1) * ySpacer
         group.width = columns * nodeWidth + (columns - 1) * xSpacer
         let dy = -group.height / 2
-        rows.forEach(({ row, incomingRow }) => {
+        rows.forEach(({ row }) => {
             const rowWidth = row.length * nodeWidth + (row.length - 1) * xSpacer
             const left = -rowWidth / 2
             row.forEach(({ id, incoming }, inx) => {
                 let dx = left + (nodeWidth + xSpacer) * inx
-                if (row.length > 1 && incoming.length === 1) {
+                // if this node has only one incoming, and that incoming only has this one outgoing, line up nodes
+                if (incoming.length === 1) {
                     if (incoming[0].outgoing.length === 1) {
                         ;({ dx } = nodeOffsetMap[incoming[0].id])
                     }
@@ -324,14 +329,6 @@ function addOffsetsToNodeMap(metrics: MetricsType, nodeOffsetMap: NodeOffsetMapT
             })
             dy += nodeHeight + ySpacer
         })
-        // calc dx, dy based on #rows and #columns
-        //               rows.forEach(row, incomingRow=>{
-        //                       if incoming is one, sort this row by name
-        //                       else sort it by the position of its parent in the last row
-        //                       if > 10 nodes in this row, split into multiple rows on the half x
-        //                       position each node
-        //                       y+row height
-        //               })
     })
 }
 
