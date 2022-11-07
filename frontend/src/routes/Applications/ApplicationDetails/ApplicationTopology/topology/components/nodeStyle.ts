@@ -10,7 +10,7 @@ export const NODE_WIDTH = 65
 export const NODE_HEIGHT = 65
 const MAX_LABEL_WIDTH = 18
 
-export const getNodeStyle = (d: { type: string; name: string }, offset: { dx: number; dy: number }) => {
+export const getNodeStyle = (d: { type: string; name: string }, offset: { dx: number; dy: number } | undefined) => {
     let type = d.type
     if (type.indexOf('application') !== -1) {
         type = 'application'
@@ -19,8 +19,9 @@ export const getNodeStyle = (d: { type: string; name: string }, offset: { dx: nu
     const secondaryLabel = getSecondaryLabel(d)
     const { status, statusIcon, isDisabled } = getStatus(d)
     const shape = typeToIconMap[type]?.shape || 'customresource'
+    const multipleResources = get(d, 'specs.resources')
 
-    const { dx, dy } = offset
+    const { dx, dy } = offset || { dx: 0, dy: 0 }
     return {
         dx,
         dy,
@@ -28,6 +29,7 @@ export const getNodeStyle = (d: { type: string; name: string }, offset: { dx: nu
         height: NODE_HEIGHT,
         status,
         statusIcon,
+        multipleResources,
         shape,
         label,
         secondaryLabel,

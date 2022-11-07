@@ -38,45 +38,6 @@ type StyledNodeProps = {
     WithDragNodeProps &
     WithSelectionProps
 
-const renderDecorator = (
-    element: Node,
-    quadrant: TopologyQuadrant,
-    statusIcon: { icon: string; classType: string; width: number; height: number },
-    getShapeDecoratorCenter?: (
-        quadrant: TopologyQuadrant,
-        node: Node,
-        radius?: number
-    ) => {
-        x: number
-        y: number
-    }
-): React.ReactNode => {
-    const { x, y } = getShapeDecoratorCenter
-        ? getShapeDecoratorCenter(quadrant, element)
-        : getDefaultShapeDecoratorCenter(quadrant, element)
-    const { icon, classType, width, height } = statusIcon
-    const use = <use href={`#nodeStatusIcon_${icon}`} width={width} height={height} className={classType} />
-    return <Decorator x={x} y={y} radius={DEFAULT_DECORATOR_RADIUS} showBackground icon={use} />
-}
-
-const renderDecorators = (
-    element: Node,
-    data: { statusIcon?: { icon: string; classType: string; width: number; height: number } },
-    getShapeDecoratorCenter?: (
-        quadrant: TopologyQuadrant,
-        node: Node
-    ) => {
-        x: number
-        y: number
-    }
-): React.ReactNode => {
-    return (
-        data.statusIcon && (
-            <>{renderDecorator(element, TopologyQuadrant.upperLeft, data.statusIcon, getShapeDecoratorCenter)}</>
-        )
-    )
-}
-
 const StyledNode: React.FunctionComponent<StyledNodeProps> = ({
     element,
     onContextMenu,
@@ -136,6 +97,78 @@ const StyledNode: React.FunctionComponent<StyledNodeProps> = ({
             </g>
         </Layer>
     )
+}
+
+const renderDecorators = (
+    element: Node,
+    data: {
+        statusIcon?: { icon: string; classType: string; width: number; height: number }
+        multipleResources?: any[]
+    },
+    getShapeDecoratorCenter?: (
+        quadrant: TopologyQuadrant,
+        node: Node
+    ) => {
+        x: number
+        y: number
+    }
+): React.ReactNode => {
+    const { statusIcon, multipleResources } = data
+    return (
+        <>
+            {statusIcon &&
+                renderStatusDecorator(element, TopologyQuadrant.upperLeft, statusIcon, getShapeDecoratorCenter)}
+            {multipleResources &&
+                renderCountDecorator(element, TopologyQuadrant.lowerRight, multipleResources, getShapeDecoratorCenter)}
+        </>
+    )
+}
+
+const renderStatusDecorator = (
+    element: Node,
+    quadrant: TopologyQuadrant,
+    statusIcon: { icon: string; classType: string; width: number; height: number },
+    getShapeDecoratorCenter?: (
+        quadrant: TopologyQuadrant,
+        node: Node,
+        radius?: number
+    ) => {
+        x: number
+        y: number
+    }
+): React.ReactNode => {
+    const { x, y } = getShapeDecoratorCenter
+        ? getShapeDecoratorCenter(quadrant, element)
+        : getDefaultShapeDecoratorCenter(quadrant, element)
+    const { icon, classType, width, height } = statusIcon
+    const use = <use href={`#nodeStatusIcon_${icon}`} width={width} height={height} className={classType} />
+    return <Decorator x={x} y={y} radius={DEFAULT_DECORATOR_RADIUS} showBackground icon={use} />
+}
+
+const renderCountDecorator = (
+    element: Node,
+    quadrant: TopologyQuadrant,
+    multipleResources: any[],
+    getShapeDecoratorCenter?: (
+        quadrant: TopologyQuadrant,
+        node: Node,
+        radius?: number
+    ) => {
+        x: number
+        y: number
+    }
+): React.ReactNode => {
+    const { x, y } = getShapeDecoratorCenter
+        ? getShapeDecoratorCenter(quadrant, element)
+        : getDefaultShapeDecoratorCenter(quadrant, element)
+    //const { icon, classType, width, height } = statusIcon
+    const use = (
+        <g>
+            <use href={'#nodeIcon_multiplier'} width={16} height={16} className={'fff'} />
+            <text text-anchor="middle">{multipleResources.length}</text>
+        </g>
+    )
+    return <Decorator x={x} y={y} radius={DEFAULT_DECORATOR_RADIUS} showBackground icon={use} />
 }
 
 export default observer(StyledNode)

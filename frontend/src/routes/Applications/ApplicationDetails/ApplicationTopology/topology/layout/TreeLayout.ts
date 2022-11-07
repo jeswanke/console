@@ -9,6 +9,7 @@ export interface TreeLayoutOptions {
     nodeWidth: number
     nodeHeight: number
     maxColumns?: number
+    placeWith?: { parentType: string; childType: string }
     sortRowsBy?: string[]
     filterBy?: string[]
 }
@@ -71,7 +72,8 @@ export function calculateNodeOffsets(elements: { nodes: any[]; links: any[] }, o
         const metrics: MetricsType = groupNodesByConnections(elements)
         addRootsLeavesToConnectedGroups(metrics)
         sortConnectedGroupsIntoRows(metrics, options)
-        addOffsetsToNodeMap(metrics, nodeOffsetMap, options)
+        const placeLast = addOffsetsToNodeMap(metrics, nodeOffsetMap, options)
+        placePairedNodes(metrics, nodeOffsetMap, placeLast, options)
     }
     return { nodeOffsetMap }
 }
@@ -260,12 +262,6 @@ function sortConnectedGroupsIntoRows(metrics: MetricsType, options: TreeLayoutOp
                                 return ret !== 0
                             })
                             return ret
-                            // const r = a.type.localeCompare(b.type)
-                            // if (r !== 0) {
-                            //     return r
-                            // } else {
-                            //     return (a?.label || '').localeCompare(b?.label || '')
-                            // }
                         })
                     })
                 }
@@ -330,6 +326,7 @@ function sortConnectedGroupsIntoRows(metrics: MetricsType, options: TreeLayoutOp
 
 ///// assume center of group is at 0,0 then offset nodes from the center
 function addOffsetsToNodeMap(metrics: MetricsType, nodeOffsetMap: NodeOffsetMapType, options: TreeLayoutOptions) {
+    const placeLast: any[] = []
     const { connected } = metrics
     const { xSpacer = 60, ySpacer = 60, nodeWidth = 65, nodeHeight = 65 } = options
     connected.forEach((group) => {
@@ -338,6 +335,17 @@ function addOffsetsToNodeMap(metrics: MetricsType, nodeOffsetMap: NodeOffsetMapT
         group.width = columns * nodeWidth + (columns - 1) * xSpacer
         let dy = -group.height / 2
         rows.forEach(({ row }) => {
+            // filter out nodes that are placed last
+            if (options?.placeWith) {
+                row = row.filter((n) => {
+                    if (options.placeWith && n.type === options.placeWith.childType) {
+                        placeLast.push(n)
+                        return false
+                    }
+                    return true
+                })
+            }
+
             const rowWidth = row.length * nodeWidth + (row.length - 1) * xSpacer
             const left = -rowWidth / 2
             row.forEach(({ id, incoming }, inx) => {
@@ -353,10 +361,26 @@ function addOffsetsToNodeMap(metrics: MetricsType, nodeOffsetMap: NodeOffsetMapT
             dy += nodeHeight + ySpacer
         })
     })
+    return placeLast
 }
 
 export { TreeLayout }
 
+function placePairedNodes(
+    metrics: MetricsType,
+    nodeOffsetMap: NodeOffsetMapType,
+    placeLast: any[],
+    options: TreeLayoutOptions
+) {
+    const { allNodeMap } = metrics
+    placeLast.forEach((child) => {
+        const childLayout = allNodeMap[child.id]
+        if (childLayout?.incoming.length > 0) {
+            const { dx, dy } = nodeOffsetMap[childLayout?.incoming[0].id]
+            nodeOffsetMap[child.id] = { dx: dx + options.xSpacer + options.nodeWidth, dy }
+        }
+    })
+}
 // // eslint-disable-next-line @typescript-eslint/no-unused-vars
 // protected getConstraints(nodes: ColaNode[], groups: ColaGroup[], edges: ColaLink[]): any[] {
 //     return []
