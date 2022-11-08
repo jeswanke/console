@@ -73,7 +73,11 @@ const StyledNode: React.FunctionComponent<StyledNodeProps> = ({
     const { width, height } = element.getDimensions()
     return (
         <Layer id={hover ? TOP_LAYER : DEFAULT_LAYER}>
-            <g ref={hoverRef}>
+            <g
+                ref={(r) => {
+                    r && hoverRef(r)
+                }}
+            >
                 <DefaultNode
                     element={element}
                     scaleLabel={detailsLevel !== ScaleDetailsLevel.high}
@@ -118,8 +122,7 @@ const renderDecorators = (
         <>
             {statusIcon &&
                 renderStatusDecorator(element, TopologyQuadrant.upperLeft, statusIcon, getShapeDecoratorCenter)}
-            {multipleResources &&
-                renderCountDecorator(element, TopologyQuadrant.lowerRight, multipleResources, getShapeDecoratorCenter)}
+            {multipleResources && renderCountDecorator(element, multipleResources)}
         </>
     )
 }
@@ -145,30 +148,31 @@ const renderStatusDecorator = (
     return <Decorator x={x} y={y} radius={DEFAULT_DECORATOR_RADIUS} showBackground icon={use} />
 }
 
-const renderCountDecorator = (
-    element: Node,
-    quadrant: TopologyQuadrant,
-    multipleResources: any[],
-    getShapeDecoratorCenter?: (
-        quadrant: TopologyQuadrant,
-        node: Node,
-        radius?: number
-    ) => {
-        x: number
-        y: number
-    }
-): React.ReactNode => {
-    const { x, y } = getShapeDecoratorCenter
-        ? getShapeDecoratorCenter(quadrant, element)
-        : getDefaultShapeDecoratorCenter(quadrant, element)
-    //const { icon, classType, width, height } = statusIcon
-    const use = (
-        <g>
-            <use href={'#nodeIcon_multiplier'} width={16} height={16} className={'fff'} />
-            <text text-anchor="middle">{multipleResources.length}</text>
+const renderCountDecorator = (element: Node, multipleResources: any[]): React.ReactNode => {
+    const { width, height } = element.getDimensions()
+    const x = width
+    const y = height / 2
+
+    return (
+        <g className="pf-topology__node__decorator">
+            <g transform={`translate(${x}, ${y})`}>
+                <g transform={`translate(-16, -12)`}>
+                    <use href={'#nodeStatusIcon_clusterCount'} width={32} height={24} className={'resourceCountIcon'} />
+                </g>
+                <g transform={`translate(0, 1)`}>
+                    <text
+                        text-anchor="middle"
+                        pointer-events="none"
+                        dominant-baseline="middle"
+                        style={{ fontWeight: 'bold' }}
+                        className={'resourceCountIcon'}
+                    >
+                        {multipleResources.length}
+                    </text>
+                </g>
+            </g>
         </g>
     )
-    return <Decorator x={x} y={y} radius={DEFAULT_DECORATOR_RADIUS} showBackground icon={use} />
 }
 
 export default observer(StyledNode)
