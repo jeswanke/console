@@ -1,13 +1,6 @@
 /* Copyright Contributors to the Open Cluster Management project */
 export const NodeIcons = () => (
     <svg xmlns="http://www.w3.org/2000/svg" xmlnsXlink="http://www.w3.org/1999/xlink" width="0" height="0">
-        <symbol viewBox="0 0 64 46" id="nodeIcon_selectMultiplier">
-            <rect x="2" y="2" width="60px" height="44px" rx="22px" ry="22px" />
-        </symbol>
-        <symbol viewBox="0 0 32 32" id="nodeIcon_multiplier">
-            <circle cx="25.795" cy="15.795" r="15.093" fill="#F0F0F0" stroke="#c7c7c7" strokeWidth="1" />
-            <circle cx="20.795" cy="15.795" r="15.093" fill="#F0F0F0" stroke="#c7c7c7" strokeWidth="1" />
-        </symbol>
         <symbol viewBox="0 0 32 32" id="nodeIcon_application">
             <g id="Application" fill="none" fillRule="evenodd">
                 <g id="02_Software/App/App_outline" transform="matrix(1.6379 0 0 1.6379 7.9512 7.8634)" stroke="none">

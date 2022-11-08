@@ -14,11 +14,6 @@ export interface TreeLayoutOptions {
     filterBy?: string[]
 }
 
-export const NODE_WIDTH = 65
-export const NODE_HEIGHT = 65
-export const X_SPACER = 70
-export const Y_SPACER = 60
-
 const TREE_LAYOUT_DEFAULTS: TreeLayoutOptions = {
     xSpacer: 70,
     ySpacer: 60,

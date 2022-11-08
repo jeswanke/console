@@ -18,11 +18,14 @@ import {
     WithCreateConnectorProps,
     WithDragNodeProps,
     WithSelectionProps,
+    Ellipse,
 } from '@patternfly/react-topology'
 
 import useDetailsLevel from '@patternfly/react-topology/dist/esm/hooks/useDetailsLevel'
 
 import { SVGIconProps } from '@patternfly/react-icons/dist/esm/createIcon'
+
+import MultiEllipse from './MultiEllipse'
 
 type StyledNodeProps = {
     element: Node
@@ -84,6 +87,7 @@ const StyledNode: React.FunctionComponent<StyledNodeProps> = ({
                     scaleNode={hover && detailsLevel === ScaleDetailsLevel.low}
                     {...rest}
                     {...passedData}
+                    getCustomShape={() => (passedData?.multipleResources ? MultiEllipse : Ellipse)}
                     dragging={dragging}
                     regrouping={regrouping}
                     showLabel={hover || (detailsLevel === ScaleDetailsLevel.high && showLabel)}
@@ -176,34 +180,3 @@ const renderCountDecorator = (element: Node, multipleResources: any[]): React.Re
 }
 
 export default observer(StyledNode)
-
-// className?: string;
-// scaleNode?: boolean; // Whether or not to scale the node, best on hover of node at lowest scale level
-
-// label?: string; // Defaults to element.getLabel()
-// secondaryLabel?: string;
-// showLabel?: boolean; // Defaults to true
-// labelClassName?: string;
-// scaleLabel?: boolean; // Whether or not to scale the label, best at lower scale levels
-// labelPosition?: LabelPosition; // Defaults to element.getLabelPosition() right, bottom
-// truncateLength?: number; // Defaults to 13
-// labelIconClass?: string; // Icon to show in label
-// labelIcon?: React.ReactNode;
-// labelIconPadding?: number;
-
-// badge?: string;
-// badgeColor?: string;
-// badgeTextColor?: string;
-// badgeBorderColor?: string;
-// badgeClassName?: string;
-// badgeLocation?: BadgeLocation; inner/below
-
-// attachments?: React.ReactNode; // ie. decorators
-
-// showStatusBackground?: boolean;
-// showStatusDecorator?: boolean;
-// statusDecoratorTooltip?: React.ReactNode;
-// onStatusDecoratorClick?: (event: React.MouseEvent<SVGGElement, MouseEvent>, element: GraphElement) => void;
-// getShapeDecoratorCenter?: (quadrant: TopologyQuadrant, node: Node) => { x: number; y: number };
-
-// getCustomShape?: (node: Node) => React.FunctionComponent<ShapeProps>;
