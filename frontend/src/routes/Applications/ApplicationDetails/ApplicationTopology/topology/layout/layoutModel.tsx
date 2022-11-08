@@ -1,14 +1,14 @@
 /* Copyright Contributors to the Open Cluster Management project */
 import { Model, NodeModel, EdgeModel } from '@patternfly/react-topology'
-import { getNodeStyle, NODE_WIDTH, NODE_HEIGHT } from '../components/nodeStyle'
+import { getNodeStyle, NODE_WIDTH, NODE_HEIGHT, X_SPACER, Y_SPACER } from '../components/nodeStyle'
 import { calculateNodeOffsets } from './TreeLayout'
 
 const getLayoutModel = (elements: { nodes: any[]; links: any[] }): Model => {
     // create nodes from data
     const { nodeOffsetMap } = calculateNodeOffsets(elements, {
         maxColumns: 20,
-        xSpacer: 70,
-        ySpacer: 60,
+        xSpacer: X_SPACER,
+        ySpacer: Y_SPACER,
         nodeWidth: NODE_WIDTH,
         nodeHeight: NODE_HEIGHT,
         placeWith: { parentType: 'subscription', childType: 'placements' },

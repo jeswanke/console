@@ -1,4 +1,4 @@
-import { Graph, ColaLayout, LayoutNode, NodeModel } from '@patternfly/react-topology'
+import { Graph, ColaLayout, LayoutNode, NodeModel, ColaLayoutOptions, LayoutOptions } from '@patternfly/react-topology'
 import get from 'lodash/get'
 import chunk from 'lodash/chunk'
 import uniqBy from 'lodash/uniqBy'
@@ -13,6 +13,19 @@ export interface TreeLayoutOptions {
     sortRowsBy?: string[]
     filterBy?: string[]
 }
+
+export const NODE_WIDTH = 65
+export const NODE_HEIGHT = 65
+export const X_SPACER = 70
+export const Y_SPACER = 60
+
+const TREE_LAYOUT_DEFAULTS: TreeLayoutOptions = {
+    xSpacer: 70,
+    ySpacer: 60,
+    nodeWidth: 65,
+    nodeHeight: 65,
+}
+
 interface LayoutNodeModel extends NodeModel {
     cycles: boolean
     incoming: LayoutNodeModel[]
@@ -51,11 +64,22 @@ type NodeOffsetMapType = {
 }
 
 class TreeLayout extends ColaLayout {
+    protected treeOptions: TreeLayoutOptions
+
+    constructor(graph: Graph, options?: Partial<ColaLayoutOptions & LayoutOptions & TreeLayoutOptions>) {
+        super(graph, options)
+        this.treeOptions = {
+            ...TREE_LAYOUT_DEFAULTS,
+            ...options,
+        }
+    }
+
     protected initializeNodePositions(nodes: LayoutNode[], graph: Graph): void {
         const { width, height } = graph.getBounds()
         const cx = width / 2
         const cy = height / 2
-        //        this.d3Cola.flowLayout('y', 70 * 1.2)
+        const { nodeHeight, ySpacer } = this.treeOptions
+        this.d3Cola.flowLayout('y', nodeHeight + ySpacer)
 
         nodes.forEach((node: LayoutNode) => {
             const { dx = 0, dy = 0 } = node.element.getData()
@@ -63,7 +87,7 @@ class TreeLayout extends ColaLayout {
         })
     }
 
-    protected startColaLayout(/*initialRun: boolean, addingNodes: boolean*/): void {}
+    //.protected startColaLayout(/*initialRun: boolean, addingNodes: boolean*/): void {}
 }
 
 export function calculateNodeOffsets(elements: { nodes: any[]; links: any[] }, options: TreeLayoutOptions) {
