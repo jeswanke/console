@@ -5,14 +5,14 @@ import { calculateNodeOffsets } from './TreeLayout'
 
 const getLayoutModel = (elements: { nodes: any[]; links: any[] }): Model => {
     // create nodes from data
-    const { nodeOffsetMap } = calculateNodeOffsets(elements, {
+    const { nodeOffsetMap, layout } = calculateNodeOffsets(elements, {
         maxColumns: 20,
         xSpacer: X_SPACER,
         ySpacer: Y_SPACER,
         nodeWidth: NODE_WIDTH,
         nodeHeight: NODE_HEIGHT,
         placeWith: { parentType: 'subscription', childType: 'placements' },
-        sortRowsBy: ['specs.resourceCount', 'type', 'name'],
+        sortRowsBy: ['type', 'name'],
     })
     const nodes: NodeModel[] = elements.nodes.map((d) => {
         const data = getNodeStyle(d, nodeOffsetMap[d.id])
@@ -43,7 +43,7 @@ const getLayoutModel = (elements: { nodes: any[]; links: any[] }): Model => {
         graph: {
             id: 'graph',
             type: 'graph',
-            layout: 'TreeLayout',
+            layout,
         },
         nodes,
         edges,

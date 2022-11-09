@@ -9,6 +9,7 @@ export interface TreeLayoutOptions {
     nodeWidth: number
     nodeHeight: number
     maxColumns?: number
+    useCola?: boolean
     placeWith?: { parentType: string; childType: string }
     sortRowsBy?: string[]
     filterBy?: string[]
@@ -19,6 +20,7 @@ const TREE_LAYOUT_DEFAULTS: TreeLayoutOptions = {
     ySpacer: 60,
     nodeWidth: 65,
     nodeHeight: 65,
+    useCola: false,
 }
 
 interface LayoutNodeModel extends NodeModel {
@@ -79,11 +81,21 @@ class TreeLayout extends ColaLayout {
         nodes.forEach((node: LayoutNode) => {
             const { dx = 0, dy = 0 } = node.element.getData()
             node.setPosition(cx + dx, cy + dy)
+            node.setFixed(true)
         })
+
+        graph.fit(80)
     }
 
-    //.protected startColaLayout(/*initialRun: boolean, addingNodes: boolean*/): void {}
+    protected startColaLayout(initialRun: boolean, addingNodes: boolean): void {
+        if (this.treeOptions.useCola) {
+            super.startColaLayout(initialRun, addingNodes)
+        }
+    }
 }
+
+////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////
 
 export function calculateNodeOffsets(elements: { nodes: any[]; links: any[] }, options: TreeLayoutOptions) {
     const nodeOffsetMap: NodeOffsetMapType = {}
@@ -92,9 +104,10 @@ export function calculateNodeOffsets(elements: { nodes: any[]; links: any[] }, o
         addRootsLeavesToConnectedGroups(metrics)
         sortConnectedGroupsIntoRows(metrics, options)
         const placeLast = addOffsetsToNodeMap(metrics, nodeOffsetMap, options)
+        centerParentNodesWithTheirChilden(metrics, nodeOffsetMap)
         placePairedNodes(metrics, nodeOffsetMap, placeLast, options)
     }
-    return { nodeOffsetMap }
+    return { nodeOffsetMap, layout: 'TreeLayout' }
 }
 
 function groupNodesByConnections(elements: { nodes: any[]; links: any[] }) {
@@ -242,59 +255,12 @@ function sortConnectedGroupsIntoRows(metrics: MetricsType, options: TreeLayoutOp
 
             // if this row has >1 columns
             if (newRow.row.length > 1) {
-                // split into nodes w/ and w/o outgoings
-                // put those nodes in the center of bottom row
-                const endsHere: LayoutNodeModel[] = []
-                const continuesOn: LayoutNodeModel[] = []
-                newRow.row.forEach((node) => {
-                    if (node.outgoing.length) {
-                        continuesOn.push(node)
-                    } else {
-                        endsHere.push(node)
-                    }
+                // sort by incoming/outgoing row
+                sortRowIntoRelatedNodes({
+                    newRow,
+                    sortRowsBy,
+                    maxColumns,
                 })
-
-                // sort nodes in this row by array of property names
-                if (sortRowsBy) {
-                    ;[endsHere, continuesOn].forEach((arr) => {
-                        arr.sort((a: LayoutNodeModel, b: LayoutNodeModel) => {
-                            let ret = 0
-                            sortRowsBy.some((property) => {
-                                const av = get(a, property)
-                                const bv = get(b, property)
-                                const at = typeof av
-                                const bt = typeof bv
-                                if (at === bt) {
-                                    switch (at) {
-                                        case 'string':
-                                            ret = av.localeCompare(bv)
-                                            break
-                                        case 'number':
-                                            ret = av - bv
-                                            break
-                                    }
-                                } else if (av && !bv) {
-                                    ret = -1
-                                } else if (!av && bv) {
-                                    ret = 1
-                                }
-                                return ret !== 0
-                            })
-                            return ret
-                        })
-                    })
-                }
-
-                // reinsert continuesOn in the middle
-                let inx = endsHere.length / 2
-                if (newRow.row.length > maxColumns) {
-                    // if we're chunking it, what's the index of the middle of the last row
-                    const lr = chunk(newRow.row, (maxColumns * 5) / 6).pop()
-                    inx = lr ? endsHere.length - (lr.length - continuesOn.length) / 2 : inx
-                    if (inx < 0) inx = endsHere.length
-                }
-                newRow.row = endsHere
-                endsHere.splice(inx, 0, ...continuesOn)
 
                 // chunk it for real this time
                 if (newRow.row.length > maxColumns) {
@@ -323,12 +289,6 @@ function sortConnectedGroupsIntoRows(metrics: MetricsType, options: TreeLayoutOp
                 lastRow = newRow
             }
 
-            // TODO find bridges between big groupings
-            //   if this is a row of 1 node and that node has >1 outgoing and each has >1 outgoing
-            //           and rows.length >3
-            //           make a clone as the root of a new group and start over
-            //            add secondary line between them
-
             groupIds = groupIds.filter((id) => !set.has(id))
 
             // if all nodes used but outgoings aren't emtpy, mark them cycles
@@ -343,7 +303,88 @@ function sortConnectedGroupsIntoRows(metrics: MetricsType, options: TreeLayoutOp
     })
 }
 
+function sortRowIntoRelatedNodes(data: { newRow: RowType; sortRowsBy: string[] | undefined; maxColumns: number }) {
+    const { newRow, sortRowsBy, maxColumns } = data
+    const { incomingRow } = newRow
+    if (!incomingRow) return
+
+    // for incoming, sort nodes to fall under their parent node
+    const segments: LayoutNodeModel[][] = []
+    incomingRow.row.forEach(({ outgoing }) => {
+        const row = outgoing
+
+        // for outgoing, center nodes that have outgoing
+        // 1) split into nodes that end and those that continue on
+        const endsHere: LayoutNodeModel[] = []
+        const continuesOn: LayoutNodeModel[] = []
+        row.forEach((node) => {
+            if (node.outgoing.length) {
+                continuesOn.push(node)
+            } else {
+                endsHere.push(node)
+            }
+        })
+
+        // 2) sort both section of nodes using 'sorRowsBy' option
+        if (sortRowsBy) {
+            ;[endsHere, continuesOn].forEach((arr) => {
+                arr.sort((a: LayoutNodeModel, b: LayoutNodeModel) => {
+                    let ret = 0
+                    sortRowsBy.some((property) => {
+                        const av = get(a, property)
+                        const bv = get(b, property)
+                        const at = typeof av
+                        const bt = typeof bv
+                        if (at === bt) {
+                            switch (at) {
+                                case 'string':
+                                    ret = av.localeCompare(bv)
+                                    break
+                                case 'number':
+                                    ret = av - bv
+                                    break
+                            }
+                        } else if (av && !bv) {
+                            ret = -1
+                        } else if (!av && bv) {
+                            ret = 1
+                        }
+                        return ret !== 0
+                    })
+                    return ret
+                })
+            })
+        }
+
+        // 3) reinsert continuesOn section into the middle of the row
+        let inx = endsHere.length / 2
+        if (newRow.row.length > maxColumns) {
+            // if we're chunking it, what's the index of the middle of the last row
+            const lr = chunk(newRow.row, (maxColumns * 5) / 6).pop()
+            inx = lr ? endsHere.length - (lr.length - continuesOn.length) / 2 : inx
+            if (inx < 0) inx = endsHere.length
+        }
+        endsHere.splice(inx, 0, ...continuesOn)
+        segments.push(endsHere)
+    })
+
+    // recombine, w/o duplicating nodes
+    const set = new Set()
+    newRow.row = []
+    segments.forEach((segment) => {
+        segment.forEach((node) => {
+            if (!set.has(node.id)) {
+                newRow.row.push(node)
+                set.add(node.id)
+            }
+        })
+    })
+
+    return { newRow }
+}
+
 ///// assume center of group is at 0,0 then offset nodes from the center
+// place paired nodes last
 function addOffsetsToNodeMap(metrics: MetricsType, nodeOffsetMap: NodeOffsetMapType, options: TreeLayoutOptions) {
     const placeLast: any[] = []
     const { connected } = metrics
@@ -383,8 +424,34 @@ function addOffsetsToNodeMap(metrics: MetricsType, nodeOffsetMap: NodeOffsetMapT
     return placeLast
 }
 
-export { TreeLayout }
+// center parent over its children if there are more children then parents
+function centerParentNodesWithTheirChilden(metrics: MetricsType, nodeOffsetMap: NodeOffsetMapType) {
+    const { connected } = metrics
+    connected.forEach((group) => {
+        const { rows } = group
+        rows.reverse().forEach(({ row, incomingRow }) => {
+            if (incomingRow && row.length > 1 && row.length >= incomingRow?.row.length) {
+                incomingRow?.row.forEach(({ id, outgoing }) => {
+                    if (outgoing.length) {
+                        const mixDX = Math.min(
+                            ...outgoing.map(({ id }) => {
+                                return nodeOffsetMap[id] ? nodeOffsetMap[id].dx : Infinity
+                            })
+                        )
+                        const maxDX = Math.max(
+                            ...outgoing.map(({ id }) => {
+                                return nodeOffsetMap[id] ? nodeOffsetMap[id].dx : -Infinity
+                            })
+                        )
+                        nodeOffsetMap[id].dx = mixDX + (maxDX - mixDX) / 2
+                    }
+                })
+            }
+        })
+    })
+}
 
+// place paired next to its parent
 function placePairedNodes(
     metrics: MetricsType,
     nodeOffsetMap: NodeOffsetMapType,
@@ -396,10 +463,13 @@ function placePairedNodes(
         const childLayout = allNodeMap[child.id]
         if (childLayout?.incoming.length > 0) {
             const { dx, dy } = nodeOffsetMap[childLayout?.incoming[0].id]
-            nodeOffsetMap[child.id] = { dx: dx + options.xSpacer + options.nodeWidth, dy }
+            nodeOffsetMap[child.id] = { dx: dx + options.xSpacer + options.nodeWidth, dy: dy + 20 }
         }
     })
 }
+
+export { TreeLayout }
+
 // // eslint-disable-next-line @typescript-eslint/no-unused-vars
 // protected getConstraints(nodes: ColaNode[], groups: ColaGroup[], edges: ColaLink[]): any[] {
 //     return []
@@ -426,3 +496,9 @@ function placePairedNodes(
 //     this.d3Cola.links(edges)
 //     this.d3Cola.groups(groups)
 // }
+
+// TODO find bridges between big groupings
+//   if this is a row of 1 node and that node has >1 outgoing and each has >1 outgoing
+//           and rows.length >3
+//           make a clone as the root of a new group and start over
+//            add secondary line between them
