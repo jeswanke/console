@@ -99,6 +99,7 @@ class TreeLayout extends ColaLayout {
 
 export function calculateNodeOffsets(elements: { nodes: any[]; links: any[] }, options: TreeLayoutOptions) {
     const nodeOffsetMap: NodeOffsetMapType = {}
+    let layout = 'TreeLayout'
     if (elements.nodes.length) {
         const metrics: MetricsType = groupNodesByConnections(elements)
         addRootsLeavesToConnectedGroups(metrics)
@@ -106,8 +107,11 @@ export function calculateNodeOffsets(elements: { nodes: any[]; links: any[] }, o
         const placeLast = addOffsetsToNodeMap(metrics, nodeOffsetMap, options)
         centerParentNodesWithTheirChilden(metrics, nodeOffsetMap)
         placePairedNodes(metrics, nodeOffsetMap, placeLast, options)
+        if (placeLast.length > 0) {
+            layout = 'ColaTreeLayout'
+        }
     }
-    return { nodeOffsetMap, layout: 'TreeLayout' }
+    return { nodeOffsetMap, layout }
 }
 
 function groupNodesByConnections(elements: { nodes: any[]; links: any[] }) {
