@@ -38,6 +38,7 @@ export const getNodeStyle = (
         height: NODE_HEIGHT,
         status,
         statusIcon,
+        type,
         specs: d.specs,
         shape,
         label,

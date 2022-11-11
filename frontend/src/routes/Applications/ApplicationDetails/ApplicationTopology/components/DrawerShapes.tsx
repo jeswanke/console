@@ -1,6 +1,13 @@
 /* Copyright Contributors to the Open Cluster Management project */
 export const DrawerShapes = () => (
     <svg xmlns="http://www.w3.org/2000/svg" xmlnsXlink="http://www.w3.org/1999/xlink" width="0" height="0">
+        <symbol viewBox="0 0 16 16" id="drawerShapes_carbonLaunch">
+            <g id="launch" fill="#3D70B2">
+                <path id="Combined-Shape" d="M14.3,1h-3.8V0H16v5.5h-1V1.7L9.7,7L9,6.3L14.3,1z" />
+                <path id="Combined-Shape_1_" d="M14.3,1h-3.8V0H16v5.5h-1V1.7L9.7,7L9,6.3L14.3,1z" />
+                <path id="window" d="M13,9h1v6c0,0.6-0.4,1-1,1H1c-0.6,0-1-0.4-1-1V3c0-0.6,0.4-1,1-1h7v1H1v12h12V9z" />
+            </g>
+        </symbol>
         <symbol viewBox="0 0 14 12" id="drawerShapes_sidecar">
             <g id="Topology" stroke="none" strokeWidth="1" fill="none" fillRule="evenodd">
                 <g id="App-Topology-6" transform="translate(-376.000000, -571.000000)" fill="#3D70B2">
@@ -251,5 +258,20 @@ export const DrawerShapes = () => (
                 </g>
             </g>
         </symbol>
+        <svg viewBox="0 0 1024 1024" id="drawerShapes_open-new-tab">
+            <title>open-new-tab</title>
+            <g id="open-new-tab" stroke="none" strokeWidth="1" fill="none" fillRule="evenodd">
+                <path
+                    d="M576,320 L896,320 L896,192 L576,192 L576,320 Z M128,320 L448,320 L448,192 L128,192 L128,320 Z M930,64 L896,64 L128,64 L94,64 C42.085,64 0,106.085 0,158 L0,192 L0,832 L0,866 C0,917.915 42.085,960 94,960 L128,960 L488,960 C501.255,960 512,949.255 512,936 L512,856 C512,842.745 501.255,832 488,832 L140,832 C133.373,832 128,826.627 128,820 L128,448 L896,448 L896,552 C896,565.255 906.745,576 920,576 L1000,576 C1013.255,576 1024,565.255 1024,552 L1024,158 C1024,106.085 981.915,64 930,64 L930,64 Z"
+                    id="Fill-1"
+                    fill="#0066CC"
+                ></path>
+                <path
+                    d="M968,784 L848,784 L848,664 C848,650.7 837.3,640 824,640 L776,640 C762.7,640 752,650.7 752,664 L752,784 L632,784 C618.7,784 608,794.7 608,808 L608,856 C608,869.3 618.7,880 632,880 L752,880 L752,1000 C752,1013.3 762.7,1024 776,1024 L824,1024 C837.3,1024 848,1013.3 848,1000 L848,880 L968,880 C981.3,880 992,869.3 992,856 L992,808 C992,794.7 981.3,784 968,784"
+                    id="Fill-3"
+                    fill="#0066CC"
+                ></path>
+            </g>
+        </svg>
     </svg>
 )
