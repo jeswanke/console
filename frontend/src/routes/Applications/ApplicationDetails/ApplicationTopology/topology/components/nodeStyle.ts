@@ -12,7 +12,15 @@ export const X_SPACER = 70
 export const Y_SPACER = 60
 const MAX_LABEL_WIDTH = 18
 
-export const getNodeStyle = (d: { type: string; name: string }, offset: { dx: number; dy: number } | undefined) => {
+export const getNodeStyle = (
+    d: {
+        uid: string
+        specs: any
+        type: string
+        name: string
+    },
+    offset: { dx: number; dy: number } | undefined
+) => {
     let type = d.type
     if (type.indexOf('application') !== -1) {
         type = 'application'
@@ -21,7 +29,6 @@ export const getNodeStyle = (d: { type: string; name: string }, offset: { dx: nu
     const secondaryLabel = getSecondaryLabel(d)
     const { status, statusIcon, isDisabled } = getStatus(d)
     const shape = typeToIconMap[type]?.shape || 'customresource'
-    const multipleResources = get(d, 'specs.resources')
 
     const { dx, dy } = offset || { dx: 0, dy: 0 }
     return {
@@ -31,11 +38,12 @@ export const getNodeStyle = (d: { type: string; name: string }, offset: { dx: nu
         height: NODE_HEIGHT,
         status,
         statusIcon,
-        multipleResources,
+        specs: d.specs,
         shape,
         label,
         secondaryLabel,
         isDisabled,
+        uid: d.uid,
     }
 }
 
@@ -124,12 +132,6 @@ const getStatus = (node: {
     }
 
     return { status, statusIcon, isDisabled: disabled }
-}
-
-export const isAnythingWaiting = (elements: { nodes: any[] }) => {
-    return elements.nodes.some((node) => {
-        return get(node, 'specs.pulse', '') === 'spinner'
-    })
 }
 
 // export const getType = (type: string | undefined) => {

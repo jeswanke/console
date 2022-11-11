@@ -87,7 +87,7 @@ const StyledNode: React.FunctionComponent<StyledNodeProps> = ({
                     scaleNode={hover && detailsLevel === ScaleDetailsLevel.low}
                     {...rest}
                     {...passedData}
-                    getCustomShape={() => (passedData?.multipleResources ? MultiEllipse : Ellipse)}
+                    getCustomShape={() => (passedData?.specs?.resourceCount > 1 ? MultiEllipse : Ellipse)}
                     dragging={dragging}
                     regrouping={regrouping}
                     showLabel={hover || (detailsLevel === ScaleDetailsLevel.high && showLabel)}
@@ -111,7 +111,7 @@ const renderDecorators = (
     element: Node,
     data: {
         statusIcon?: { icon: string; classType: string; width: number; height: number }
-        multipleResources?: any[]
+        specs?: any
     },
     getShapeDecoratorCenter?: (
         quadrant: TopologyQuadrant,
@@ -121,12 +121,12 @@ const renderDecorators = (
         y: number
     }
 ): React.ReactNode => {
-    const { statusIcon, multipleResources } = data
+    const { statusIcon, specs } = data
     return (
         <>
             {statusIcon &&
                 renderStatusDecorator(element, TopologyQuadrant.upperLeft, statusIcon, getShapeDecoratorCenter)}
-            {multipleResources && renderCountDecorator(element, multipleResources)}
+            {specs?.resourceCount > 1 && renderCountDecorator(element, specs?.resourceCount)}
         </>
     )
 }
@@ -152,7 +152,7 @@ const renderStatusDecorator = (
     return <Decorator x={x} y={y} radius={DEFAULT_DECORATOR_RADIUS} showBackground icon={use} />
 }
 
-const renderCountDecorator = (element: Node, multipleResources: any[]): React.ReactNode => {
+const renderCountDecorator = (element: Node, resourceCount: number): React.ReactNode => {
     const { width, height } = element.getDimensions()
     const x = width
     const y = height / 2
@@ -171,7 +171,7 @@ const renderCountDecorator = (element: Node, multipleResources: any[]): React.Re
                         style={{ fontWeight: 'bold' }}
                         className={'resourceCountIcon'}
                     >
-                        {multipleResources.length}
+                        {resourceCount}
                     </text>
                 </g>
             </g>
