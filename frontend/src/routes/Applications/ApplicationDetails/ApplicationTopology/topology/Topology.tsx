@@ -44,7 +44,7 @@ interface TopologyProps {
         nodes: any[]
         links: any[]
     }
-    // searchName?: string
+    // searchName?: string test
     // searchUrl?: string
     // channelControl: {
     //     allChannels: [string] | undefined
