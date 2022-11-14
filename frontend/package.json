@@ -15,7 +15,7 @@
         "clean": "rm -rf coverage build",
         "test": "npm run jest --",
         "jest": "jest",
-        "jest:update-snapshot": "jest --updateSnapshot --testPathPattern=src/components/TemplateEditor",
+        "jest:update-snapshot": "jest --updateSnapshot",
         "lint": "eslint src --ext .js,.jsx,.ts,.tsx --max-warnings=0",
         "lint:fix": "npm run lint -- --fix",
         "prettier": "prettier --check src public",
@@ -237,6 +237,7 @@
             "node": true
         },
         "rules": {
+            "react/jsx-key": 1,
             "prettier/prettier": "error",
             "@typescript-eslint/no-non-null-assertion": "off",
             "react/react-in-jsx-scope": "off",
@@ -276,6 +277,13 @@
                         {
                             "name": "recoil",
                             "message": "Please use hooks from ./src/shared-recoil for ACM/MCE dynamic plugins common RecoilRoot"
+                        },
+                        {
+                            "name": "@patternfly/react-core",
+                            "importNames": [
+                                "Truncate"
+                            ],
+                            "message": "Truncate component is not available on OpenShift 4.10; use src/components/Trucate instead"
                         }
                     ],
                     "patterns": [

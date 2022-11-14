@@ -223,6 +223,15 @@ export async function typeByTestId(id: string, type: string, index?: number) {
     }
 }
 
+export async function clearByTestId(id: string, index?: number) {
+    await waitForInputByTestId(id, index)
+    if (index !== undefined) {
+        userEvent.clear(screen.getAllByTestId(id)[index])
+    } else {
+        userEvent.clear(screen.getByTestId(id))
+    }
+}
+
 // By Label Text
 
 export async function waitForLabelText(text: string, multipleAllowed?: boolean) {
@@ -321,7 +330,13 @@ export function nocksAreDone(nocks: Scope[]) {
 }
 
 export async function waitForNocks(nocks: Scope[]) {
-    await waitFor(() => expect(nocksAreDone(nocks)).toBeTruthy())
+    const timeout = options.timeout * nocks.length * 3
+    const timeoutMsg = (error: Error) => {
+        error.message = `!!!!!!!!!!! Test timed out in waitForNocks()--waited ${timeout / 1000} seconds !!!!!!!!!!!!!`
+        error.stack = ''
+        return error
+    }
+    await waitFor(() => expect(nocksAreDone(nocks)).toBeTruthy(), { timeout, onTimeout: timeoutMsg })
 }
 
 export async function waitForNock(nock: Scope) {

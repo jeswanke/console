@@ -72,6 +72,12 @@ const labelArr: string[] = [
     'app.kubernetes.io/part-of=',
 ]
 
+const cachedFilters = JSON.parse(localStorage.getItem('cachedFilters') || '[]')
+
+localStorage.setItem('cachedFilters', JSON.stringify(cachedFilters))
+
+const initialFilters = { 'table.filter.type.acm.application.label': cachedFilters }
+
 type IApplicationResource = IResource | OCPAppResource
 
 function isOCPAppResource(resource: IApplicationResource): resource is OCPAppResource {
@@ -93,7 +99,7 @@ function isFluxApplication(label: string) {
 function getApplicationType(resource: IApplicationResource, t: TFunction) {
     if (resource.apiVersion === ApplicationApiVersion) {
         if (resource.kind === ApplicationKind) {
-            return 'Subscription'
+            return t('Subscription')
         }
     } else if (resource.apiVersion === ArgoApplicationApiVersion) {
         if (resource.kind === ArgoApplicationKind) {
@@ -759,6 +765,7 @@ export default function ApplicationsOverview() {
                         }
                     })
                 },
+                cachedFilters: cachedFilters,
             },
         ],
         [t]
@@ -1005,12 +1012,12 @@ export default function ApplicationsOverview() {
                         ? history.push(NavigationPath.createApplicationArgo)
                         : history.push(NavigationPath.createApplicationSubscription)
                 }}
-                text={'Create application'}
+                text={t('Create application')}
                 dropdownItems={[
                     {
                         id: 'psuedo.group.label',
                         isDisabled: true,
-                        text: <span style={{ fontSize: '14px' }}>Choose a type</span>,
+                        text: <span style={{ fontSize: '14px' }}>{t('Choose a type')}</span>,
                     },
                     {
                         id: 'create-argo',
@@ -1047,6 +1054,7 @@ export default function ApplicationsOverview() {
                 items={tableItems}
                 filters={filters}
                 customTableAction={appCreationButton}
+                initialFilters={cachedFilters.length ? initialFilters : undefined}
                 emptyState={
                     <AcmEmptyState
                         key="appOverviewEmptyState"

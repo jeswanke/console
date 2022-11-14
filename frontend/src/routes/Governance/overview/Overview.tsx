@@ -1,13 +1,13 @@
 /* Copyright Contributors to the Open Cluster Management project */
 import { Button, ButtonVariant, Card, CardBody, CardTitle, PageSection, Stack, Tooltip } from '@patternfly/react-core'
 import { CheckCircleIcon, ExclamationCircleIcon, ExclamationTriangleIcon } from '@patternfly/react-icons'
-import { AcmDrawerContext, compareStrings } from '../../../ui-components'
 import { Fragment, useCallback, useContext, useEffect, useMemo, useState } from 'react'
-import { useRecoilState, useSharedAtoms } from '../../../shared-recoil'
 import { AcmMasonry } from '../../../components/AcmMasonry'
 import { useTranslation } from '../../../lib/acm-i18next'
 import { checkPermission, rbacCreate } from '../../../lib/rbac-util'
 import { ManagedCluster, Policy, PolicyDefinition } from '../../../resources'
+import { useRecoilState, useSharedAtoms } from '../../../shared-recoil'
+import { AcmDrawerContext, compareStrings } from '../../../ui-components'
 import {
     GovernanceCreatePolicyEmptyState,
     GovernanceManagePoliciesEmptyState,
@@ -132,7 +132,7 @@ function SecurityGroupCard(props: { title: string; group: string; policies: Poli
                         {violations.map((violation) => {
                             if (!(violation.compliant || violation.noncompliant)) return <Fragment />
                             return (
-                                <Fragment>
+                                <Fragment key={`${props.title}-${violation.name}`}>
                                     <span>{violation.name}</span>
                                     {violation.compliant ? (
                                         <Tooltip
@@ -226,13 +226,36 @@ function ClustersCard() {
             <Card isRounded>
                 <CardTitle>{'Clusters'}</CardTitle>
                 <CardBody>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto auto', gap: 16 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto auto auto', gap: 16 }}>
                         {clusters.map((cluster) => {
                             const clusterViolationSummary = clusterViolationSummaryMap[cluster.metadata.name ?? '']
                             if (!clusterViolationSummary) return <Fragment />
                             return (
-                                <Fragment>
+                                <Fragment key={`${cluster.metadata.name}-card`}>
                                     <span>{cluster.metadata.name}</span>
+                                    {clusterViolationSummary.pending ? (
+                                        <Tooltip
+                                            content={t('policies.pending', {
+                                                count: clusterViolationSummary.pending,
+                                            })}
+                                        >
+                                            <span style={{ whiteSpace: 'nowrap', textAlign: 'right' }}>
+                                                <Fragment>
+                                                    <Button
+                                                        isInline
+                                                        variant={ButtonVariant.link}
+                                                        onClick={() => onClick(cluster, 'pending')}
+                                                    >
+                                                        {clusterViolationSummary.pending}
+                                                    </Button>{' '}
+                                                    &nbsp;
+                                                    <ExclamationTriangleIcon color="var(--pf-global--warning-color--100)" />
+                                                </Fragment>
+                                            </span>
+                                        </Tooltip>
+                                    ) : (
+                                        <span />
+                                    )}
                                     {clusterViolationSummary.unknown ? (
                                         <Tooltip
                                             content={t('policies.unknown', {
