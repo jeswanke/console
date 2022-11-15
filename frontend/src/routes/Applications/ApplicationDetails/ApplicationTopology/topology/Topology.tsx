@@ -37,7 +37,7 @@ import { NodeIcons } from './components/nodeIcons'
 import { NodeStatusIcons } from './components/nodeStatusIcons'
 import LegendView from '../components/LegendView'
 import DetailsView from '../components/DetailsView'
-import { ArgoAppDetailsContainerData } from '../ApplicationTopology'
+import { ArgoAppDetailsContainerData, ClusterDetailsContainerData } from '../ApplicationTopology'
 
 interface TopologyProps {
     elements: {
@@ -46,15 +46,19 @@ interface TopologyProps {
     }
     // searchName?: string test
     // searchUrl?: string
-    // channelControl: {
-    //     allChannels: [string] | undefined
-    //     activeChannel: string | undefined
-    //     changeTheChannel: (fetchChannel: string) => void
-    // }
+    channelControl: {
+        allChannels: [string] | undefined
+        activeChannel: string | undefined
+        changeTheChannel: (fetchChannel: string) => void
+    }
     argoAppDetailsContainerControl: {
         argoAppDetailsContainerData: ArgoAppDetailsContainerData
         handleArgoAppDetailsContainerUpdate: React.Dispatch<React.SetStateAction<ArgoAppDetailsContainerData>>
         handleErrorMsg: () => void
+    }
+    clusterDetailsContainerControl: {
+        clusterDetailsContainerData: ClusterDetailsContainerData
+        handleClusterDetailsContainerUpdate: React.Dispatch<React.SetStateAction<ClusterDetailsContainerData>>
     }
     options: any
     setDrawerContent: (
@@ -77,7 +81,14 @@ interface TopologyViewComponentsProps {
 
 export const TopologyViewComponents: React.FC<TopologyViewComponentsProps> = ({ controller, topologyProps }) => {
     const { t } = useTranslation()
-    const { processActionLink, argoAppDetailsContainerControl, setDrawerContent, options, elements } = topologyProps
+    const {
+        processActionLink,
+        argoAppDetailsContainerControl,
+        clusterDetailsContainerControl,
+        setDrawerContent,
+        options,
+        elements,
+    } = topologyProps
     const [selectedIds, setSelectedIds] = useState<string[]>()
 
     useEventListener<SelectionEventListener>(SELECTION_EVENT, (ids) => {
@@ -92,25 +103,27 @@ export const TopologyViewComponents: React.FC<TopologyViewComponentsProps> = ({ 
                 })
         }
 
-        setDrawerContent(
-            t('Details'),
-            false, // inline
-            true, // resizable
-            true, // no drawerhead
-            true, // no padding for drawerpanelbody
-            <DetailsView
-                options={options}
-                getLayoutNodes={getLayoutNodes}
-                selectedNodeId={selectedNodeId}
-                processActionLink={processActionLink}
-                nodes={elements.nodes}
-                // clusterDetailsContainerControl={clusterDetailsContainerControl}
-                argoAppDetailsContainerControl={argoAppDetailsContainerControl}
-                activeFilters={{}}
-                t={t}
-            />,
-            false
-        )
+        selectedNodeId
+            ? setDrawerContent(
+                  t('Details'),
+                  false, // inline
+                  true, // resizable
+                  true, // no drawerhead
+                  true, // no padding for drawerpanelbody
+                  <DetailsView
+                      options={options}
+                      getLayoutNodes={getLayoutNodes}
+                      selectedNodeId={selectedNodeId}
+                      processActionLink={processActionLink}
+                      nodes={elements.nodes}
+                      clusterDetailsContainerControl={clusterDetailsContainerControl}
+                      argoAppDetailsContainerControl={argoAppDetailsContainerControl}
+                      activeFilters={{}}
+                      t={t}
+                  />,
+                  false
+              )
+            : setDrawerContent('Close', false, true, true, true, undefined, true)
     })
 
     const viewToolbar = (

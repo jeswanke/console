@@ -18,14 +18,12 @@ export const getNodeStyle = (
         specs: any
         type: string
         name: string
+        namespace: string
     },
     offset: { dx: number; dy: number } | undefined
 ) => {
-    let type = d.type
-    if (type.indexOf('application') !== -1) {
-        type = 'application'
-    }
-    const label = getLabel(d.type)
+    const type = d.type
+    const label = getLabel(type)
     const secondaryLabel = getSecondaryLabel(d)
     const { status, statusIcon, isDisabled } = getStatus(d)
     const shape = typeToIconMap[type]?.shape || 'customresource'
@@ -40,10 +38,13 @@ export const getNodeStyle = (
         statusIcon,
         type,
         specs: d.specs,
+        name: d.name,
+        namespace: d.namespace,
         shape,
         label,
         secondaryLabel,
         isDisabled,
+        id: d.uid,
         uid: d.uid,
     }
 }

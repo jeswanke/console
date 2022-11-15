@@ -1,16 +1,16 @@
 /* Copyright Contributors to the Open Cluster Management project */
 
 import { AcmDrawerContext } from '../../../../ui-components'
-import { cloneDeep } from 'lodash'
+import cloneDeep from 'lodash/cloneDeep'
 import { useContext, useEffect, useState } from 'react'
 import { Topology } from './topology/Topology'
 import { useTranslation } from '../../../../lib/acm-i18next'
 import { ApplicationDataType } from '../ApplicationDetails'
-import './ApplicationTopology.css'
 import { processResourceActionLink } from './helpers/diagram-helpers'
 import { getDiagramElements } from './model/topology'
 import { getOptions } from './options'
 import { DrawerShapes } from './components/DrawerShapes'
+import './ApplicationTopology.css'
 import './components/Drawer.css'
 
 export type ArgoAppDetailsContainerData = {
@@ -21,6 +21,17 @@ export type ArgoAppDetailsContainerData = {
     selected: undefined
     selectedArgoAppList: []
     isLoading: boolean
+}
+
+export type ClusterDetailsContainerData = {
+    page: number
+    startIdx: number
+    clusterSearchToggle: boolean
+    isSelectOpen: boolean
+    expandSectionToggleMap: any
+    clusterID: string | undefined
+    selected: undefined
+    selectedClusterList: any[]
 }
 
 export function ApplicationTopologyPageContent(props: {
@@ -46,6 +57,7 @@ export function ApplicationTopologyPageContent(props: {
         nodes: any[]
         links: any[]
     }>({ nodes: [], links: [] })
+
     const [argoAppDetailsContainerData, setArgoAppDetailsContainerData] = useState<ArgoAppDetailsContainerData>({
         page: 1,
         startIdx: 0,
@@ -54,6 +66,17 @@ export function ApplicationTopologyPageContent(props: {
         selected: undefined,
         selectedArgoAppList: [],
         isLoading: false,
+    })
+
+    const [clusterDetailsContainerData, setClusterDetailsContainerData] = useState<ClusterDetailsContainerData>({
+        page: 1,
+        startIdx: 0,
+        clusterSearchToggle: false,
+        isSelectOpen: false,
+        expandSectionToggleMap: new Set(),
+        clusterID: undefined,
+        selected: undefined,
+        selectedClusterList: [],
     })
 
     const handleErrorMsg = () => {
@@ -100,6 +123,10 @@ export function ApplicationTopologyPageContent(props: {
         handleArgoAppDetailsContainerUpdate: setArgoAppDetailsContainerData,
         handleErrorMsg,
     }
+    const clusterDetailsContainerControl = {
+        clusterDetailsContainerData,
+        handleClusterDetailsContainerUpdate: setClusterDetailsContainerData,
+    }
 
     const processActionLink = (resource: any, toggleLoading: boolean) => {
         processResourceActionLink(resource, toggleLoading, t)
@@ -121,12 +148,11 @@ export function ApplicationTopologyPageContent(props: {
                 processActionLink={processActionLink}
                 canUpdateStatuses={canUpdateStatuses}
                 argoAppDetailsContainerControl={argoAppDetailsContainerControl}
+                clusterDetailsContainerControl={clusterDetailsContainerControl}
+                channelControl={channelControl}
                 options={options}
                 setDrawerContent={setDrawerContent}
             />
-            {/* <Topology
-                channelControl={channelControl}
-            /> */}
         </>
     )
 }
