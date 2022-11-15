@@ -1,3 +1,4 @@
+/* Copyright Contributors to the Open Cluster Management project */
 import { Graph, ColaLayout, LayoutNode, NodeModel, ColaLayoutOptions, LayoutOptions } from '@patternfly/react-topology'
 import get from 'lodash/get'
 import chunk from 'lodash/chunk'

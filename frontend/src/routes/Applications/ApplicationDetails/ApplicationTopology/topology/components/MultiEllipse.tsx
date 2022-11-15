@@ -1,3 +1,4 @@
+/* Copyright Contributors to the Open Cluster Management project */
 import { css } from '@patternfly/react-styles'
 import styles from '@patternfly/react-styles/css/components/Topology/topology-components'
 import * as React from 'react'
