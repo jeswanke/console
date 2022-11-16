@@ -99,12 +99,13 @@ const StyledNode: React.FunctionComponent<StyledNodeProps> = ({
                     onHideCreateConnector={onHideCreateConnector}
                     labelIcon={LabelIcon && <LabelIcon noVerticalAlign />}
                     attachments={
-                        detailsLevel !== ScaleDetailsLevel.low
-                            ? renderDecorators(element, passedData, rest.getShapeDecoratorCenter)
-                            : undefined
+                        detailsLevel !== ScaleDetailsLevel.low &&
+                        renderDecorators(element, passedData, rest.getShapeDecoratorCenter)
                     }
                 >
-                    <use href={`#nodeIcon_${data.shape}`} width={width} height={height} />
+                    {detailsLevel !== ScaleDetailsLevel.low && (
+                        <use href={`#nodeIcon_${data.shape}`} width={width} height={height} />
+                    )}
                 </DefaultNode>
             </g>
         </Layer>

@@ -17,17 +17,7 @@ import {
     VisualizationProvider,
     isNode,
 } from '@patternfly/react-topology'
-import {
-    ToolbarItem,
-    // Split,
-    // SplitItem,
-    // Dropdown,
-    // DropdownItem,
-    // DropdownToggle,
-    // DropdownPosition,
-    Button,
-    Tooltip,
-} from '@patternfly/react-core'
+import { ToolbarItem, Split, SplitItem } from '@patternfly/react-core'
 import layoutFactory from './layout/layoutFactory'
 import getLayoutModel from './layout/layoutModel'
 import '@patternfly/patternfly/patternfly.css'
@@ -38,18 +28,17 @@ import { NodeStatusIcons } from './components/nodeStatusIcons'
 import LegendView from '../components/LegendView'
 import DetailsView from '../components/DetailsView'
 import { ArgoAppDetailsContainerData, ClusterDetailsContainerData } from '../ApplicationTopology'
+import ChannelControl from '../components/ChannelControl'
 
 interface TopologyProps {
     elements: {
         nodes: any[]
         links: any[]
     }
-    // searchName?: string test
-    // searchUrl?: string
     channelControl: {
-        allChannels: [string] | undefined
+        allChannels: string[]
         activeChannel: string | undefined
-        changeTheChannel: (fetchChannel: string) => void
+        setActiveChannel: (channel: string) => void
     }
     argoAppDetailsContainerControl: {
         argoAppDetailsContainerData: ArgoAppDetailsContainerData
@@ -85,6 +74,7 @@ export const TopologyViewComponents: React.FC<TopologyViewComponentsProps> = ({ 
         processActionLink,
         argoAppDetailsContainerControl,
         clusterDetailsContainerControl,
+        channelControl,
         setDrawerContent,
         options,
         elements,
@@ -126,15 +116,19 @@ export const TopologyViewComponents: React.FC<TopologyViewComponentsProps> = ({ 
             : setDrawerContent('Close', false, true, true, true, undefined, true)
     })
 
+    const channelChanger = (
+        <Split>
+            <SplitItem>
+                {channelControl.activeChannel && (
+                    <ChannelControl channelControl={channelControl} t={t} setDrawerContent={setDrawerContent} />
+                )}
+            </SplitItem>
+        </Split>
+    )
+
     const viewToolbar = (
         <>
-            <ToolbarItem>
-                <Tooltip content="Layout info saved" trigger="manual">
-                    <Button variant="secondary" onClick={() => {}}>
-                        Button
-                    </Button>
-                </Tooltip>
-            </ToolbarItem>
+            <ToolbarItem>{channelChanger}</ToolbarItem>
             <div style={{ position: 'absolute', right: '30px' }}>
                 <ToolbarItem style={{ marginLeft: 'auto', marginRight: 0 }}>
                     <div className="diagram-title">

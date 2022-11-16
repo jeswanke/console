@@ -12,6 +12,7 @@ import { getOptions } from './options'
 import { DrawerShapes } from './components/DrawerShapes'
 import './ApplicationTopology.css'
 import './components/Drawer.css'
+import './components/Toolbar.css'
 
 export type ArgoAppDetailsContainerData = {
     page: number
@@ -36,21 +37,25 @@ export type ClusterDetailsContainerData = {
 
 export function ApplicationTopologyPageContent(props: {
     applicationData: ApplicationDataType | undefined
-    setActiveChannel: (channel: string) => void
+    channelControl: {
+        allChannels: string[]
+        activeChannel: string | undefined
+        setActiveChannel: (channel: string) => void
+    }
 }) {
     const { t } = useTranslation()
     const {
         applicationData = {
             refreshTime: undefined,
-            activeChannel: undefined,
-            allChannels: undefined,
             application: undefined,
             appData: undefined,
             topology: undefined,
             statuses: undefined,
         },
+        channelControl,
     } = props
-    const { refreshTime, activeChannel, allChannels, application, appData, topology, statuses } = applicationData
+    const { refreshTime, application, appData, topology, statuses } = applicationData
+
     const { setDrawerContext } = useContext(AcmDrawerContext)
     const [options] = useState<any>(getOptions())
     const [elements, setElements] = useState<{
@@ -109,20 +114,12 @@ export function ApplicationTopologyPageContent(props: {
         }
     }
 
-    const changeTheChannel = (fetchChannel: string) => {
-        props.setActiveChannel(fetchChannel)
-    }
-
-    const channelControl = {
-        allChannels,
-        activeChannel,
-        changeTheChannel,
-    }
     const argoAppDetailsContainerControl = {
         argoAppDetailsContainerData,
         handleArgoAppDetailsContainerUpdate: setArgoAppDetailsContainerData,
         handleErrorMsg,
     }
+
     const clusterDetailsContainerControl = {
         clusterDetailsContainerData,
         handleClusterDetailsContainerUpdate: setClusterDetailsContainerData,

@@ -19,7 +19,7 @@ const MultiEllipse: React.FunctionComponent<MultiEllipseProps> = ({
             <ellipse
                 className={className}
                 ref={dndDropRef}
-                cx={width / 2 + 10}
+                cx={width / 2 + 14}
                 cy={height / 2}
                 rx={Math.max(0, width / 2 - 1)}
                 ry={Math.max(0, height / 2 - 1)}
@@ -28,7 +28,7 @@ const MultiEllipse: React.FunctionComponent<MultiEllipseProps> = ({
             <ellipse
                 className={className}
                 ref={dndDropRef}
-                cx={width / 2 + 5}
+                cx={width / 2 + 7}
                 cy={height / 2}
                 rx={Math.max(0, width / 2 - 1)}
                 ry={Math.max(0, height / 2 - 1)}
