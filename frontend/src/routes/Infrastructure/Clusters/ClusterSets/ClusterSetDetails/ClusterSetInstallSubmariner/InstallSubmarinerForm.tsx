@@ -11,7 +11,7 @@ import { RbacButton } from '../../../../../../components/Rbac'
 import { Trans, useTranslation } from '../../../../../../lib/acm-i18next'
 import { DOC_LINKS } from '../../../../../../lib/doc-util'
 import { rbacCreate } from '../../../../../../lib/rbac-util'
-import { validateJSON } from '../../../../../../lib/validation'
+import { validateJSON, validateCloudsYaml } from '../../../../../../lib/validation'
 import { NavigationPath } from '../../../../../../NavigationPath'
 import {
     Broker,
@@ -149,7 +149,7 @@ export function InstallSubmarinerFormPage() {
 }
 
 // supported providers for creating a SubmarinerConfig resource
-const submarinerConfigProviders = [Provider.aws, Provider.gcp, Provider.vmware, Provider.azure]
+const submarinerConfigProviders = [Provider.aws, Provider.gcp, Provider.vmware, Provider.azure, Provider.openstack]
 
 // used to try to auto-detect the provider secret in the cluster namespace
 const providerAutoDetectSecret: Record<string, (secrets: Secret[]) => Secret | undefined> = {
@@ -192,12 +192,16 @@ export function InstallSubmarinerForm(props: { availableClusters: Cluster[] }) {
     const [subscriptionIds, setSubscriptionIds] = useState<Record<string, string | undefined>>({})
     const [tenantIds, setTenantIds] = useState<Record<string, string | undefined>>({})
 
+    const [cloudsYamls, setOpenstackCloudsYamls] = useState<Record<string, string | undefined>>({})
+    const [clouds, setOpenstackClouds] = useState<Record<string, string | undefined>>({})
+
     const [nattPorts, setNattPorts] = useState<Record<string, number>>({})
     const [nattEnables, setNattEnables] = useState<Record<string, boolean>>({})
     const [cableDrivers, setCableDrivers] = useState<Record<string, CableDriver>>({})
     const [gateways, setGateways] = useState<Record<string, number>>({})
     const [awsInstanceTypes, setAwsInstanceTypes] = useState<Record<string, string>>({})
     const [azInstanceTypes, setAzInstanceTypes] = useState<Record<string, string>>({})
+    const [openStackInstanceTypes, setOpenStackInstanceTypes] = useState<Record<string, string>>({})
 
     const { availableClusters } = props
 
@@ -206,7 +210,9 @@ export function InstallSubmarinerForm(props: { availableClusters: Cluster[] }) {
             setFetchSecrets(false)
             const calls = resultsSettled(
                 availableClusters
-                    .filter((c) => submarinerConfigProviders.includes(c!.provider!))
+                    .filter(
+                        (c) => submarinerConfigProviders.includes(c!.provider!) && !c.distribution?.isManagedOpenShift
+                    )
                     .map((c) => listNamespaceSecrets(c.namespace!))
             )
             const map: Record<string, string | null> = {}
@@ -276,43 +282,6 @@ export function InstallSubmarinerForm(props: { availableClusters: Cluster[] }) {
                     },
                 })
 
-                // Create credential secret if one doesn't exist
-                const secret: Secret = {
-                    apiVersion: SecretApiVersion,
-                    kind: SecretKind,
-                    metadata: {
-                        name: `${cluster.name}-${cluster.provider}-creds`,
-                        namespace: cluster.namespace,
-                    },
-                    stringData: {},
-                    type: 'Opaque',
-                }
-
-                // configure secret if one doesn't exist
-                if (cluster.provider !== Provider.vmware && providerSecretMap[cluster.displayName!] === null) {
-                    if (cluster.provider === Provider.aws) {
-                        secret.stringData!['aws_access_key_id'] = awsAccessKeyIDs[cluster.displayName!]! || ''
-                        secret.stringData!['aws_secret_access_key'] = awsSecretAccessKeyIDs[cluster.displayName!]! || ''
-                    } else if (cluster.provider === Provider.gcp) {
-                        secret.stringData!['osServiceAccount.json'] = gcServiceAccountKeys[cluster.displayName!]! || ''
-                    } else if (cluster.provider === Provider.azure) {
-                        const clientid = clientIds[cluster.displayName!]! || ''
-                        const clientSecret = clientSecrets[cluster.displayName!]! || ''
-                        const tenantid = tenantIds[cluster.displayName!]! || ''
-                        const subscriptionid = subscriptionIds[cluster.displayName!]! || ''
-                        secret.stringData!['osServicePrincipal.json'] = JSON.stringify({
-                            clientid,
-                            clientSecret,
-                            tenantid,
-                            subscriptionid,
-                        })
-                        secret.stringData!['baseDomainResourceGroupName'] =
-                            baseDomainResourceGroupNames[cluster.displayName!]! || ''
-                    }
-
-                    resources.push(secret)
-                }
-
                 const submarinerConfig: SubmarinerConfig = {
                     apiVersion: SubmarinerConfigApiVersion,
                     kind: SubmarinerConfigKind,
@@ -330,30 +299,84 @@ export function InstallSubmarinerForm(props: { availableClusters: Cluster[] }) {
                     },
                 }
 
-                if (cluster.provider !== Provider.vmware) {
-                    // use existing secret name
-                    if (providerSecretMap[cluster.displayName!]) {
-                        submarinerConfig.spec.credentialsSecret = {
-                            name: providerSecretMap[cluster.displayName!]!,
-                        }
-                    } else {
-                        // use secret name that will be created
-                        submarinerConfig.spec.credentialsSecret = {
-                            name: secret.metadata.name!,
-                        }
+                if (!cluster.distribution?.isManagedOpenShift) {
+                    // Create credential secret if one doesn't exist
+                    const secret: Secret = {
+                        apiVersion: SecretApiVersion,
+                        kind: SecretKind,
+                        metadata: {
+                            name: `${cluster.name}-${cluster.provider}-creds`,
+                            namespace: cluster.namespace,
+                        },
+                        stringData: {},
+                        type: 'Opaque',
                     }
-                }
 
-                // configure instance type if AWS
-                if (cluster.provider === Provider.aws) {
-                    submarinerConfig.spec.gatewayConfig!.aws = {
-                        instanceType: awsInstanceTypes[cluster.displayName!] ?? submarinerConfigDefault.awsInstanceType,
+                    // configure secret if one doesn't exist
+                    if (cluster.provider !== Provider.vmware && providerSecretMap[cluster.displayName!] === null) {
+                        if (cluster.provider === Provider.aws) {
+                            secret.stringData!['aws_access_key_id'] = awsAccessKeyIDs[cluster.displayName!]! || ''
+                            secret.stringData!['aws_secret_access_key'] =
+                                awsSecretAccessKeyIDs[cluster.displayName!]! || ''
+                        } else if (cluster.provider === Provider.gcp) {
+                            secret.stringData!['osServiceAccount.json'] =
+                                gcServiceAccountKeys[cluster.displayName!]! || ''
+                        } else if (cluster.provider === Provider.azure) {
+                            const clientid = clientIds[cluster.displayName!]! || ''
+                            const clientSecret = clientSecrets[cluster.displayName!]! || ''
+                            const tenantid = tenantIds[cluster.displayName!]! || ''
+                            const subscriptionid = subscriptionIds[cluster.displayName!]! || ''
+                            secret.stringData!['osServicePrincipal.json'] = JSON.stringify({
+                                clientid,
+                                clientSecret,
+                                tenantid,
+                                subscriptionid,
+                            })
+                            secret.stringData!['baseDomainResourceGroupName'] =
+                                baseDomainResourceGroupNames[cluster.displayName!]! || ''
+                        } else if (cluster.provider === Provider.openstack) {
+                            secret.stringData!['cloud'] = clouds[cluster.displayName!] || ''
+                            secret.stringData!['clouds.yaml'] = cloudsYamls[cluster.displayName!] || ''
+                        }
+
+                        resources.push(secret)
                     }
-                } else if (cluster.provider === Provider.azure) {
-                    submarinerConfig.spec.gatewayConfig!.azure = {
-                        instanceType:
-                            azInstanceTypes[cluster.displayName!] ?? submarinerConfigDefault.azureInstanceType,
+
+                    if (cluster.provider !== Provider.vmware) {
+                        // use existing secret name
+                        if (providerSecretMap[cluster.displayName!]) {
+                            submarinerConfig.spec.credentialsSecret = {
+                                name: providerSecretMap[cluster.displayName!]!,
+                            }
+                        } else {
+                            // use secret name that will be created
+                            submarinerConfig.spec.credentialsSecret = {
+                                name: secret.metadata.name!,
+                            }
+                        }
                     }
+
+                    // configure instance type if AWS
+                    if (cluster.provider === Provider.aws) {
+                        submarinerConfig.spec.gatewayConfig!.aws = {
+                            instanceType:
+                                awsInstanceTypes[cluster.displayName!] ?? submarinerConfigDefault.awsInstanceType,
+                        }
+                    } else if (cluster.provider === Provider.azure) {
+                        submarinerConfig.spec.gatewayConfig!.azure = {
+                            instanceType:
+                                azInstanceTypes[cluster.displayName!] ?? submarinerConfigDefault.azureInstanceType,
+                        }
+                    } else if (cluster.provider === Provider.openstack) {
+                        submarinerConfig.spec.gatewayConfig!.rhos = {
+                            instanceType:
+                                openStackInstanceTypes[cluster.displayName!] ??
+                                submarinerConfigDefault.openStackInstanceType,
+                        }
+                    }
+                } else {
+                    submarinerConfig.spec.gatewayConfig = {}
+                    submarinerConfig.spec.loadBalancerEnable = true
                 }
                 resources.push(submarinerConfig)
             } else {
@@ -621,7 +644,9 @@ export function InstallSubmarinerForm(props: { availableClusters: Cluster[] }) {
                                     labelHelp: t('submariner.install.form.credential.secret.labelHelp'),
                                     value: providerSecretMap[clusterName],
                                     isHidden:
-                                        providerSecretMap[clusterName] === null || cluster.provider === Provider.vmware,
+                                        providerSecretMap[clusterName] === null ||
+                                        cluster.provider === Provider.vmware ||
+                                        cluster.distribution?.isManagedOpenShift,
                                     isRequired:
                                         [Provider.aws, Provider.gcp, Provider.azure].includes(cluster.provider!) &&
                                         providerSecretMap[clusterName] !== null,
@@ -641,7 +666,9 @@ export function InstallSubmarinerForm(props: { availableClusters: Cluster[] }) {
                                         setAwsAccessKeyIDs(copy)
                                     },
                                     isHidden:
-                                        cluster.provider !== Provider.aws || providerSecretMap[clusterName] !== null,
+                                        cluster.provider !== Provider.aws ||
+                                        providerSecretMap[clusterName] !== null ||
+                                        cluster.distribution?.isManagedOpenShift,
                                     isRequired:
                                         cluster.provider === Provider.aws && providerSecretMap[clusterName] === null,
                                 },
@@ -658,7 +685,9 @@ export function InstallSubmarinerForm(props: { availableClusters: Cluster[] }) {
                                         setAwsSecretAccessKeyIDs(copy)
                                     },
                                     isHidden:
-                                        cluster.provider !== Provider.aws || providerSecretMap[clusterName] !== null,
+                                        cluster.provider !== Provider.aws ||
+                                        providerSecretMap[clusterName] !== null ||
+                                        cluster.distribution?.isManagedOpenShift,
                                     isRequired:
                                         cluster.provider === Provider.aws && providerSecretMap[clusterName] === null,
                                     isSecret: true,
@@ -697,7 +726,9 @@ export function InstallSubmarinerForm(props: { availableClusters: Cluster[] }) {
                                         setBaseDomainResourceGroupNames(copy)
                                     },
                                     isHidden:
-                                        cluster.provider !== Provider.azure || providerSecretMap[clusterName] !== null,
+                                        cluster.provider !== Provider.azure ||
+                                        providerSecretMap[clusterName] !== null ||
+                                        cluster.distribution?.isManagedOpenShift,
                                     isRequired:
                                         cluster.provider === Provider.azure && providerSecretMap[clusterName] === null,
                                 },
@@ -716,7 +747,9 @@ export function InstallSubmarinerForm(props: { availableClusters: Cluster[] }) {
                                         setClientIds(copy)
                                     },
                                     isHidden:
-                                        cluster.provider !== Provider.azure || providerSecretMap[clusterName] !== null,
+                                        cluster.provider !== Provider.azure ||
+                                        providerSecretMap[clusterName] !== null ||
+                                        cluster.distribution?.isManagedOpenShift,
                                     isRequired:
                                         cluster.provider === Provider.azure && providerSecretMap[clusterName] === null,
                                 },
@@ -735,7 +768,9 @@ export function InstallSubmarinerForm(props: { availableClusters: Cluster[] }) {
                                         setClientSecrets(copy)
                                     },
                                     isHidden:
-                                        cluster.provider !== Provider.azure || providerSecretMap[clusterName] !== null,
+                                        cluster.provider !== Provider.azure ||
+                                        providerSecretMap[clusterName] !== null ||
+                                        cluster.distribution?.isManagedOpenShift,
                                     isRequired:
                                         cluster.provider === Provider.azure && providerSecretMap[clusterName] === null,
                                     isSecret: true,
@@ -755,7 +790,9 @@ export function InstallSubmarinerForm(props: { availableClusters: Cluster[] }) {
                                         setSubscriptionIds(copy)
                                     },
                                     isHidden:
-                                        cluster.provider !== Provider.azure || providerSecretMap[clusterName] !== null,
+                                        cluster.provider !== Provider.azure ||
+                                        providerSecretMap[clusterName] !== null ||
+                                        cluster.distribution?.isManagedOpenShift,
                                     isRequired:
                                         cluster.provider === Provider.azure && providerSecretMap[clusterName] === null,
                                 },
@@ -774,9 +811,55 @@ export function InstallSubmarinerForm(props: { availableClusters: Cluster[] }) {
                                         setTenantIds(copy)
                                     },
                                     isHidden:
-                                        cluster.provider !== Provider.azure || providerSecretMap[clusterName] !== null,
+                                        cluster.provider !== Provider.azure ||
+                                        providerSecretMap[clusterName] !== null ||
+                                        cluster.distribution?.isManagedOpenShift,
                                     isRequired:
                                         cluster.provider === Provider.azure && providerSecretMap[clusterName] === null,
+                                },
+                                {
+                                    id: 'clouds.yaml',
+                                    type: 'TextArea',
+                                    label: t('OpenStack clouds.yaml'),
+                                    placeholder: t('Enter the contents of the OpenStack clouds.yaml'),
+                                    labelHelp: t(
+                                        'The OpenStack clouds.yaml file, including the password, to connect to the OpenStack server.'
+                                    ),
+                                    value: cloudsYamls[clusterName] ?? '',
+                                    isHidden:
+                                        cluster.provider !== Provider.openstack ||
+                                        providerSecretMap[clusterName] !== null,
+                                    isRequired:
+                                        cluster.provider === Provider.openstack &&
+                                        providerSecretMap[clusterName] === null,
+                                    onChange: (value: string) => {
+                                        const copy = { ...cloudsYamls }
+                                        copy[clusterName] = value
+                                        setOpenstackCloudsYamls(copy)
+                                    },
+                                    isSecret: true,
+                                    validation: (value) => validateCloudsYaml(value, clouds[clusterName] as string, t),
+                                },
+                                {
+                                    id: 'cloud',
+                                    type: 'Text',
+                                    label: t('Cloud name'),
+                                    placeholder: t('Enter the OpenStack cloud name to reference in the clouds.yaml'),
+                                    labelHelp: t(
+                                        'The name of the cloud section of the clouds.yaml to use for establishing communication to the OpenStack server.'
+                                    ),
+                                    value: clouds[clusterName] ?? '',
+                                    onChange: (value: string) => {
+                                        const copy = { ...clouds }
+                                        copy[clusterName] = value
+                                        setOpenstackClouds(copy)
+                                    },
+                                    isHidden:
+                                        cluster.provider !== Provider.openstack ||
+                                        providerSecretMap[clusterName] !== null,
+                                    isRequired:
+                                        cluster.provider === Provider.openstack &&
+                                        providerSecretMap[clusterName] === null,
                                 },
                                 {
                                     id: 'aws-instance-type',
@@ -785,7 +868,8 @@ export function InstallSubmarinerForm(props: { availableClusters: Cluster[] }) {
                                     placeholder: t('submariner.install.form.instancetype.placeholder'),
                                     labelHelp: t('submariner.install.form.instancetype.labelHelp.aws'),
                                     value: awsInstanceTypes[clusterName] ?? submarinerConfigDefault.awsInstanceType,
-                                    isHidden: cluster.provider !== Provider.aws,
+                                    isHidden:
+                                        cluster.provider !== Provider.aws || cluster.distribution?.isManagedOpenShift,
                                     onChange: (value) => {
                                         const copy = { ...awsInstanceTypes }
                                         copy[clusterName] = value
@@ -799,11 +883,30 @@ export function InstallSubmarinerForm(props: { availableClusters: Cluster[] }) {
                                     placeholder: t('submariner.install.form.instancetype.placeholder'),
                                     labelHelp: t('submariner.install.form.instancetype.labelHelp.azure'),
                                     value: azInstanceTypes[clusterName] ?? submarinerConfigDefault.azureInstanceType,
-                                    isHidden: cluster.provider !== Provider.azure,
+                                    isHidden:
+                                        cluster.provider !== Provider.azure || cluster.distribution?.isManagedOpenShift,
                                     onChange: (value) => {
                                         const copy = { ...azInstanceTypes }
                                         copy[clusterName] = value
                                         setAzInstanceTypes(copy)
+                                    },
+                                },
+                                {
+                                    id: 'openstack-instance-type',
+                                    type: 'Text',
+                                    label: t('submariner.install.form.instancetype'),
+                                    placeholder: t('submariner.install.form.instancetype.placeholder'),
+                                    labelHelp: t(
+                                        'The OpenStack instance type of the gateway node that will be created on the managed cluster (default PnTAE.CPU_4_Memory_8192_Disk_50).'
+                                    ),
+                                    value:
+                                        openStackInstanceTypes[clusterName] ??
+                                        submarinerConfigDefault.openStackInstanceType,
+                                    isHidden: cluster.provider !== Provider.openstack,
+                                    onChange: (value) => {
+                                        const copy = { ...openStackInstanceTypes }
+                                        copy[clusterName] = value
+                                        setOpenStackInstanceTypes(copy)
                                     },
                                 },
                                 {
@@ -842,6 +945,7 @@ export function InstallSubmarinerForm(props: { availableClusters: Cluster[] }) {
                                     placeholder: t('submariner.install.form.gateways.placeholder'),
                                     labelHelp: t('submariner.install.form.gateways.labelHelp'),
                                     value: gateways[clusterName] ?? submarinerConfigDefault.gateways,
+                                    isHidden: cluster.distribution?.isManagedOpenShift,
                                     onChange: (value: number) => {
                                         const copy = { ...gateways }
                                         copy[clusterName] = value

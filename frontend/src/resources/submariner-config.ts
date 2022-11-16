@@ -45,6 +45,7 @@ export interface SubmarinerConfig extends IResource {
             }
             gateways?: number
         }
+        loadBalancerEnable?: boolean
     }
 }
 
@@ -55,6 +56,8 @@ type SubmarinerConfigDefaults = {
     gateways: number
     awsInstanceType: string
     azureInstanceType: string
+    openStackInstanceType: string
+    loadBalancerEnable: boolean
 }
 
 export const submarinerConfigDefault: SubmarinerConfigDefaults = {
@@ -64,4 +67,6 @@ export const submarinerConfigDefault: SubmarinerConfigDefaults = {
     gateways: 1,
     awsInstanceType: 'c5d.large',
     azureInstanceType: 'Standard_F4s_v2',
+    openStackInstanceType: 'PnTAE.CPU_4_Memory_8192_Disk_50',
+    loadBalancerEnable: false,
 }

@@ -21,7 +21,7 @@ import { render, waitFor } from '@testing-library/react'
 import * as nock from 'nock'
 import { RecoilRoot } from 'recoil'
 import { ansibleJobState, clusterImageSetsState, nodePoolsState } from '../../../../../atoms'
-import { nockIgnoreRBAC, nockRBAC } from '../../../../../lib/nock-util'
+import { nockIgnoreApiPaths, nockIgnoreRBAC, nockRBAC } from '../../../../../lib/nock-util'
 import { clickByText, waitForCalled, waitForNock, waitForNotText, waitForText } from '../../../../../lib/test-util'
 import { DistributionField } from './DistributionField'
 import { HostedClusterK8sResource } from 'openshift-assisted-ui-lib/cim'
@@ -322,6 +322,7 @@ const mockNodepools: NodePool[] = [
             namespace: 'clusters',
         },
         spec: {
+            management: {},
             clusterName: '',
             platform: {
                 aws: {
@@ -330,6 +331,10 @@ const mockNodepools: NodePool[] = [
                     rootVolume: {
                         size: 1,
                         type: '',
+                    },
+                    securityGroups: [],
+                    subnet: {
+                        id: '',
                     },
                 },
                 type: '',
@@ -351,6 +356,7 @@ const mockNodepools: NodePool[] = [
             namespace: 'clusters',
         },
         spec: {
+            management: {},
             clusterName: '',
             platform: {
                 aws: {
@@ -359,6 +365,10 @@ const mockNodepools: NodePool[] = [
                     rootVolume: {
                         size: 1,
                         type: '',
+                    },
+                    securityGroups: [],
+                    subnet: {
+                        id: '',
                     },
                 },
                 type: '',
@@ -380,6 +390,7 @@ const mockNodepools: NodePool[] = [
             namespace: 'clusters',
         },
         spec: {
+            management: {},
             clusterName: '',
             platform: {
                 aws: {
@@ -388,6 +399,10 @@ const mockNodepools: NodePool[] = [
                     rootVolume: {
                         size: 1,
                         type: '',
+                    },
+                    securityGroups: [],
+                    subnet: {
+                        id: '',
                     },
                 },
                 type: '',
@@ -409,6 +424,7 @@ const mockNodepools: NodePool[] = [
             namespace: 'clusters',
         },
         spec: {
+            management: {},
             clusterName: '',
             platform: {
                 aws: {
@@ -417,6 +433,10 @@ const mockNodepools: NodePool[] = [
                     rootVolume: {
                         size: 1,
                         type: '',
+                    },
+                    securityGroups: [],
+                    subnet: {
+                        id: '',
                     },
                 },
                 type: '',
@@ -438,6 +458,7 @@ const mockNodepools: NodePool[] = [
             namespace: 'clusters',
         },
         spec: {
+            management: {},
             clusterName: '',
             platform: {
                 aws: {
@@ -446,6 +467,10 @@ const mockNodepools: NodePool[] = [
                     rootVolume: {
                         size: 1,
                         type: '',
+                    },
+                    securityGroups: [],
+                    subnet: {
+                        id: '',
                     },
                 },
                 type: '',
@@ -504,6 +529,7 @@ function getClusterCuratoResourceAttributes(name: string, verb: string) {
 }
 
 describe('DistributionField', () => {
+    beforeEach(() => nockIgnoreApiPaths())
     const renderDistributionInfoField = async (
         data: DistributionInfo,
         allowUpgrade: boolean,
@@ -634,6 +660,7 @@ describe('DistributionField', () => {
 })
 
 describe('DistributionField hypershift clusters', () => {
+    beforeEach(() => nockIgnoreApiPaths())
     const renderDistributionInfoField = async (
         cluster?: Cluster,
         allowUpgrade?: boolean,
