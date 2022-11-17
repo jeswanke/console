@@ -3,6 +3,7 @@ import { render } from '@testing-library/react'
 import { MemoryRouter, Route } from 'react-router-dom'
 import { RecoilRoot } from 'recoil'
 import {
+    applicationSetsState,
     channelsState,
     gitOpsClustersState,
     managedClusterSetBindingsState,
@@ -17,8 +18,9 @@ import {
     nockArgoGitPathTree,
     nockCreate,
     nockGet,
+    nockIgnoreApiPaths,
 } from '../../../lib/nock-util'
-import { clickByText, typeByPlaceholderText, typeByTestId, waitForNocks } from '../../../lib/test-util'
+import { clickByText, typeByPlaceholderText, typeByTestId, waitForNocks, waitForText } from '../../../lib/test-util'
 import { NavigationPath } from '../../../NavigationPath'
 import {
     ApplicationSet,
@@ -47,6 +49,7 @@ import {
     SecretKind,
 } from '../../../resources'
 import CreateApplicationArgo from './CreateApplicationArgo'
+import { EditArgoApplicationSet } from './EditArgoApplicationSet'
 
 const gitOpsCluster: GitOpsCluster = {
     apiVersion: GitOpsClusterApiVersion,
@@ -256,6 +259,7 @@ const placementHelm: Placement = {
 }
 
 describe('Create Argo Application Set', () => {
+    beforeEach(() => nockIgnoreApiPaths())
     const AddApplicationSet = () => {
         return (
             <RecoilRoot
@@ -296,6 +300,8 @@ describe('Create Argo Application Set', () => {
         await waitForNocks(appBranchNocks)
 
         await clickByText('Enter or select a tracking revision')
+        // await clickByText('Enter or select a tracking revision') // Hack to handle broken PatternFly dropdown not initially populating
+        // await clickByText('Enter or select a tracking revision')
         const pathNocks = [
             nockArgoGitPathSha(channelGit.spec.pathname, 'branch-01', { commit: { sha: '01' } }),
             nockArgoGitPathTree(channelGit.spec.pathname, { tree: [{ path: 'application-test', type: 'tree' }] }),
@@ -304,9 +310,11 @@ describe('Create Argo Application Set', () => {
         await waitForNocks(pathNocks)
 
         await clickByText('Enter or select a repository path')
+        // await clickByText('Enter or select a repository path') // Hack to handle broken PatternFly dropdown not initially populating
+        // await clickByText('Enter or select a repository path')
         await clickByText('application-test')
 
-        await typeByPlaceholderText('Enter the remote namespace', 'gitops-ns')
+        await typeByPlaceholderText('Enter the destination namespace', 'gitops-ns')
         await clickByText('Next')
 
         // Sync policy
@@ -346,11 +354,11 @@ describe('Create Argo Application Set', () => {
         await clickByText(channelHelm.spec.pathname)
         // // nock.recorder.rec()
 
-        await typeByPlaceholderText('Enter the chart name', chartName)
-        await typeByPlaceholderText('Enter the package version', 'v1')
+        await typeByPlaceholderText('Enter the name of the Helm chart', chartName)
+        await typeByPlaceholderText('Enter the version or versions', 'v1')
 
         // remote namespace
-        await typeByPlaceholderText('Enter the remote namespace', 'gitops-ns')
+        await typeByPlaceholderText('Enter the destination namespace', 'gitops-ns')
         await clickByText('Next')
 
         // sync policy
@@ -366,5 +374,30 @@ describe('Create Argo Application Set', () => {
         await clickByText('Submit')
 
         await waitForNocks(createHelmAppSetNocks)
+    })
+
+    test('can render Edit Argo Application Page', async () => {
+        render(
+            <RecoilRoot
+                initializeState={(snapshot) => {
+                    snapshot.set(applicationSetsState, [argoAppSetGit])
+                }}
+            >
+                <MemoryRouter initialEntries={[NavigationPath.editApplicationArgo]}>
+                    <Route
+                        component={(props: any) => {
+                            const newProps = { ...props }
+                            newProps.match = props.match || { params: {} }
+                            newProps.match.params.name = argoAppSetGit?.metadata.name
+                            newProps.match.params.namespace = argoAppSetGit?.metadata.namespace
+                            return <EditArgoApplicationSet {...newProps} />
+                        }}
+                    />
+                </MemoryRouter>
+            </RecoilRoot>
+        )
+
+        await new Promise((resolve) => setTimeout(resolve, 500))
+        await waitForText('Edit application set')
     })
 })

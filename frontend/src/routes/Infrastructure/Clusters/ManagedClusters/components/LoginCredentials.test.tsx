@@ -3,7 +3,7 @@
 import { Cluster, ClusterStatus } from '../../../../../resources'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { mockBadRequestStatus, nockGet } from '../../../../../lib/nock-util'
+import { mockBadRequestStatus, nockGet, nockIgnoreApiPaths } from '../../../../../lib/nock-util'
 import { waitForNock, waitForNocks, waitForNotText } from '../../../../../lib/test-util'
 import { ClusterContext } from '../ClusterDetails/ClusterDetails'
 import { LoginCredentials } from './LoginCredentials'
@@ -12,6 +12,7 @@ const mockCluster: Cluster = {
     name: 'test-cluster',
     displayName: 'test-cluster',
     namespace: 'test-cluster',
+    uid: 'test-cluster-uid',
     status: ClusterStatus.ready,
     distribution: {
         k8sVersion: '1.19',
@@ -32,16 +33,19 @@ const mockCluster: Cluster = {
         isHibernatable: true,
         clusterPool: undefined,
         secrets: {
-            kubeconfig: '',
-            kubeadmin: 'test-cluster-0-fk6c9-admin-password',
             installConfig: '',
         },
     },
     isHive: true,
     isManaged: true,
     isCurator: false,
+    isHostedCluster: false,
     isSNOCluster: false,
     owner: {},
+    kubeconfig: '',
+    kubeadmin: 'test-cluster-0-fk6c9-admin-password',
+    isHypershift: false,
+    isRegionalHubCluster: false,
 }
 
 const mockKubeadminSecret = {
@@ -72,6 +76,7 @@ const mockKubeadminSecret = {
 }
 
 describe('LoginCredentials', () => {
+    beforeEach(() => nockIgnoreApiPaths())
     test('renders', async () => {
         const nock = nockGet(mockKubeadminSecret)
         render(

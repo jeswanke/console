@@ -1,13 +1,13 @@
 /* Copyright Contributors to the Open Cluster Management project */
 
-import { ManagedClusterSet, ManagedClusterSetDefinition } from '../../../../../resources'
+import { ManagedClusterSet, ManagedClusterSetDefinition, isGlobalClusterSet } from '../../../../../resources'
 import { useEffect, useState } from 'react'
-import { useRecoilState } from 'recoil'
-import { managedClusterSetsState } from '../../../../../atoms'
 import { canUser, checkAdminAccess } from '../../../../../lib/rbac-util'
+import { useSharedAtoms, useRecoilState } from '../../../../../shared-recoil'
 
 // returns a list of cluster sets that the user is authorized to attach managed clusters to
 export function useCanJoinClusterSets() {
+    const { managedClusterSetsState } = useSharedAtoms()
     const [managedClusterSets] = useRecoilState(managedClusterSetsState)
     const [canJoinClusterSets, setCanJoinClusterSets] = useState<ManagedClusterSet[] | undefined>()
     const [isLoading, setIsLoading] = useState<boolean>(true)
@@ -21,7 +21,9 @@ export function useCanJoinClusterSets() {
             const adminAccessCheck = checkAdminAccess()
             adminAccessCheck.then((adminAccess) => {
                 if (adminAccess.status!.allowed) {
-                    return setCanJoinClusterSets(managedClusterSets)
+                    return setCanJoinClusterSets(
+                        managedClusterSets.filter((managedClusterSet) => !isGlobalClusterSet(managedClusterSet))
+                    )
                 } else {
                     const requests = Promise.allSettled(
                         managedClusterSets.map((mcs) => {
@@ -38,7 +40,9 @@ export function useCanJoinClusterSets() {
                         const authorizedClusterSets = managedClusterSets.filter((mcs) =>
                             authorizedClusterSetNames.includes(mcs.metadata.name!)
                         )
-                        return setCanJoinClusterSets(authorizedClusterSets)
+                        return setCanJoinClusterSets(
+                            authorizedClusterSets.filter((managedClusterSet) => !isGlobalClusterSet(managedClusterSet))
+                        )
                     })
                 }
             })

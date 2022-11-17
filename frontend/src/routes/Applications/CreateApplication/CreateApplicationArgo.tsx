@@ -1,23 +1,12 @@
 /* Copyright Contributors to the Open Cluster Management project */
 
 import { useData, useItem } from '@patternfly-labs/react-form-wizard'
-import { ArgoWizard } from '@patternfly-labs/react-form-wizard/lib/wizards/Argo/ArgoWizard'
-import { AcmToastContext } from '@stolostron/ui-components'
+import { ArgoWizard } from '../../../wizards/Argo/ArgoWizard'
+import { AcmToastContext } from '../../../ui-components'
 import moment from 'moment-timezone'
 import { useContext } from 'react'
 import { useHistory } from 'react-router-dom'
-import { useRecoilState } from 'recoil'
-import {
-    applicationSetsState,
-    channelsState,
-    gitOpsClustersState,
-    managedClusterSetBindingsState,
-    managedClusterSetsState,
-    managedClustersState,
-    namespacesState,
-    placementsState,
-    secretsState,
-} from '../../../atoms'
+import { useRecoilState, useRecoilValue, useSharedAtoms, useSharedSelectors } from '../../../shared-recoil'
 import { SyncEditor } from '../../../components/SyncEditor/SyncEditor'
 import { useTranslation } from '../../../lib/acm-i18next'
 import { isType } from '../../../lib/is-type'
@@ -28,7 +17,6 @@ import {
     getGitChannelBranches,
     getGitChannelPaths,
     IResource,
-    unpackProviderConnection,
 } from '../../../resources'
 import { argoAppSetQueryString } from './actions'
 import schema from './schema.json'
@@ -59,6 +47,16 @@ function getWizardSyncEditor() {
 
 export function CreateApplicationArgo() {
     const { t } = useTranslation()
+    const {
+        channelsState,
+        namespacesState,
+        applicationSetsState,
+        placementsState,
+        gitOpsClustersState,
+        managedClustersState,
+        managedClusterSetsState,
+        managedClusterSetBindingsState,
+    } = useSharedAtoms()
     const history = useHistory()
     const [applicationSets] = useRecoilState(applicationSetsState)
     const toast = useContext(AcmToastContext)
@@ -66,22 +64,16 @@ export function CreateApplicationArgo() {
     const [gitOpsClusters] = useRecoilState(gitOpsClustersState)
     const [channels] = useRecoilState(channelsState)
     const [namespaces] = useRecoilState(namespacesState)
-    const [secrets] = useRecoilState(secretsState)
     const [managedClusters] = useRecoilState(managedClustersState)
     const [clusterSets] = useRecoilState(managedClusterSetsState)
     const [managedClusterSetBindings] = useRecoilState(managedClusterSetBindingsState)
-    const providerConnections = secrets.map(unpackProviderConnection)
+    const { ansibleCredentialsValue } = useSharedSelectors()
 
     const availableArgoNS = gitOpsClusters
         .map((gitOpsCluster) => gitOpsCluster.spec?.argoServer?.argoNamespace)
         .filter(isType)
     const availableNamespace = namespaces.map((namespace) => namespace.metadata.name).filter(isType)
-    const ansibleCredentials = providerConnections.filter(
-        (providerConnection) =>
-            providerConnection.metadata?.labels?.['cluster.open-cluster-management.io/type'] === 'ans' &&
-            !providerConnection.metadata?.labels?.['cluster.open-cluster-management.io/copiedFromSecretName']
-    )
-    const availableAnsibleCredentials = ansibleCredentials
+    const availableAnsibleCredentials = useRecoilValue(ansibleCredentialsValue)
         .map((ansibleCredential) => ansibleCredential.metadata.name)
         .filter(isType)
 

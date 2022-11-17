@@ -1,9 +1,8 @@
 /* Copyright Contributors to the Open Cluster Management project */
 import { Card } from '@patternfly/react-core'
-import { AcmDonutChart } from '@stolostron/ui-components'
+import { AcmDonutChart } from '../../../ui-components'
 import { useMemo } from 'react'
-import { useRecoilState } from 'recoil'
-import { policySetsState } from '../../../atoms'
+import { useRecoilState, useSharedAtoms } from '../../../shared-recoil'
 import { useTranslation } from '../../../lib/acm-i18next'
 import { NavigationPath } from '../../../NavigationPath'
 
@@ -21,6 +20,7 @@ export function PolicySetViolationsCard() {
 }
 
 function usePolicySetViolations() {
+    const { policySetsState } = useSharedAtoms()
     const [policySets] = useRecoilState(policySetsState)
     const violations = useMemo(() => {
         let compliant = 0

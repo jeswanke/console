@@ -1,10 +1,11 @@
 /* Copyright Contributors to the Open Cluster Management project */
 
-// eslint-disable-next-line no-use-before-define
-import React from 'react'
-import { VALIDATE_ALPHANUMERIC, VALIDATE_NUMERIC, VALIDATE_ALPHANUMERIC_PERIOD } from 'temptifly'
 import {
-    CREATE_CLOUD_CONNECTION,
+    VALIDATE_ALPHANUMERIC,
+    VALIDATE_NUMERIC,
+    VALIDATE_ALPHANUMERIC_PERIOD,
+} from '../../../../../../components/TemplateEditor'
+import {
     LOAD_OCP_IMAGES,
     clusterDetailsControlData,
     networkingControlData,
@@ -18,8 +19,17 @@ import {
     onChangeConnection,
     addSnoText,
     architectureData,
+    appendKlusterletAddonConfig,
+    insertToggleModalFunction,
+    onImageChange,
 } from './ControlDataHelpers'
+import { getControlByID } from '../../../../../../lib/temptifly-utils'
 import { DevPreviewLabel } from '../../../../../../components/TechPreviewAlert'
+import installConfigHbs from '../templates/install-config.hbs'
+import Handlebars from 'handlebars'
+import { CreateCredentialModal } from '../../../../../../components/CreateCredentialModal'
+
+const installConfig = Handlebars.compile(installConfigHbs)
 
 // Ideally, we should use aws-sdk and the connection credentials to fetch this information,
 // falling back to a pre-generated list if we can't connect.
@@ -86,7 +96,7 @@ export const awsGovRegions = {
 const setAWSZones = (control, controlData) => {
     const setZones = (poolKey, zoneKey) => {
         const region = control.active
-        const pool = controlData.find(({ id }) => id === poolKey)
+        const pool = getControlByID(controlData, poolKey)
         pool.active.forEach((worker) => {
             const typeZones = worker.find(({ id }) => id === zoneKey)
             const zones = awsRegions[region]
@@ -108,9 +118,17 @@ const updateWorkerZones = (control, controlData) => {
     typeZones.active = []
 }
 
-export const getControlDataAWS = (includeAutomation = true, includeAwsPrivate = true, includeSno = false) => {
-    if (includeSno) addSnoText(controlDataAWS)
-    let controlData = [...controlDataAWS]
+export const getControlDataAWS = (
+    handleModalToggle,
+    includeAutomation = true,
+    includeAwsPrivate = true,
+    includeSno = false,
+    includeKlusterletAddonConfig = true
+) => {
+    const controlData = [...controlDataAWS]
+    if (includeSno) {
+        addSnoText(controlData)
+    }
     if (includeAwsPrivate) {
         controlData.push(...awsPrivateControlData)
         const regionObject = controlData.find((object) => object.id === 'region')
@@ -119,7 +137,11 @@ export const getControlDataAWS = (includeAutomation = true, includeAwsPrivate = 
             regionObject.available = regionObject.available.concat(Object.keys(awsRegions))
         }
     }
-    if (includeAutomation) controlData.push(...automationControlData)
+    if (includeAutomation) {
+        controlData.push(...automationControlData)
+    }
+    appendKlusterletAddonConfig(includeKlusterletAddonConfig, controlData)
+    insertToggleModalFunction(handleModalToggle, controlData)
     return controlData
 }
 
@@ -661,6 +683,17 @@ const controlDataAWS = [
     ////////////////////////////////////////////////////////////////////////////////////
     ///////////////////////  connection  /////////////////////////////////////
     {
+        id: 'detailStep',
+        type: 'step',
+        title: 'Cluster details',
+    },
+    {
+        id: 'infrastructure',
+        name: 'Infrastructure',
+        active: 'AWS',
+        type: 'reviewinfo',
+    },
+    {
         name: 'creation.ocp.cloud.connection',
         tooltip: 'tooltip.creation.ocp.cloud.connection',
         id: 'connection',
@@ -672,8 +705,8 @@ const controlDataAWS = [
         },
         available: [],
         providerId: 'aws',
+        footer: <CreateCredentialModal />,
         onSelect: onChangeConnection,
-        prompts: CREATE_CLOUD_CONNECTION,
     },
     ...clusterDetailsControlData,
     ////////////////////////////////////////////////////////////////////////////////////
@@ -690,6 +723,7 @@ const controlDataAWS = [
             notification: 'creation.ocp.cluster.must.select.ocp.image',
             required: true,
         },
+        onSelect: onImageChange,
     },
     //Always Hidden
     {
@@ -714,6 +748,19 @@ const controlDataAWS = [
         type: 'labels',
         active: [],
         tip: 'Use labels to organize and place application subscriptions and policies on this cluster. The placement of resources are controlled by label selectors. If your cluster has the labels that match the resource placement’s label selector, the resource will be installed on your cluster after creation.',
+    },
+    {
+        id: 'infrastructure',
+        active: ['AWS'],
+        type: 'hidden',
+        hasReplacements: true,
+        availableMap: {
+            AWS: {
+                replacements: {
+                    'install-config': { template: installConfig, encode: true, newTab: true },
+                },
+            },
+        },
     },
 
     ////////////////////////////////////////////////////////////////////////////////////

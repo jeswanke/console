@@ -27,27 +27,15 @@ import {
     IAcmTableAction,
     IAcmTableColumn,
     ITableFilter,
-} from '@stolostron/ui-components'
+} from '../../../ui-components'
 import moment from 'moment'
 import { ReactNode, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { Link, useHistory } from 'react-router-dom'
-import { useRecoilState } from 'recoil'
-import {
-    channelsState,
-    helmReleaseState,
-    namespacesState,
-    placementBindingsState,
-    placementRulesState,
-    placementsState,
-    policyAutomationState,
-    policySetsState,
-    subscriptionsState,
-    usePolicies,
-} from '../../../atoms'
+import { useRecoilState, useSharedAtoms } from '../../../shared-recoil'
 import { BulkActionModel, IBulkActionModelProps } from '../../../components/BulkActionModel'
 import { useTranslation } from '../../../lib/acm-i18next'
 import { deletePolicy } from '../../../lib/delete-policy'
-import { checkPermission, rbacCreate, rbacUpdate } from '../../../lib/rbac-util'
+import { checkPermission, rbacCreate, rbacUpdate, rbacPatch } from '../../../lib/rbac-util'
 import { transformBrowserUrlToFilterPresets } from '../../../lib/urlQuery'
 import { NavigationPath } from '../../../NavigationPath'
 import {
@@ -81,6 +69,15 @@ export default function PoliciesPage() {
     const { t } = useTranslation()
     const unauthorizedMessage = t('rbac.unauthorized')
     const presets = transformBrowserUrlToFilterPresets(window.location.search)
+    const {
+        channelsState,
+        helmReleaseState,
+        namespacesState,
+        policyAutomationState,
+        policySetsState,
+        subscriptionsState,
+        usePolicies,
+    } = useSharedAtoms()
     const policies = usePolicies()
     const [helmReleases] = useRecoilState(helmReleaseState)
     const [subscriptions] = useRecoilState(subscriptionsState)
@@ -119,11 +116,13 @@ export default function PoliciesPage() {
     const policyClusterViolationsColumn = usePolicyViolationsColumn(policyClusterViolationSummaryMap)
     const [modal, setModal] = useState<ReactNode | undefined>()
     const [canCreatePolicy, setCanCreatePolicy] = useState<boolean>(false)
+    const [canPatchPolicy, setCanPatchPolicy] = useState<boolean>(false)
     const [canCreatePolicyAutomation, setCanCreatePolicyAutomation] = useState<boolean>(false)
     const [canUpdatePolicyAutomation, setCanUpdatePolicyAutomation] = useState<boolean>(false)
 
     useEffect(() => {
         checkPermission(rbacCreate(PolicyDefinition), setCanCreatePolicy, namespaces)
+        checkPermission(rbacPatch(PolicyDefinition), setCanPatchPolicy, namespaces)
         checkPermission(rbacCreate(PolicyAutomationDefinition), setCanCreatePolicyAutomation, namespaces)
         checkPermission(rbacUpdate(PolicyAutomationDefinition), setCanUpdatePolicyAutomation, namespaces)
     }, [namespaces])
@@ -373,6 +372,7 @@ export default function PoliciesPage() {
                     setModal(<AddToPolicySetModal policyTableItems={...item} onClose={() => setModal(undefined)} />)
                 },
                 tooltip: t('Add to policy set'),
+                isDisabled: !canPatchPolicy,
             },
             {
                 id: 'seperator-1',
@@ -420,6 +420,7 @@ export default function PoliciesPage() {
                                     }).length > 0,
                             })
                         },
+                        isDisabled: !canPatchPolicy,
                     },
                     {
                         variant: 'bulk-action',
@@ -458,6 +459,7 @@ export default function PoliciesPage() {
                                     }).length > 0,
                             })
                         },
+                        isDisabled: !canPatchPolicy,
                     },
                 ],
             },
@@ -507,6 +509,7 @@ export default function PoliciesPage() {
                                     }).length > 0,
                             })
                         },
+                        isDisabled: !canPatchPolicy,
                     },
                     {
                         variant: 'bulk-action',
@@ -545,11 +548,12 @@ export default function PoliciesPage() {
                                     }).length > 0,
                             })
                         },
+                        isDisabled: !canPatchPolicy,
                     },
                 ],
             },
         ],
-        [t, bulkModalStatusColumns, bulkModalRemediationColumns]
+        [t, bulkModalStatusColumns, bulkModalRemediationColumns, canPatchPolicy]
     )
 
     const getSourceOptions = useCallback(() => {
@@ -577,32 +581,62 @@ export default function PoliciesPage() {
                 label: 'Cluster violations',
                 options: [
                     {
-                        label: 'Without violations',
+                        label: t('Without violations'),
                         value: 'without-violations',
                     },
                     {
-                        label: 'With violations',
+                        label: t('With violations'),
                         value: 'with-violations',
                     },
                     {
-                        label: 'No status',
+                        label: t('Pending'),
+                        value: 'pending',
+                    },
+                    {
+                        label: t('No status'),
                         value: 'no-status',
                     },
                 ],
                 tableFilterFn: (selectedValues, item) => {
                     if (selectedValues.includes('with-violations')) {
-                        if (item.policy.status?.compliant === 'NonCompliant') {
-                            return true
+                        if (item.policy.status?.status !== undefined) {
+                            for (let i = 0; i < item.policy.status?.status.length; i++) {
+                                const cl = item.policy.status?.status[i]
+                                if (cl.compliant !== undefined && cl.compliant == 'NonCompliant') {
+                                    return true
+                                }
+                            }
                         }
                     }
                     if (selectedValues.includes('without-violations')) {
-                        if (item.policy.status?.compliant === 'Compliant') {
-                            return true
+                        if (item.policy.status?.status !== undefined) {
+                            for (let i = 0; i < item.policy.status?.status.length; i++) {
+                                const cl = item.policy.status?.status[i]
+                                if (cl.compliant !== undefined && cl.compliant == 'Compliant') {
+                                    return true
+                                }
+                            }
+                        }
+                    }
+                    if (selectedValues.includes('pending')) {
+                        if (item.policy.status?.status !== undefined) {
+                            for (let i = 0; i < item.policy.status?.status.length; i++) {
+                                const cl = item.policy.status?.status[i]
+                                if (cl.compliant !== undefined && cl.compliant == 'Pending') {
+                                    return true
+                                }
+                            }
                         }
                     }
                     if (selectedValues.includes('no-status')) {
-                        if (!item.policy.status?.compliant) {
+                        if (!item.policy.status?.status) {
                             return true
+                        }
+                        for (let i = 0; i < item.policy.status?.status.length; i++) {
+                            const cl = item.policy.status?.status[i]
+                            if (!cl.compliant) {
+                                return true
+                            }
                         }
                     }
                     return false
@@ -610,7 +644,7 @@ export default function PoliciesPage() {
             },
             {
                 id: 'namespace',
-                label: 'Namespace',
+                label: t('Namespace'),
                 options: namespaces.map((namespace) => ({
                     label: namespace.metadata.name,
                     value: namespace.metadata.name ?? '',
@@ -621,7 +655,7 @@ export default function PoliciesPage() {
             },
             {
                 id: 'source',
-                label: 'Source',
+                label: t('Source'),
                 options: getSourceOptions(),
                 tableFilterFn: (selectedValues, item) => {
                     let itemText = item.source as string
@@ -634,11 +668,11 @@ export default function PoliciesPage() {
             },
             {
                 id: 'remediation',
-                label: 'Remediation',
+                label: t('Remediation'),
                 options: [
-                    { label: 'Inform', value: 'inform' },
-                    { label: 'Enforce', value: 'enforce' },
-                    { label: 'Inform/Enforce', value: 'inform/enforce' },
+                    { label: t('Inform'), value: 'inform' },
+                    { label: t('Enforce'), value: 'enforce' },
+                    { label: t('Inform/Enforce'), value: 'inform/enforce' },
                 ],
                 tableFilterFn: (selectedValues, item) => {
                     const policyRemediation = getPolicyRemediation(item.policy)
@@ -647,14 +681,14 @@ export default function PoliciesPage() {
             },
             {
                 id: 'enabled',
-                label: 'Enabled',
+                label: t('Enabled'),
                 options: [
                     {
-                        label: 'True',
+                        label: t('True'),
                         value: 'True',
                     },
                     {
-                        label: 'False',
+                        label: t('False'),
                         value: 'False',
                     },
                 ],
@@ -681,7 +715,7 @@ export default function PoliciesPage() {
     }
 
     return (
-        <PageSection isWidthLimited>
+        <PageSection>
             {modal !== undefined && modal}
             <BulkActionModel<PolicyTableItem> {...modalProps} />
             <AcmTable<PolicyTableItem>
@@ -700,7 +734,7 @@ export default function PoliciesPage() {
                         tooltip: !canCreatePolicy ? unauthorizedMessage : '',
                         variant: ButtonVariant.primary,
                         id: 'create',
-                        title: 'Create policy',
+                        title: t('Create policy'),
                         click: () => history.push(NavigationPath.createPolicy),
                     },
                 ]}
@@ -719,19 +753,19 @@ export default function PoliciesPage() {
                                         <div style={{ marginLeft: 106, marginTop: '20px', marginBottom: '20px' }}>
                                             <DescriptionList isAutoFit isAutoColumnWidths>
                                                 <DescriptionListGroup>
-                                                    <DescriptionListTerm>{'Standards'}</DescriptionListTerm>
+                                                    <DescriptionListTerm>{t('Standards')}</DescriptionListTerm>
                                                     <DescriptionListDescription>
                                                         {standards ?? '-'}
                                                     </DescriptionListDescription>
                                                 </DescriptionListGroup>
                                                 <DescriptionListGroup>
-                                                    <DescriptionListTerm>{'Controls'}</DescriptionListTerm>
+                                                    <DescriptionListTerm>{t('Controls')}</DescriptionListTerm>
                                                     <DescriptionListDescription>
                                                         {controls ?? '-'}
                                                     </DescriptionListDescription>
                                                 </DescriptionListGroup>
                                                 <DescriptionListGroup>
-                                                    <DescriptionListTerm>{'Categories'}</DescriptionListTerm>
+                                                    <DescriptionListTerm>{t('Categories')}</DescriptionListTerm>
                                                     <DescriptionListDescription>
                                                         {categories ?? '-'}
                                                     </DescriptionListDescription>
@@ -760,6 +794,7 @@ function usePolicyViolationsColumn(
             if (
                 clusterViolationSummary.compliant ||
                 clusterViolationSummary.noncompliant ||
+                clusterViolationSummary.pending ||
                 clusterViolationSummary.unknown
             ) {
                 return (
@@ -770,6 +805,10 @@ function usePolicyViolationsColumn(
                             .replace(':name', item.policy.metadata?.name ?? '')}?sort=-1`}
                         noncompliant={clusterViolationSummary.noncompliant}
                         violationHref={`${NavigationPath.policyDetailsResults
+                            .replace(':namespace', item.policy.metadata?.namespace ?? '')
+                            .replace(':name', item.policy.metadata?.name ?? '')}?sort=1`}
+                        pending={clusterViolationSummary.pending}
+                        pendingHref={`${NavigationPath.policyDetailsResults
                             .replace(':namespace', item.policy.metadata?.namespace ?? '')
                             .replace(':name', item.policy.metadata?.name ?? '')}?sort=1`}
                         unknown={clusterViolationSummary.unknown}
@@ -796,6 +835,7 @@ function usePolicyViolationsColumn(
 
 export function AddToPolicySetModal(props: { policyTableItems: PolicyTableItem[]; onClose: () => void }) {
     const { t } = useTranslation()
+    const { policySetsState } = useSharedAtoms()
     const [policySets] = useRecoilState(policySetsState)
     const namespace = useMemo(() => namespaceCheck(props.policyTableItems), [props.policyTableItems])
     const namespacedPolicySets = useMemo(
@@ -918,7 +958,7 @@ export function AddToPolicySetModal(props: { policyTableItems: PolicyTableItem[]
                             label=""
                             onChange={(key) => setSelectedPolicySetUid(key)}
                             value={selectedPolicySetUid}
-                            placeholder={'Select a policy set'}
+                            placeholder={t('Select a policy set')}
                         >
                             {namespacedPolicySets.map((ps) => (
                                 <SelectOption key={ps.metadata.uid} value={ps.metadata.uid}>
@@ -948,6 +988,7 @@ export function AddToPolicySetModal(props: { policyTableItems: PolicyTableItem[]
 
 export function DeletePolicyModal(props: { item: PolicyTableItem; onClose: () => void }) {
     const { t } = useTranslation()
+    const { placementBindingsState, placementRulesState, placementsState } = useSharedAtoms()
     const [deletePlacements, setDeletePlacements] = useState(true)
     const [deletePlacementBindings, setDeletePlacementBindings] = useState(true)
     const [placements] = useRecoilState(placementsState)
@@ -1026,6 +1067,18 @@ export function DeletePolicyModal(props: { item: PolicyTableItem; onClose: () =>
                         />
                     </StackItem>
                 ) : null}
+                {policyHasDeletePruneBehavior(props.item.policy) ? (
+                    <StackItem>
+                        <AcmAlert
+                            variant="warning"
+                            title={t('Some policies have the Prune parameter set.')}
+                            message={t(
+                                'Deleting this policy might delete some related objects on the managed cluster(s).'
+                            )}
+                            isInline
+                        />
+                    </StackItem>
+                ) : null}
                 {error && (
                     <StackItem>
                         <Alert variant="danger" title={error} isInline />
@@ -1034,4 +1087,22 @@ export function DeletePolicyModal(props: { item: PolicyTableItem; onClose: () =>
             </Stack>
         </Modal>
     )
+}
+
+function policyHasDeletePruneBehavior(policy: Policy) {
+    if (policy.spec.disabled || policy.spec.remediationAction?.endsWith('nform')) {
+        return false
+    }
+    return policy.spec['policy-templates']?.some((tmpl) => {
+        if (
+            tmpl.objectDefinition.kind !== 'ConfigurationPolicy' ||
+            !tmpl.objectDefinition.spec.pruneObjectBehavior?.startsWith('Delete')
+        ) {
+            return false
+        }
+        return (
+            policy.spec.remediationAction?.endsWith('nforce') ||
+            tmpl.objectDefinition.spec.remediationAction?.endsWith('nforce')
+        )
+    })
 }

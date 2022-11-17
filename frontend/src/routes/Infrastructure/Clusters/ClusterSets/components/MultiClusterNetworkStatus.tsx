@@ -1,12 +1,11 @@
 /* Copyright Contributors to the Open Cluster Management project */
 
 import { ManagedClusterSet } from '../../../../../resources'
-import { AcmButton, AcmInlineStatus, StatusType } from '@stolostron/ui-components'
+import { AcmButton, AcmInlineStatus, StatusType } from '../../../../../ui-components'
 import { Popover } from '@patternfly/react-core'
 import { useTranslation } from '../../../../../lib/acm-i18next'
 import { Link } from 'react-router-dom'
-import { useRecoilState } from 'recoil'
-import { managedClusterAddonsState } from '../../../../../atoms'
+import { useRecoilState, useSharedAtoms } from '../../../../../shared-recoil'
 import { NavigationPath } from '../../../../../NavigationPath'
 import { submarinerHealthCheck, SubmarinerStatus } from '../ClusterSetDetails/ClusterSetSubmariner/ClusterSetSubmariner'
 import { useClusters } from './useClusters'
@@ -14,6 +13,7 @@ import { useClusters } from './useClusters'
 export function MultiClusterNetworkStatus(props: { clusterSet: ManagedClusterSet }) {
     const { t } = useTranslation()
     const { clusterSet } = props
+    const { managedClusterAddonsState } = useSharedAtoms()
     const [managedClusterAddons] = useRecoilState(managedClusterAddonsState)
 
     const clusters = useClusters(clusterSet)

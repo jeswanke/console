@@ -1,18 +1,23 @@
 /* Copyright Contributors to the Open Cluster Management project */
+/* istanbul ignore file */
 import { Redirect, Route, Switch } from 'react-router-dom'
 import { NavigationPath } from '../../../NavigationPath'
-import CreateClusterPoolPage from './ClusterPools/CreateClusterPool/CreateClusterPool'
+import { CreateClusterPoolPage } from './ClusterPools/CreateClusterPoolPage'
 import ClusterSetDetailsPage from './ClusterSets/ClusterSetDetails/ClusterSetDetails'
 import { ClustersPage } from './ClustersPage'
 import DiscoveryConfigPage from './DiscoveredClusters/DiscoveryConfig/DiscoveryConfig'
 import ClusterDetailsPage from './ManagedClusters/ClusterDetails/ClusterDetails'
 import EditAICluster from './ManagedClusters/components/cim/EditAICluster'
-import CreateClusterPage from './ManagedClusters/CreateCluster/CreateCluster'
+import { CreateClusterPage } from './ManagedClusters/CreateClusterPage'
+import { CreateControlPlane } from './ManagedClusters/CreateClusterCatalog/CreateControlPlane'
+import { CreateDiscoverHost } from './ManagedClusters/CreateClusterCatalog/CreateDiscoverHost'
 import ImportClusterPage from './ManagedClusters/ImportCluster/ImportCluster'
 
 export default function Clusters() {
     return (
         <Switch>
+            <Route exact path={NavigationPath.createControlPlane} component={CreateControlPlane} />
+            <Route exact path={NavigationPath.createDiscoverHost} component={CreateDiscoverHost} />
             <Route exact path={NavigationPath.createCluster} component={CreateClusterPage} />
             <Route exact path={NavigationPath.importCluster} component={ImportClusterPage} />
             <Route path={NavigationPath.clusterDetails} component={ClusterDetailsPage} />

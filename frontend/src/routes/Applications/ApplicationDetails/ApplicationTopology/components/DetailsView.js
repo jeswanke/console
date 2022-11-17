@@ -13,7 +13,7 @@
 
 import _ from 'lodash'
 import R from 'ramda'
-import React, { Fragment } from 'react'
+import { Component, Fragment } from 'react'
 import PropTypes from 'prop-types'
 import classNames from 'classnames'
 import { Button, Spinner, Tabs, Tab, TabTitleText } from '@patternfly/react-core'
@@ -41,7 +41,7 @@ DetailsViewDecorator.propTypes = {
     shape: PropTypes.string,
 }
 
-class DetailsView extends React.Component {
+class DetailsView extends Component {
     constructor(props) {
         super(props)
         this.toggleLinkLoading = this.toggleLinkLoading.bind(this)
@@ -186,13 +186,15 @@ class DetailsView extends React.Component {
     renderTabs(node) {
         const { t } = this.props
         const isLogTabHidden = node.type !== 'pod'
+        const isYAMLTabHidden =
+            node.type === 'cluster' || node.type === 'ocpapplication' || node.type === 'fluxapplication'
         const { activeTabKey } = this.state
 
         return (
             <Tabs activeKey={activeTabKey} onSelect={this.handleTabClick} mountOnEnter={true} unmountOnExit={true}>
                 <Tab eventKey={0} title={<TabTitleText>{t('Details')}</TabTitleText>} isHidden={false} />
                 <Tab eventKey={1} title={<TabTitleText>{t('Logs')}</TabTitleText>} isHidden={isLogTabHidden} />
-                <Tab eventKey={2} title={<TabTitleText>{t('YAML')}</TabTitleText>} isHidden={node.type === 'cluster'} />
+                <Tab eventKey={2} title={<TabTitleText>{t('YAML')}</TabTitleText>} isHidden={isYAMLTabHidden} />
             </Tabs>
         )
     }

@@ -44,12 +44,45 @@ export async function waitForInputByText(text: string, index?: number) {
     }
 }
 
+export async function waitForInputByTitle(title: string, index?: number) {
+    if (index !== undefined) {
+        await waitFor(() => expect(screen.getAllByTitle(title).length).toBeGreaterThan(index), options)
+        await waitFor(() => expect(screen.getAllByTitle(title)[index]).not.toBeDisabled(), options)
+        await waitFor(
+            () =>
+                expect(
+                    (screen.getAllByTitle(title)[index] as HTMLInputElement).getAttribute('aria-disabled')
+                ).not.toEqual('true'),
+            options
+        )
+    } else {
+        await waitFor(() => expect(screen.getByTitle(title)).toBeDefined(), options)
+        await waitFor(() => expect(screen.getByTitle(title)).not.toBeDisabled(), options)
+        await waitFor(
+            () =>
+                expect((screen.getByTitle(title) as HTMLInputElement).getAttribute('aria-disabled')).not.toEqual(
+                    'true'
+                ),
+            options
+        )
+    }
+}
+
 export async function clickByText(text: string, index?: number) {
     await waitForInputByText(text, index)
     if (index !== undefined) {
         userEvent.click(screen.getAllByText(text)[index])
     } else {
         userEvent.click(screen.getByText(text))
+    }
+}
+
+export async function clickByTitle(title: string, index?: number) {
+    await waitForInputByTitle(title, index)
+    if (index !== undefined) {
+        userEvent.click(screen.getAllByTitle(title)[index])
+    } else {
+        userEvent.click(screen.getByTitle(title))
     }
 }
 
@@ -190,6 +223,15 @@ export async function typeByTestId(id: string, type: string, index?: number) {
     }
 }
 
+export async function clearByTestId(id: string, index?: number) {
+    await waitForInputByTestId(id, index)
+    if (index !== undefined) {
+        userEvent.clear(screen.getAllByTestId(id)[index])
+    } else {
+        userEvent.clear(screen.getByTestId(id))
+    }
+}
+
 // By Label Text
 
 export async function waitForLabelText(text: string, multipleAllowed?: boolean) {
@@ -321,5 +363,10 @@ export async function clickRowAction(row: number, text: string) {
 
 export async function selectByText(placeholdText: string, text: string) {
     await clickByPlaceholderText(placeholdText)
+    await clickByText(text)
+}
+
+export async function clickHostAction(text: string) {
+    await clickByText('Add hosts')
     await clickByText(text)
 }

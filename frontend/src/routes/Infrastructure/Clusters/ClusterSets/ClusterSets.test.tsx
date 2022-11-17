@@ -1,6 +1,7 @@
 /* Copyright Contributors to the Open Cluster Management project */
 
 import { render } from '@testing-library/react'
+import { screen } from '@testing-library/dom'
 import { MemoryRouter } from 'react-router-dom'
 import { RecoilRoot } from 'recoil'
 import {
@@ -10,9 +11,9 @@ import {
     managedClusterSetsState,
     managedClustersState,
 } from '../../../../atoms'
-import { nockCreate, nockDelete, nockIgnoreRBAC } from '../../../../lib/nock-util'
+import { nockCreate, nockDelete, nockIgnoreApiPaths, nockIgnoreRBAC } from '../../../../lib/nock-util'
 import { PluginContext } from '../../../../lib/PluginContext'
-import { mockManagedClusterSet } from '../../../../lib/test-metadata'
+import { mockManagedClusterSet, mockGlobalClusterSet } from '../../../../lib/test-metadata'
 import {
     clickBulkAction,
     clickByText,
@@ -29,11 +30,12 @@ import {
     mockManagedClusters,
 } from '../ManagedClusters/ManagedClusters.test'
 import ClusterSetsPage from './ClusterSets'
+import { PluginDataContext } from '../../../../lib/PluginDataContext'
 
 const Component = () => (
     <RecoilRoot
         initializeState={(snapshot) => {
-            snapshot.set(managedClusterSetsState, [mockManagedClusterSet])
+            snapshot.set(managedClusterSetsState, [mockManagedClusterSet, mockGlobalClusterSet])
             snapshot.set(clusterDeploymentsState, mockClusterDeployments)
             snapshot.set(managedClusterInfosState, mockManagedClusterInfos)
             snapshot.set(managedClustersState, mockManagedClusters)
@@ -53,8 +55,8 @@ describe('ClusterSets page', () => {
     })
     test('renders', async () => {
         await waitForText(mockManagedClusterSet.metadata.name!)
+        await waitForText(mockGlobalClusterSet.metadata.name!)
         await waitForText('Submariner')
-        await waitForText('Multi-cluster network status')
     })
     test('can create a managed cluster set', async () => {
         await clickByText('Create cluster set')
@@ -67,19 +69,27 @@ describe('ClusterSets page', () => {
     })
     test('can delete managed cluster sets with bulk actions', async () => {
         const nock = nockDelete(mockManagedClusterSet)
-        await selectTableRow(1)
+        await selectTableRow(2)
         await clickBulkAction('Delete cluster sets')
         await typeByText('Confirm by typing "confirm" below:', 'confirm')
         await clickByText('Delete')
         await waitForNock(nock)
+    })
+    test('cannot delete global cluster sets with bulk actions', async () => {
+        expect(
+            screen.getByRole('checkbox', {
+                name: /select row 0/i,
+            })
+        ).toBeDisabled()
     })
 })
 
 describe('ClusterSets page without Submariner', () => {
     beforeEach(() => {
         nockIgnoreRBAC()
+        nockIgnoreApiPaths()
         render(
-            <PluginContext.Provider value={{ isSubmarinerAvailable: false }}>
+            <PluginContext.Provider value={{ isSubmarinerAvailable: false, dataContext: PluginDataContext }}>
                 <Component />
             </PluginContext.Provider>
         )
@@ -87,6 +97,5 @@ describe('ClusterSets page without Submariner', () => {
     test('renders', async () => {
         await waitForText(mockManagedClusterSet.metadata.name!)
         await waitForNotText('Submariner')
-        await waitForNotText('Multi-cluster network status')
     })
 })

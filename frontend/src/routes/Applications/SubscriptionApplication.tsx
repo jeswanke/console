@@ -1,26 +1,24 @@
 /* Copyright Contributors to the Open Cluster Management project */
-import { PageSection } from '@patternfly/react-core'
-import { AcmErrorBoundary, AcmPage, AcmPageContent, AcmPageHeader, AcmToastContext } from '@stolostron/ui-components'
+import { Modal, ModalVariant, PageSection } from '@patternfly/react-core'
+import {
+    AcmErrorBoundary,
+    AcmPage,
+    AcmPageContent,
+    AcmPageHeader,
+    AcmToastContext,
+    Provider,
+} from '../../ui-components'
 import Handlebars from 'handlebars'
 import { Location } from 'history'
 import _ from 'lodash'
 import 'monaco-editor/esm/vs/basic-languages/yaml/yaml.contribution.js'
 import 'monaco-editor/esm/vs/editor/editor.all.js'
-import { Dispatch, SetStateAction, useContext, useEffect, useState } from 'react'
+import { Dispatch, SetStateAction, useCallback, useContext, useEffect, useState } from 'react'
 // include monaco editor
 import MonacoEditor from 'react-monaco-editor'
 import { useHistory, useLocation } from 'react-router-dom'
-import { useRecoilState } from 'recoil'
-import TemplateEditor from 'temptifly'
-import 'temptifly/dist/styles.css'
-import {
-    ansibleJobState,
-    applicationsState,
-    channelsState,
-    placementRulesState,
-    secretsState,
-    subscriptionsState,
-} from '../../atoms'
+import { useRecoilState, useSharedAtoms } from '../../shared-recoil'
+import TemplateEditor from '../../components/TemplateEditor'
 import { getErrorInfo } from '../../components/ErrorPage'
 import { useTranslation } from '../../lib/acm-i18next'
 import { useSearchParams } from '../../lib/search'
@@ -32,11 +30,12 @@ import {
     ProviderConnectionApiVersion,
     ProviderConnectionKind,
     reconcileResources,
+    Secret,
     SubscriptionKind,
     unpackProviderConnection,
     updateAppResources,
 } from '../../resources'
-import '../Applications/CreateApplication/Subscription/style.css'
+import './style.css'
 import { getApplicationResources } from '../Applications/CreateApplication/Subscription/transformers/transform-data-to-resources'
 import { getApplication } from './ApplicationDetails/ApplicationTopology/model/application'
 // Template Data
@@ -47,6 +46,10 @@ import helmTemplate from './CreateApplication/Subscription/templates/templateHel
 import ObjTemplate from './CreateApplication/Subscription/templates/templateObjectStore.hbs'
 import otherTemplate from './CreateApplication/Subscription/templates/templateOther.hbs'
 import placementTemplate from './CreateApplication/Subscription/templates/templatePlacement.hbs'
+import { useAllClusters } from '../Infrastructure/Clusters/ManagedClusters/components/useAllClusters'
+import { CredentialsForm } from '../Credentials/CredentialsForm'
+import { GetProjects } from '../../components/GetProjects'
+import { setAvailableConnections } from '../Infrastructure/Clusters/ManagedClusters/CreateCluster/controlData/ControlDataHelpers'
 
 interface CreationStatus {
     status: string
@@ -63,6 +66,38 @@ const Portals = Object.freeze({
 export default function CreateSubscriptionApplicationPage() {
     const { t } = useTranslation()
     const [title, setTitle] = useState<string>(t('Create application'))
+    const [isModalOpen, setIsModalOpen] = useState(false)
+    const [newSecret, setNewSecret] = useState<Secret>()
+    const { secretsState } = useSharedAtoms()
+    const [secrets] = useRecoilState(secretsState)
+    const { projects } = GetProjects()
+
+    const onControlChange = useCallback(
+        (control: any) => {
+            if (control.id === 'connection') {
+                if (newSecret && control.setActive) {
+                    control.setActive(newSecret.metadata.name)
+                }
+            }
+        },
+        [newSecret]
+    )
+
+    // if a connection is added outside of wizard, add it to connection selection
+    const [connectionControl, setConnectionControl] = useState()
+    useEffect(() => {
+        if (connectionControl) {
+            setAvailableConnections(
+                connectionControl,
+                secrets.filter(
+                    (secret) =>
+                        !secret.metadata.labels?.['cluster.open-cluster-management.io/copiedFromNamespace'] ||
+                        !secret.metadata.labels?.['cluster.open-cluster-management.io/copiedFromSecretName']
+                )
+            )
+            onControlChange(connectionControl)
+        }
+    }, [connectionControl, onControlChange, secrets])
 
     // create portals for buttons in header
     const switches = (
@@ -78,6 +113,10 @@ export default function CreateSubscriptionApplicationPage() {
         </div>
     )
 
+    const handleModalToggle = () => {
+        setIsModalOpen(!isModalOpen)
+    }
+
     return (
         <AcmPage
             header={
@@ -92,7 +131,31 @@ export default function CreateSubscriptionApplicationPage() {
             <AcmErrorBoundary>
                 <AcmPageContent id="create-cluster-pool">
                     <PageSection variant="light" type="wizard">
-                        {CreateSubscriptionApplication(setTitle)}
+                        <Modal
+                            variant={ModalVariant.large}
+                            showClose={false}
+                            isOpen={isModalOpen}
+                            aria-labelledby="modal-wizard-label"
+                            aria-describedby="modal-wizard-description"
+                            onClose={handleModalToggle}
+                            hasNoBodyWrapper
+                        >
+                            <CredentialsForm
+                                namespaces={projects}
+                                isEditing={false}
+                                isViewing={false}
+                                credentialsType={Provider.ansible}
+                                handleModalToggle={handleModalToggle}
+                                hideYaml={true}
+                                newCredentialCallback={setNewSecret}
+                            />
+                        </Modal>
+                        {CreateSubscriptionApplication(
+                            setTitle,
+                            handleModalToggle,
+                            setConnectionControl,
+                            onControlChange
+                        )}
                     </PageSection>
                 </AcmPageContent>
             </AcmErrorBoundary>
@@ -100,26 +163,29 @@ export default function CreateSubscriptionApplicationPage() {
     )
 }
 
-export function CreateSubscriptionApplication(setTitle: Dispatch<SetStateAction<string>>) {
+export function CreateSubscriptionApplication(
+    setTitle: Dispatch<SetStateAction<string>>,
+    handleModalToggle: () => void,
+    setConnectionControl: Dispatch<SetStateAction<undefined>>,
+    onControlChange: (control: any) => void
+) {
     const history = useHistory()
     const { t } = useTranslation()
+    const { ansibleJobState, applicationsState, channelsState, placementRulesState, secretsState, subscriptionsState } =
+        useSharedAtoms()
     const toastContext = useContext(AcmToastContext)
-    const [controlData, setControlData] = useState<any>('')
     const [secrets] = useRecoilState(secretsState)
     const providerConnections = secrets.map(unpackProviderConnection)
     const ansibleCredentials = providerConnections.filter(
         (providerConnection) =>
             providerConnection.metadata?.labels?.['cluster.open-cluster-management.io/type'] === 'ans'
     )
-    useEffect(() => {
-        getControlData()
-            .then((cd) => {
-                setControlData(cd)
-            })
-            .catch((err) => {
-                return err
-            })
-    }, [])
+
+    const clusters = useAllClusters()
+    const localCluster = clusters.find(
+        (cluster) => cluster.name === 'local-cluster' && cluster.isManaged && cluster.status === 'ready'
+    )
+    const isLocalCluster = localCluster ? true : false
 
     // create button
     const [creationStatus, setCreationStatus] = useState<CreationStatus>()
@@ -336,6 +402,14 @@ export function CreateSubscriptionApplication(setTitle: Dispatch<SetStateAction<
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
+    function onControlInitialize(control: any) {
+        switch (control.id) {
+            case 'connection':
+                setConnectionControl(control)
+                break
+        }
+    }
+
     useEffect(() => {
         if (editApplication) {
             const { selectedAppName } = editApplication
@@ -354,17 +428,18 @@ export function CreateSubscriptionApplication(setTitle: Dispatch<SetStateAction<
     const isFetchControl = editApplication ? fetchControl : true
 
     return (
-        controlData &&
         isFetchControl && (
             <TemplateEditor
                 type={'application'}
                 title={t('application.create.yaml')}
                 monacoEditor={<MonacoEditor />}
-                controlData={controlData}
+                controlData={getControlData(isLocalCluster, handleModalToggle)}
                 template={template}
                 portals={Portals}
                 fetchControl={fetchControl}
                 createControl={createControl}
+                onControlInitialize={onControlInitialize}
+                onControlChange={onControlChange}
                 logging={process.env.NODE_ENV !== 'production'}
                 i18n={t}
             />

@@ -2,6 +2,7 @@
 import { IResourceDefinition } from '.'
 import { Metadata } from './metadata'
 import { ResourceRef } from './resource-ref'
+import { MatchExpressions } from './selector'
 
 export const PolicyApiVersion = 'policy.open-cluster-management.io/v1'
 export type PolicyApiVersionType = 'policy.open-cluster-management.io/v1'
@@ -21,10 +22,10 @@ export interface Policy {
     spec: {
         disabled: boolean
         'policy-templates'?: PolicyTemplate[]
-        remediationAction: string
+        remediationAction?: string
     }
     status?: {
-        compliant?: 'Compliant' | 'NonCompliant'
+        compliant?: 'Compliant' | 'NonCompliant' | 'Pending'
         details?: PolicyStatusDetails[]
         placement?: { placementBinding: string; placementRule?: string; placement?: string; policySet?: string }[]
         status?: { clustername: string; clusternamespace: string; compliant?: string }[]
@@ -37,8 +38,13 @@ export interface PolicyTemplate {
         kind: string
         metadata: { name: string }
         spec: {
-            namespaceSelector: { exclude?: string[]; include?: string[] }
-            objecttemplates?: {
+            namespaceSelector?: {
+                exclude?: string[]
+                include?: string[]
+                matchLabels?: Record<string, string>
+                matchExpressions?: MatchExpressions[]
+            }
+            'object-templates'?: {
                 complianceType: string
                 objectDefinition: {
                     apiVersion: string
@@ -52,6 +58,7 @@ export interface PolicyTemplate {
             remediationAction: string
             severity: string
             maxClusterRoleBindingUsers?: number
+            pruneObjectBehavior?: string
         }
     }
 }

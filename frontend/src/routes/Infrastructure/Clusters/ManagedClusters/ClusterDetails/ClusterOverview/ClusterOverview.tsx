@@ -11,10 +11,11 @@ import {
     AcmPageContent,
     StatusType,
     Provider,
-} from '@stolostron/ui-components'
-import { ButtonVariant, PageSection, Popover } from '@patternfly/react-core'
+    AcmAlert,
+} from '../../../../../../ui-components'
+import { AlertVariant, ButtonVariant, PageSection, Popover } from '@patternfly/react-core'
 import { ExternalLinkAltIcon, OutlinedQuestionCircleIcon, PencilAltIcon } from '@patternfly/react-icons'
-import React, { useContext, useState } from 'react'
+import { useContext, useState } from 'react'
 import { Trans, useTranslation } from '../../../../../../lib/acm-i18next'
 import { Link } from 'react-router-dom'
 import { CIM } from 'openshift-assisted-ui-lib'
@@ -33,14 +34,42 @@ import { StatusField } from '../../components/StatusField'
 import { StatusSummaryCount } from '../../components/StatusSummaryCount'
 import { ClusterContext } from '../ClusterDetails'
 import AIClusterDetails from '../../components/cim/AIClusterDetails'
+import AIHypershiftClusterDetails from '../../components/cim/AIHypershiftClusterDetails'
+import HypershiftClusterDetails from '../../components/HypershiftClusterDetails'
+import HypershiftKubeAPI from './HypershiftKubeAPI'
+import { HypershiftImportCommand } from '../../components/HypershiftImportCommand'
+import TemplateSummaryModal from '../../../../../../components/TemplateSummaryModal'
+import { HostedClusterK8sResource } from 'openshift-assisted-ui-lib/cim'
 
 const { getClusterProperties } = CIM
 
-export function ClusterOverviewPageContent(props: { canGetSecret?: boolean }) {
-    const { cluster, clusterCurator, clusterDeployment, agentClusterInstall } = useContext(ClusterContext)
+export function ClusterOverviewPageContent(props: {
+    canGetSecret?: boolean
+    selectedHostedClusterResource?: HostedClusterK8sResource
+}) {
+    const { cluster, clusterCurator, clusterDeployment, agentClusterInstall, hostedCluster } =
+        useContext(ClusterContext)
     const { t } = useTranslation()
     const [showEditLabels, setShowEditLabels] = useState<boolean>(false)
     const [showChannelSelectModal, setShowChannelSelectModal] = useState<boolean>(false)
+    const [curatorSummaryModalIsOpen, setCuratorSummaryModalIsOpen] = useState<boolean>(false)
+
+    const renderControlPlaneType = () => {
+        if (cluster?.name === 'local-cluster') {
+            return t('Hub')
+        }
+        if (cluster?.isRegionalHubCluster) {
+            if (cluster?.isHostedCluster || cluster?.isHypershift) {
+                return t('Hub, Hosted')
+            }
+            return t('Hub')
+        }
+        if (cluster?.isHostedCluster || cluster?.isHypershift) {
+            return t('Hosted')
+        } else {
+            return t('Standalone')
+        }
+    }
 
     const clusterProperties: { [key: string]: { key: string; value?: React.ReactNode; keyAction?: React.ReactNode } } =
         {
@@ -60,6 +89,10 @@ export function ClusterOverviewPageContent(props: { canGetSecret?: boolean }) {
                         </Popover>
                     </span>
                 ),
+            },
+            clusterControlPlaneType: {
+                key: t('table.clusterControlPlaneType'),
+                value: renderControlPlaneType(),
             },
             clusterClaim: {
                 key: t('table.clusterClaim'),
@@ -89,7 +122,11 @@ export function ClusterOverviewPageContent(props: { canGetSecret?: boolean }) {
             distribution: {
                 key: t('table.distribution'),
                 value: cluster?.distribution?.displayVersion && (
-                    <DistributionField cluster={cluster} clusterCurator={clusterCurator} />
+                    <DistributionField
+                        cluster={cluster}
+                        clusterCurator={clusterCurator}
+                        hostedCluster={hostedCluster}
+                    />
                 ),
             },
             channel: {
@@ -135,6 +172,40 @@ export function ClusterOverviewPageContent(props: { canGetSecret?: boolean }) {
                     </RbacButton>
                 ),
             },
+            acmDistribution: {
+                key: t('table.acm.distribution'),
+                value: (
+                    <span>
+                        {cluster?.acmDistribution?.version}
+                        <Popover
+                            bodyContent={
+                                <Trans i18nKey="table.acm.distribution.helperText" components={{ bold: <strong /> }} />
+                            }
+                        >
+                            <AcmButton variant="link" style={{ paddingLeft: '6px' }}>
+                                <OutlinedQuestionCircleIcon />
+                            </AcmButton>
+                        </Popover>
+                    </span>
+                ),
+            },
+            acmChannel: {
+                key: t('table.acm.channel'),
+                value: (
+                    <span>
+                        {cluster?.acmDistribution?.channel}
+                        <Popover
+                            bodyContent={
+                                <Trans i18nKey="table.acm.channel.helperText" components={{ bold: <strong /> }} />
+                            }
+                        >
+                            <AcmButton variant="link" style={{ paddingLeft: '6px' }}>
+                                <OutlinedQuestionCircleIcon />
+                            </AcmButton>
+                        </Popover>
+                    </span>
+                ),
+            },
             labels: {
                 key: t('table.labels'),
                 value: cluster?.labels && <AcmLabels labels={cluster?.labels} />,
@@ -151,7 +222,11 @@ export function ClusterOverviewPageContent(props: { canGetSecret?: boolean }) {
             },
             kubeApiServer: {
                 key: t('table.kubeApiServer'),
-                value: cluster?.kubeApiServer && <AcmInlineCopy text={cluster?.kubeApiServer} id="kube-api-server" />,
+                value: cluster?.kubeApiServer ? (
+                    <AcmInlineCopy text={cluster?.kubeApiServer} id="kube-api-server" />
+                ) : cluster?.isHypershift && hostedCluster ? (
+                    <HypershiftKubeAPI />
+                ) : undefined,
             },
             consoleUrl: {
                 key: t('table.consoleUrl'),
@@ -166,6 +241,21 @@ export function ClusterOverviewPageContent(props: { canGetSecret?: boolean }) {
                         iconPosition="right"
                     >
                         {cluster?.consoleURL}
+                    </AcmButton>
+                ),
+            },
+            acmConsoleUrl: {
+                key: t('table.acm.consoleUrl'),
+                value: cluster?.acmConsoleURL && (
+                    <AcmButton
+                        variant="link"
+                        isInline
+                        onClick={() => window.open(cluster.acmConsoleURL, '_blank')}
+                        tooltip={t('table.acm.consoleUrl.helperText')}
+                        icon={<ExternalLinkAltIcon />}
+                        iconPosition="right"
+                    >
+                        {cluster?.acmConsoleURL}
                     </AcmButton>
                 ),
             },
@@ -204,10 +294,19 @@ export function ClusterOverviewPageContent(props: { canGetSecret?: boolean }) {
                 key: t('table.clusterPool'),
                 value: cluster?.hive?.clusterPool,
             },
+            automationTemplate: {
+                key: t('Automation template'),
+                value: clusterCurator && (
+                    <AcmButton variant="link" isInline onClick={() => setCuratorSummaryModalIsOpen(true)}>
+                        {t('View template')}
+                    </AcmButton>
+                ),
+            },
         }
 
     let leftItems = [
         clusterProperties.clusterName,
+        clusterProperties.clusterControlPlaneType,
         clusterProperties.clusterClaim,
         clusterProperties.status,
         clusterProperties.provider,
@@ -222,6 +321,7 @@ export function ClusterOverviewPageContent(props: { canGetSecret?: boolean }) {
         clusterProperties.claimedBy,
         clusterProperties.clusterSet,
         clusterProperties.clusterPool,
+        clusterProperties.automationTemplate,
     ]
 
     // should only show channel for ocp clusters with version
@@ -229,9 +329,12 @@ export function ClusterOverviewPageContent(props: { canGetSecret?: boolean }) {
         leftItems.splice(5, 0, clusterProperties.channel)
     }
 
-    const isHybrid = cluster?.provider === Provider.hybrid
-
-    if (isHybrid && !!(clusterDeployment && agentClusterInstall)) {
+    if (
+        cluster?.provider === Provider.hostinventory &&
+        !cluster?.isHypershift &&
+        clusterDeployment &&
+        agentClusterInstall
+    ) {
         const aiClusterProperties = getClusterProperties(clusterDeployment, agentClusterInstall)
 
         leftItems = [
@@ -253,12 +356,74 @@ export function ClusterOverviewPageContent(props: { canGetSecret?: boolean }) {
             aiClusterProperties.serviceNetworkCidr,
         ]
     }
+
+    if (cluster?.isHypershift) {
+        leftItems = [
+            clusterProperties.clusterName,
+            clusterProperties.clusterControlPlaneType,
+            clusterProperties.clusterClaim,
+            clusterProperties.status,
+            clusterProperties.provider,
+            clusterProperties.distribution,
+            clusterProperties.labels,
+        ]
+        rightItems = [
+            clusterProperties.kubeApiServer,
+            clusterProperties.consoleUrl,
+            clusterProperties.credentials,
+            clusterProperties.clusterSet,
+        ]
+    }
+
+    if (cluster?.isRegionalHubCluster) {
+        leftItems.splice(7, 0, clusterProperties.acmDistribution)
+        leftItems.splice(8, 0, clusterProperties.acmChannel)
+        rightItems.splice(2, 0, clusterProperties.acmConsoleUrl)
+    }
+
+    let details = <ProgressStepBar />
+    if (cluster?.provider === Provider.hostinventory) {
+        if (cluster.isHypershift) {
+            details = <AIHypershiftClusterDetails />
+        } else if (!agentClusterInstall) {
+            details = (
+                <div style={{ marginBottom: '1rem' }} id={`missing-agentclusterinstall-alert`}>
+                    <AcmAlert
+                        isInline
+                        variant={AlertVariant.danger}
+                        title={<>{t('Cluster installation info unavailable')}</>}
+                        message={t('Could not find the AgentClusterInstall resource.')}
+                        noClose
+                    />
+                </div>
+            )
+        } else {
+            details = <AIClusterDetails />
+        }
+    }
+    if (cluster?.isHostedCluster) {
+        details = <HypershiftClusterDetails />
+    }
+
     return (
         <AcmPageContent id="overview">
             <PageSection>
+                {clusterCurator && (
+                    <TemplateSummaryModal
+                        curatorTemplate={clusterCurator}
+                        isOpen={curatorSummaryModalIsOpen}
+                        close={() => {
+                            setCuratorSummaryModalIsOpen(false)
+                        }}
+                    ></TemplateSummaryModal>
+                )}
                 <ClusterStatusMessageAlert cluster={cluster!} padBottom />
                 <HiveNotification />
-                <ImportCommandContainer />
+                {cluster?.isHypershift && !cluster?.isHostedCluster ? (
+                    <HypershiftImportCommand selectedHostedClusterResource={props.selectedHostedClusterResource} />
+                ) : (
+                    <ImportCommandContainer />
+                )}
                 <EditLabels
                     resource={
                         showEditLabels
@@ -271,7 +436,7 @@ export function ClusterOverviewPageContent(props: { canGetSecret?: boolean }) {
                     displayName={cluster!.displayName}
                     close={() => setShowEditLabels(false)}
                 />
-                {isHybrid ? <AIClusterDetails /> : <ProgressStepBar />}
+                {details}
                 <AcmDescriptionList title={t('table.details')} leftItems={leftItems} rightItems={rightItems} />
                 {cluster!.isManaged &&
                     [

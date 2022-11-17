@@ -11,7 +11,7 @@
 // Copyright Contributors to the Open Cluster Management project
 'use strict'
 
-import { initializeControls, getSourcePath, getResourceID } from 'temptifly'
+import { initializeControls, getSourcePath, getResourceID } from '../../../../../components/TemplateEditor'
 import _ from 'lodash'
 
 //only called when editing an existing application
@@ -141,13 +141,11 @@ const discoverChannelFromSource = (
         }
 
         // if more then one group, collapse all groups
-        if (multiple) {
-            groupControlData
-                .filter(({ type }) => type === 'section')
-                .forEach((section) => {
-                    section.collapsed = true
-                })
-        }
+        groupControlData
+            .filter(({ type }) => type === 'section')
+            .forEach((section) => {
+                section.collapsed = true
+            })
     }
 
     // get trailing digit so we can create a unique name

@@ -3,6 +3,7 @@
 import { render } from '@testing-library/react'
 import { MemoryRouter, Route, Switch } from 'react-router-dom'
 import { RecoilRoot } from 'recoil'
+import * as YAML from 'yaml'
 import {
     certificateSigningRequestsState,
     clusterDeploymentsState,
@@ -17,12 +18,14 @@ import {
     nockClusterList,
     nockCreate,
     nockDelete,
+    nockIgnoreApiPaths,
     nockIgnoreRBAC,
     nockNamespacedList,
     nockPatch,
 } from '../../../../../lib/nock-util'
 import { PluginContext } from '../../../../../lib/PluginContext'
-import { mockManagedClusterSet } from '../../../../../lib/test-metadata'
+import { PluginDataContext } from '../../../../../lib/PluginDataContext'
+import { mockGlobalManagedClusterSet, mockManagedClusterSet } from '../../../../../lib/test-metadata'
 import {
     clickByLabel,
     clickByPlaceholderText,
@@ -67,6 +70,92 @@ import ClusterSetDetailsPage from './ClusterSetDetails'
 const clusterSetCluster: ManagedCluster = mockManagedClusters.find(
     (mc: ManagedCluster) => mc.metadata.labels?.[managedClusterSetLabel] === mockManagedClusterSet.metadata.name!
 )!
+
+const mockManagedClusterRosa: ManagedCluster = {
+    apiVersion: ManagedClusterApiVersion,
+    kind: ManagedClusterKind,
+    metadata: {
+        name: 'managed-cluster-rosa-clusterset',
+        labels: { [managedClusterSetLabel]: mockManagedClusterSet.metadata.name! },
+    },
+    spec: { hubAcceptsClient: true },
+    status: {
+        allocatable: { cpu: '', memory: '' },
+        capacity: { cpu: '', memory: '' },
+        clusterClaims: [
+            { name: 'platform.open-cluster-management.io', value: 'AWS' },
+            { name: 'product.open-cluster-management.io', value: 'ROSA' },
+        ],
+        conditions: [],
+        version: { kubernetes: '' },
+    },
+}
+
+const mockManagedClusterInfoRosa: ManagedClusterInfo = {
+    apiVersion: ManagedClusterInfoApiVersion,
+    kind: ManagedClusterInfoKind,
+    metadata: {
+        name: mockManagedClusterRosa.metadata.name!,
+        namespace: mockManagedClusterRosa.metadata.name!,
+    },
+    status: {
+        conditions: [],
+        version: '1.17',
+        distributionInfo: {
+            type: 'ocp',
+            ocp: {
+                version: '1.2.3',
+                availableUpdates: ['1.2.4', '1.2.5'],
+                desiredVersion: '1.2.4',
+                upgradeFailed: false,
+                versionAvailableUpdates: [],
+            },
+        },
+    },
+}
+
+const mockManagedClusterAro: ManagedCluster = {
+    apiVersion: ManagedClusterApiVersion,
+    kind: ManagedClusterKind,
+    metadata: {
+        name: 'managed-cluster-aro-clusterset',
+        labels: { [managedClusterSetLabel]: mockManagedClusterSet.metadata.name! },
+    },
+    spec: { hubAcceptsClient: true },
+    status: {
+        allocatable: { cpu: '', memory: '' },
+        capacity: { cpu: '', memory: '' },
+        clusterClaims: [
+            { name: 'platform.open-cluster-management.io', value: 'AWS' },
+            { name: 'product.open-cluster-management.io', value: 'ARO' },
+        ],
+        conditions: [],
+        version: { kubernetes: '' },
+    },
+}
+
+const mockManagedClusterInfoAro: ManagedClusterInfo = {
+    apiVersion: ManagedClusterInfoApiVersion,
+    kind: ManagedClusterInfoKind,
+    metadata: {
+        name: mockManagedClusterAro.metadata.name!,
+        namespace: mockManagedClusterAro.metadata.name!,
+    },
+    status: {
+        conditions: [],
+        version: '1.17',
+        distributionInfo: {
+            type: 'ocp',
+            ocp: {
+                version: '1.2.3',
+                availableUpdates: ['1.2.4', '1.2.5'],
+                desiredVersion: '1.2.4',
+                upgradeFailed: false,
+                versionAvailableUpdates: [],
+            },
+        },
+    },
+}
 
 const mockManagedClusterExtra: ManagedCluster = {
     apiVersion: ManagedClusterApiVersion,
@@ -212,6 +301,277 @@ const mockManagedClusterNoCredentialsSubmarinerConfig: SubmarinerConfig = {
     },
 }
 
+const mockManagedClusterAzure: ManagedCluster = {
+    apiVersion: ManagedClusterApiVersion,
+    kind: ManagedClusterKind,
+    metadata: {
+        name: 'managed-cluster-Azure-clusterset',
+        labels: { [managedClusterSetLabel]: mockManagedClusterSet.metadata.name! },
+    },
+    spec: { hubAcceptsClient: true },
+    status: {
+        allocatable: { cpu: '', memory: '' },
+        capacity: { cpu: '', memory: '' },
+        clusterClaims: [{ name: 'platform.open-cluster-management.io', value: 'Azure' }],
+        conditions: [],
+        version: { kubernetes: '' },
+    },
+}
+
+const mockManagedClusterInfoAzure: ManagedClusterInfo = {
+    apiVersion: ManagedClusterInfoApiVersion,
+    kind: ManagedClusterInfoKind,
+    metadata: {
+        name: mockManagedClusterAzure.metadata.name!,
+        namespace: mockManagedClusterAzure.metadata.name!,
+    },
+    status: {
+        conditions: [],
+        version: '1.17',
+        distributionInfo: {
+            type: 'ocp',
+            ocp: {
+                version: '1.2.3',
+                availableUpdates: ['1.2.4', '1.2.5'],
+                desiredVersion: '1.2.4',
+                upgradeFailed: false,
+                versionAvailableUpdates: [],
+            },
+        },
+    },
+}
+
+const mockManagedClusterAzureSecret: Secret = {
+    apiVersion: SecretApiVersion,
+    kind: SecretKind,
+    metadata: {
+        name: `${mockManagedClusterAzure.metadata.name}-aws-creds`,
+        namespace: mockManagedClusterAzure.metadata.name,
+    },
+    data: {
+        baseDomainResourceGroupName: 'baseDomainResourceGroupName',
+        cloudName: 'AzurePublicCloud',
+        'osServicePrincipal.json': JSON.stringify({
+            clientid: 'clientId',
+            clientSecret: 'clientSecret',
+            tenantid: 'tenantId',
+            subscriptionid: 'subscriptionId',
+        }),
+    },
+    type: 'Opaque',
+}
+
+const mockManagedClusterNoCredentialsAzure: ManagedCluster = {
+    apiVersion: ManagedClusterApiVersion,
+    kind: ManagedClusterKind,
+    metadata: {
+        name: 'managed-cluster-no-credentials-azure',
+        labels: { [managedClusterSetLabel]: mockManagedClusterSet.metadata.name! },
+    },
+    spec: { hubAcceptsClient: true },
+    status: {
+        allocatable: { cpu: '', memory: '' },
+        capacity: { cpu: '', memory: '' },
+        clusterClaims: [{ name: 'platform.open-cluster-management.io', value: 'Azure' }],
+        conditions: [],
+        version: { kubernetes: '' },
+    },
+}
+
+const mockManagedClusterInfoNoCredentialsAzure: ManagedClusterInfo = {
+    apiVersion: ManagedClusterInfoApiVersion,
+    kind: ManagedClusterInfoKind,
+    metadata: {
+        name: mockManagedClusterNoCredentialsAzure.metadata.name!,
+        namespace: mockManagedClusterNoCredentialsAzure.metadata.name!,
+    },
+    status: {
+        conditions: [],
+        version: '1.17',
+        distributionInfo: {
+            type: 'ocp',
+            ocp: {
+                version: '1.2.3',
+                availableUpdates: ['1.2.4', '1.2.5'],
+                desiredVersion: '1.2.4',
+                upgradeFailed: false,
+                versionAvailableUpdates: [],
+            },
+        },
+    },
+}
+
+const mockManagedClusterNoCredentialsSecretAzure: Secret = {
+    apiVersion: SecretApiVersion,
+    kind: SecretKind,
+    metadata: {
+        name: `${mockManagedClusterNoCredentialsAzure.metadata.name}-azr-creds`,
+        namespace: mockManagedClusterNoCredentialsAzure.metadata.name,
+    },
+    data: {
+        'osServicePrincipal.json': JSON.stringify({
+            clientid: 'clientId',
+            clientSecret: 'clientSecret',
+            tenantid: 'tenantId',
+            subscriptionid: 'subscriptionId',
+        }),
+        baseDomainResourceGroupName: 'baseDomainResourceGroupName',
+    },
+    type: 'Opaque',
+}
+
+const mockManagedClusterNoCredentialsSecretRequestAzure: Secret = {
+    apiVersion: SecretApiVersion,
+    kind: SecretKind,
+    metadata: {
+        name: `${mockManagedClusterNoCredentialsAzure.metadata.name}-azr-creds`,
+        namespace: mockManagedClusterNoCredentialsAzure.metadata.name,
+    },
+
+    stringData: {
+        'osServicePrincipal.json': mockManagedClusterNoCredentialsSecretAzure.data!['osServicePrincipal.json'],
+        baseDomainResourceGroupName: mockManagedClusterNoCredentialsSecretAzure.data!.baseDomainResourceGroupName,
+    },
+    type: 'Opaque',
+}
+
+const mockManagedClusterOpenstack: ManagedCluster = {
+    apiVersion: ManagedClusterApiVersion,
+    kind: ManagedClusterKind,
+    metadata: {
+        name: 'managed-cluster-Openstack-clusterset',
+        labels: { [managedClusterSetLabel]: mockManagedClusterSet.metadata.name! },
+    },
+    spec: { hubAcceptsClient: true },
+    status: {
+        allocatable: { cpu: '', memory: '' },
+        capacity: { cpu: '', memory: '' },
+        clusterClaims: [{ name: 'platform.open-cluster-management.io', value: 'Openstack' }],
+        conditions: [],
+        version: { kubernetes: '' },
+    },
+}
+
+const mockManagedClusterInfoOpenstack: ManagedClusterInfo = {
+    apiVersion: ManagedClusterInfoApiVersion,
+    kind: ManagedClusterInfoKind,
+    metadata: {
+        name: mockManagedClusterOpenstack.metadata.name!,
+        namespace: mockManagedClusterOpenstack.metadata.name!,
+    },
+    status: {
+        conditions: [],
+        version: '1.17',
+        distributionInfo: {
+            type: 'ocp',
+            ocp: {
+                version: '1.2.3',
+                availableUpdates: ['1.2.4', '1.2.5'],
+                desiredVersion: '1.2.4',
+                upgradeFailed: false,
+                versionAvailableUpdates: [],
+            },
+        },
+    },
+}
+
+const cloudJSON =
+    '{"clouds":{"openstack":{"auth":{"auth_url":"https://myurl:13000","username":"\u201cfake\u201d","password":"\u201cfake\u201d"}}}}' //gitleaks:allow
+
+const yamlData = YAML.parse(cloudJSON) as {
+    clouds: {
+        [cloud: string]: {
+            auth?: {
+                auth_url?: string
+                password?: string
+                username?: string
+            }
+        }
+    }
+}
+const mockManagedClusterOpenstackSecret: Secret = {
+    apiVersion: SecretApiVersion,
+    kind: SecretKind,
+    metadata: {
+        name: `${mockManagedClusterOpenstack.metadata.name}-ost-creds`,
+        namespace: mockManagedClusterOpenstack.metadata.name,
+    },
+    data: {
+        cloud: 'openstack',
+        'clouds.yaml': YAML.stringify(yamlData),
+    },
+    type: 'Opaque',
+}
+
+const mockManagedClusterNoCredentialsOpenstack: ManagedCluster = {
+    apiVersion: ManagedClusterApiVersion,
+    kind: ManagedClusterKind,
+    metadata: {
+        name: 'managed-cluster-no-credentials-openstack',
+        labels: { [managedClusterSetLabel]: mockManagedClusterSet.metadata.name! },
+    },
+    spec: { hubAcceptsClient: true },
+    status: {
+        allocatable: { cpu: '', memory: '' },
+        capacity: { cpu: '', memory: '' },
+        clusterClaims: [{ name: 'platform.open-cluster-management.io', value: 'Openstack' }],
+        conditions: [],
+        version: { kubernetes: '' },
+    },
+}
+
+const mockManagedClusterInfoNoCredentialsOpenstack: ManagedClusterInfo = {
+    apiVersion: ManagedClusterInfoApiVersion,
+    kind: ManagedClusterInfoKind,
+    metadata: {
+        name: mockManagedClusterNoCredentialsOpenstack.metadata.name!,
+        namespace: mockManagedClusterNoCredentialsOpenstack.metadata.name!,
+    },
+    status: {
+        conditions: [],
+        version: '1.17',
+        distributionInfo: {
+            type: 'ocp',
+            ocp: {
+                version: '1.2.3',
+                availableUpdates: ['1.2.4', '1.2.5'],
+                desiredVersion: '1.2.4',
+                upgradeFailed: false,
+                versionAvailableUpdates: [],
+            },
+        },
+    },
+}
+
+const mockManagedClusterNoCredentialsSecretOpenstack: Secret = {
+    apiVersion: SecretApiVersion,
+    kind: SecretKind,
+    metadata: {
+        name: `${mockManagedClusterNoCredentialsOpenstack.metadata.name}-ost-creds`,
+        namespace: mockManagedClusterNoCredentialsOpenstack.metadata.name,
+    },
+    data: {
+        cloud: 'openstack',
+        'clouds.yaml': YAML.stringify(yamlData),
+    },
+    type: 'Opaque',
+}
+
+const mockManagedClusterNoCredentialsSecretRequestOpenstack: Secret = {
+    apiVersion: SecretApiVersion,
+    kind: SecretKind,
+    metadata: {
+        name: `${mockManagedClusterNoCredentialsOpenstack.metadata.name}-ost-creds`,
+        namespace: mockManagedClusterNoCredentialsOpenstack.metadata.name,
+    },
+
+    stringData: {
+        cloud: mockManagedClusterNoCredentialsSecretOpenstack.data!['cloud'],
+        'clouds.yaml': YAML.stringify(yamlData),
+    },
+    type: 'Opaque',
+}
+
 const mockNoCredentialsAddOn: ManagedClusterAddOn = {
     apiVersion: ManagedClusterAddOnApiVersion,
     kind: ManagedClusterAddOnKind,
@@ -221,6 +581,38 @@ const mockNoCredentialsAddOn: ManagedClusterAddOn = {
     },
     spec: {
         installNamespace: 'submariner-operator',
+    },
+}
+
+const mockManagedClusterRosaSubmarinerConfig: SubmarinerConfig = {
+    apiVersion: SubmarinerConfigApiVersion,
+    kind: SubmarinerConfigKind,
+    metadata: {
+        name: 'submariner',
+        namespace: mockManagedClusterRosa.metadata.name,
+    },
+    spec: {
+        gatewayConfig: {},
+        IPSecNATTPort: submarinerConfigDefault.nattPort,
+        NATTEnable: submarinerConfigDefault.nattEnable,
+        cableDriver: submarinerConfigDefault.cableDriver,
+        loadBalancerEnable: true,
+    },
+}
+
+const mockManagedClusterAroSubmarinerConfig: SubmarinerConfig = {
+    apiVersion: SubmarinerConfigApiVersion,
+    kind: SubmarinerConfigKind,
+    metadata: {
+        name: 'submariner',
+        namespace: mockManagedClusterAro.metadata.name,
+    },
+    spec: {
+        gatewayConfig: {},
+        IPSecNATTPort: submarinerConfigDefault.nattPort,
+        NATTEnable: submarinerConfigDefault.nattEnable,
+        cableDriver: submarinerConfigDefault.cableDriver,
+        loadBalancerEnable: true,
     },
 }
 
@@ -243,6 +635,52 @@ const mockManagedClusterExtraSubmarinerConfig: SubmarinerConfig = {
         cableDriver: submarinerConfigDefault.cableDriver,
         credentialsSecret: {
             name: mockManagedClusterExtraSecret.metadata.name!,
+        },
+    },
+}
+
+const mockManagedClusterAzureSubmarinerConfig: SubmarinerConfig = {
+    apiVersion: SubmarinerConfigApiVersion,
+    kind: SubmarinerConfigKind,
+    metadata: {
+        name: 'submariner',
+        namespace: mockManagedClusterAzure.metadata.name,
+    },
+    spec: {
+        gatewayConfig: {
+            gateways: submarinerConfigDefault.gateways,
+            azure: {
+                instanceType: submarinerConfigDefault.azureInstanceType,
+            },
+        },
+        IPSecNATTPort: submarinerConfigDefault.nattPort,
+        NATTEnable: submarinerConfigDefault.nattEnable,
+        cableDriver: submarinerConfigDefault.cableDriver,
+        credentialsSecret: {
+            name: mockManagedClusterAzureSecret.metadata.name!,
+        },
+    },
+}
+
+const mockManagedClusterOpenstackSubmarinerConfig: SubmarinerConfig = {
+    apiVersion: SubmarinerConfigApiVersion,
+    kind: SubmarinerConfigKind,
+    metadata: {
+        name: 'submariner',
+        namespace: mockManagedClusterOpenstack.metadata.name,
+    },
+    spec: {
+        gatewayConfig: {
+            gateways: submarinerConfigDefault.gateways,
+            rhos: {
+                instanceType: submarinerConfigDefault.openStackInstanceType,
+            },
+        },
+        IPSecNATTPort: submarinerConfigDefault.nattPort,
+        NATTEnable: submarinerConfigDefault.nattEnable,
+        cableDriver: submarinerConfigDefault.cableDriver,
+        credentialsSecret: {
+            name: mockManagedClusterOpenstackSecret.metadata.name!,
         },
     },
 }
@@ -273,6 +711,30 @@ const mockSubmarinerConfig: SubmarinerConfig = {
     },
 }
 
+const mockSubmarinerAddonRosa: ManagedClusterAddOn = {
+    apiVersion: ManagedClusterAddOnApiVersion,
+    kind: ManagedClusterAddOnKind,
+    metadata: {
+        name: 'submariner',
+        namespace: mockManagedClusterRosa.metadata.name,
+    },
+    spec: {
+        installNamespace: 'submariner-operator',
+    },
+}
+
+const mockSubmarinerAddonAro: ManagedClusterAddOn = {
+    apiVersion: ManagedClusterAddOnApiVersion,
+    kind: ManagedClusterAddOnKind,
+    metadata: {
+        name: 'submariner',
+        namespace: mockManagedClusterAro.metadata.name,
+    },
+    spec: {
+        installNamespace: 'submariner-operator',
+    },
+}
+
 const mockSubmarinerAddonExtra: ManagedClusterAddOn = {
     apiVersion: ManagedClusterAddOnApiVersion,
     kind: ManagedClusterAddOnKind,
@@ -285,20 +747,128 @@ const mockSubmarinerAddonExtra: ManagedClusterAddOn = {
     },
 }
 
-const Component = () => (
+const mockSubmarinerAddonAzure: ManagedClusterAddOn = {
+    apiVersion: ManagedClusterAddOnApiVersion,
+    kind: ManagedClusterAddOnKind,
+    metadata: {
+        name: 'submariner',
+        namespace: mockManagedClusterAzure.metadata.name,
+    },
+    spec: {
+        installNamespace: 'submariner-operator',
+    },
+}
+
+const mockNoCredentialsAddOnAzure: ManagedClusterAddOn = {
+    apiVersion: ManagedClusterAddOnApiVersion,
+    kind: ManagedClusterAddOnKind,
+    metadata: {
+        name: 'submariner',
+        namespace: mockManagedClusterNoCredentialsAzure.metadata.name,
+    },
+    spec: {
+        installNamespace: 'submariner-operator',
+    },
+}
+
+const mockManagedClusterNoCredentialsSubmarinerConfigAzure: SubmarinerConfig = {
+    apiVersion: SubmarinerConfigApiVersion,
+    kind: SubmarinerConfigKind,
+    metadata: {
+        name: 'submariner',
+        namespace: mockManagedClusterNoCredentialsAzure.metadata.name,
+    },
+    spec: {
+        gatewayConfig: {
+            gateways: submarinerConfigDefault.gateways,
+            azure: {
+                instanceType: submarinerConfigDefault.azureInstanceType,
+            },
+        },
+        IPSecNATTPort: submarinerConfigDefault.nattPort,
+        NATTEnable: submarinerConfigDefault.nattEnable,
+        cableDriver: submarinerConfigDefault.cableDriver,
+        credentialsSecret: {
+            name: 'managed-cluster-no-credentials-azure-azr-creds',
+        },
+    },
+}
+
+const mockSubmarinerAddonOpenstack: ManagedClusterAddOn = {
+    apiVersion: ManagedClusterAddOnApiVersion,
+    kind: ManagedClusterAddOnKind,
+    metadata: {
+        name: 'submariner',
+        namespace: mockManagedClusterOpenstack.metadata.name,
+    },
+    spec: {
+        installNamespace: 'submariner-operator',
+    },
+}
+
+const mockNoCredentialsAddOnOpenstack: ManagedClusterAddOn = {
+    apiVersion: ManagedClusterAddOnApiVersion,
+    kind: ManagedClusterAddOnKind,
+    metadata: {
+        name: 'submariner',
+        namespace: mockManagedClusterNoCredentialsOpenstack.metadata.name,
+    },
+    spec: {
+        installNamespace: 'submariner-operator',
+    },
+}
+
+const mockManagedClusterNoCredentialsSubmarinerConfigOpenstack: SubmarinerConfig = {
+    apiVersion: SubmarinerConfigApiVersion,
+    kind: SubmarinerConfigKind,
+    metadata: {
+        name: 'submariner',
+        namespace: mockManagedClusterNoCredentialsOpenstack.metadata.name,
+    },
+    spec: {
+        gatewayConfig: {
+            gateways: submarinerConfigDefault.gateways,
+            rhos: {
+                instanceType: submarinerConfigDefault.openStackInstanceType,
+            },
+        },
+        IPSecNATTPort: submarinerConfigDefault.nattPort,
+        NATTEnable: submarinerConfigDefault.nattEnable,
+        cableDriver: submarinerConfigDefault.cableDriver,
+        credentialsSecret: {
+            name: mockManagedClusterNoCredentialsSecretOpenstack.metadata.name!,
+        },
+    },
+}
+
+const Component = (props: { isGlobal?: boolean }) => (
     <RecoilRoot
         initializeState={(snapshot) => {
-            snapshot.set(managedClusterSetsState, [mockManagedClusterSet])
+            snapshot.set(managedClusterSetsState, [
+                props.isGlobal ? mockGlobalManagedClusterSet : mockManagedClusterSet,
+            ])
             snapshot.set(clusterDeploymentsState, mockClusterDeployments)
             snapshot.set(managedClusterInfosState, [
                 ...mockManagedClusterInfos,
                 mockManagedClusterInfoExtra,
+                mockManagedClusterInfoAzure,
+                mockManagedClusterInfoRosa,
+                mockManagedClusterInfoAro,
                 mockManagedClusterInfoNoCredentials,
+                mockManagedClusterInfoNoCredentialsAzure,
+                mockManagedClusterInfoOpenstack,
+                mockManagedClusterInfoNoCredentialsOpenstack,
             ])
             snapshot.set(managedClustersState, [
                 ...mockManagedClusters,
                 mockManagedClusterExtra,
+                mockManagedClusterAzure,
+                mockManagedClusterRosa,
+                mockManagedClusterAro,
                 mockManagedClusterNoCredentials,
+                mockManagedClusterNoCredentialsAzure,
+                mockManagedClusterOpenstack,
+                mockManagedClusterNoCredentialsOpenstack,
             ])
             snapshot.set(certificateSigningRequestsState, [])
             snapshot.set(managedClusterAddonsState, [mockSubmarinerAddon])
@@ -307,7 +877,12 @@ const Component = () => (
         }}
     >
         <MemoryRouter
-            initialEntries={[NavigationPath.clusterSetDetails.replace(':id', mockManagedClusterSet.metadata.name!)]}
+            initialEntries={[
+                NavigationPath.clusterSetDetails.replace(
+                    ':id',
+                    props.isGlobal ? mockGlobalManagedClusterSet.metadata.name! : mockManagedClusterSet.metadata.name!
+                ),
+            ]}
         >
             <Switch>
                 <Route path={NavigationPath.clusterSetDetails} component={ClusterSetDetailsPage} />
@@ -358,10 +933,36 @@ const mockGroup = {
     users: [],
 }
 
+const mockGlobalClusterRoleBinding: ClusterRoleBinding = {
+    apiVersion: RbacApiVersion,
+    kind: ClusterRoleBindingKind,
+    metadata: {
+        name: 'cluster-set-binding',
+        uid: '88723604-037e-4e42-9f46-13839752b3be',
+    },
+    subjects: [
+        {
+            kind: 'User',
+            apiGroup: 'rbac.authorization.k8s.io',
+            name: 'mock-user',
+        },
+    ],
+    roleRef: {
+        apiGroup: 'rbac.authorization.k8s.io',
+        kind: 'ClusterRole',
+        name: `open-cluster-management:managedclusterset:admin:${mockGlobalManagedClusterSet.metadata.name!}`,
+    },
+}
+
 describe('ClusterSetDetails page', () => {
     beforeEach(async () => {
-        const getNocks = [nockClusterList(mockUser, [mockUser]), nockClusterList(mockGroup, [mockGroup])]
+        const getNocks = [
+            nockClusterList(mockUser, [mockUser]),
+            nockClusterList(mockGroup, [mockGroup]),
+            nockClusterList(mockClusterRoleBinding, [mockClusterRoleBinding]),
+        ]
         nockIgnoreRBAC()
+        nockIgnoreApiPaths()
         render(<Component />)
         await waitForNocks(getNocks)
     })
@@ -369,7 +970,7 @@ describe('ClusterSetDetails page', () => {
         await waitForText(mockManagedClusterSet.metadata.name!, true)
         await waitForText('Details')
 
-        await clickByText('Managed clusters')
+        await clickByText('Cluster list')
         await waitForText(clusterSetCluster.metadata.name!)
 
         await clickByText('Cluster pools')
@@ -384,14 +985,33 @@ describe('ClusterSetDetails page', () => {
 
         const nockListExtraSecrets = nockNamespacedList(mockManagedClusterExtraSecret, [mockManagedClusterExtraSecret])
         const nockListNoCredsSecrets = nockNamespacedList(mockManagedClusterNoCredentialsSecret, [])
+        const nockListAzureSecrets = nockNamespacedList(mockManagedClusterAzureSecret, [mockManagedClusterAzureSecret])
+        const nockListNoCredsSecretsAzure = nockNamespacedList(mockManagedClusterNoCredentialsSecretAzure, [])
+        const nockListOpenstackSecrets = nockNamespacedList(mockManagedClusterOpenstackSecret, [
+            mockManagedClusterOpenstackSecret,
+        ])
+        const nockListNoCredsSecretsOpenstack = nockNamespacedList(mockManagedClusterNoCredentialsSecretOpenstack, [])
         await clickByText('Install Submariner add-ons', 0)
-        await waitForNocks([nockListExtraSecrets, nockListNoCredsSecrets])
+        await waitForNocks([
+            nockListExtraSecrets,
+            nockListNoCredsSecrets,
+            nockListAzureSecrets,
+            nockListNoCredsSecretsAzure,
+            nockListOpenstackSecrets,
+            nockListNoCredsSecretsOpenstack,
+        ])
 
         await waitForText('Select clusters', true)
 
         await clickByPlaceholderText('Select clusters')
         await clickByText(mockManagedClusterExtra!.metadata.name!)
         await clickByText(mockManagedClusterNoCredentials!.metadata.name!)
+        await clickByText(mockManagedClusterAzure!.metadata.name!)
+        await clickByText(mockManagedClusterNoCredentialsAzure!.metadata.name!)
+        await clickByText(mockManagedClusterOpenstack!.metadata.name!)
+        await clickByText(mockManagedClusterNoCredentialsOpenstack!.metadata.name!)
+        await clickByText(mockManagedClusterRosa!.metadata.name!)
+        await clickByText(mockManagedClusterAro!.metadata.name!)
         await clickByText('Next')
 
         // mockManagedClusterExtra
@@ -407,6 +1027,38 @@ describe('ClusterSetDetails page', () => {
 
         await clickByText('Next')
 
+        // mockManagedClusterAzure
+        await waitForTestId('credential-secret')
+        await waitForNotTestId('baseDomainResourceGroupName')
+        await waitForNotTestId('clientId')
+        await waitForNotTestId('clientSecret')
+        await waitForNotTestId('subscriptionId')
+        await clickByText('Next')
+
+        // mockManagedClusterNoCredentialsAzure
+        await waitForNotTestId('credential-secret')
+        await typeByTestId(
+            'baseDomainResourceGroupName',
+            mockManagedClusterNoCredentialsSecretAzure.data!.baseDomainResourceGroupName
+        )
+        await typeByTestId('clientId', 'clientId')
+        await typeByTestId('clientSecret', 'clientSecret')
+        await typeByTestId('subscriptionId', 'subscriptionId')
+        await typeByTestId('tenantId', 'tenantId')
+        await clickByText('Next')
+
+        // mockManagedClusterOpenstack
+        await waitForTestId('credential-secret')
+        await waitForNotTestId('cloud')
+        await waitForNotTestId('clouds.yaml')
+        await clickByText('Next')
+
+        // mockManagedClusterNoCredentialsOpenstack
+        await waitForNotTestId('credential-secret')
+        await typeByTestId('cloud', mockManagedClusterNoCredentialsSecretOpenstack.data?.cloud!)
+        await typeByTestId('clouds.yaml', mockManagedClusterNoCredentialsSecretOpenstack.data?.['clouds.yaml']!)
+        await clickByText('Next')
+
         // mockManagedClusterExtra
         const nockMCAExtra = nockCreate(mockSubmarinerAddonExtra)
         const nockSCExtra = nockCreate(mockManagedClusterExtraSubmarinerConfig)
@@ -419,8 +1071,62 @@ describe('ClusterSetDetails page', () => {
         )
         const nockSCNoCreds = nockCreate(mockManagedClusterNoCredentialsSubmarinerConfig)
 
+        // mockManagedClusterAzure
+        const nockMCAAzure = nockCreate(mockSubmarinerAddonAzure)
+        const nockSCAzure = nockCreate(mockManagedClusterAzureSubmarinerConfig)
+
+        // mockManagedClusterNoCredentials
+        const nockMCANoCredsAzure = nockCreate(mockNoCredentialsAddOnAzure)
+        const nockSecretNoCredsAzure = nockCreate(
+            mockManagedClusterNoCredentialsSecretRequestAzure,
+            mockManagedClusterNoCredentialsSecretAzure
+        )
+        const nockSCNoCredsAzure = nockCreate(mockManagedClusterNoCredentialsSubmarinerConfigAzure)
+
+        // mockManagedClusterOpenstack
+        const nockMCAOpenstack = nockCreate(mockSubmarinerAddonOpenstack)
+        const nockSCOpenstack = nockCreate(mockManagedClusterOpenstackSubmarinerConfig)
+
+        // mockManagedClusterNoCredentials
+        const nockMCANoCredsOpenstack = nockCreate(mockNoCredentialsAddOnOpenstack)
+        const nockSecretNoCredsOpenstack = nockCreate(
+            mockManagedClusterNoCredentialsSecretRequestOpenstack,
+            mockManagedClusterNoCredentialsSecretOpenstack
+        )
+        const nockSCNoCredsOpenstack = nockCreate(mockManagedClusterNoCredentialsSubmarinerConfigOpenstack)
+
+        // mockManagedClusterRosa
+        const nockMCARosa = nockCreate(mockSubmarinerAddonRosa)
+        const nockSCRosa = nockCreate(mockManagedClusterRosaSubmarinerConfig)
+        await clickByText('Next')
+
+        // mockManagedClusterAro
+        const nockMCAAro = nockCreate(mockSubmarinerAddonAro)
+        const nockSCAro = nockCreate(mockManagedClusterAroSubmarinerConfig)
+        await clickByText('Next')
+
         await clickByText('Install')
-        await waitForNocks([nockMCAExtra, nockSCExtra, nockMCANoCreds, nockSecretNoCreds, nockSCNoCreds])
+        await waitForNocks([
+            nockMCAExtra,
+            nockSCExtra,
+            nockMCANoCreds,
+            nockSecretNoCreds,
+            nockSCNoCreds,
+            nockMCAAzure,
+            nockSCAzure,
+            nockMCANoCredsAzure,
+            nockSecretNoCredsAzure,
+            nockSCNoCredsAzure,
+            nockMCAOpenstack,
+            nockSCOpenstack,
+            nockMCANoCredsOpenstack,
+            nockSecretNoCredsOpenstack,
+            nockSCNoCredsOpenstack,
+            nockMCARosa,
+            nockSCRosa,
+            nockMCAAro,
+            nockSCAro,
+        ])
     })
     test('can uninstall submariner add-ons', async () => {
         await waitForText(mockManagedClusterSet.metadata.name!, true)
@@ -481,7 +1187,7 @@ describe('ClusterSetDetails page', () => {
             mockClusterRoleBinding,
         ])
         await waitForText(mockManagedClusterSet.metadata.name!, true)
-        await clickByText('Access management')
+        await clickByText('User management', 0)
         await waitForNocks([nock])
         await waitForText('mock-user')
         await clickByLabel('Actions', 0)
@@ -496,7 +1202,7 @@ describe('ClusterSetDetails page', () => {
             mockClusterRoleBinding,
         ])
         await waitForText(mockManagedClusterSet.metadata.name!, true)
-        await clickByText('Access management')
+        await clickByText('User management', 0)
         await waitForNocks([nock])
         await clickByText('Add user or group')
         await waitForText(
@@ -504,7 +1210,10 @@ describe('ClusterSetDetails page', () => {
         )
         await clickByPlaceholderText('Select user')
         await clickByText(mockUser.metadata.name!)
-        await clickByText('Select role', 1)
+        await clickByText('Select role')
+        await waitForText('Cluster set admin', true)
+        await waitForText('Cluster set view', true)
+        await waitForText('Cluster set bind', true)
         await clickByText('Cluster set admin', 1)
         const createNock = nockCreate({
             apiVersion: RbacApiVersion,
@@ -528,12 +1237,13 @@ describe('ClusterSetDetails page', () => {
         await clickByText('Add')
         await waitForNocks([createNock])
     })
+
     test('can add groups to the cluster set', async () => {
         const nock = nockClusterList({ apiVersion: RbacApiVersion, kind: ClusterRoleBindingKind }, [
             mockClusterRoleBinding,
         ])
         await waitForText(mockManagedClusterSet.metadata.name!, true)
-        await clickByText('Access management')
+        await clickByText('User management', 0)
         await waitForNocks([nock])
         await clickByText('Add user or group')
         await waitForText(
@@ -542,7 +1252,7 @@ describe('ClusterSetDetails page', () => {
         await clickByText('Groups')
         await clickByPlaceholderText('Select group')
         await clickByText(mockGroup.metadata.name!)
-        await clickByText('Select role', 1)
+        await clickByText('Select role')
         await clickByText('Cluster set view')
         const createNock = nockCreate({
             apiVersion: RbacApiVersion,
@@ -561,6 +1271,60 @@ describe('ClusterSetDetails page', () => {
                 apiGroup: 'rbac.authorization.k8s.io',
                 kind: 'ClusterRole',
                 name: `open-cluster-management:managedclusterset:view:${mockManagedClusterSet!.metadata.name!}`,
+            },
+        })
+        await clickByText('Add')
+        await waitForNocks([createNock])
+    })
+})
+
+describe('Global ClusterSetDetails page', () => {
+    beforeEach(async () => {
+        const getNocks = [
+            nockClusterList(mockUser, [mockUser]),
+            nockClusterList(mockGroup, [mockGroup]),
+            nockClusterList(mockClusterRoleBinding, [mockClusterRoleBinding]),
+        ]
+        nockIgnoreRBAC()
+        nockIgnoreApiPaths()
+        render(<Component isGlobal />)
+        await waitForNocks(getNocks)
+    })
+    test('correct roles are present for global clustersets', async () => {
+        const nock = nockClusterList({ apiVersion: RbacApiVersion, kind: ClusterRoleBindingKind }, [
+            mockClusterRoleBinding,
+        ])
+        await waitForText(mockGlobalManagedClusterSet.metadata.name!, true)
+        await clickByText('User management', 0)
+        await waitForNocks([nock])
+        await clickByText('Add user or group', 1)
+        await waitForText(
+            'Adding a user or group will grant access permissions to the cluster set and all of its associated clusters. These permissions can be revoked at any time.'
+        )
+        await clickByPlaceholderText('Select user')
+        await clickByText(mockUser.metadata.name!)
+        await clickByText('Select role')
+        await waitForNotText('Cluster set admin')
+        await waitForText('Cluster set view', true)
+        await waitForText('Cluster set bind', true)
+        await clickByText('Cluster set bind')
+        const createNock = nockCreate({
+            apiVersion: RbacApiVersion,
+            kind: ClusterRoleBindingKind,
+            metadata: {
+                generateName: `${mockGlobalManagedClusterSet?.metadata.name}-`,
+            },
+            subjects: [
+                {
+                    kind: 'User',
+                    apiGroup: 'rbac.authorization.k8s.io',
+                    name: mockUser!.metadata.name!,
+                },
+            ],
+            roleRef: {
+                apiGroup: 'rbac.authorization.k8s.io',
+                kind: 'ClusterRole',
+                name: `open-cluster-management:managedclusterset:bind:${mockGlobalManagedClusterSet!.metadata.name!}`,
             },
         })
         await clickByText('Add')
@@ -589,6 +1353,8 @@ describe('ClusterSetDetails error', () => {
         </RecoilRoot>
     )
     test('renders error page when cluster set does not exist', async () => {
+        nockIgnoreApiPaths()
+        nockClusterList(mockClusterRoleBinding, [mockClusterRoleBinding])
         render(<Component />)
         await waitForText('Not found')
     })
@@ -617,6 +1383,8 @@ describe('ClusterSetDetails deletion', () => {
         </RecoilRoot>
     )
     test('renders deletion page when the cluster set has a deletionTimestamp', async () => {
+        nockIgnoreApiPaths()
+        nockClusterList(mockClusterRoleBinding, [mockClusterRoleBinding])
         render(<Component />)
         await waitForText('test-cluster-set is being deleted.')
     })
@@ -624,10 +1392,15 @@ describe('ClusterSetDetails deletion', () => {
 
 describe('ClusterSetDetails page without Submariner', () => {
     beforeEach(async () => {
-        const getNocks = [nockClusterList(mockUser, [mockUser]), nockClusterList(mockGroup, [mockGroup])]
+        const getNocks = [
+            nockClusterList(mockUser, [mockUser]),
+            nockClusterList(mockGroup, [mockGroup]),
+            nockClusterList(mockClusterRoleBinding, [mockClusterRoleBinding]),
+        ]
         nockIgnoreRBAC()
+        nockIgnoreApiPaths()
         render(
-            <PluginContext.Provider value={{ isSubmarinerAvailable: false }}>
+            <PluginContext.Provider value={{ isSubmarinerAvailable: false, dataContext: PluginDataContext }}>
                 <Component />
             </PluginContext.Provider>
         )
@@ -638,5 +1411,29 @@ describe('ClusterSetDetails page without Submariner', () => {
         await waitForText('Details')
 
         await waitForNotText('Submariner add-ons')
+    })
+})
+
+describe('ClusterSetDetails page global clusterset', () => {
+    beforeEach(async () => {
+        const getNocks = [
+            nockClusterList(mockUser, [mockUser]),
+            nockClusterList(mockGroup, [mockGroup]),
+            nockClusterList(mockGlobalClusterRoleBinding, [mockGlobalClusterRoleBinding]),
+        ]
+        nockIgnoreRBAC()
+        nockIgnoreApiPaths()
+        render(
+            <PluginContext.Provider value={{ isSubmarinerAvailable: false, dataContext: PluginDataContext }}>
+                <Component isGlobal />
+            </PluginContext.Provider>
+        )
+        await waitForNocks(getNocks)
+    })
+    test('does not render Submariner, Cluster pools or Discovered clusters tab', async () => {
+        await waitForText(mockGlobalManagedClusterSet.metadata.name!, true)
+        await waitForNotText('Submariner add-ons')
+        await waitForNotText('Managed clusters')
+        await waitForNotText('Cluster pools')
     })
 })

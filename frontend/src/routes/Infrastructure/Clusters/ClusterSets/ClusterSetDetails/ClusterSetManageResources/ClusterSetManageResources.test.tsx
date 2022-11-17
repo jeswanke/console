@@ -27,7 +27,7 @@ import {
     managedClusterSetsState,
     managedClustersState,
 } from '../../../../../../atoms'
-import { nockIgnoreRBAC, nockPatch } from '../../../../../../lib/nock-util'
+import { nockIgnoreApiPaths, nockIgnoreRBAC, nockPatch } from '../../../../../../lib/nock-util'
 import { mockManagedClusterSet } from '../../../../../../lib/test-metadata'
 import {
     clickByLabel,
@@ -271,6 +271,7 @@ const Component = () => (
                 submarinerAddons: undefined,
                 clusterSetBindings: undefined,
                 clusterDeployments: [mockClusterDeploymentClaimed],
+                clusterRoleBindings: [],
             }}
         >
             <MemoryRouter
@@ -292,6 +293,7 @@ const Component = () => (
 describe('ClusterSetManageClusters', () => {
     beforeEach(() => {
         nockIgnoreRBAC()
+        nockIgnoreApiPaths()
     })
     test('does not display claimed clusters for reassignment', async () => {
         render(<Component />)

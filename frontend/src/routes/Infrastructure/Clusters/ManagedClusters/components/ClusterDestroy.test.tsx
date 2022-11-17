@@ -11,6 +11,7 @@ const mockDestroyCluster: Cluster = {
     name: 'test-cluster',
     displayName: 'test-cluster',
     namespace: 'test-cluster',
+    uid: 'test-cluster-uid',
     provider: undefined,
     isCurator: false,
     owner: {},
@@ -30,18 +31,22 @@ const mockDestroyCluster: Cluster = {
         clusterPool: undefined,
         secrets: {
             installConfig: '',
-            kubeadmin: '',
-            kubeconfig: '',
         },
     },
     isHive: false,
     isManaged: true,
+    isHostedCluster: false,
     isSNOCluster: false,
+    kubeadmin: '',
+    kubeconfig: '',
+    isHypershift: false,
+    isRegionalHubCluster: false,
 }
 
 const mockDetachCluster: Cluster = {
     name: 'test-cluster',
     namespace: 'test-cluster',
+    uid: 'test-cluster-uid',
     provider: undefined,
     status: ClusterStatus.detaching,
     distribution: {
@@ -59,15 +64,18 @@ const mockDetachCluster: Cluster = {
         clusterPool: undefined,
         secrets: {
             installConfig: '',
-            kubeadmin: '',
-            kubeconfig: '',
         },
     },
     isHive: false,
     isManaged: true,
     isCurator: false,
+    isHostedCluster: false,
     isSNOCluster: false,
     owner: {},
+    kubeadmin: '',
+    kubeconfig: '',
+    isHypershift: false,
+    isRegionalHubCluster: false,
 }
 
 describe('ClusterDestroy', () => {

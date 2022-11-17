@@ -1,10 +1,7 @@
 /* Copyright Contributors to the Open Cluster Management project */
 
-// eslint-disable-next-line no-use-before-define
-import React from 'react'
-import { VALIDATE_NUMERIC, VALIDATE_IP } from 'temptifly'
+import { VALIDATE_NUMERIC, VALIDATE_IP } from '../../../../../../components/TemplateEditor'
 import {
-    CREATE_CLOUD_CONNECTION,
     LOAD_OCP_IMAGES,
     getSimplifiedImageName,
     clusterDetailsControlData,
@@ -16,17 +13,40 @@ import {
     isHidden_SNO,
     onChangeSNO,
     architectureData,
+    appendKlusterletAddonConfig,
+    insertToggleModalFunction,
 } from './ControlDataHelpers'
 import { DevPreviewLabel } from '../../../../../../components/TechPreviewAlert'
+import installConfigHbs from '../templates/install-config.hbs'
+import Handlebars from 'handlebars'
+import { CreateCredentialModal } from '../../../../../../components/CreateCredentialModal'
 
-export const getControlDataRHV = (includeAutomation = true) => {
-    if (includeAutomation) return [...controlDataRHV, ...automationControlData]
-    return [...controlDataRHV]
+const installConfig = Handlebars.compile(installConfigHbs)
+
+export const getControlDataRHV = (handleModalToggle, includeAutomation = true, includeKlusterletAddonConfig = true) => {
+    const controlData = [...controlDataRHV]
+    appendKlusterletAddonConfig(includeKlusterletAddonConfig, controlData)
+    insertToggleModalFunction(handleModalToggle, controlData)
+    if (includeAutomation) {
+        return [...controlData, ...automationControlData]
+    }
+    return controlData
 }
 
 const controlDataRHV = [
     ////////////////////////////////////////////////////////////////////////////////////
     ///////////////////////  connection  /////////////////////////////////////
+    {
+        id: 'detailStep',
+        type: 'step',
+        title: 'Cluster details',
+    },
+    {
+        id: 'infrastructure',
+        name: 'Infrastructure',
+        active: 'RHV',
+        type: 'reviewinfo',
+    },
     {
         name: 'creation.ocp.cloud.connection',
         tooltip: 'tooltip.creation.ocp.cloud.connection',
@@ -39,8 +59,8 @@ const controlDataRHV = [
             required: true,
         },
         available: [],
-        prompts: CREATE_CLOUD_CONNECTION,
         encode: ['cacertificate'],
+        footer: <CreateCredentialModal />,
     },
     ...clusterDetailsControlData,
     ////////////////////////////////////////////////////////////////////////////////////
@@ -105,6 +125,19 @@ const controlDataRHV = [
         type: 'labels',
         active: [],
         tip: 'Use labels to organize and place application subscriptions and policies on this cluster. The placement of resources are controlled by label selectors. If your cluster has the labels that match the resource placement’s label selector, the resource will be installed on your cluster after creation.',
+    },
+    {
+        id: 'infrastructure',
+        active: ['RHV'],
+        type: 'hidden',
+        hasReplacements: true,
+        availableMap: {
+            RHV: {
+                replacements: {
+                    'install-config': { template: installConfig, encode: true, newTab: true },
+                },
+            },
+        },
     },
 
     ////////////////////////////////////////////////////////////////////////////////////
@@ -261,7 +294,7 @@ const controlDataRHV = [
     {
         id: 'networkStep',
         type: 'step',
-        title: 'Networks',
+        title: 'Networking',
     },
     {
         id: 'ovirt_network_name',

@@ -12,12 +12,11 @@ import { notFound, respondInternalServerError, respondOK } from './lib/respond'
 import { startServer, stopServer } from './lib/server'
 import { ServerSideEvents } from './lib/server-side-events'
 import { ansibleTower } from './routes/ansibletower'
+import { apiPaths } from './routes/apiPaths'
 import { authenticated } from './routes/authenticated'
 import { configure } from './routes/configure'
-import { consoleLinks } from './routes/consoleLinks'
 import { events, startWatching, stopWatching } from './routes/events'
 import { liveness } from './routes/liveness'
-import { mchVersion } from './routes/mchVersion'
 import { login, loginCallback, logout } from './routes/oauth'
 import { proxy } from './routes/proxy'
 import { readiness } from './routes/readiness'
@@ -35,6 +34,7 @@ router.all(`/api`, proxy)
 router.all(`/api/*`, proxy)
 router.all(`/apis`, proxy)
 router.all(`/apis/*`, proxy)
+router.all(`/apiPaths`, apiPaths)
 router.all(`/version`, proxy)
 router.all(`/version/`, proxy)
 router.get(`/login`, login)
@@ -47,9 +47,7 @@ router.get(`/authenticated`, authenticated)
 router.post(`/ansibletower`, ansibleTower)
 router.get(`/*`, serve)
 router.get('/configure', configure)
-router.get('/console-links', consoleLinks)
 router.get('/username', username)
-router.get('/mchVersion', mchVersion)
 
 export async function requestHandler(req: Http2ServerRequest, res: Http2ServerResponse): Promise<void> {
     if (process.env.NODE_ENV !== 'production') {

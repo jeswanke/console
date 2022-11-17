@@ -18,15 +18,14 @@ import {
 import { AngleLeftIcon, FlagIcon, ListIcon, OutlinedClockIcon } from '@patternfly/react-icons'
 import { TableGridBreakpoint } from '@patternfly/react-table'
 import { Markdown } from '@redhat-cloud-services/rule-components/Markdown'
-import { AcmLabels, AcmTable, compareStrings } from '@stolostron/ui-components'
+import { AcmLabels, AcmTable, compareStrings } from '../../../../../ui-components'
 import { TFunction } from 'i18next'
 import _ from 'lodash'
 import { useState } from 'react'
-import { useRecoilState } from 'recoil'
-import { configMapsState } from '../../../../../atoms'
 import { useTranslation } from '../../../../../lib/acm-i18next'
 import { PolicyReport, PolicyReportResults } from '../../../../../resources'
 import { CriticalRiskIcon, ImportantRiskIcon, LowRiskIcon, ModerateRiskIcon } from './ClusterPolicySidebarIcons'
+import { useSharedAtoms, useRecoilState } from '../../../../../shared-recoil'
 
 const useStyles = makeStyles({
     body: {
@@ -143,6 +142,7 @@ function DetailsView(props: {
     selectedReport: PolicyReportResults | undefined
 }) {
     const { setDetailsView, selectedReport } = props
+    const { configMapsState } = useSharedAtoms()
     const [configmaps] = useRecoilState(configMapsState)
     const contentMap = configmaps.find((cm) => cm.metadata.name === 'insight-content-data')
     let policyContentData = contentMap?.data && contentMap?.data[selectedReport?.policy ?? '']

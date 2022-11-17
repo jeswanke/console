@@ -4,46 +4,48 @@
 
 import {
     computeNodeStatus,
-    setSubscriptionDeployStatus,
-    setResourceDeployStatus,
-    setApplicationDeployStatus,
-    setPodDeployStatus,
-    getPulseForData,
-    setPlacementRuleDeployStatus,
     getPodState,
+    getPulseForData,
     getPulseStatusForCluster,
+    setApplicationDeployStatus,
+    setPlacementRuleDeployStatus,
+    setPodDeployStatus,
+    setResourceDeployStatus,
+    setSubscriptionDeployStatus,
 } from './computeStatuses'
 
 import {
-    genericNodeYellowNotDefined,
-    persVolumePendingStateYellow,
-    persVolumePendingStateGreen,
-    subscriptionInputRed1,
-    subscriptionInputRed,
-    subscriptionInputYellow,
-    subscriptionGreenNotPlacedYellow,
-    subscriptionInputNotPlaced,
-    genericNodeInputRed,
-    genericNodeInputRed2,
-    deploymentNodeRed,
-    deploymentNodeYellow4,
-    deploymentNodeYellow2,
+    appNoChannelGreen,
+    appNoChannelRed,
+    appSetDeployable,
+    appSetDesignFalse,
+    deploymentNodeNoPodModel,
     deploymentNodeNoPODS,
     deploymentNodeNoPODSNoRes,
+    deploymentNodeRed,
     deploymentNodeRed3,
-    deploymentNodeNoPodModel,
+    deploymentNodeYellow2,
+    deploymentNodeYellow4,
+    genericNodeInputRed,
+    genericNodeInputRed2,
     genericNodeYellow,
+    genericNodeYellowNotDefined,
     packageNodeOrange,
-    ruleNodeRed,
-    ruleNodeGreen2,
-    appNoChannelRed,
-    appNoChannelGreen,
-    podCrash,
+    persVolumePendingStateGreen,
     persVolumePendingStateGreenRes,
     persVolumePendingStatePendingRes,
+    persVolumePendingStateYellow,
+    podCrash,
+    ruleNodeGreen2,
+    ruleNodeRed,
+    subscriptionGreenNotPlacedYellow,
+    subscriptionInputNotPlaced,
+    subscriptionInputRed,
+    subscriptionInputRed1,
+    subscriptionInputYellow,
 } from './computeStatuses.data.js'
 
-import { ansibleSuccess, ansibleError, ansibleError2, ansibleErrorAllClusters } from './TestingData'
+import { ansibleError, ansibleError2, ansibleErrorAllClusters, ansibleSuccess } from './TestingData'
 
 const t = (string) => {
     return string
@@ -110,6 +112,7 @@ describe('setSubscriptionDeployStatus with time window', () => {
         namespace: 'ns',
         apiversion: 'apps.open-cluster-management.io/v1',
         specs: {
+            isDesign: true,
             searchClusters: [
                 {
                     name: 'local',
@@ -182,6 +185,7 @@ describe('setSubscriptionDeployStatus with local hub subscription error', () => 
         namespace: 'ns',
         apiversion: 'test',
         specs: {
+            isDesign: true,
             searchClusters: [
                 {
                     name: 'local',
@@ -217,7 +221,7 @@ describe('setSubscriptionDeployStatus with local hub subscription error', () => 
         {
             labelValue: 'Error',
             status: 'failure',
-            value: 'Some resources failed to deploy. Use View resource YAML link below to view the details.',
+            value: 'Some resources failed to deploy. Use View resource YAML link to view the details.',
         },
         { type: 'spacer' },
         { type: 'spacer' },
@@ -233,6 +237,7 @@ describe('setSubscriptionDeployStatus with hub error', () => {
         name: 'name',
         namespace: 'ns',
         specs: {
+            isDesign: true,
             searchClusters: [
                 {
                     name: 'local',
@@ -258,7 +263,7 @@ describe('setSubscriptionDeployStatus with hub error', () => {
         {
             labelValue: 'Error',
             status: 'failure',
-            value: 'Some resources failed to deploy. Use View resource YAML link below to view the details.',
+            value: 'Some resources failed to deploy. Use View resource YAML link to view the details.',
         },
         { type: 'spacer' },
         { type: 'spacer' },
@@ -276,6 +281,7 @@ describe('setSubscriptionDeployStatus with Failed phase subscription statuses', 
         namespace: 'ns',
         apiversion: 'test',
         specs: {
+            isDesign: true,
             searchClusters: [
                 {
                     name: 'local-cluster',
@@ -322,7 +328,7 @@ describe('setSubscriptionDeployStatus with Failed phase subscription statuses', 
         {
             labelValue: 'Warning',
             status: 'warning',
-            value: 'Some resources failed to deploy. Use View resource YAML link below to view the details.',
+            value: 'Some resources failed to deploy. Use View resource YAML link to view the details.',
         },
         { type: 'spacer' },
         { type: 'spacer' },
@@ -338,6 +344,7 @@ describe('setSubscriptionDeployStatus with no sub error', () => {
         name: 'name',
         namespace: 'ns',
         specs: {
+            isDesign: true,
             subscriptionModel: [],
         },
     }
@@ -374,6 +381,7 @@ describe('setSubscriptionDeployStatus with error', () => {
         name: 'name',
         namespace: 'ns',
         specs: {
+            isDesign: true,
             searchClusters: [
                 {
                     name: 'local',
@@ -405,7 +413,7 @@ describe('setSubscriptionDeployStatus with error', () => {
         {
             labelValue: 'Error',
             status: 'failure',
-            value: 'Some resources failed to deploy. Use View resource YAML link below to view the details.',
+            value: 'Some resources failed to deploy. Use View resource YAML link to view the details.',
         },
         { type: 'spacer' },
         { type: 'spacer' },
@@ -422,6 +430,7 @@ describe('setSubscriptionDeployStatus with hub no status', () => {
         name: 'name',
         namespace: 'ns',
         specs: {
+            isDesign: true,
             searchClusters: [
                 {
                     name: 'local',
@@ -461,6 +470,7 @@ describe('setSubscriptionDeployStatus with remote no status', () => {
         name: 'name',
         namespace: 'ns',
         specs: {
+            isDesign: true,
             searchClusters: [
                 {
                     name: 'local',
@@ -511,6 +521,7 @@ describe('setSubscriptionDeployStatus for details yellow', () => {
         name: 'name',
         namespace: 'ns',
         specs: {
+            isDesign: true,
             searchClusters: [
                 {
                     name: 'local',
@@ -677,6 +688,14 @@ describe('computeNodeStatus', () => {
     it('return computeNodeStatus subscriptionGreenNotPlacedYellow', () => {
         expect(computeNodeStatus(subscriptionGreenNotPlacedYellow, true, t)).toEqual('yellow')
     })
+
+    it('return computeNodeStatus appSet is deployable', () => {
+        expect(computeNodeStatus(appSetDeployable, true, t)).toEqual('green')
+    })
+
+    it('return computeNodeStatus appSet not design', () => {
+        expect(computeNodeStatus(appSetDesignFalse, true, t)).toEqual('green')
+    })
 })
 
 describe('setResourceDeployStatus 1', () => {
@@ -813,7 +832,7 @@ describe('setResourceDeployStatus ansiblejob', () => {
                     action: 'show_resource_yaml',
                     cluster: 'local-cluster',
                     editLink:
-                        '/multicloud/home/search/resources?apiversion=tower.ansible.com%2Fv1alpha1&cluster=local-cluster&kind=ansiblejob&name=bigjoblaunch123&namespace=default',
+                        '/multicloud/home/search/resources/yaml?apiversion=tower.ansible.com%2Fv1alpha1&cluster=local-cluster&kind=ansiblejob&name=bigjoblaunch123&namespace=default',
                 },
                 label: 'View resource YAML',
             },
@@ -883,7 +902,7 @@ describe('setResourceDeployStatus ansiblejob', () => {
                     action: 'show_resource_yaml',
                     cluster: 'local-cluster',
                     editLink:
-                        '/multicloud/home/search/resources?apiversion=tower.ansible.com%2Fv1alpha1&cluster=local-cluster&kind=ansiblejob&name=bigjoblaunch&namespace=default',
+                        '/multicloud/home/search/resources/yaml?apiversion=tower.ansible.com%2Fv1alpha1&cluster=local-cluster&kind=ansiblejob&name=bigjoblaunch&namespace=default',
                 },
                 label: 'View resource YAML',
             },
@@ -943,7 +962,7 @@ describe('setResourceDeployStatus ansiblejob no specs.raw.spec', () => {
                     action: 'show_resource_yaml',
                     cluster: 'local-cluster',
                     editLink:
-                        '/multicloud/home/search/resources?apiversion=tower.ansible.com%2Fv1alpha1&cluster=local-cluster&kind=ansiblejob&name=bigjoblaunch&namespace=default',
+                        '/multicloud/home/search/resources/yaml?apiversion=tower.ansible.com%2Fv1alpha1&cluster=local-cluster&kind=ansiblejob&name=bigjoblaunch&namespace=default',
                 },
                 label: 'View resource YAML',
             },
@@ -1002,7 +1021,7 @@ describe('setResourceDeployStatus ansiblejob no status', () => {
                     action: 'show_resource_yaml',
                     cluster: 'local-cluster',
                     editLink:
-                        '/multicloud/home/search/resources?apiversion=tower.ansible.com%2Fv1alpha1&cluster=local-cluster&kind=ansiblejob&name=bigjoblaunch&namespace=default',
+                        '/multicloud/home/search/resources/yaml?apiversion=tower.ansible.com%2Fv1alpha1&cluster=local-cluster&kind=ansiblejob&name=bigjoblaunch&namespace=default',
                 },
                 label: 'View resource YAML',
             },
@@ -1031,7 +1050,7 @@ describe('setResourceDeployStatus ansiblejob no status', () => {
                     action: 'show_resource_yaml',
                     cluster: 'local-cluster',
                     editLink:
-                        '/multicloud/home/search/resources?apiversion=tower.ansible.com%2Fv1alpha1&cluster=local-cluster&kind=ansiblejob&name=bigjoblaunch&namespace=default',
+                        '/multicloud/home/search/resources/yaml?apiversion=tower.ansible.com%2Fv1alpha1&cluster=local-cluster&kind=ansiblejob&name=bigjoblaunch&namespace=default',
                 },
                 label: 'View resource YAML',
             },
@@ -1059,7 +1078,7 @@ describe('setResourceDeployStatus ansiblejob no status', () => {
                 data: {
                     action: 'show_resource_yaml',
                     cluster: 'local-cluster',
-                    editLink: '/multicloud/home/search/resources?cluster=local-cluster&namespace=default',
+                    editLink: '/multicloud/home/search/resources/yaml?cluster=local-cluster&namespace=default',
                 },
                 label: 'View resource YAML',
             },
@@ -1139,7 +1158,7 @@ describe('setResourceDeployStatus 2', () => {
                     action: 'show_resource_yaml',
                     cluster: 'possiblereptile',
                     editLink:
-                        '/multicloud/home/search/resources?cluster=possiblereptile&kind=service&name=mortgage-app-svc&namespace=default',
+                        '/multicloud/home/search/resources/yaml?cluster=possiblereptile&kind=service&name=mortgage-app-svc&namespace=default',
                 },
                 label: 'View resource YAML',
             },
@@ -1221,7 +1240,7 @@ describe('setResourceDeployStatus 2 with filter green', () => {
                     action: 'show_resource_yaml',
                     cluster: 'possiblereptile',
                     editLink:
-                        '/multicloud/home/search/resources?cluster=possiblereptile&kind=service&name=mortgage-app-svc&namespace=default',
+                        '/multicloud/home/search/resources/yaml?cluster=possiblereptile&kind=service&name=mortgage-app-svc&namespace=default',
                 },
                 label: 'View resource YAML',
             },
@@ -1436,6 +1455,7 @@ describe('setApplicationDeployStatus for ARGO', () => {
         cluster: 'local-cluster',
         namespace: 'default',
         specs: {
+            isDesign: true,
             relatedApps: [
                 {
                     name: 'app1',
@@ -1543,6 +1563,7 @@ describe('setApplicationDeployStatus 2', () => {
         namespace: 'default',
         id: 'member--member--deployable--member--clusters--braveman, possiblereptile, sharingpenguin, relievedox--default--guestbook-app-cassandra-cassandra-service--service--cassandra',
         specs: {
+            isDesign: true,
             clustersNames: ['possiblereptile', 'braveman', 'sharingpenguin'],
             raw: {
                 metadata: {
@@ -1574,6 +1595,7 @@ describe('setApplicationDeployStatus application', () => {
         namespace: 'default',
         id: 'member--application',
         specs: {
+            isDesign: true.valueOf,
             clustersNames: ['possiblereptile', 'braveman', 'sharingpenguin'],
             raw: {
                 metadata: {
@@ -1622,6 +1644,7 @@ describe('setApplicationDeployStatus no selector', () => {
         namespace: 'default',
         id: 'member--clusters--braveman, possiblereptile, sharingpenguin, relievedox--default--guestbook-app-cassandra-cassandra-service--service--cassandra',
         specs: {
+            isDesign: true,
             clustersNames: ['possiblereptile', 'braveman', 'sharingpenguin'],
         },
     }
@@ -1662,6 +1685,7 @@ describe('setApplicationDeployStatus channels', () => {
         namespace: 'default',
         id: 'member--member--deployable--member--clusters--braveman, possiblereptile, sharingpenguin, relievedox--default--guestbook-app-cassandra-cassandra-service--service--cassandra',
         specs: {
+            isDesign: true,
             clustersNames: ['possiblereptile', 'braveman', 'sharingpenguin'],
             channels: ['subsdata'],
         },
@@ -1786,7 +1810,7 @@ describe('setPodDeployStatus  with pod less then desired', () => {
                 data: {
                     action: 'show_resource_yaml',
                     cluster: 'possiblereptile',
-                    editLink: '/multicloud/home/search/resources?cluster=possiblereptile&namespace=default',
+                    editLink: '/multicloud/home/search/resources/yaml?cluster=possiblereptile&namespace=default',
                 },
                 label: 'View Pod YAML and Logs',
             },
@@ -1917,7 +1941,7 @@ describe('setPodDeployStatus  with pod as desired', () => {
                 data: {
                     action: 'show_resource_yaml',
                     cluster: 'possiblereptile',
-                    editLink: '/multicloud/home/search/resources?cluster=possiblereptile&namespace=default',
+                    editLink: '/multicloud/home/search/resources/yaml?cluster=possiblereptile&namespace=default',
                 },
                 label: 'View Pod YAML and Logs',
             },
@@ -1970,7 +1994,7 @@ describe('setPodDeployStatus  with pod as desired', () => {
                 data: {
                     action: 'show_resource_yaml',
                     cluster: 'possiblereptile',
-                    editLink: '/multicloud/home/search/resources?cluster=possiblereptile&namespace=default',
+                    editLink: '/multicloud/home/search/resources/yaml?cluster=possiblereptile&namespace=default',
                 },
                 label: 'View Pod YAML and Logs',
             },
@@ -2023,7 +2047,7 @@ describe('setPodDeployStatus  with pod as desired', () => {
                 data: {
                     action: 'show_resource_yaml',
                     cluster: 'possiblereptile',
-                    editLink: '/multicloud/home/search/resources?cluster=possiblereptile&namespace=default',
+                    editLink: '/multicloud/home/search/resources/yaml?cluster=possiblereptile&namespace=default',
                 },
                 label: 'View Pod YAML and Logs',
             },
@@ -2169,7 +2193,7 @@ describe('setPodDeployStatus - pod as desired with green filter', () => {
                 data: {
                     action: 'show_resource_yaml',
                     cluster: 'possiblereptile',
-                    editLink: '/multicloud/home/search/resources?cluster=possiblereptile&namespace=default',
+                    editLink: '/multicloud/home/search/resources/yaml?cluster=possiblereptile&namespace=default',
                 },
                 label: 'View Pod YAML and Logs',
             },

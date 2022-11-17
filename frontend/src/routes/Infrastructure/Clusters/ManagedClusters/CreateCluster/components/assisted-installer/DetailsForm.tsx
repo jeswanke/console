@@ -1,20 +1,22 @@
 /* Copyright Contributors to the Open Cluster Management project */
 /* eslint-disable react-hooks/exhaustive-deps */
-import { useCallback, useRef, useEffect, useState, useMemo } from 'react'
+import { useCallback, useRef, useEffect, useState, useMemo, Dispatch, SetStateAction } from 'react'
 import { FormikProps } from 'formik'
 import { CIM } from 'openshift-assisted-ui-lib'
 import { set, get, isEqual, startCase, camelCase, debounce } from 'lodash'
-import { getValue } from 'temptifly'
-import { AcmLabelsInput, AcmSelect } from '@stolostron/ui-components'
-import { useTranslation } from '../../../../../../../lib/acm-i18next'
+// eslint-disable-next-line
+import { TFunction } from 'react-i18next'
 import { SelectOption, Text } from '@patternfly/react-core'
 import { Link } from 'react-router-dom'
-import { useRecoilState, useRecoilValue, waitForAll } from 'recoil'
 import { NavigationPath } from '../../../../../../../NavigationPath'
-import { Secret } from '../../../../../../../resources'
-import { clusterDeploymentsState, clusterImageSetsState } from '../../../../../../../atoms'
+import { Secret, ManagedClusterSet } from '../../../../../../../resources'
 import { useCanJoinClusterSets, useMustJoinClusterSet } from '../../../../ClusterSets/components/useCanJoinClusterSets'
-import { useClusterImages } from './utils'
+import { useClusterImages, getDefault } from './utils'
+import { useSharedAtoms, useSharedRecoil, useRecoilState, useRecoilValue } from '../../../../../../../shared-recoil'
+
+import { getValue } from '../../../../../../../components/TemplateEditor'
+import { AcmLabelsInput, AcmSelect } from '../../../../../../../ui-components'
+import { useTranslation } from '../../../../../../../lib/acm-i18next'
 
 const {
     ACMClusterDeploymentDetailsStep,
@@ -53,7 +55,76 @@ const fields: any = {
     pullSecret: {},
 }
 
+export const getExtensionAfter = ({
+    t,
+    control,
+    handleChange,
+    canJoinClusterSets,
+    managedClusterSet,
+    setManagedClusterSet,
+    mustJoinClusterSet,
+    additionalLabels,
+    setAdditionaLabels,
+}: {
+    t: TFunction
+    control: FormControl
+    handleChange: (control: FormControl) => void
+    canJoinClusterSets: ManagedClusterSet[] | undefined
+    managedClusterSet: string | undefined
+    setManagedClusterSet: Dispatch<SetStateAction<string | undefined>>
+    mustJoinClusterSet: boolean | undefined
+    additionalLabels: Record<string, string> | undefined
+    setAdditionaLabels: Dispatch<SetStateAction<Record<string, string> | undefined>>
+}) => ({
+    // the "key" references element preceeding the one which is being added
+    name: (
+        <AcmSelect
+            id="managedClusterSet"
+            label={t('import.form.managedClusterSet.label')}
+            placeholder={
+                canJoinClusterSets?.length === 0
+                    ? t('import.no.cluster.sets.available')
+                    : t('import.form.managedClusterSet.placeholder')
+            }
+            labelHelp={t('import.form.managedClusterSet.labelHelp')}
+            value={managedClusterSet}
+            onChange={(value) => {
+                setManagedClusterSet(value)
+                control.active = { ...control.active, managedClusterSet: value }
+                handleChange(control)
+            }}
+            isDisabled={canJoinClusterSets === undefined || canJoinClusterSets.length === 0}
+            hidden={canJoinClusterSets === undefined}
+            helperText={
+                <Text component="small">
+                    <Link to={NavigationPath.clusterSets}>{t('import.manage.cluster.sets')}</Link>
+                </Text>
+            }
+            isRequired={mustJoinClusterSet}
+        >
+            {canJoinClusterSets?.map((mcs) => (
+                <SelectOption key={mcs.metadata.name} value={mcs.metadata.name}>
+                    {mcs.metadata.name}
+                </SelectOption>
+            ))}
+        </AcmSelect>
+    ),
+    openshiftVersion: (
+        <AcmLabelsInput
+            id="additionalLabels"
+            label={t('import.form.labels.label')}
+            buttonLabel={t('label.add')}
+            value={additionalLabels}
+            onChange={(label) => setAdditionaLabels(label)}
+            placeholder={t('labels.edit.placeholder')}
+            isDisabled={false}
+        />
+    ),
+})
+
 const DetailsForm: React.FC<DetailsFormProps> = ({ control, handleChange, controlProps }) => {
+    const { clusterDeploymentsState, clusterImageSetsState } = useSharedAtoms()
+    const { waitForAll } = useSharedRecoil()
     const [clusterDeployments] = useRecoilState(clusterDeploymentsState)
     const [clusterImageSets] = useRecoilValue(waitForAll([clusterImageSetsState]))
     const formRef = useRef<FormikProps<any>>(null)
@@ -93,6 +164,9 @@ const DetailsForm: React.FC<DetailsFormProps> = ({ control, handleChange, contro
                 managedClusterSet: control.active.managedClusterSet,
                 additionalLabels: control.active.additionalLabels,
             }
+            if (control.active.managedClusterSet !== managedClusterSet) {
+                setManagedClusterSet(control.active.managedClusterSet)
+            }
             Object.keys(fields).forEach((key) => {
                 const path = fields[key].path
                 if (path) {
@@ -131,51 +205,17 @@ const DetailsForm: React.FC<DetailsFormProps> = ({ control, handleChange, contro
 
     const usedClusterNames = useMemo(() => clusterDeployments.map((cd) => cd.metadata.name || ''), [])
 
-    const extensionAfter = {
-        // the "key" references element preceeding the one which is being added
-        name: (
-            <AcmSelect
-                id="managedClusterSet"
-                label={t('import.form.managedClusterSet.label')}
-                placeholder={
-                    canJoinClusterSets?.length === 0
-                        ? t('import.no.cluster.sets.available')
-                        : t('import.form.managedClusterSet.placeholder')
-                }
-                labelHelp={t('import.form.managedClusterSet.labelHelp')}
-                value={managedClusterSet}
-                onChange={setManagedClusterSet}
-                isDisabled={canJoinClusterSets === undefined || canJoinClusterSets.length === 0}
-                hidden={canJoinClusterSets === undefined}
-                helperText={
-                    <Text component="small">
-                        <Link to={NavigationPath.clusterSets}>{t('import.manage.cluster.sets')}</Link>
-                    </Text>
-                }
-                isRequired={mustJoinClusterSet}
-            >
-                {canJoinClusterSets?.map((mcs) => (
-                    <SelectOption key={mcs.metadata.name} value={mcs.metadata.name}>
-                        {mcs.metadata.name}
-                    </SelectOption>
-                ))}
-            </AcmSelect>
-        ),
-        openshiftVersion: (
-            <AcmLabelsInput
-                id="additionalLabels"
-                label={t('import.form.labels.label')}
-                buttonLabel={t('label.add')}
-                value={additionalLabels}
-                onChange={(label) => setAdditionaLabels(label)}
-                placeholder={t('labels.edit.placeholder')}
-                isDisabled={false}
-            />
-        ),
-        // pullSecret: control.additionalProps?.['promptSshPublicKey'] ? (
-        //     <ClusterSshKeyFields clusterSshKey="" imageSshKey="" /* Props are empty since we are in the Create flow ...*/ />
-        // ) : null,
-    }
+    const extensionAfter = getExtensionAfter({
+        t,
+        control,
+        handleChange,
+        canJoinClusterSets,
+        managedClusterSet,
+        setManagedClusterSet,
+        mustJoinClusterSet,
+        additionalLabels,
+        setAdditionaLabels,
+    })
 
     useEffect(() => {
         control.active = { ...control.active, managedClusterSet }
@@ -211,6 +251,15 @@ const DetailsForm: React.FC<DetailsFormProps> = ({ control, handleChange, contro
         handleChange(control)
     }, [additionalLabels])
 
+    useEffect(() => {
+        control.active = {
+            ...control.active,
+            pullSecret: getDefault([controlProps?.stringData?.pullSecret, control.active.pullSecret, '']),
+            baseDnsDomain: getDefault([controlProps?.stringData?.baseDomain, control.active.baseDnsDomain, '']),
+        }
+        handleChange(control)
+    }, [controlProps?.metadata.uid, controlProps?.stringData?.pullSecret, controlProps?.stringData?.baseDomain])
+
     return clusterImages ? (
         <FeatureGateContextProvider features={ACM_ENABLED_FEATURES}>
             <ACMFeatureSupportLevelProvider clusterImages={clusterImages}>
@@ -219,8 +268,6 @@ const DetailsForm: React.FC<DetailsFormProps> = ({ control, handleChange, contro
                     onValuesChanged={onValuesChanged}
                     clusterImages={clusterImages}
                     usedClusterNames={usedClusterNames}
-                    pullSecret={controlProps?.stringData?.pullSecret}
-                    defaultBaseDomain={controlProps?.stringData?.baseDomain}
                     extensionAfter={extensionAfter}
                 />
             </ACMFeatureSupportLevelProvider>

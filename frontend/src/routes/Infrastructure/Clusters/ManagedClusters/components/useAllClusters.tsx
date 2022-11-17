@@ -2,19 +2,22 @@
 
 import { Cluster, mapClusters } from '../../../../../resources'
 import { useMemo } from 'react'
-import { useRecoilValue, waitForAll } from 'recoil'
-import {
-    certificateSigningRequestsState,
-    clusterClaimsState,
-    clusterCuratorsState,
-    clusterDeploymentsState,
-    managedClusterAddonsState,
-    managedClusterInfosState,
-    managedClustersState,
-    agentClusterInstallsState,
-} from '../../../../../atoms'
+import { useSharedAtoms, useRecoilValue, useSharedRecoil } from '../../../../../shared-recoil'
 
 export function useAllClusters() {
+    const { waitForAll } = useSharedRecoil()
+    const {
+        managedClustersState,
+        clusterDeploymentsState,
+        managedClusterInfosState,
+        certificateSigningRequestsState,
+        managedClusterAddonsState,
+        clusterClaimsState,
+        clusterCuratorsState,
+        agentClusterInstallsState,
+        hostedClustersState,
+        nodePoolsState,
+    } = useSharedAtoms()
     const [
         managedClusters,
         clusterDeployments,
@@ -24,6 +27,8 @@ export function useAllClusters() {
         clusterClaims,
         clusterCurators,
         agentClusterInstalls,
+        hostedClusters,
+        nodePools,
     ] = useRecoilValue(
         waitForAll([
             managedClustersState,
@@ -34,6 +39,8 @@ export function useAllClusters() {
             clusterClaimsState,
             clusterCuratorsState,
             agentClusterInstallsState,
+            hostedClustersState,
+            nodePoolsState,
         ])
     )
     const clusters = useMemo(
@@ -46,7 +53,9 @@ export function useAllClusters() {
                 managedClusterAddons,
                 clusterClaims,
                 clusterCurators,
-                agentClusterInstalls
+                agentClusterInstalls,
+                hostedClusters,
+                nodePools
             ),
         [
             clusterDeployments,
@@ -57,6 +66,8 @@ export function useAllClusters() {
             clusterClaims,
             clusterCurators,
             agentClusterInstalls,
+            hostedClusters,
+            nodePools,
         ]
     )
     return clusters as Cluster[]

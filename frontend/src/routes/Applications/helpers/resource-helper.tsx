@@ -8,40 +8,32 @@ import { Link } from 'react-router-dom'
 import { NavigationPath } from '../../../NavigationPath'
 import {
     Application,
+    ApplicationDefinition,
     ApplicationSet,
+    ApplicationSetDefinition,
     ArgoApplication,
-    ArgoApplicationDefinition,
     ArgoApplicationApiVersion,
+    ArgoApplicationDefinition,
     ArgoApplicationKind,
     Channel,
     Cluster,
+    CronJobKind,
+    DaemonSetKind,
+    DeploymentConfigKind,
+    DeploymentKind,
     IResource,
     IResourceDefinition,
+    JobKind,
     PlacementRule,
     PlacementRuleApiVersion,
     PlacementRuleKind,
+    StatefulSetKind,
     Subscription,
     SubscriptionApiVersion,
     SubscriptionKind,
-    ApplicationSetDefinition,
-    ApplicationDefinition,
-    DeploymentDefinition,
-    JobDefinition,
-    CronJobDefinition,
-    DeploymentKind,
-    StatefulSetKind,
-    DeploymentConfigKind,
-    JobKind,
-    CronJobKind,
-    DaemonSetKind,
-    DeploymentConfigDefinition,
-    DaemonSetDefinition,
-    StatefulSetDefinition,
-    KustomizationDefinition,
 } from '../../../resources'
-import { getSubscriptionAnnotations, isLocalSubscription } from './subscriptions'
 import { getArgoDestinationCluster } from '../ApplicationDetails/ApplicationTopology/model/topologyArgo'
-import { getAnnotation } from '../Overview'
+import { getSubscriptionAnnotations, isLocalSubscription } from './subscriptions'
 export const CHANNEL_TYPES = ['git', 'helmrepo', 'namespace', 'objectbucket']
 const localClusterStr = 'local-cluster'
 const appSetPlacementStr =
@@ -160,7 +152,7 @@ export const getClusterList = (
         DeploymentConfigKind,
         JobKind,
         StatefulSetKind,
-    ].map((kind) => kind.toLowerCase())
+    ]
     if (ocpAppResourceKinds.includes(resource.kind)) {
         const clusterSet = new Set<string>()
         if (resource.status.cluster) {
@@ -182,20 +174,6 @@ export const getClusterList = (
         )
     } else if (isResourceTypeOf(resource, ApplicationDefinition)) {
         return getSubscriptionsClusterList(resource as Application, placementRules, subscriptions)
-    } else if (
-        isResourceTypeOf(resource, [
-            CronJobDefinition,
-            DaemonSetDefinition,
-            DeploymentDefinition,
-            DeploymentConfigDefinition,
-            JobDefinition,
-            StatefulSetDefinition,
-        ]) ||
-        isResourceTypeOf(resource, KustomizationDefinition)
-    ) {
-        const clusterSet = new Set<string>()
-        clusterSet.add(localClusterStr)
-        return Array.from(clusterSet)
     }
 
     return [] as string[]
@@ -370,7 +348,7 @@ export const getEditLink = (params: {
     const {
         properties: { name, namespace, kind, apiversion, cluster },
     } = params
-    return `${NavigationPath.resources}?${queryString.stringify({
+    return `${NavigationPath.resourceYAML}?${queryString.stringify({
         cluster,
         name,
         namespace,
@@ -488,7 +466,11 @@ export const getAppChildResources = (
         let subWithPR
         const referencedPR = currentSub ? (currentSub as Subscription).spec.placement?.placementRef : undefined
         placementRules.forEach((item) => {
-            if (referencedPR && referencedPR.name === item.metadata.name) {
+            if (
+                referencedPR &&
+                referencedPR.name === item.metadata.name &&
+                currentSub?.metadata?.namespace === item.metadata.namespace
+            ) {
                 subWithPR = { ...currentSub, rule: item }
             }
             const prHostingSubAnnotation = getAnnotation(item, hostingSubAnnotationStr)
@@ -576,4 +558,8 @@ export const getAppChildResources = (
     })
 
     return [children.sort((a, b) => a.label.localeCompare(b.label)), sharedChildren]
+}
+
+export function getAnnotation(resource: IResource, annotationString: string) {
+    return resource.metadata?.annotations !== undefined ? resource.metadata?.annotations[annotationString] : undefined
 }

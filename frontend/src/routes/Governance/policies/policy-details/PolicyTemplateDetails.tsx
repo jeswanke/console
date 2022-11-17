@@ -11,19 +11,20 @@ import {
     Title,
 } from '@patternfly/react-core'
 import { CheckCircleIcon, ExclamationCircleIcon, ExclamationTriangleIcon } from '@patternfly/react-icons'
-import {
-    AcmAlert,
-    AcmDescriptionList,
-    AcmTable,
-    AcmTablePaginationContextProvider,
-    compareStrings,
-} from '@stolostron/ui-components'
 import jsYaml from 'js-yaml'
 import { useEffect, useMemo, useState } from 'react'
 import YamlEditor from '../../../../components/YamlEditor'
 import { useTranslation } from '../../../../lib/acm-i18next'
 import { NavigationPath } from '../../../../NavigationPath'
 import { fireManagedClusterView } from '../../../../resources'
+import { useRecoilState, useSharedAtoms } from '../../../../shared-recoil'
+import {
+    AcmAlert,
+    AcmDescriptionList,
+    AcmTable,
+    AcmTablePaginationContextProvider,
+    compareStrings,
+} from '../../../../ui-components'
 
 export function PolicyTemplateDetails(props: {
     clusterName: string
@@ -34,15 +35,40 @@ export function PolicyTemplateDetails(props: {
 }) {
     const { t } = useTranslation()
     const { clusterName, apiGroup, apiVersion, kind, templateName } = props
+    const { managedClusterAddonsState } = useSharedAtoms()
     const [template, setTemplate] = useState<any>()
     const [relatedObjects, setRelatedObjects] = useState<any>()
     const [templateError, setTemplateError] = useState<string>()
     const [isExpanded, setIsExpanded] = useState<boolean>(true)
+    const [managedClusterAddOns] = useRecoilState(managedClusterAddonsState)
 
-    function getRelatedObjects(resource: any) {
+    let templateClusterName = clusterName
+    let templateNamespace = clusterName
+
+    // Determine if the policy framework is deployed in hosted mode. If so, the policy template needs to be retrieved
+    // from the hosting cluster instead of the managed cluster.
+    for (const addon of managedClusterAddOns) {
+        if (addon.metadata.namespace !== clusterName) {
+            continue
+        }
+
+        if (addon.metadata.name !== 'governance-policy-framework') {
+            continue
+        }
+
+        if (addon.metadata.annotations?.['addon.open-cluster-management.io/hosting-cluster-name']) {
+            templateClusterName = addon.metadata.annotations['addon.open-cluster-management.io/hosting-cluster-name']
+            // open-cluster-management-agent-addon is the default namespace but it shouldn't be used for hosted mode.
+            templateNamespace = addon.spec.installNamespace || 'open-cluster-management-agent-addon'
+        }
+
+        break
+    }
+
+    function getRelatedObjects(resource: any, clusterName: string) {
         return (
             resource?.status?.relatedObjects?.map((obj: any) => {
-                obj.cluster = resource.metadata.namespace
+                obj.cluster = clusterName
                 return obj
             }) ?? []
         )
@@ -50,20 +76,20 @@ export function PolicyTemplateDetails(props: {
 
     useEffect(() => {
         const version = apiGroup ? `${apiGroup}/${apiVersion}` : apiVersion
-        fireManagedClusterView(clusterName, kind, version, templateName, clusterName)
+        fireManagedClusterView(templateClusterName, kind, version, templateName, templateNamespace)
             .then((viewResponse) => {
                 if (viewResponse?.message) {
                     setTemplateError(viewResponse.message)
                 } else {
                     setTemplate(viewResponse.result)
-                    setRelatedObjects(getRelatedObjects(viewResponse.result))
+                    setRelatedObjects(getRelatedObjects(viewResponse.result, clusterName))
                 }
             })
             .catch((err) => {
                 console.error('Error getting resource: ', err)
                 setTemplateError(err)
             })
-    }, [clusterName, kind, apiGroup, apiVersion, templateName])
+    }, [templateClusterName, templateNamespace, clusterName, kind, apiGroup, apiVersion, templateName])
 
     const descriptionItems = [
         {
@@ -72,7 +98,7 @@ export function PolicyTemplateDetails(props: {
         },
         {
             key: t('Cluster'),
-            value: template?.metadata?.namespace ?? '-',
+            value: template ? clusterName : '-',
         },
         {
             key: t('Kind'),
@@ -95,31 +121,31 @@ export function PolicyTemplateDetails(props: {
     const relatedResourceColumns = useMemo(
         () => [
             {
-                header: 'Name',
+                header: t('Name'),
                 cell: 'object.metadata.name',
                 sort: 'object.metadata.name',
                 search: 'object.metadata.name',
             },
             {
-                header: 'Namespace',
+                header: t('Namespace'),
                 cell: (item: any) => item.object?.metadata?.namespace ?? '-',
                 search: (item: any) => item.object?.metadata?.namespace,
                 sort: (a: any, b: any) => compareStrings(a.object?.metadata?.namespace, b.object?.metadata?.namespace),
             },
             {
-                header: 'Kind',
+                header: t('Kind'),
                 cell: 'object.kind',
                 sort: 'object.kind',
                 search: 'object.kind',
             },
             {
-                header: 'API groups',
+                header: t('API groups'),
                 cell: 'object.apiVersion',
                 sort: 'object.apiVersion',
                 search: 'object.apiVersion',
             },
             {
-                header: 'Compliant',
+                header: t('Compliant'),
                 sort: (a: any, b: any) => compareStrings(a.compliant, b.compliant),
                 cell: (item: any) => {
                     let compliant = item.compliant ?? '-'
@@ -129,14 +155,16 @@ export function PolicyTemplateDetails(props: {
                         case 'compliant':
                             compliant = (
                                 <div>
-                                    <CheckCircleIcon color="var(--pf-global--success-color--100)" /> {'No violations'}
+                                    <CheckCircleIcon color="var(--pf-global--success-color--100)" />{' '}
+                                    {t('No violations')}
                                 </div>
                             )
                             break
                         case 'noncompliant':
                             compliant = (
                                 <div>
-                                    <ExclamationCircleIcon color="var(--pf-global--danger-color--100)" /> {'Violations'}
+                                    <ExclamationCircleIcon color="var(--pf-global--danger-color--100)" />{' '}
+                                    {t('Violations')}
                                 </div>
                             )
                             break
@@ -144,7 +172,7 @@ export function PolicyTemplateDetails(props: {
                             compliant = (
                                 <div>
                                     <ExclamationTriangleIcon color="var(--pf-global--warning-color--100)" />{' '}
-                                    {'No status'}
+                                    {t('No status')}
                                 </div>
                             )
                             break
@@ -154,23 +182,19 @@ export function PolicyTemplateDetails(props: {
                 },
             },
             {
-                header: 'Reason',
+                header: t('Reason'),
                 cell: 'reason',
                 search: 'reason',
             },
             {
                 header: '',
                 cell: (item: any) => {
-                    let {
-                        // eslint-disable-next-line prefer-const
+                    const {
                         cluster,
-                        // eslint-disable-next-line prefer-const
                         reason,
                         object: {
-                            // eslint-disable-next-line prefer-const
                             apiVersion,
                             kind,
-                            // eslint-disable-next-line prefer-const
                             metadata: { name, namespace = '' },
                         },
                     } = item
@@ -180,18 +204,13 @@ export function PolicyTemplateDetails(props: {
                     ) {
                         return ''
                     }
-                    if (kind.endsWith('ies')) {
-                        kind = kind.slice(0, -3)
-                    } else if (kind.endsWith('s')) {
-                        kind = kind.slice(0, -1)
-                    }
                     if (cluster && kind && apiVersion && name) {
                         if (namespace !== '') {
                             return (
                                 <a
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    href={`${NavigationPath.resources}?cluster=${cluster}&kind=${kind}&apiversion=${apiVersion}&namespace=${namespace}&name=${name}`}
+                                    href={`${NavigationPath.resourceYAML}?cluster=${cluster}&kind=${kind}&apiversion=${apiVersion}&namespace=${namespace}&name=${name}`}
                                 >
                                     {t('View yaml')}
                                 </a>
@@ -201,7 +220,7 @@ export function PolicyTemplateDetails(props: {
                                 <a
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    href={`${NavigationPath.resources}?cluster=${cluster}&kind=${kind}&apiversion=${apiVersion}&name=${name}`}
+                                    href={`${NavigationPath.resourceYAML}?cluster=${cluster}&kind=${kind}&apiversion=${apiVersion}&name=${name}`}
                                 >
                                     {t('View yaml')}
                                 </a>
@@ -258,7 +277,7 @@ export function PolicyTemplateDetails(props: {
                             index: 0,
                             direction: 'asc',
                         }}
-                        plural={'related resources'}
+                        plural={t('related resources')}
                     />
                 </AcmTablePaginationContextProvider>
             </PageSection>

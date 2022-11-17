@@ -1,20 +1,23 @@
 /* Copyright Contributors to the Open Cluster Management project */
 import { getClusterName, isDeployableResource } from '../helpers/diagram-helpers-utils'
-import { addDiagramDetails } from '../model/computeRelated'
-import { computeNodeStatus } from '../model/computeStatuses'
+import { addDiagramDetails } from './computeRelated'
+import { computeNodeStatus } from './computeStatuses'
 import _ from 'lodash'
 import R from 'ramda'
 import { getArgoTopology } from './topologyArgo'
 import { getSubscriptionTopology } from './topologySubscription'
 import { getAppSetTopology } from './topologyAppSet'
+import { getOCPFluxAppTopology } from './topologyOCPFluxApp'
 
-export const getTopology = (application, managedClusters, relatedResources, argoData) => {
+export const getTopology = async (application, managedClusters, relatedResources, argoData) => {
     let topology
     if (application) {
         if (application.isArgoApp) {
             topology = getArgoTopology(application, argoData, managedClusters)
         } else if (application.isAppSet) {
             topology = getAppSetTopology(application)
+        } else if (application.isOCPApp || application.isFluxApp) {
+            topology = await getOCPFluxAppTopology(application)
         } else {
             topology = getSubscriptionTopology(application, managedClusters, relatedResources)
         }
@@ -82,8 +85,8 @@ export const getDiagramElements = (appData, topology, resourceStatuses, canUpdat
 //link the search objects to this node;
 export const processNodeData = (node, topoResourceMap, isClusterGrouped, hasHelmReleases, topology) => {
     const { name, type } = node
-
-    if (!isDeployableResource(node) && R.includes(type, ['cluster', 'application', 'placements'])) {
+    const isDesign = _.get(node, 'specs.isDesign', false)
+    if (!isDeployableResource(node) && R.includes(type, ['cluster', 'application', 'placements']) && isDesign) {
         return //ignore these types
     }
 

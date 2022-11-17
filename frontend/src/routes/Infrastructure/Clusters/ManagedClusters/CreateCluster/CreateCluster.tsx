@@ -1,52 +1,64 @@
 /* Copyright Contributors to the Open Cluster Management project */
 import { makeStyles } from '@material-ui/styles'
-import { PageSection } from '@patternfly/react-core'
-import { AcmErrorBoundary, AcmPage, AcmPageContent, AcmPageHeader } from '@stolostron/ui-components'
+import { PageSection, Modal, ModalVariant } from '@patternfly/react-core'
+import { AcmErrorBoundary, AcmPage, AcmPageContent, AcmPageHeader, Provider } from '../../../../../ui-components'
 import Handlebars from 'handlebars'
-import { get, keyBy } from 'lodash'
+import { cloneDeep, get, keyBy, set } from 'lodash'
 import 'monaco-editor/esm/vs/basic-languages/yaml/yaml.contribution.js'
 import 'monaco-editor/esm/vs/editor/editor.all.js'
 import { CIM } from 'openshift-assisted-ui-lib'
-import { useContext, useEffect, useRef, useState } from 'react'
+import { useCallback, useContext, useEffect, useRef, useState } from 'react'
 // include monaco editor
 import MonacoEditor from 'react-monaco-editor'
-import { useHistory, useLocation } from 'react-router-dom'
-import { useRecoilState } from 'recoil'
-import TemplateEditor from 'temptifly'
-import 'temptifly/dist/styles.css'
-import {
-    agentClusterInstallsState,
-    clusterCuratorsState,
-    infraEnvironmentsState,
-    managedClustersState,
-    secretsState,
-    settingsState,
-} from '../../../../../atoms'
+import { generatePath, useHistory } from 'react-router-dom'
+import TemplateEditor from '../../../../../components/TemplateEditor'
 import { useTranslation } from '../../../../../lib/acm-i18next'
 import { createCluster } from '../../../../../lib/create-cluster'
 import { DOC_LINKS } from '../../../../../lib/doc-util'
 import { PluginContext } from '../../../../../lib/PluginContext'
-import { NavigationPath } from '../../../../../NavigationPath'
+import { NavigationPath, useBackCancelNavigation } from '../../../../../NavigationPath'
 import {
     ClusterCurator,
     createClusterCurator,
     createResource as createResourceTool,
-    filterForTemplatedCurators,
+    IResource,
     ProviderConnection,
     Secret,
-    unpackProviderConnection,
 } from '../../../../../resources'
 import { useCanJoinClusterSets, useMustJoinClusterSet } from '../../ClusterSets/components/useCanJoinClusterSets'
 // template/data
-import { getControlData } from './controlData/ControlData'
-import { arrayItemHasKey, setAvailableConnections } from './controlData/ControlDataHelpers'
-import './style.css'
+import { append, arrayItemHasKey, setAvailableConnections } from './controlData/ControlDataHelpers'
 import endpointTemplate from './templates/endpoints.hbs'
 import hiveTemplate from './templates/hive-template.hbs'
+import hypershiftTemplate from './templates/assisted-installer/hypershift-template.hbs'
+import cimTemplate from './templates/assisted-installer/cim-template.hbs'
+import aiTemplate from './templates/assisted-installer/ai-template.hbs'
 import { Warning, WarningContext, WarningContextType } from './Warning'
+import {
+    HypershiftAgentContext,
+    useHypershiftContextValues,
+} from './components/assisted-installer/hypershift/HypershiftAgentContext'
+
+import './style.css'
+import getControlDataAWS from './controlData/ControlDataAWS'
+import getControlDataGCP from './controlData/ControlDataGCP'
+import getControlDataAZR from './controlData/ControlDataAZR'
+import getControlDataVMW from './controlData/ControlDataVMW'
+import getControlDataOST from './controlData/ControlDataOST'
+import getControlDataRHV from './controlData/ControlDataRHV'
+import getControlDataHypershift from './controlData/ControlDataHypershift'
+import getControlDataCIM from './controlData/ControlDataCIM'
+import getControlDataAI from './controlData/ControlDataAI'
+import { CredentialsForm } from '../../../../Credentials/CredentialsForm'
+import { GetProjects } from '../../../../../components/GetProjects'
+import { useSharedAtoms, useRecoilState, useRecoilValue, useSharedSelectors } from '../../../../../shared-recoil'
+import {
+    ClusterInfrastructureType,
+    HostInventoryInfrastructureType,
+    getCredentialsTypeForClusterInfrastructureType,
+} from '../ClusterInfrastructureType'
 
 const { isAIFlowInfraEnv } = CIM
-
 interface CreationStatus {
     status: string
     messages: any[] | null
@@ -67,38 +79,65 @@ const useStyles = makeStyles({
     },
 })
 
-export default function CreateClusterPage() {
+export default function CreateCluster(props: { infrastructureType: ClusterInfrastructureType }) {
+    const { infrastructureType } = props
     const history = useHistory()
-    const location = useLocation()
-    const [secrets] = useRecoilState(secretsState)
+    const { back, cancel } = useBackCancelNavigation()
+    const { agentClusterInstallsState, infraEnvironmentsState, managedClustersState, secretsState, settingsState } =
+        useSharedAtoms()
+    const {
+        ansibleCredentialsValue,
+        clusterCuratorSupportedCurationsValue,
+        providerConnectionsValue,
+        validClusterCuratorTemplatesValue,
+    } = useSharedSelectors()
+    const secrets = useRecoilValue(secretsState)
+    const providerConnections = useRecoilValue(providerConnectionsValue)
+    const ansibleCredentials = useRecoilValue(ansibleCredentialsValue)
     const { isACMAvailable } = useContext(PluginContext)
     const templateEditorRef = useRef<null>()
+    const [isModalOpen, setIsModalOpen] = useState(false)
+    const [newSecret, setNewSecret] = useState<Secret>()
+
+    const { projects } = GetProjects()
+
+    // setup translation
+    const { t } = useTranslation()
+    const i18n = (key: string, arg: any) => {
+        return t(key, arg)
+    }
+    const controlPlaneBreadCrumb = { text: t('Control plane type'), to: NavigationPath.createControlPlane }
+    const hostsBreadCrumb = { text: t('Hosts'), to: NavigationPath.createDiscoverHost }
+
+    const settings = useRecoilValue(settingsState)
+    const supportedCurations = useRecoilValue(clusterCuratorSupportedCurationsValue)
+    const managedClusters = useRecoilValue(managedClustersState)
+    const validCuratorTemplates = useRecoilValue(validClusterCuratorTemplatesValue)
+    const [selectedConnection, setSelectedConnection] = useState<ProviderConnection>()
+    const onControlChange = useCallback(
+        (control: any) => {
+            if (control.id === 'connection') {
+                if (newSecret && control.setActive) {
+                    control.setActive(newSecret.metadata.name)
+                }
+                setSelectedConnection(providerConnections.find((provider) => control.active === provider.metadata.name))
+            }
+        },
+        [providerConnections, setSelectedConnection, newSecret]
+    )
+    const [agentClusterInstalls] = useRecoilState(agentClusterInstallsState)
+    const [infraEnvs] = useRecoilState(infraEnvironmentsState)
+    const [warning, setWarning] = useState<WarningContextType>()
+    const hypershiftValues = useHypershiftContextValues()
 
     // if a connection is added outside of wizard, add it to connection selection
     const [connectionControl, setConnectionControl] = useState()
     useEffect(() => {
         if (connectionControl) {
             setAvailableConnections(connectionControl, secrets)
+            onControlChange(connectionControl)
         }
-    }, [connectionControl, secrets])
-
-    const providerConnections = secrets.map(unpackProviderConnection)
-    const ansibleCredentials = providerConnections.filter(
-        (providerConnection) =>
-            providerConnection.metadata?.labels?.['cluster.open-cluster-management.io/type'] === 'ans' &&
-            !providerConnection.metadata?.labels?.['cluster.open-cluster-management.io/copiedFromSecretName']
-    )
-
-    const [settings] = useRecoilState(settingsState)
-
-    const [managedClusters] = useRecoilState(managedClustersState)
-    const [clusterCurators] = useRecoilState(clusterCuratorsState)
-    const curatorTemplates = filterForTemplatedCurators(clusterCurators)
-    const [selectedTemplate, setSelectedTemplate] = useState('')
-    const [selectedConnection, setSelectedConnection] = useState<ProviderConnection>()
-    const [agentClusterInstalls] = useRecoilState(agentClusterInstallsState)
-    const [infraEnvs] = useRecoilState(infraEnvironmentsState)
-    const [warning, setWarning] = useState<WarningContextType>()
+    }, [connectionControl, onControlChange, secrets])
 
     // Is there a way how to get this without fetching all InfraEnvs?
     const isInfraEnvAvailable = !!infraEnvs?.length
@@ -121,7 +160,7 @@ export default function CreateClusterPage() {
     // create button
     const [creationStatus, setCreationStatus] = useState<CreationStatus>()
     const createResource = async (
-        resourceJSON: { createResources: any[] },
+        resourceJSON: { createResources: IResource[] },
         noRedirect: boolean,
         inProgressMsg?: string,
         completedMsg?: string
@@ -129,7 +168,8 @@ export default function CreateClusterPage() {
         if (resourceJSON) {
             const { createResources } = resourceJSON
             const map = keyBy(createResources, 'kind')
-            const clusterName = get(map, 'ClusterDeployment.metadata.name')
+            const cluster = map?.ClusterDeployment || map?.HostedCluster
+            const clusterName = cluster?.metadata?.name
 
             // return error if cluster name is already used
             const matchedManagedCluster = managedClusters.find((mc) => mc.metadata.name === clusterName)
@@ -138,16 +178,30 @@ export default function CreateClusterPage() {
             if (matchedManagedCluster || matchedAgentClusterInstall) {
                 setCreationStatus({
                     status: 'ERROR',
-                    messages: [{ message: `The cluster name is already used by another cluster.` }],
+                    messages: [{ message: t('The cluster name is already used by another cluster.') }],
                 })
                 return 'ERROR'
             } else {
-                // check if Template is selected
-                if (selectedTemplate !== '') {
+                const isClusterCurator = (resource: any) => {
+                    return resource.kind === 'ClusterCurator'
+                }
+                const isAutomationCredential = (resource: any) => {
+                    return resource.kind === 'Secret' && resource.metadata.name.startsWith('toweraccess-')
+                }
+                const clusterResources = createResources.filter(
+                    (resource) => !(isClusterCurator(resource) || isAutomationCredential(resource))
+                )
+                const clusterCurator = createResources.find((resource) => isClusterCurator(resource)) as ClusterCurator
+                const automationCredentials = createResources.filter((resource) =>
+                    isAutomationCredential(resource)
+                ) as Secret[]
+
+                // Check if an 'install' curation will be run
+                if (clusterCurator?.spec?.desiredCuration === 'install') {
                     // set installAttemptsLimit to 0
-                    createResources.forEach((resource) => {
-                        if (resource.kind === 'ClusterDeployment') {
-                            resource.spec.installAttemptsLimit = 0
+                    clusterResources.forEach((resource) => {
+                        if (resource?.kind === 'ClusterDeployment') {
+                            set(resource, 'spec.installAttemptsLimit', 0)
                         }
                     })
                 }
@@ -155,13 +209,24 @@ export default function CreateClusterPage() {
                 // add source labels to secrets, add backup labels
                 createResources.forEach((resource) => {
                     if (resource.kind === 'Secret') {
-                        resource!.metadata.labels! = { 'cluster.open-cluster-management.io/backup': 'cluster' }
+                        set(resource, 'metadata.labels["cluster.open-cluster-management.io/backup"]', 'cluster')
+                        const resourceName = resource?.metadata?.name
 
-                        if (!resource!.metadata!.name.includes('install-config')) {
-                            resource!.metadata!.labels['cluster.open-cluster-management.io/copiedFromNamespace'] =
+                        // install-config is not copied; toweraccess secrets already include these labels
+                        if (
+                            resourceName &&
+                            !(resourceName.includes('install-config') || resourceName.includes('toweraccess-'))
+                        ) {
+                            set(
+                                resource,
+                                'metadata.labels["cluster.open-cluster-management.io/copiedFromNamespace"]',
                                 selectedConnection?.metadata.namespace!
-                            resource!.metadata.labels!['cluster.open-cluster-management.io/copiedFromSecretName'] =
+                            )
+                            set(
+                                resource,
+                                'metadata.labels["cluster.open-cluster-management.io/copiedFromSecretName"]',
                                 selectedConnection?.metadata.name!
+                            )
                         }
                     }
                 })
@@ -170,65 +235,18 @@ export default function CreateClusterPage() {
                 setCreationStatus({ status: 'IN_PROGRESS', messages: progressMessage })
 
                 // creates managedCluster, deployment, secrets etc...
-                const { status, messages } = await createCluster(createResources)
+                const { status, messages } = await createCluster(clusterResources)
 
                 if (status === 'ERROR') {
                     setCreationStatus({ status, messages })
-                } else if (status !== 'ERROR' && selectedTemplate !== '') {
+                } else if (status !== 'ERROR' && clusterCurator) {
                     setCreationStatus({
                         status: 'IN_PROGRESS',
-                        messages: ['Running automation...'],
+                        messages: [t('Setting up automation...')],
                     })
-                    // get template, modifty it and create curator cluster namespace
-                    const currentTemplate = curatorTemplates.find(
-                        (template) => template.metadata.name === selectedTemplate
-                    )
-                    const currentTemplateMutable: ClusterCurator = JSON.parse(JSON.stringify(currentTemplate))
-                    if (currentTemplateMutable.spec?.install?.towerAuthSecret)
-                        currentTemplateMutable.spec.install.towerAuthSecret = 'toweraccess'
-                    if (currentTemplateMutable.spec?.scale?.towerAuthSecret)
-                        currentTemplateMutable.spec.scale.towerAuthSecret = 'toweraccess'
-                    if (currentTemplateMutable.spec?.upgrade?.towerAuthSecret)
-                        currentTemplateMutable.spec.upgrade.towerAuthSecret = 'toweraccess'
-                    if (currentTemplateMutable.spec?.destroy?.towerAuthSecret)
-                        currentTemplateMutable.spec.destroy.towerAuthSecret = 'toweraccess'
-                    delete currentTemplateMutable.metadata.creationTimestamp
-                    delete currentTemplateMutable.metadata.resourceVersion
 
-                    currentTemplateMutable!.metadata.name = createResources[0].metadata.namespace
-                    currentTemplateMutable!.metadata.namespace = createResources[0].metadata.namespace
-                    currentTemplateMutable!.spec!.desiredCuration = 'install'
-
-                    createClusterCurator(currentTemplateMutable)
-
-                    // get ansible secret, modifty it and create it in cluster namespace
-                    const ansibleSecret = ansibleCredentials.find(
-                        (secret) => secret.metadata.name === currentTemplate?.spec?.install?.towerAuthSecret
-                    )
-
-                    if (ansibleSecret === undefined) {
-                        setCreationStatus({
-                            status: 'ERROR',
-                            messages: [
-                                'Your Ansible Automation Platform credential was deleted. Create a new template with an Ansible Automation Platform credential.',
-                            ],
-                        })
-                        return status
-                    }
-
-                    const ansibleSecretMutable: Secret = JSON.parse(JSON.stringify(ansibleSecret))
-                    ansibleSecretMutable!.metadata.name = 'toweraccess'
-                    ansibleSecretMutable!.metadata.namespace = createResources[0].metadata.namespace
-                    ansibleSecretMutable!.metadata.labels!['cluster.open-cluster-management.io/copiedFromNamespace'] =
-                        ansibleSecret?.metadata.namespace!
-                    ansibleSecretMutable!.metadata.labels!['cluster.open-cluster-management.io/copiedFromSecretName'] =
-                        ansibleSecret?.metadata.name!
-
-                    delete ansibleSecretMutable.metadata.creationTimestamp
-                    delete ansibleSecretMutable.metadata.resourceVersion
-                    delete ansibleSecretMutable.metadata.labels!['cluster.open-cluster-management.io/credentials']
-
-                    createResourceTool<Secret>(ansibleSecretMutable)
+                    createClusterCurator(clusterCurator)
+                    automationCredentials.forEach((ac) => createResourceTool<Secret>(ac))
                 }
 
                 // redirect to created cluster
@@ -237,7 +255,7 @@ export default function CreateClusterPage() {
                     setCreationStatus({ status, messages: finishMessage })
                     if (!noRedirect) {
                         setTimeout(() => {
-                            history.push(NavigationPath.clusterDetails.replace(':id', clusterName as string))
+                            history.push(generatePath(NavigationPath.clusterDetails, { id: clusterName as string }))
                         }, 2000)
                     }
                 }
@@ -248,31 +266,13 @@ export default function CreateClusterPage() {
     }
 
     // cancel button
-    const cancelCreate = () => {
-        history.push(NavigationPath.clusters)
-    }
-
-    // setup translation
-    const { t } = useTranslation()
-    const i18n = (key: string, arg: any) => {
-        return t(key, arg)
-    }
+    const cancelCreate = cancel(NavigationPath.clusters)
 
     //compile templates
-    const template = Handlebars.compile(hiveTemplate)
+    let template = Handlebars.compile(hiveTemplate)
     Handlebars.registerPartial('endpoints', Handlebars.compile(endpointTemplate))
     Handlebars.registerHelper('arrayItemHasKey', arrayItemHasKey)
-
-    // if opened from bma page, pass selected bma's to editor
-    const urlParams = new URLSearchParams(location.search.substring(1))
-    const bmasParam = urlParams.get('bmas')
-    const requestedUIDs = bmasParam ? bmasParam.split(',') : []
-    const fetchControl = bmasParam
-        ? {
-              isLoaded: true,
-              fetchData: { requestedUIDs },
-          }
-        : null
+    Handlebars.registerHelper('append', append)
 
     const { canJoinClusterSets } = useCanJoinClusterSets()
     const mustJoinClusterSet = useMustJoinClusterSet()
@@ -287,25 +287,16 @@ export default function CreateClusterPage() {
                     control.validation.required = mustJoinClusterSet ?? false
                 }
                 break
-            case 'infrastructure':
-                control?.available?.forEach((provider: any) => {
-                    const providerData: any = control?.availableMap[provider]
-                    providerData?.change?.insertControlData?.forEach((ctrl: any) => {
-                        if (ctrl.id === 'connection') {
-                            setAvailableConnections(ctrl, secrets)
-                        }
-                    })
-                })
+            case 'templateName': {
+                const availableData = validCuratorTemplates
+                // TODO: Need to keep namespace information
+                control.available = availableData.map((curatorTemplate) => curatorTemplate.metadata.name)
+                control.availableData = availableData
+                control.availableSecrets = ansibleCredentials
                 break
-            case 'templateName':
-                control.available = curatorTemplates.map((template) => {
-                    const ansibleSecret = ansibleCredentials.find(
-                        (secret) => secret.metadata.name === template?.spec?.install?.towerAuthSecret
-                    )
-                    if (ansibleSecret !== undefined) {
-                        return template.metadata.name
-                    }
-                })
+            }
+            case 'supportedCurations':
+                control.active = cloneDeep(supportedCurations)
                 break
             case 'singleNodeFeatureFlag':
                 if (settings.singleNodeOpenshift === 'enabled') {
@@ -326,8 +317,8 @@ export default function CreateClusterPage() {
                                 createResource(
                                     resourceJSON,
                                     true,
-                                    'Saving cluster draft...',
-                                    'Cluster draft saved'
+                                    t('Saving cluster draft...'),
+                                    t('Cluster draft saved')
                                 ).then((status) => {
                                     if (status === 'ERROR') {
                                         resolve(status)
@@ -356,52 +347,103 @@ export default function CreateClusterPage() {
         }
     }
 
+    useEffect(() => {
+        if (
+            (infrastructureType === HostInventoryInfrastructureType.CIM ||
+                infrastructureType === HostInventoryInfrastructureType.CIMHypershift) &&
+            !isInfraEnvAvailable
+        ) {
+            setWarning({
+                title: t('cim.infra.missing.warning.title'),
+                text: t('cim.infra.missing.warning.text'),
+                linkText: t('cim.infra.manage.link'),
+                linkTo: NavigationPath.infraEnvironments,
+            })
+        } else {
+            setWarning(undefined)
+        }
+    }, [infrastructureType, isInfraEnvAvailable, t])
+
     // cluster set dropdown won't update without this
     if (canJoinClusterSets === undefined || mustJoinClusterSet === undefined) {
         return null
     }
 
-    function onControlChange(control: any) {
-        switch (control.id) {
-            case 'templateName':
-                setSelectedTemplate(control.active)
-                break
-            case 'connection':
-                setSelectedConnection(providerConnections.find((provider) => control.active === provider.metadata.name))
-                break
-        }
+    let controlData: any[]
+    const breadcrumbs = [
+        { text: t('Clusters'), to: NavigationPath.clusters },
+        { text: t('Infrastructure'), to: NavigationPath.createCluster },
+    ]
+
+    const backButtonOverride = back(NavigationPath.clusters)
+
+    const handleModalToggle = () => {
+        setIsModalOpen(!isModalOpen)
     }
 
-    const onControlSelect = (control: any) => {
-        if (control.controlId === 'infrastructure') {
-            if (control.active?.includes('CIM') && !isInfraEnvAvailable) {
-                setWarning({
-                    title: t('cim.infra.missing.warning.title'),
-                    text: t('cim.infra.missing.warning.text'),
-                    linkText: t('cim.infra.manage.link'),
-                    linkTo: NavigationPath.infraEnvironments,
-                })
-            } else if (control.active?.includes('BMC')) {
-                setWarning({
-                    title: t('bareMetalAsset.warning.title'),
-                    text: t('bareMetalAsset.warning.text'),
-                    linkText: t('Learn more'),
-                    linkTo: DOC_LINKS.CREATE_CLUSTER_ON_PREMISE,
-                    isExternalLink: true,
-                })
-            } else {
-                setWarning(undefined)
-            }
-        }
+    switch (infrastructureType) {
+        case Provider.aws:
+            controlData = getControlDataAWS(
+                handleModalToggle,
+                true,
+                settings.awsPrivateWizardStep === 'enabled',
+                settings.singleNodeOpenshift === 'enabled',
+                isACMAvailable
+            )
+            break
+        case Provider.gcp:
+            controlData = getControlDataGCP(
+                handleModalToggle,
+                true,
+                settings.singleNodeOpenshift === 'enabled',
+                isACMAvailable
+            )
+            break
+        case Provider.azure:
+            controlData = getControlDataAZR(
+                handleModalToggle,
+                true,
+                settings.singleNodeOpenshift === 'enabled',
+                isACMAvailable
+            )
+            break
+        case Provider.vmware:
+            controlData = getControlDataVMW(
+                handleModalToggle,
+                true,
+                settings.singleNodeOpenshift === 'enabled',
+                isACMAvailable
+            )
+            break
+        case Provider.openstack:
+            controlData = getControlDataOST(
+                handleModalToggle,
+                true,
+                settings.singleNodeOpenshift === 'enabled',
+                isACMAvailable
+            )
+            break
+        case Provider.redhatvirtualization:
+            controlData = getControlDataRHV(handleModalToggle, true, isACMAvailable)
+            break
+        case HostInventoryInfrastructureType.CIMHypershift:
+            template = Handlebars.compile(hypershiftTemplate)
+            controlData = getControlDataHypershift(handleModalToggle, <Warning />, true, isACMAvailable)
+            breadcrumbs.push(controlPlaneBreadCrumb)
+            break
+        case HostInventoryInfrastructureType.CIM:
+            template = Handlebars.compile(cimTemplate)
+            controlData = getControlDataCIM(handleModalToggle, <Warning />, isACMAvailable)
+            breadcrumbs.push(controlPlaneBreadCrumb)
+            break
+        case HostInventoryInfrastructureType.AI:
+            template = Handlebars.compile(aiTemplate)
+            controlData = getControlDataAI(handleModalToggle, isACMAvailable)
+            breadcrumbs.push(controlPlaneBreadCrumb, hostsBreadCrumb)
+            break
     }
 
-    const controlData = getControlData(
-        <Warning />,
-        onControlSelect,
-        settings.awsPrivateWizardStep === 'enabled',
-        settings.singleNodeOpenshift === 'enabled',
-        isACMAvailable /* includeKlusterletAddonConfig */
-    )
+    breadcrumbs.push({ text: t('page.header.create-cluster'), to: NavigationPath.emptyPath })
 
     return (
         <AcmPage
@@ -421,10 +463,7 @@ export default function CreateClusterPage() {
                             </a>
                         </>
                     }
-                    breadcrumb={[
-                        { text: t('Clusters'), to: NavigationPath.clusters },
-                        { text: t('page.header.create-cluster'), to: '' },
-                    ]}
+                    breadcrumb={breadcrumbs}
                     switches={switches}
                     actions={portals}
                 />
@@ -434,32 +473,55 @@ export default function CreateClusterPage() {
                 <AcmPageContent id="create-cluster">
                     <PageSection variant="light" isFilled type="wizard">
                         <WarningContext.Provider value={warning}>
-                            <TemplateEditor
-                                wizardClassName={classes.wizardBody}
-                                type={'cluster'}
-                                title={'Cluster YAML'}
-                                monacoEditor={<MonacoEditor />}
-                                controlData={controlData}
-                                template={template}
-                                portals={Portals}
-                                fetchControl={fetchControl}
-                                createControl={{
-                                    createResource,
-                                    cancelCreate,
-                                    pauseCreate: () => {},
-                                    creationStatus: creationStatus?.status,
-                                    creationMsg: creationStatus?.messages,
-                                    resetStatus: () => {
-                                        setCreationStatus(undefined)
-                                    },
-                                }}
-                                logging={process.env.NODE_ENV !== 'production'}
-                                i18n={i18n}
-                                onControlInitialize={onControlInitialize}
-                                onControlChange={onControlChange}
-                                ref={templateEditorRef}
-                                controlProps={selectedConnection}
-                            />
+                            <HypershiftAgentContext.Provider value={hypershiftValues}>
+                                <Modal
+                                    variant={ModalVariant.large}
+                                    showClose={false}
+                                    isOpen={isModalOpen}
+                                    aria-labelledby="modal-wizard-label"
+                                    aria-describedby="modal-wizard-description"
+                                    onClose={handleModalToggle}
+                                    hasNoBodyWrapper
+                                >
+                                    <CredentialsForm
+                                        namespaces={projects}
+                                        isEditing={false}
+                                        isViewing={false}
+                                        credentialsType={getCredentialsTypeForClusterInfrastructureType(
+                                            infrastructureType
+                                        )}
+                                        handleModalToggle={handleModalToggle}
+                                        hideYaml={true}
+                                        newCredentialCallback={setNewSecret}
+                                    />
+                                </Modal>
+                                <TemplateEditor
+                                    wizardClassName={classes.wizardBody}
+                                    type={'cluster'}
+                                    title={t('Cluster YAML')}
+                                    monacoEditor={<MonacoEditor />}
+                                    controlData={controlData}
+                                    template={template}
+                                    portals={Portals}
+                                    createControl={{
+                                        createResource,
+                                        cancelCreate,
+                                        pauseCreate: () => {},
+                                        creationStatus: creationStatus?.status,
+                                        creationMsg: creationStatus?.messages,
+                                        resetStatus: () => {
+                                            setCreationStatus(undefined)
+                                        },
+                                        backButtonOverride,
+                                    }}
+                                    logging={process.env.NODE_ENV !== 'production'}
+                                    i18n={i18n}
+                                    onControlInitialize={onControlInitialize}
+                                    onControlChange={onControlChange}
+                                    ref={templateEditorRef}
+                                    controlProps={selectedConnection}
+                                />
+                            </HypershiftAgentContext.Provider>
                         </WarningContext.Provider>
                     </PageSection>
                 </AcmPageContent>

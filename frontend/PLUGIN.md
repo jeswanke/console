@@ -26,17 +26,38 @@ In the case of 4.10+ we will install addition [resources](https://github.com/ope
 
 ## Development
 
-### Running console as OCP dynamic plugins
+### Prerequisites
+
+- python
+- [jq](https://stedolan.github.io/jq/download/)
+- [oc](https://docs.openshift.com/container-platform/4.10/cli_reference/openshift_cli/getting-started-cli.html)
+- podman or docker
+
+## Running console as OCP dynamic plugins
 
 From the root of the `console` repository make sure your kubecontext is set to a hub cluster, then run:
+
 ```
 npm run setup
 npm run plugins
 ```
 
-This will concurrently start the backend server and frontend webpack development server.
+This will concurrently start the backend server, frontend webpack development server and OCP console.
+
+The console will be running at localhost:9000.
+
+## Running against local development build of OCP console
+
+```
+npm run setup
+npm run plugins-dev
+```
+
+This will concurrently start the backend server and frontend webpack development server
 
 ### [OCP Console Git Repo](https://github.com/openshift/console)
+
+Ensure that [OCP Console's dependencies](https://github.com/openshift/console#dependencies) are met in your local environment.
 
 ```
 git clone git@github.com:openshift/console.git
@@ -45,6 +66,7 @@ git clone git@github.com:openshift/console.git
 ### Running OCP Console in development mode
 
 **Note:** With recent post-4.10 builds, you need to run OpenShift console with authentication for authorization to work with the proxied services. Follow [these instructions](https://github.com/openshift/console#openshift-with-authentication). Alternatively, you can revert a commit that regressed the ability to use proxies that require authorization when running without authentication and continue with these instructions.
+
 ```
 git revert 1230920afbcd7cbc1d2f0c6b1e48744c72eb60be -m 1 -n
 ```
@@ -58,14 +80,16 @@ Build OCP Console
 Start ocp console bridge with plugin and proxy
 
 ```
-source ./contrib/oc-environment.sh 
+source ./contrib/oc-environment.sh
 ```
 
 ```
 ./bin/bridge -plugins mce=http://localhost:3001 -plugins acm=http://localhost:3002 --plugin-proxy='{"services":[{"consoleAPIPath":"/api/proxy/plugin/mce/console/","endpoint":"https://localhost:4000","authorize":true},{"consoleAPIPath":"/api/proxy/plugin/acm/console/","endpoint":"https://localhost:4000","authorize":true}]}'
 ```
 
-Bridge variables can also be passes in as environment variables
+The console will be running at localhost:9000.
+
+Bridge variables can also be passed in as environment variables
 
 ```
 BRIDGE_PLUGIN_PROXY='{"services":[{"consoleAPIPath":"/api/proxy/plugin/mce/console/","endpoint":"https://localhost:4000","authorize":true},{"consoleAPIPath":"/api/proxy/plugin/acm/console/","endpoint":"https://localhost:4000","authorize":true}]}'

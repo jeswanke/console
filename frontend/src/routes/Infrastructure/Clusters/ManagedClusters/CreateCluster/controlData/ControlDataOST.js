@@ -1,10 +1,12 @@
 /* Copyright Contributors to the Open Cluster Management project */
 
-// eslint-disable-next-line no-use-before-define
-import React from 'react'
-import { VALIDATE_NUMERIC, VALIDATE_IP, VALIDATE_IP_OPTIONAL, VALIDATE_URL } from 'temptifly'
 import {
-    CREATE_CLOUD_CONNECTION,
+    VALIDATE_NUMERIC,
+    VALIDATE_IP,
+    VALIDATE_IP_OPTIONAL,
+    VALIDATE_URL,
+} from '../../../../../../components/TemplateEditor'
+import {
     LOAD_OCP_IMAGES,
     clusterDetailsControlData,
     proxyControlData,
@@ -20,18 +22,49 @@ import {
     onChangeDisconnect,
     addSnoText,
     architectureData,
+    appendKlusterletAddonConfig,
+    insertToggleModalFunction,
+    onImageChange,
 } from './ControlDataHelpers'
 import { DevPreviewLabel } from '../../../../../../components/TechPreviewAlert'
+import installConfigHbs from '../templates/install-config.hbs'
+import Handlebars from 'handlebars'
+import { CreateCredentialModal } from '../../../../../../components/CreateCredentialModal'
 
-export const getControlDataOST = (includeAutomation = true, includeSno = false) => {
-    if (includeSno) addSnoText(controlDataOST)
-    if (includeAutomation) return [...controlDataOST, ...automationControlData]
-    return [...controlDataOST]
+const installConfig = Handlebars.compile(installConfigHbs)
+
+export const getControlDataOST = (
+    handleModalToggle,
+    includeAutomation = true,
+    includeSno = false,
+    includeKlusterletAddonConfig = true
+) => {
+    const controlData = [...controlDataOST]
+    if (includeSno) {
+        addSnoText(controlData)
+    }
+    appendKlusterletAddonConfig(includeKlusterletAddonConfig, controlData)
+    insertToggleModalFunction(handleModalToggle, controlData)
+    if (includeAutomation) {
+        return [...controlData, ...automationControlData]
+    }
+    return controlData
 }
 
 const controlDataOST = [
     ////////////////////////////////////////////////////////////////////////////////////
     ///////////////////////  connection  /////////////////////////////////////
+    {
+        id: 'detailStep',
+        type: 'step',
+        title: 'Cluster details',
+    },
+    {
+        id: 'infrastructure',
+        name: 'Infrastructure',
+        active: 'OpenStack',
+        type: 'reviewinfo',
+    },
     {
         name: 'creation.ocp.cloud.connection',
         tooltip: 'tooltip.creation.ocp.cloud.connection',
@@ -45,7 +78,7 @@ const controlDataOST = [
         },
         available: [],
         onSelect: onChangeConnection,
-        prompts: CREATE_CLOUD_CONNECTION,
+        footer: <CreateCredentialModal />,
     },
     ...clusterDetailsControlData,
     ////////////////////////////////////////////////////////////////////////////////////
@@ -62,6 +95,7 @@ const controlDataOST = [
             notification: 'creation.ocp.cluster.must.select.ocp.image',
             required: true,
         },
+        onSelect: onImageChange,
     },
     //Always Hidden
     {
@@ -86,6 +120,19 @@ const controlDataOST = [
         type: 'labels',
         active: [],
         tip: 'Use labels to organize and place application subscriptions and policies on this cluster. The placement of resources are controlled by label selectors. If your cluster has the labels that match the resource placement’s label selector, the resource will be installed on your cluster after creation.',
+    },
+    {
+        id: 'infrastructure',
+        active: ['OpenStack'],
+        type: 'hidden',
+        hasReplacements: true,
+        availableMap: {
+            OpenStack: {
+                replacements: {
+                    'install-config': { template: installConfig, encode: true, newTab: true },
+                },
+            },
+        },
     },
 
     ////////////////////////////////////////////////////////////////////////////////////

@@ -3,11 +3,9 @@
 import { useCallback, useMemo, useState, useEffect } from 'react'
 import { isEqual } from 'lodash'
 import { CIM } from 'openshift-assisted-ui-lib'
-import { useRecoilValue, waitForAll } from 'recoil'
 
 import { useTranslation } from '../../../../../../../lib/acm-i18next'
 import {
-    ConfigMap,
     patchResource,
     createResource,
     getResource,
@@ -18,25 +16,19 @@ import {
     ManagedClusterKind,
     KlusterletAddonConfigApiVersion,
     KlusterletAddonConfigKind,
+    createResources,
+    IResource,
 } from '../../../../../../../resources'
-import {
-    agentClusterInstallsState,
-    agentsState,
-    bareMetalAssetsState,
-    clusterDeploymentsState,
-    configMapsState,
-    infraEnvironmentsState,
-} from '../../../../../../../atoms'
 import { NavigationPath } from '../../../../../../../NavigationPath'
 import { ModalProps } from './types'
 import { deleteResources } from '../../../../../../../lib/delete-resources'
 import { IBulkActionModelProps } from '../../../../../../../components/BulkActionModel'
-import { AgentK8sResource, BareMetalHostK8sResource } from 'openshift-assisted-ui-lib/cim'
+import { AgentK8sResource } from 'openshift-assisted-ui-lib/cim'
+import { useSharedAtoms, useSharedRecoil, useRecoilValue } from '../../../../../../../shared-recoil'
 
 const {
     getAnnotationsFromAgentSelector,
     AGENT_BMH_NAME_LABEL_KEY,
-    INFRAENV_GENERATED_AI_FLOW,
     getBareMetalHostCredentialsSecret,
     getBareMetalHost,
     isAgentOfCluster,
@@ -288,19 +280,22 @@ export const onSaveNetworking = async (
     }
 }
 
-export const getAIConfigMap = (configMaps: ConfigMap[]) =>
-    configMaps.find(
-        (cm) => cm.metadata.name === 'assisted-service-config' && cm.metadata.namespace === 'assisted-installer'
-    ) ||
-    configMaps.find(
-        (cm) =>
-            cm.metadata.name === 'assisted-service' &&
-            (cm.metadata.namespace === 'rhacm' || cm.metadata.namespace === 'open-cluster-management')
-    )
+export const useAssistedServiceNamespace = () => {
+    const { waitForAll } = useSharedRecoil()
+    const { multiClusterEnginesState } = useSharedAtoms()
+    const [[multiClusterEngine]] = useRecoilValue(waitForAll([multiClusterEnginesState]))
+    return useMemo(() => multiClusterEngine?.spec?.targetNamespace ?? 'multicluster-engine', [multiClusterEngine])
+}
 
-export const useAIConfigMap = () => {
+export const useAssistedServiceConfigMap = () => {
+    const namespace = useAssistedServiceNamespace()
+    const { configMapsState } = useSharedAtoms()
+    const { waitForAll } = useSharedRecoil()
     const [configMaps] = useRecoilValue(waitForAll([configMapsState]))
-    return useMemo(() => getAIConfigMap(configMaps), [configMaps])
+    return useMemo(
+        () => configMaps.find((cm) => cm.metadata.name === 'assisted-service' && cm.metadata.namespace === namespace),
+        [configMaps]
+    )
 }
 
 export const useClusterDeployment = ({
@@ -310,6 +305,8 @@ export const useClusterDeployment = ({
     name?: string
     namespace?: string
 }): CIM.ClusterDeploymentK8sResource | undefined => {
+    const { clusterDeploymentsState } = useSharedAtoms()
+    const { waitForAll } = useSharedRecoil()
     const [clusterDeployments] = useRecoilValue(waitForAll([clusterDeploymentsState]))
     return useMemo(
         () =>
@@ -327,6 +324,8 @@ export const useAgentClusterInstall = ({
     name?: string
     namespace?: string
 }): CIM.AgentClusterInstallK8sResource | undefined => {
+    const { agentClusterInstallsState } = useSharedAtoms()
+    const { waitForAll } = useSharedRecoil()
     const [agentClusterInstalls] = useRecoilValue(waitForAll([agentClusterInstallsState]))
     return useMemo(
         () => agentClusterInstalls.find((aci) => aci.metadata.name === name && aci.metadata.namespace === namespace),
@@ -335,6 +334,8 @@ export const useAgentClusterInstall = ({
 }
 
 export const useInfraEnv = ({ name, namespace }: { name: string; namespace: string }) => {
+    const { infraEnvironmentsState } = useSharedAtoms()
+    const { waitForAll } = useSharedRecoil()
     const [infraEnvs] = useRecoilValue(waitForAll([infraEnvironmentsState]))
     return useMemo(
         () => infraEnvs.find((ie) => ie.metadata.name === name && ie.metadata.namespace === namespace),
@@ -549,33 +550,12 @@ export const onChangeBMHHostname = async (bmh: CIM.BareMetalHostK8sResource, hos
     ]).promise
 
 export const useAgentsOfAIFlow = ({ name, namespace }: { name: string; namespace: string }): AgentK8sResource[] => {
+    const { agentsState } = useSharedAtoms()
+    const { waitForAll } = useSharedRecoil()
     const [agents] = useRecoilValue(waitForAll([agentsState]))
     return useMemo(() => agents.filter((a) => isAgentOfCluster(a, name, namespace)), [agents]) || []
 }
 
-export const useBMHsOfAIFlow = ({
-    name,
-    namespace,
-}: {
-    name?: string
-    namespace?: string
-}): BareMetalHostK8sResource[] => {
-    const [bmhs] = useRecoilValue(waitForAll([bareMetalAssetsState]))
-    return (
-        useMemo(
-            () =>
-                // TODO(mlibra): make that happen!
-                /* That label is added to the InfraEnv along creating ClusterDeployment, specific for the AI flow */
-                bmhs.filter(
-                    (bmh: CIM.BareMetalHostK8sResource) =>
-                        namespace &&
-                        name &&
-                        bmh.metadata?.labels?.[INFRAENV_GENERATED_AI_FLOW] === `${namespace}-${name}`
-                ),
-            [bmhs]
-        ) || []
-    )
-}
 export const useClusterImages = () => {
     const [clusterImages, setClusterImages] = useState<ClusterImageSet[]>()
     useEffect(() => {
@@ -731,3 +711,30 @@ export const onMassDeleteHost = (
 export const fetchInfraEnv = (name: string, namespace: string) =>
     getResource({ apiVersion: 'agent-install.openshift.io/v1beta1', kind: 'InfraEnv', metadata: { namespace, name } })
         .promise
+
+export const importYaml = (yamlContent: unknown) => {
+    return createResources(yamlContent as IResource[])
+}
+
+// Simple string search is _so far_ enough.
+// Full key-path support would be ineffective when not actually needed.
+export const getTemplateValue = (yaml: string, simpleKey: string, defaultValue: string) => {
+    const lines = yaml.split('\n')
+    const regex = new RegExp(`^ *${simpleKey}: *`)
+
+    const rows = lines.filter((l) => l.match(regex))
+
+    if (rows.length === 0) {
+        return defaultValue
+    }
+
+    if (rows.length > 1) {
+        // Provide better key (i.e. leverage indentation). If this is not enough, let's full-parse the yaml instead.
+        throw new Error(`Multiple matches for yaml key "${simpleKey}"`)
+    }
+
+    const value = rows[0].replace(regex, '').trim()
+    return value
+}
+
+export const getDefault = (values: (string | undefined)[]): string => values.filter(Boolean)?.[0] || ''

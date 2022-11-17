@@ -14,7 +14,7 @@ import {
     infraEnvironmentsState,
 } from '../../../../../../atoms'
 import { clickByText, waitForTestId, waitForText, waitForNocks } from '../../../../../../lib/test-util'
-import { nockGet, nockList } from '../../../../../../lib/nock-util'
+import { nockGet, nockIgnoreApiPaths, nockList } from '../../../../../../lib/nock-util'
 
 import EditAICluster from './EditAICluster'
 import {
@@ -58,6 +58,7 @@ const Component = () => {
 }
 
 describe('Edit AI Cluster', () => {
+    beforeEach(() => nockIgnoreApiPaths())
     test('can be rendered', async () => {
         const nocks = [
             nockGet(pullSecretMock, pullSecretMock),
@@ -68,15 +69,17 @@ describe('Edit AI Cluster', () => {
         await new Promise((resolve) => setTimeout(resolve, 500))
 
         await waitForText('Installation type')
-        await waitForText('Cluster details', true)
-        await waitForText('Cluster hosts')
-        await waitForText('Cluster network')
-        await waitForText('Review and create')
+
+        await waitForText('ai:Cluster details')
+        await waitForText('ai:Cluster hosts')
+        await waitForText('ai:Networking')
+        await waitForText('ai:Review and create')
 
         await waitForTestId('form-static-openshiftVersion-field')
-        await waitForText('OpenShift 4.8.15')
 
-        await clickByText('Next')
+        await waitForText('ai:OpenShift 4.8.15')
+
+        await clickByText('ai:Next')
         await waitForNocks(nocks)
 
         await waitForTestId('form-input-autoSelectHosts-field')

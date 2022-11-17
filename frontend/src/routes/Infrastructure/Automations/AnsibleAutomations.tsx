@@ -2,7 +2,6 @@
 
 import { makeStyles } from '@material-ui/styles'
 import { ButtonVariant, Hint, PageSection, TextContent } from '@patternfly/react-core'
-import { ExternalLinkAltIcon } from '@patternfly/react-icons'
 import { fitContent } from '@patternfly/react-table'
 import {
     AcmAlertContext,
@@ -12,31 +11,29 @@ import {
     AcmPageContent,
     AcmPageHeader,
     AcmTable,
-} from '@stolostron/ui-components'
+} from '../../../ui-components'
 import { Fragment, useContext, useEffect, useMemo, useState } from 'react'
 import { Link, useHistory } from 'react-router-dom'
-import { useRecoilState } from 'recoil'
-import { clusterCuratorsState, configMapsState, secretsState, subscriptionOperatorsState } from '../../../atoms'
+import { useRecoilState, useRecoilValue, useSharedAtoms, useSharedSelectors } from '../../../shared-recoil'
 import { BulkActionModel, IBulkActionModelProps } from '../../../components/BulkActionModel'
 import { DropdownActionModal, IDropdownActionModalProps } from '../../../components/DropdownActionModal'
 import { RbacDropdown } from '../../../components/Rbac'
 import { Trans, useTranslation } from '../../../lib/acm-i18next'
 import { DOC_LINKS, viewDocumentation } from '../../../lib/doc-util'
+import { getOperatorError } from '../../../lib/error-output'
 import { rbacDelete, rbacPatch } from '../../../lib/rbac-util'
 import { NavigationPath } from '../../../NavigationPath'
 import {
     ClusterCurator,
     deleteResource,
-    filterForTemplatedCurators,
     getTemplateJobsNum,
     LinkAnsibleCredential,
-    unpackProviderConnection,
     isAnsibleOperatorInstalled,
 } from '../../../resources'
 
 export default function AnsibleAutomationsPage() {
-    const [configMaps] = useRecoilState(configMapsState)
     const alertContext = useContext(AcmAlertContext)
+    const { subscriptionOperatorsState } = useSharedAtoms()
     const [subscriptionOperators] = useRecoilState(subscriptionOperatorsState)
 
     const isOperatorInstalled = useMemo(
@@ -67,36 +64,12 @@ export default function AnsibleAutomationsPage() {
     //         })
     //     }
     // }
-
-    const openShiftConsoleConfig = configMaps.find((configmap) => configmap.metadata.name === 'console-public')
-    const openShiftConsoleUrl = openShiftConsoleConfig?.data?.consoleURL
-
     return (
         <AcmPage hasDrawer header={<AcmPageHeader title={t('template.title')} />}>
             <AcmPageContent id="clusters">
                 <PageSection>
                     {!isOperatorInstalled && (
-                        <Hint className={classes.hint}>
-                            <div>
-                                {t('template.hint')}{' '}
-                                <AcmButton
-                                    onClick={() =>
-                                        window.open(
-                                            openShiftConsoleUrl +
-                                                '/operatorhub/all-namespaces?keyword=ansible+automation+platform'
-                                        )
-                                    }
-                                    variant={ButtonVariant.link}
-                                    role="link"
-                                    id="view-logs"
-                                    isInline
-                                    isSmall
-                                >
-                                    {t('template.operator.link')}
-                                    <ExternalLinkAltIcon style={{ marginLeft: '4px', verticalAlign: 'middle' }} />
-                                </AcmButton>
-                            </div>
-                        </Hint>
+                        <Hint className={classes.hint}>{getOperatorError(isOperatorInstalled, t)}</Hint>
                     )}
                     <AnsibleJobTemplateTable />
                 </PageSection>
@@ -107,15 +80,9 @@ export default function AnsibleAutomationsPage() {
 
 function AnsibleJobTemplateTable() {
     // Load Data
-    const [secrets] = useRecoilState(secretsState)
-    const [clusterCurators] = useRecoilState(clusterCuratorsState)
-    const providerConnections = secrets.map(unpackProviderConnection)
-    const templatedCurators = useMemo(() => filterForTemplatedCurators(clusterCurators), [clusterCurators])
-    const ansibleCredentials = providerConnections.filter(
-        (providerConnection) =>
-            providerConnection.metadata?.labels?.['cluster.open-cluster-management.io/type'] === 'ans' &&
-            !providerConnection.metadata?.labels?.['cluster.open-cluster-management.io/copiedFromSecretName']
-    )
+    const { ansibleCredentialsValue, clusterCuratorTemplatesValue } = useSharedSelectors()
+    const templatedCurators = useRecoilValue(clusterCuratorTemplatesValue)
+    const ansibleCredentials = useRecoilValue(ansibleCredentialsValue)
 
     const [bulkModalProps, setBulkModalProps] = useState<IBulkActionModelProps<ClusterCurator> | { open: false }>({
         open: false,

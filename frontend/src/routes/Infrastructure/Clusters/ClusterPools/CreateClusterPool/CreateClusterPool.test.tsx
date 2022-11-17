@@ -24,17 +24,20 @@ import { render } from '@testing-library/react'
 import { MemoryRouter, Route } from 'react-router-dom'
 import { RecoilRoot } from 'recoil'
 import { managedClusterSetsState, namespacesState, secretsState } from '../../../../../atoms'
-import { nockCreate, nockIgnoreRBAC, nockList, nockReplace } from '../../../../../lib/nock-util'
+import { nockCreate, nockIgnoreApiPaths, nockIgnoreRBAC, nockList, nockReplace } from '../../../../../lib/nock-util'
 import {
     clickByPlaceholderText,
-    clickByTestId,
     clickByText,
+    selectByText,
     typeByTestId,
     waitForNocks,
+    waitForTestId,
     waitForText,
 } from '../../../../../lib/test-util'
 import { NavigationPath } from '../../../../../NavigationPath'
-import CreateClusterPoolPage from './CreateClusterPool'
+import { createProviderConnection } from '../../../../Credentials/CredentialsForm.test'
+import { CreateClusterPoolPage } from '../CreateClusterPoolPage'
+import { CLUSTER_POOL_INFRA_TYPE_PARAM } from '../ClusterPoolInfrastructureType'
 
 const clusterName = 'test'
 
@@ -51,6 +54,12 @@ const clusterImageSet: ClusterImageSet = {
     },
 }
 const mockClusterImageSet = [clusterImageSet]
+
+const mockNamespaces: Namespace[] = ['namespace1', 'namespace2', 'namespace3', 'test-namespace'].map((name) => ({
+    apiVersion: NamespaceApiVersion,
+    kind: NamespaceKind,
+    metadata: { name },
+}))
 
 const providerConnection: ProviderConnection = {
     apiVersion: ProviderConnectionApiVersion,
@@ -176,17 +185,19 @@ const mockClusterPool: ClusterPool = {
 
 ///////////////////////////////// TESTS /////////////////////////////////////////////////////
 
-describe('CreateClusterPool', () => {
+describe('CreateClusterPool AWS', () => {
     const Component = () => {
         return (
             <RecoilRoot
                 initializeState={(snapshot) => {
                     snapshot.set(managedClusterSetsState, [])
-                    snapshot.set(namespacesState, [mockNamespace])
+                    snapshot.set(namespacesState, mockNamespaces)
                     snapshot.set(secretsState, [providerConnection as Secret])
                 }}
             >
-                <MemoryRouter initialEntries={[NavigationPath.createClusterPool]}>
+                <MemoryRouter
+                    initialEntries={[`${NavigationPath.createClusterPool}?${CLUSTER_POOL_INFRA_TYPE_PARAM}=AWS`]}
+                >
                     <Route path={NavigationPath.createClusterPool}>
                         <CreateClusterPoolPage />
                     </Route>
@@ -195,28 +206,9 @@ describe('CreateClusterPool', () => {
         )
     }
 
-    let consoleInfos: string[]
-    const originalConsoleInfo = console.info
-    const originalConsoleGroup = console.group
-    const originalConsoleGroupCollapsed = console.groupCollapsed
-
     beforeEach(() => {
         nockIgnoreRBAC()
-        consoleInfos = []
-        console.info =
-            console.groupCollapsed =
-            console.group =
-                (message?: any, ...optionalParams: any[]) => {
-                    if (message) {
-                        consoleInfos = [...consoleInfos, message, ...optionalParams]
-                    }
-                }
-    })
-
-    afterEach(() => {
-        console.info = originalConsoleInfo
-        console.group = originalConsoleGroup
-        console.groupCollapsed = originalConsoleGroupCollapsed
+        nockIgnoreApiPaths()
     })
 
     test('can create a cluster pool', async () => {
@@ -224,19 +216,31 @@ describe('CreateClusterPool', () => {
 
         const initialNocks = [nockList(clusterImageSet, mockClusterImageSet)]
 
+        const newProviderConnection = createProviderConnection(
+            'aws',
+            { aws_access_key_id: 'aws_access_key_id', aws_secret_access_key: 'aws_secret_access_key' },
+            true
+        )
+
         // create the form
         const { container } = render(<Component />)
-
-        // step 1 -- the infrastructure
-        await clickByTestId('amazon-web-services')
 
         // wait for tables/combos to fill in
         await waitForNocks(initialNocks)
 
         // connection
         await clickByPlaceholderText('Select a credential')
+
+        // Should show the modal wizard
+        await clickByText('Add credential')
+        // Credentials type
+        await waitForTestId('credentialsType-input-toggle')
+        await typeByTestId('credentialsName', newProviderConnection.metadata.name!)
+        await selectByText('Select a namespace for the credential', newProviderConnection.metadata.namespace!)
+        await clickByText('Cancel', 1)
+
+        await clickByPlaceholderText('Select a credential')
         await clickByText(providerConnection.metadata.name!)
-        await clickByText('Next')
 
         // step 2 -- the name, namespace and imageset
         await typeByTestId('eman', clusterName!)
@@ -248,13 +252,15 @@ describe('CreateClusterPool', () => {
         // skip AWS private config
         await clickByText('Next')
 
-        await clickByText('Review')
+        await clickByText('Review and create')
 
         // nocks for cluster creation
         const createNocks = [
-            // create the managed cluster
+            // create aws namespace (project)
             nockCreate(mockCreateProject),
             nockReplace(mockNamespaceUpdate),
+
+            // create the managed cluster
             nockCreate(mockPullSecret),
             nockCreate(mockInstallConfigSecret),
             nockCreate(mockCredentialSecret),
@@ -264,7 +270,6 @@ describe('CreateClusterPool', () => {
         // click create button
         await clickByText('Create')
 
-        expect(consoleInfos).hasNoConsoleLogs()
         await waitForText('Creating ClusterPool ...')
 
         // make sure creating

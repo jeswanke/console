@@ -39,17 +39,17 @@ export function queryStatusCount(cluster: string): IRequestResult<ISearchResult>
             input: [
                 {
                     filters: [
-                        { property: 'kind', values: ['subscription'] },
+                        { property: 'kind', values: ['Subscription'] },
                         { property: 'cluster', values: [cluster] },
                     ],
-                    relatedKinds: ['application'],
+                    relatedKinds: ['Application'],
                 },
                 {
                     filters: [
                         { property: 'compliant', values: ['!Compliant'] },
-                        { property: 'kind', values: ['policy'] },
+                        { property: 'kind', values: ['Policy'] },
                         { property: 'namespace', values: [cluster] },
-                        { property: 'cluster', values: 'local-cluster' },
+                        { property: 'cluster', values: ['local-cluster'] },
                     ],
                 },
             ],
@@ -86,25 +86,6 @@ export function queryOCPAppResources(): IRequestResult<ISearchResult> {
                         {
                             property: 'kind',
                             values: ['cronjob', 'daemonset', 'deployment', 'deploymentconfig', 'job', 'statefulset'],
-                        },
-                    ],
-                },
-            ],
-        },
-        query: searchFilterQuery,
-    })
-}
-
-export function queryKustomizations(): IRequestResult<ISearchResult> {
-    return postRequest<SearchQuery, ISearchResult>(getBackendUrl() + apiSearchUrl, {
-        operationName: 'searchResult',
-        variables: {
-            input: [
-                {
-                    filters: [
-                        {
-                            property: 'kind',
-                            values: 'kustomization',
                         },
                     ],
                 },

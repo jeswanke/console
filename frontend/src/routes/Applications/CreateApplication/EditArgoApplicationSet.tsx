@@ -1,24 +1,11 @@
 /* Copyright Contributors to the Open Cluster Management project */
 
 import { useData, useItem } from '@patternfly-labs/react-form-wizard'
-import { ArgoWizard } from '@patternfly-labs/react-form-wizard/lib/wizards/Argo/ArgoWizard'
-import { AcmToastContext } from '@stolostron/ui-components'
+import { ArgoWizard } from '../../../wizards/Argo/ArgoWizard'
 import moment from 'moment-timezone'
 import { useContext, useEffect, useState } from 'react'
 import { useHistory, useParams } from 'react-router-dom'
-import { useRecoilState } from 'recoil'
-import {
-    applicationSetsState,
-    channelsState,
-    gitOpsClustersState,
-    managedClusterSetBindingsState,
-    managedClusterSetsState,
-    managedClustersState,
-    namespacesState,
-    placementDecisionsState,
-    placementsState,
-    secretsState,
-} from '../../../atoms'
+import { useRecoilState, useRecoilValue, useSharedAtoms, useSharedSelectors } from '../../../shared-recoil'
 import { LoadingPage } from '../../../components/LoadingPage'
 import { SyncEditor } from '../../../components/SyncEditor/SyncEditor'
 import { useTranslation } from '../../../lib/acm-i18next'
@@ -34,8 +21,8 @@ import {
     Placement,
     PlacementKind,
     reconcileResources,
-    unpackProviderConnection,
 } from '../../../resources'
+import { AcmToastContext } from '../../../ui-components'
 import { argoAppSetQueryString } from './actions'
 import schema from './schema.json'
 
@@ -61,31 +48,35 @@ function getWizardSyncEditor() {
 
 export function EditArgoApplicationSet() {
     const { t } = useTranslation()
+    const {
+        channelsState,
+        namespacesState,
+        applicationSetsState,
+        placementsState,
+        gitOpsClustersState,
+        managedClustersState,
+        managedClusterSetsState,
+        managedClusterSetBindingsState,
+    } = useSharedAtoms()
+    const { ansibleCredentialsValue } = useSharedSelectors()
+
     const history = useHistory()
     const searchParams = useSearchParams()
     const toast = useContext(AcmToastContext)
     const params: { namespace?: string; name?: string } = useParams()
     const [applicationSets] = useRecoilState(applicationSetsState)
     const [placements] = useRecoilState(placementsState)
-    const [placementDecisions] = useRecoilState(placementDecisionsState)
     const [gitOpsClusters] = useRecoilState(gitOpsClustersState)
     const [channels] = useRecoilState(channelsState)
     const [namespaces] = useRecoilState(namespacesState)
-    const [secrets] = useRecoilState(secretsState)
     const [managedClusters] = useRecoilState(managedClustersState)
     const [clusterSets] = useRecoilState(managedClusterSetsState)
     const [managedClusterSetBindings] = useRecoilState(managedClusterSetBindingsState)
-    const providerConnections = secrets.map(unpackProviderConnection)
     const availableArgoNS = gitOpsClusters
         .map((gitOpsCluster) => gitOpsCluster.spec?.argoServer?.argoNamespace)
         .filter(isType)
     const availableNamespace = namespaces.map((namespace) => namespace.metadata.name).filter(isType)
-    const availableAnsibleCredentials = providerConnections
-        .filter(
-            (providerConnection) =>
-                providerConnection.metadata?.labels?.['cluster.open-cluster-management.io/type'] === 'ans' &&
-                !providerConnection.metadata?.labels?.['cluster.open-cluster-management.io/copiedFromSecretName']
-        )
+    const availableAnsibleCredentials = useRecoilValue(ansibleCredentialsValue)
         .map((ansibleCredential) => ansibleCredential.metadata.name)
         .filter(isType)
 
@@ -108,7 +99,7 @@ export function EditArgoApplicationSet() {
             isPlacementUsedByApplicationSet(applicationSet, placement)
         )
         setExistingResources([applicationSet, ...applicationSetPlacements])
-    }, [applicationSets, history, params.name, params.namespace, placementDecisions, placements])
+    }, [applicationSets, history, params.name, params.namespace, placements])
 
     if (existingResources === undefined) {
         return <LoadingPage />

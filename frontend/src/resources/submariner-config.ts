@@ -34,8 +34,18 @@ export interface SubmarinerConfig extends IResource {
             aws?: {
                 instanceType: string
             }
+            gcp?: {
+                instanceType: string
+            }
+            azure?: {
+                instanceType: string
+            }
+            rhos?: {
+                instanceType: string
+            }
             gateways?: number
         }
+        loadBalancerEnable?: boolean
     }
 }
 
@@ -45,6 +55,9 @@ type SubmarinerConfigDefaults = {
     cableDriver: CableDriver
     gateways: number
     awsInstanceType: string
+    azureInstanceType: string
+    openStackInstanceType: string
+    loadBalancerEnable: boolean
 }
 
 export const submarinerConfigDefault: SubmarinerConfigDefaults = {
@@ -53,4 +66,7 @@ export const submarinerConfigDefault: SubmarinerConfigDefaults = {
     cableDriver: CableDriver.libreswan,
     gateways: 1,
     awsInstanceType: 'c5d.large',
+    azureInstanceType: 'Standard_F4s_v2',
+    openStackInstanceType: 'PnTAE.CPU_4_Memory_8192_Disk_50',
+    loadBalancerEnable: false,
 }

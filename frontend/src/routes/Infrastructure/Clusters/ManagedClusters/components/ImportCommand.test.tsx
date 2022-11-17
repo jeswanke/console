@@ -3,7 +3,7 @@
 import { Cluster, ClusterStatus, Secret, SecretApiVersion, SecretKind } from '../../../../../resources'
 import { render, screen, waitFor } from '@testing-library/react'
 import { RecoilRoot } from 'recoil'
-import { mockBadRequestStatus, nockGet } from '../../../../../lib/nock-util'
+import { mockBadRequestStatus, nockGet, nockIgnoreApiPaths } from '../../../../../lib/nock-util'
 import { ClusterContext } from '../ClusterDetails/ClusterDetails'
 import { ImportCommandContainer } from './ImportCommand'
 
@@ -22,6 +22,7 @@ const mockCluster: Cluster = {
     name: 'test-cluster',
     displayName: 'test-cluster',
     namespace: 'test-cluster',
+    uid: 'test-cluster-uid',
     status: ClusterStatus.pendingimport,
     distribution: {
         k8sVersion: '1.19',
@@ -37,19 +38,23 @@ const mockCluster: Cluster = {
         isHibernatable: true,
         clusterPool: undefined,
         secrets: {
-            kubeconfig: '',
-            kubeadmin: '',
             installConfig: '',
         },
     },
     isHive: false,
     isManaged: true,
     isCurator: false,
+    isHostedCluster: false,
     isSNOCluster: false,
     owner: {},
+    kubeconfig: '',
+    kubeadmin: '',
+    isHypershift: false,
+    isRegionalHubCluster: false,
 }
 
 describe('ImportCommandContainer', () => {
+    beforeEach(() => nockIgnoreApiPaths())
     const Component = () => {
         return (
             <RecoilRoot>

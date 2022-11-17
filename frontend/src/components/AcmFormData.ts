@@ -11,6 +11,7 @@ export interface FormData {
     sections: (Section | SectionGroup)[]
     submit: () => void
     cancel: () => void
+    back?: () => void
     submitText: string
     submittingText: string
     reviewTitle: string
@@ -109,6 +110,7 @@ export interface SelectOptionsBase<T> extends InputBase<T> {
 export interface SelectInput extends SelectOptionsBase<string> {
     type: 'Select'
     variant?: 'single' | 'typeahead'
+    footer?: React.ReactNode
 }
 
 export interface MultiselectInput extends SelectOptionsBase<string[]> {

@@ -11,18 +11,17 @@ import {
     compareStrings,
     IAcmTableColumn,
     Provider,
-} from '@stolostron/ui-components'
+} from '../../../../ui-components'
 import { ActionList, ActionListItem, Bullseye, ButtonVariant, PageSection, TextContent } from '@patternfly/react-core'
 import { ExternalLinkAltIcon } from '@patternfly/react-icons'
 import * as moment from 'moment'
 import { Fragment, useEffect, useState } from 'react'
 import { Trans, useTranslation } from '../../../../lib/acm-i18next'
 import { Link, useHistory } from 'react-router-dom'
-import { useRecoilState } from 'recoil'
-import { discoveredClusterState, discoveryConfigState, secretsState } from '../../../../atoms'
 import { DOC_LINKS, viewDocumentation } from '../../../../lib/doc-util'
-import { NavigationPath } from '../../../../NavigationPath'
+import { createBackCancelLocation, NavigationPath } from '../../../../NavigationPath'
 import { DiscoveredCluster, DiscoveryConfig, ProviderConnection, unpackProviderConnection } from '../../../../resources'
+import { useRecoilState, useSharedAtoms } from '../../../../shared-recoil'
 
 export default function DiscoveredClustersPage() {
     return (
@@ -151,6 +150,7 @@ function EmptyStateAwaitingDiscoveredClusters() {
 }
 
 export function DiscoveredClustersPageContent() {
+    const { discoveredClusterState, discoveryConfigState, secretsState } = useSharedAtoms()
     const [discoveredClusters] = useRecoilState(discoveredClusterState)
     const [secrets] = useRecoilState(secretsState)
     const credentials = secrets.map(unpackProviderConnection)
@@ -380,7 +380,7 @@ export function DiscoveredClustersTable(props: {
                             sessionStorage.setItem('DiscoveredClusterDisplayName', item.spec.displayName)
                             sessionStorage.setItem('DiscoveredClusterConsoleURL', item.spec.console)
                             sessionStorage.setItem('DiscoveredClusterApiURL', item.spec?.apiUrl || '')
-                            history.push(NavigationPath.importCluster)
+                            history.push(createBackCancelLocation(NavigationPath.importCluster))
                         },
                     },
                 ]}

@@ -1,11 +1,11 @@
 /* Copyright Contributors to the Open Cluster Management project */
-import { Provider } from '@stolostron/ui-components'
+import { Provider } from '../../ui-components'
 import { render, waitFor } from '@testing-library/react'
 import { Scope } from 'nock/types'
 import { MemoryRouter, Route } from 'react-router-dom'
 import { RecoilRoot } from 'recoil'
 import { discoveryConfigState, secretsState } from '../../atoms'
-import { mockBadRequestStatus, nockDelete, nockIgnoreRBAC, nockRBAC } from '../../lib/nock-util'
+import { mockBadRequestStatus, nockDelete, nockIgnoreApiPaths, nockIgnoreRBAC, nockRBAC } from '../../lib/nock-util'
 import {
     clickBulkAction,
     clickByLabel,
@@ -36,7 +36,7 @@ const mockProviderConnection1: ProviderConnection = {
         name: 'provider-connection-1',
         namespace: 'provider-connection-namespace',
         labels: {
-            'cluster.open-cluster-management.io/type': '',
+            'cluster.open-cluster-management.io/type': 'ans',
             'cluster.open-cluster-management.io/credentials': '',
         },
     },
@@ -135,7 +135,10 @@ function TestProviderConnectionsPage(props: {
 }
 
 describe('provider connections page', () => {
-    beforeEach(nockIgnoreRBAC)
+    beforeEach(() => {
+        nockIgnoreRBAC()
+        nockIgnoreApiPaths()
+    })
 
     test('should render the table with provider connections', async () => {
         render(<TestProviderConnectionsPage providerConnections={mockProviderConnections} />)
@@ -156,6 +159,10 @@ describe('provider connections page', () => {
                     .replace(':name', mockProviderConnection1.metadata.name!)
             )
         )
+        // Verify the information shows up
+        await waitForText('Red Hat Ansible Automation Platform')
+        await waitForText(mockProviderConnection1.metadata!.name!)
+        await waitForText(mockProviderConnection1.metadata!.namespace!, true)
     })
 
     test('should be able to delete a provider connection', async () => {

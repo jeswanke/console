@@ -23,7 +23,8 @@ import {
 } from '../../../resources'
 import { PlacementDecision } from '../../../resources/placement-decision'
 import ResourceLabels from '../../Applications/components/ResourceLabels'
-import { IAlertContext } from '@stolostron/ui-components'
+import { IAlertContext } from '../../../ui-components'
+import { useTranslation } from '../../../lib/acm-i18next'
 
 export interface PolicyCompliance {
     policyName: string
@@ -409,7 +410,7 @@ export function getPolicyDetailSourceLabel(
 export function PolicySetList(props: { policySets: PolicySet[] }) {
     const { policySets } = props
     const [showAll, setShowAll] = useState(policySets.length - 1 > 1 ? false : true)
-
+    const { t } = useTranslation()
     let policySetLinks = useMemo(
         () =>
             policySets.map((policySetMatch: PolicySet, idx: number) => {
@@ -443,7 +444,7 @@ export function PolicySetList(props: { policySets: PolicySet[] }) {
         }
         policySetLinks.push(
             <Chip key={'overflow-btn'} isOverflowChip component={'button'} onClick={() => setShowAll(!showAll)}>
-                {!showAll ? 'more' : 'Show less'}
+                {!showAll ? t('more') : t('Show less')}
             </Chip>
         )
     }

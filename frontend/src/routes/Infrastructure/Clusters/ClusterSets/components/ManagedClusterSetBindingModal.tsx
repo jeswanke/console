@@ -9,14 +9,21 @@ import {
     ManagedClusterSetBindingKind,
     resultsSettled,
 } from '../../../../../resources'
-import { AcmAlertContext, AcmAlertGroup, AcmForm, AcmModal, AcmMultiSelect, AcmSubmit } from '@stolostron/ui-components'
+import {
+    AcmAlertContext,
+    AcmAlertGroup,
+    AcmForm,
+    AcmModal,
+    AcmMultiSelect,
+    AcmSubmit,
+} from '../../../../../ui-components'
 import { ActionGroup, Button, ModalVariant, SelectOption, SelectVariant } from '@patternfly/react-core'
 import { useEffect, useState } from 'react'
 import { Trans, useTranslation } from '../../../../../lib/acm-i18next'
-import { useRecoilState } from 'recoil'
-import { managedClusterSetBindingsState, namespacesState } from '../../../../../atoms'
+import { useRecoilState, useSharedAtoms } from '../../../../../shared-recoil'
 
 export function useClusterSetBindings(clusterSet?: ManagedClusterSet) {
+    const { managedClusterSetBindingsState } = useSharedAtoms()
     const [managedClusterSetBindings] = useRecoilState(managedClusterSetBindingsState)
 
     if (clusterSet) {
@@ -28,6 +35,7 @@ export function useClusterSetBindings(clusterSet?: ManagedClusterSet) {
 
 export function ManagedClusterSetBindingModal(props: { clusterSet?: ManagedClusterSet; onClose: () => void }) {
     const { t } = useTranslation()
+    const { namespacesState } = useSharedAtoms()
     const [namespaces] = useRecoilState(namespacesState)
     const clusterSetBindings = useClusterSetBindings(props.clusterSet)
     const [selectedNamespaces, setSelectedNamespaces] = useState<string[] | undefined>(undefined)
@@ -67,6 +75,8 @@ export function ManagedClusterSetBindingModal(props: { clusterSet?: ManagedClust
                             label={t('clusterSetBinding.edit.select.label')}
                             placeholder={t('clusterSetBinding.edit.select.placeholder')}
                             value={selectedNamespaces}
+                            menuAppendTo="parent"
+                            maxHeight="18em"
                             onChange={(namespaces) => setSelectedNamespaces(namespaces)}
                         >
                             {namespaces.map((namespace) => {

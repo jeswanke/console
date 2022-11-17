@@ -1,11 +1,18 @@
 /* Copyright Contributors to the Open Cluster Management project */
 
-import { AcmToastProvider, AcmToastGroup } from '@stolostron/ui-components'
-import { render, waitFor } from '@testing-library/react'
+import { AcmToastProvider, AcmToastGroup } from '../../../../../ui-components'
+import { render, waitFor, screen } from '@testing-library/react'
 import { MemoryRouter, Route } from 'react-router-dom'
 import { RecoilRoot } from 'recoil'
 import { discoveryConfigState, secretsState } from '../../../../../atoms'
-import { nockCreate, nockIgnoreRBAC, nockGet, nockReplace, nockDelete } from '../../../../../lib/nock-util'
+import {
+    nockCreate,
+    nockIgnoreRBAC,
+    nockGet,
+    nockReplace,
+    nockDelete,
+    nockIgnoreApiPaths,
+} from '../../../../../lib/nock-util'
 import { clickByText, waitForNocks, waitForText } from '../../../../../lib/test-util'
 import { NavigationPath } from '../../../../../NavigationPath'
 import DiscoveredClustersPage from '../DiscoveredClusters'
@@ -20,6 +27,7 @@ import {
     discoveryConfigUpdateSelfSubjectAccessRequest,
     discoveryConfigUpdateSelfSubjectAccessResponse,
 } from '../DiscoveryComponents/test-utils'
+import userEvent from '@testing-library/user-event'
 
 function TestAddDiscoveryConfigPage() {
     return (
@@ -64,6 +72,9 @@ beforeEach(() => {
 })
 
 describe('discovery config page', () => {
+    beforeEach(() => {
+        nockIgnoreApiPaths()
+    })
     it('Create Minimal DiscoveryConfig', async () => {
         const discoveryConfigCreateNock = nockCreate(
             discoveryConfigCreateSelfSubjectAccessRequest,
@@ -71,6 +82,20 @@ describe('discovery config page', () => {
         )
         const { container } = render(<TestAddDiscoveryConfigPage />)
         waitForNocks([discoveryConfigCreateNock])
+
+        // click add credential to show the modal
+        userEvent.click(
+            screen.getByRole('button', {
+                name: /credential options menu/i,
+            })
+        )
+        userEvent.click(screen.getByText(/add credential/i))
+        await waitForText('Enter the basic credentials information')
+        userEvent.click(
+            screen.getByRole('button', {
+                name: /cancel/i,
+            })
+        )
 
         // Select Credential
         await waitFor(() =>
@@ -115,7 +140,7 @@ describe('discovery config page', () => {
         // Select Version
         expect(container.querySelectorAll(`[aria-labelledby^="discoveryVersions-label"]`)).toHaveLength(1)
         container.querySelector<HTMLButtonElement>(`[aria-labelledby^="discoveryVersions-label"]`)!.click()
-        await clickByText('4.7')
+        await clickByText('4.8')
 
         // Submit form
         const createDiscoveryConfigNock = nockCreate(discoveryConfig, discoveryConfig)
@@ -154,7 +179,7 @@ describe('discovery config page', () => {
         await clickByText('30 days')
 
         container.querySelector<HTMLButtonElement>(`[aria-labelledby^="discoveryVersions-label"]`)!.click()
-        await clickByText('4.8')
+        await clickByText('4.9')
 
         const replaceNock = nockReplace(discoveryConfigUpdated)
         await clickByText('Save')
@@ -167,7 +192,6 @@ describe('discovery config page', () => {
 
     it('Delete DiscoveryConfig', async () => {
         const nocks = [nockGet(discoveryConfig, discoveryConfig)]
-
         const { container } = render(<TestEditConnectionPage />)
         await waitForNocks(nocks)
 

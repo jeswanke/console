@@ -13,19 +13,11 @@ import {
     TextVariants,
 } from '@patternfly/react-core'
 import { cellWidth } from '@patternfly/react-table'
-import { AcmExpandableCard, IAcmRowAction, IAcmTableColumn } from '@stolostron/ui-components'
+import { AcmExpandableCard, IAcmRowAction, IAcmTableColumn } from '../../ui-components'
 import _ from 'lodash'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useHistory } from 'react-router-dom'
-import { useRecoilState } from 'recoil'
-import {
-    applicationsState,
-    channelsState,
-    namespacesState,
-    placementRulesState,
-    placementsState,
-    subscriptionsState,
-} from '../../atoms'
+import { useRecoilState, useSharedAtoms } from '../../shared-recoil'
 import { useTranslation } from '../../lib/acm-i18next'
 import { DOC_LINKS, viewDocumentation } from '../../lib/doc-util'
 import { canUser } from '../../lib/rbac-util'
@@ -51,6 +43,15 @@ import { ClusterCount, getAge, getClusterCountString, getEditLink, getSearchLink
 
 export default function AdvancedConfiguration() {
     const { t } = useTranslation()
+    const {
+        applicationsState,
+        channelsState,
+        namespacesState,
+        placementsState,
+        placementRulesState,
+        subscriptionsState,
+    } = useSharedAtoms()
+
     const [applications] = useRecoilState(applicationsState)
     const [channels] = useRecoilState(channelsState)
     const [placementrules] = useRecoilState(placementRulesState)
@@ -664,7 +665,7 @@ export default function AdvancedConfiguration() {
             >
                 <Split hasGutter>
                     <TerminologyCard
-                        title={t('Subsciptions')}
+                        title={t('Subscriptions')}
                         description={t(
                             'Subscriptions identify Kubernetes resources within channels (source repositories). Then, the subscription places the Kubernetes resources on the target clusters.'
                         )}

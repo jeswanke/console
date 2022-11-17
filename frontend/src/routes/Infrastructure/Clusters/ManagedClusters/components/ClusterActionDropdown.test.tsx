@@ -2,6 +2,7 @@
 
 import {
     Cluster,
+    ClusterCuratorDefinition,
     ClusterDeploymentDefinition,
     ClusterStatus,
     KlusterletAddonConfig,
@@ -11,13 +12,14 @@ import {
     ManagedClusterApiVersion,
     ManagedClusterDefinition,
     ManagedClusterKind,
+    SecretDefinition,
 } from '../../../../../resources'
 import { render } from '@testing-library/react'
 import { Scope } from 'nock/types'
 import { RecoilRoot } from 'recoil'
 import { MemoryRouter } from 'react-router'
-import { nockCreate, nockIgnoreRBAC, nockPatch, nockRBAC } from '../../../../../lib/nock-util'
-import { rbacDelete, rbacPatch } from '../../../../../lib/rbac-util'
+import { nockCreate, nockIgnoreApiPaths, nockIgnoreRBAC, nockPatch, nockRBAC } from '../../../../../lib/nock-util'
+import { rbacCreate, rbacDelete, rbacPatch } from '../../../../../lib/rbac-util'
 import { clickByLabel, clickByText, waitForNock, waitForNocks, waitForText } from '../../../../../lib/test-util'
 import { ClusterActionDropdown } from './ClusterActionDropdown'
 import { NavigationPath } from '../../../../../NavigationPath'
@@ -26,6 +28,7 @@ const mockCluster: Cluster = {
     name: 'test-cluster',
     displayName: 'test-cluster',
     namespace: 'test-cluster',
+    uid: 'test-cluster-uid',
     status: ClusterStatus.ready,
     provider: undefined,
     distribution: {
@@ -48,15 +51,18 @@ const mockCluster: Cluster = {
         clusterPool: undefined,
         secrets: {
             installConfig: undefined,
-            kubeadmin: undefined,
-            kubeconfig: undefined,
         },
     },
     isHive: true,
     isManaged: true,
     isCurator: true,
+    isHostedCluster: false,
     isSNOCluster: false,
     owner: {},
+    kubeadmin: undefined,
+    kubeconfig: undefined,
+    isHypershift: false,
+    isRegionalHubCluster: false,
 }
 
 function rbacPatchManagedCluster() {
@@ -73,6 +79,22 @@ function rbacDeleteManagedCluster() {
 
 function rbacDeleteClusterDeployment() {
     return rbacDelete(ClusterDeploymentDefinition, mockCluster.namespace, mockCluster.name)
+}
+
+function rbacPatchClusterCurator() {
+    return rbacPatch(ClusterCuratorDefinition, mockCluster.namespace)
+}
+
+function rbacCreateClusterCurator() {
+    return rbacCreate(ClusterCuratorDefinition, mockCluster.namespace)
+}
+
+function rbacPatchSecret() {
+    return rbacPatch(SecretDefinition, mockCluster.namespace)
+}
+
+function rbacCreateSecret() {
+    return rbacCreate(SecretDefinition, mockCluster.namespace)
 }
 
 function nockPatchClusterDeployment(op: 'replace' | 'add' | 'remove', path: string, value?: string) {
@@ -104,6 +126,7 @@ const Component = (props: { cluster: Cluster }) => (
 describe('ClusterActionDropdown', () => {
     beforeEach(() => {
         nockIgnoreRBAC()
+        nockIgnoreApiPaths()
     })
 
     test('can import detached clusters', async () => {
@@ -183,10 +206,14 @@ describe('ClusterActionDropdown', () => {
         cluster.status = ClusterStatus.hibernating
         render(<Component cluster={cluster} />)
         const rbacNocks: Scope[] = [
-            nockRBAC(rbacPatchManagedCluster()),
-            nockRBAC(rbacPatchClusterDeployment()),
-            nockRBAC(rbacDeleteManagedCluster()),
-            nockRBAC(rbacDeleteClusterDeployment()),
+            nockRBAC(await rbacPatchManagedCluster()),
+            nockRBAC(await rbacPatchClusterDeployment()),
+            nockRBAC(await rbacDeleteManagedCluster()),
+            nockRBAC(await rbacDeleteClusterDeployment()),
+            nockRBAC(await rbacPatchClusterCurator()),
+            nockRBAC(await rbacCreateClusterCurator()),
+            nockRBAC(await rbacPatchSecret()),
+            nockRBAC(await rbacCreateSecret()),
         ]
         await clickByLabel('Actions')
         await waitForNocks(rbacNocks)

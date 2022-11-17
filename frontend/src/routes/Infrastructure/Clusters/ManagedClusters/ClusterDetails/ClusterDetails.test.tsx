@@ -1,9 +1,11 @@
 /* Copyright Contributors to the Open Cluster Management project */
 
-import { render } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import _ from 'lodash'
 import { Scope } from 'nock/types'
 import { CIM } from 'openshift-assisted-ui-lib'
+import { HostedClusterK8sResource } from 'openshift-assisted-ui-lib/cim'
 import { MemoryRouter, Route, Switch } from 'react-router-dom'
 import { RecoilRoot } from 'recoil'
 import {
@@ -14,13 +16,23 @@ import {
     clusterManagementAddonsState,
     clusterProvisionsState,
     configMapsState,
+    hostedClustersState,
     machinePoolsState,
     managedClusterAddonsState,
     managedClusterInfosState,
     managedClusterSetsState,
     managedClustersState,
 } from '../../../../../atoms'
-import { nockCreate, nockDelete, nockGet, nockIgnoreRBAC, nockNamespacedList } from '../../../../../lib/nock-util'
+import {
+    nockCreate,
+    nockDelete,
+    nockGet,
+    nockIgnoreRBAC,
+    nockIgnoreApiPaths,
+    nockList,
+    nockNamespacedList,
+    nockPatch,
+} from '../../../../../lib/nock-util'
 import { mockManagedClusterSet, mockOpenShiftConsoleConfigMap } from '../../../../../lib/test-metadata'
 import {
     clickByLabel,
@@ -49,6 +61,8 @@ import {
     ClusterProvision,
     ClusterProvisionApiVersion,
     ClusterProvisionKind,
+    HostedClusterApiVersion,
+    HostedClusterKind,
     ManagedCluster,
     ManagedClusterAddOn,
     ManagedClusterAddOnApiVersion,
@@ -61,14 +75,17 @@ import {
     PodApiVersion,
     PodKind,
     PodList,
-    SelfSubjectAccessReview,
+    Secret,
+    SecretApiVersion,
+    SecretKind,
 } from '../../../../../resources'
-import ClusterDetails from './ClusterDetails'
 import {
-    clusterName,
-    mockMachinePoolAuto,
-    mockMachinePoolManual,
-} from './ClusterMachinePools/ClusterDetails.sharedmocks'
+    MultiClusterEngine,
+    MultiClusterEngineApiVersion,
+    MultiClusterEngineKind,
+} from '../../../../../resources/multi-cluster-engine'
+import ClusterDetails from './ClusterDetails'
+import { clusterName, mockMachinePoolAuto, mockMachinePoolManual } from './ClusterDetails.sharedmocks'
 
 const mockManagedClusterInfo: ManagedClusterInfo = {
     apiVersion: ManagedClusterInfoApiVersion,
@@ -333,6 +350,289 @@ const mockHiveProvisionPods: PodList = {
     ],
 }
 
+const mockMultiClusterEngineListResponse: MultiClusterEngine[] = [
+    {
+        apiVersion: 'multicluster.openshift.io/v1',
+        kind: 'MultiClusterEngine',
+        metadata: {
+            creationTimestamp: '2022-05-05T15:12:32Z',
+            finalizers: ['finalizer.multicluster.openshift.io'],
+            generation: 4,
+            labels: {
+                'installer.name': 'multiclusterhub',
+                'installer.namespace': 'open-cluster-management',
+            },
+            managedFields: [
+                {
+                    apiVersion: 'multicluster.openshift.io/v1',
+                    fieldsType: 'FieldsV1',
+                    fieldsV1: {
+                        'f:metadata': {
+                            'f:labels': {
+                                'f:installer.name': {},
+                                'f:installer.namespace': {},
+                            },
+                        },
+                        'f:spec': {
+                            'f:imagePullSecret': {},
+                            'f:overrides': {},
+                            'f:tolerations': {},
+                        },
+                    },
+                    manager: 'multiclusterhub-operator',
+                    operation: 'Apply',
+                    time: '2022-06-28T05:52:39Z',
+                },
+                {
+                    apiVersion: 'multicluster.openshift.io/v1',
+                    fieldsType: 'FieldsV1',
+                    fieldsV1: {
+                        'f:status': {
+                            '.': {},
+                            'f:components': {},
+                            'f:conditions': {},
+                            'f:phase': {},
+                        },
+                    },
+                    manager: 'backplane-operator',
+                    operation: 'Update',
+                    subresource: 'status',
+                    time: '2022-05-05T15:12:38Z',
+                },
+                {
+                    apiVersion: 'multicluster.openshift.io/v1',
+                    fieldsType: 'FieldsV1',
+                    fieldsV1: {
+                        'f:metadata': {
+                            'f:finalizers': {
+                                '.': {},
+                                'v:"finalizer.multicluster.openshift.io"': {},
+                            },
+                        },
+                        'f:spec': {
+                            'f:availabilityConfig': {},
+                            'f:overrides': {
+                                'f:components': {},
+                            },
+                            'f:targetNamespace': {},
+                        },
+                    },
+                    manager: 'backplane-operator',
+                    operation: 'Update',
+                    time: '2022-05-06T07:49:42Z',
+                },
+            ],
+            name: 'multiclusterengine',
+            resourceVersion: '295088094',
+            uid: '763cb473-a075-49a2-b8f6-f140ac9d7d37',
+        },
+        spec: {
+            availabilityConfig: 'High',
+            imagePullSecret: 'multiclusterhub-operator-pull-secret',
+            overrides: {
+                components: [
+                    {
+                        enabled: true,
+                        name: 'hypershift-preview',
+                    },
+                    {
+                        enabled: true,
+                        name: 'assisted-service',
+                    },
+                    {
+                        enabled: true,
+                        name: 'cluster-lifecycle',
+                    },
+                    {
+                        enabled: true,
+                        name: 'cluster-manager',
+                    },
+                    {
+                        enabled: true,
+                        name: 'discovery',
+                    },
+                    {
+                        enabled: true,
+                        name: 'hive',
+                    },
+                    {
+                        enabled: true,
+                        name: 'server-foundation',
+                    },
+                    {
+                        enabled: false,
+                        name: 'managedserviceaccount-preview',
+                    },
+                    {
+                        enabled: true,
+                        name: 'console-mce',
+                    },
+                ],
+            },
+            targetNamespace: 'multicluster-engine',
+            tolerations: [
+                {
+                    effect: 'NoSchedule',
+                    key: 'node-role.kubernetes.io/infra',
+                    operator: 'Exists',
+                },
+            ],
+        },
+        status: {
+            components: [
+                {
+                    kind: 'Component',
+                    lastTransitionTime: '2022-06-24T10:53:31Z',
+                    message: 'No resources present',
+                    name: 'managedservice',
+                    reason: 'ComponentDisabled',
+                    status: 'True',
+                    type: 'NotPresent',
+                },
+                {
+                    kind: 'Deployment',
+                    lastTransitionTime: '2022-06-24T09:35:22Z',
+                    name: 'hypershift-addon-manager',
+                    reason: 'MinimumReplicasAvailable',
+                    status: 'True',
+                    type: 'Available',
+                },
+                {
+                    kind: 'Deployment',
+                    lastTransitionTime: '2022-06-24T10:52:25Z',
+                    name: 'hypershift-deployment-controller',
+                    reason: 'MinimumReplicasAvailable',
+                    status: 'True',
+                    type: 'Available',
+                },
+                {
+                    kind: 'Deployment',
+                    lastTransitionTime: '2022-06-24T10:51:12Z',
+                    name: 'console-mce-console',
+                    reason: 'MinimumReplicasAvailable',
+                    status: 'True',
+                    type: 'Available',
+                },
+                {
+                    kind: 'Deployment',
+                    lastTransitionTime: '2022-06-24T10:52:08Z',
+                    name: 'discovery-operator',
+                    reason: 'MinimumReplicasAvailable',
+                    status: 'True',
+                    type: 'Available',
+                },
+                {
+                    kind: 'Deployment',
+                    lastTransitionTime: '2022-06-24T10:51:43Z',
+                    name: 'hive-operator',
+                    reason: 'MinimumReplicasAvailable',
+                    status: 'True',
+                    type: 'Available',
+                },
+                {
+                    kind: 'Deployment',
+                    lastTransitionTime: '2022-06-24T10:52:08Z',
+                    name: 'infrastructure-operator',
+                    reason: 'MinimumReplicasAvailable',
+                    status: 'True',
+                    type: 'Available',
+                },
+                {
+                    kind: 'Deployment',
+                    lastTransitionTime: '2022-06-24T10:42:32Z',
+                    name: 'cluster-curator-controller',
+                    reason: 'MinimumReplicasAvailable',
+                    status: 'True',
+                    type: 'Available',
+                },
+                {
+                    kind: 'Deployment',
+                    lastTransitionTime: '2022-06-24T10:51:19Z',
+                    name: 'clusterclaims-controller',
+                    reason: 'MinimumReplicasAvailable',
+                    status: 'True',
+                    type: 'Available',
+                },
+                {
+                    kind: 'Deployment',
+                    lastTransitionTime: '2022-06-24T10:53:18Z',
+                    name: 'provider-credential-controller',
+                    reason: 'MinimumReplicasAvailable',
+                    status: 'True',
+                    type: 'Available',
+                },
+                {
+                    kind: 'Deployment',
+                    lastTransitionTime: '2022-06-24T09:35:24Z',
+                    name: 'clusterlifecycle-state-metrics-v2',
+                    reason: 'MinimumReplicasAvailable',
+                    status: 'True',
+                    type: 'Available',
+                },
+                {
+                    kind: 'Deployment',
+                    lastTransitionTime: '2022-06-24T10:51:47Z',
+                    name: 'cluster-manager',
+                    reason: 'MinimumReplicasAvailable',
+                    status: 'True',
+                    type: 'Available',
+                },
+                {
+                    kind: 'ClusterManager',
+                    lastTransitionTime: '2022-06-24T10:53:31Z',
+                    message: 'Components of cluster manager are applied',
+                    name: 'cluster-manager',
+                    reason: 'ClusterManagerApplied',
+                    status: 'True',
+                    type: 'Applied',
+                },
+                {
+                    kind: 'Deployment',
+                    lastTransitionTime: '2022-06-24T10:53:21Z',
+                    name: 'ocm-controller',
+                    reason: 'MinimumReplicasAvailable',
+                    status: 'True',
+                    type: 'Available',
+                },
+                {
+                    kind: 'Deployment',
+                    lastTransitionTime: '2022-06-24T10:51:56Z',
+                    name: 'ocm-proxyserver',
+                    reason: 'MinimumReplicasAvailable',
+                    status: 'True',
+                    type: 'Available',
+                },
+                {
+                    kind: 'Deployment',
+                    lastTransitionTime: '2022-06-24T10:52:08Z',
+                    name: 'ocm-webhook',
+                    reason: 'MinimumReplicasAvailable',
+                    status: 'True',
+                    type: 'Available',
+                },
+            ],
+            conditions: [
+                {
+                    lastTransitionTime: '2022-06-24T10:52:05Z',
+                    lastUpdateTime: '2022-06-24T10:52:05Z',
+                    message: 'All components deployed',
+                    reason: 'ComponentsDeployed',
+                    status: 'True',
+                    type: 'Progressing',
+                },
+                {
+                    lastTransitionTime: '2022-06-24T10:53:31Z',
+                    lastUpdateTime: '2022-06-24T10:53:31Z',
+                    reason: 'ComponentsAvailable',
+                    status: 'True',
+                    type: 'Available',
+                },
+            ],
+            phase: 'Available',
+        },
+    },
+]
+
 const mockManagedClusterAddOnApp: ManagedClusterAddOn = {
     apiVersion: ManagedClusterAddOnApiVersion,
     kind: ManagedClusterAddOnKind,
@@ -480,35 +780,6 @@ const mockManagedClusterAddOnSearch: ManagedClusterAddOn = {
     },
 }
 
-const mockSelfSubjectAccessResponse: SelfSubjectAccessReview = {
-    apiVersion: 'authorization.k8s.io/v1',
-    kind: 'SelfSubjectAccessReview',
-    metadata: {},
-    spec: {
-        resourceAttributes: {
-            namespace: clusterName,
-            resource: 'secrets',
-            verb: 'get',
-        },
-    },
-    status: {
-        allowed: true,
-    },
-}
-
-const mockGetSecretSelfSubjectAccessRequest: SelfSubjectAccessReview = {
-    apiVersion: 'authorization.k8s.io/v1',
-    kind: 'SelfSubjectAccessReview',
-    metadata: {},
-    spec: {
-        resourceAttributes: {
-            namespace: clusterName,
-            resource: 'secrets',
-            verb: 'get',
-            group: '',
-        },
-    },
-}
 const mockClusterManagementAddons: ClusterManagementAddOn[] = [
     {
         apiVersion: 'addon.open-cluster-management.io/v1alpha1',
@@ -608,6 +879,29 @@ const mockManagedClusterAddOns: ManagedClusterAddOn[] = [
     mockManagedClusterAddOnSearch,
 ]
 
+const mockHostedCluster1: HostedClusterK8sResource = {
+    apiVersion: HostedClusterApiVersion,
+    kind: HostedClusterKind,
+    metadata: {
+        name: 'hostedCluster1',
+        namespace: clusterName,
+    },
+    spec: {
+        dns: {
+            baseDomain: 'test.com',
+        },
+    },
+}
+
+const mockSecret: Secret = {
+    apiVersion: SecretApiVersion,
+    kind: SecretKind,
+    metadata: {
+        namespace: 'hostedCluster1',
+        name: 'hostedCluster1-import',
+    },
+}
+
 const mockClusterProvisions: ClusterProvision = {
     apiVersion: ClusterProvisionApiVersion,
     kind: ClusterProvisionKind,
@@ -661,25 +955,49 @@ const mockClusterCurator: ClusterCurator = {
         install: {
             towerAuthSecret: 'ansible-credential-i',
             prehook: [],
+            posthook: [{ name: 'posthook-1' }, { name: 'posthook-2' }],
+        },
+        upgrade: {
+            towerAuthSecret: 'ansible-credential-i',
+            prehook: [],
+            posthook: [],
         },
     },
 }
 
-const mockRHACMNamespace = {
-    apiVersion: 'v1',
-    kind: 'Namespace',
+const mockMultiClusterEngineList = () =>
+    nockList<MultiClusterEngine>(
+        {
+            apiVersion: MultiClusterEngineApiVersion,
+            kind: MultiClusterEngineKind,
+        },
+        mockMultiClusterEngineListResponse
+    )
+
+const createManagedcluster1: ManagedCluster = {
+    apiVersion: ManagedClusterApiVersion,
+    kind: ManagedClusterKind,
     metadata: {
-        name: 'rhacm',
+        annotations: {
+            'import.open-cluster-management.io/hosting-cluster-name': 'local-cluster',
+            'import.open-cluster-management.io/klusterlet-deploy-mode': 'Hosted',
+            'open-cluster-management/created-via': 'other',
+        },
+        labels: {
+            cloud: 'auto-detect',
+            'cluster.open-cluster-management.io/clusterset': 'default',
+            name: 'hostedCluster1',
+            vendor: 'OpenShift',
+        },
+        name: 'hostedCluster1',
+    },
+    spec: {
+        hubAcceptsClient: true,
+        leaseDurationSeconds: 60,
     },
 }
 
-const mockOCMNamespace = {
-    apiVersion: 'v1',
-    kind: 'Namespace',
-    metadata: {
-        name: 'multicluster-engine',
-    },
-}
+const mockHostedClusters = [mockHostedCluster1]
 
 const nockListHiveProvisionJobs = () =>
     nockNamespacedList(
@@ -716,6 +1034,7 @@ const Component = ({ clusterDeployment = mockClusterDeployment }) => (
 describe('ClusterDetails', () => {
     beforeEach(async () => {
         nockIgnoreRBAC()
+        nockIgnoreApiPaths()
         render(<Component />)
     })
 
@@ -728,7 +1047,7 @@ describe('ClusterDetails', () => {
     test('overview page opens logs', async () => {
         const nocks: Scope[] = [nockListHiveProvisionJobs()]
         window.open = jest.fn()
-        await clickByText('View logs')
+        await clickByText('View logs', 1)
         await waitForNocks(nocks)
         await waitForCalled(window.open as jest.Mock)
     })
@@ -812,9 +1131,72 @@ describe('ClusterDetails', () => {
     })
 })
 
-describe('ClusterDetails', () => {
-    test('page renders error state', async () => {
-        const nock = nockCreate(mockGetSecretSelfSubjectAccessRequest, mockSelfSubjectAccessResponse)
+const AIComponent = () => <Component clusterDeployment={mockAIClusterDeployment} />
+
+describe('ClusterDetails for On Premise', () => {
+    beforeEach(async () => {
+        nockIgnoreRBAC()
+        nockIgnoreApiPaths()
+    })
+
+    test('overview page renders AI empty details', async () => {
+        const nocks: Scope[] = [mockMultiClusterEngineList()]
+        render(<AIComponent />)
+        await waitForNocks(nocks)
+
+        await waitForText(clusterName, true)
+        await waitForText('Overview')
+        await waitForText('Details')
+
+        await waitForText('Cluster hosts')
+        await waitForTestId('col-header-hostname', true) // Multiple === true since the Empty state reuses the column
+        await waitForTestId('col-header-role')
+        await waitForTestId('col-header-infraenvstatus')
+        await waitForTestId('col-header-infraenv')
+        await waitForTestId('col-header-cpucores')
+        await waitForTestId('col-header-memory')
+        await waitForTestId('col-header-disk')
+
+        await waitForText('ai:Waiting for hosts...')
+
+        // TODO(mlibra): If only we can address titles/headers in the table by ID. That would require changes to the AcmDescriptionList component
+        await waitForText('Host inventory')
+
+        // screen.debug(undefined, -1)
+    })
+})
+
+describe('Automation Details', () => {
+    beforeEach(async () => {
+        nockIgnoreRBAC()
+        nockIgnoreApiPaths()
+        render(<Component />)
+    })
+
+    test('summary link is visible', async () => {
+        await waitForText(clusterName, true)
+        await waitForText('Automation template', true)
+        await waitForText('View template', true)
+    })
+
+    test('modal displays correct values', async () => {
+        await clickByText('View template')
+        await waitForText('Automation template for test-cluster')
+
+        await waitForText('Install')
+        await waitForText('posthook-1')
+
+        await waitForText('Upgrade')
+        await waitForText('None selected', true)
+    })
+})
+
+describe('ClusterDetails with not found', () => {
+    beforeEach(() => {
+        nockIgnoreRBAC()
+        nockIgnoreApiPaths()
+    })
+    test('page renders error state to return to cluster page', async () => {
         render(
             <RecoilRoot
                 initializeState={(snapshot) => {
@@ -835,41 +1217,68 @@ describe('ClusterDetails', () => {
                 </MemoryRouter>
             </RecoilRoot>
         )
-        await waitForNocks([nock])
         await waitForText('Not found')
+        userEvent.click(
+            screen.getByRole('button', {
+                name: /back to clusters/i,
+            })
+        )
+        expect(window.location.pathname).toEqual('/')
     })
-})
+    test('page renders error state, should have option to import', async () => {
+        nockGet(mockSecret)
+        render(
+            <RecoilRoot
+                initializeState={(snapshot) => {
+                    snapshot.set(managedClustersState, [])
+                    snapshot.set(clusterDeploymentsState, [])
+                    snapshot.set(managedClusterInfosState, [])
+                    snapshot.set(certificateSigningRequestsState, [])
+                    snapshot.set(clusterManagementAddonsState, [])
+                    snapshot.set(managedClusterAddonsState, [])
+                    snapshot.set(managedClusterSetsState, [mockManagedClusterSet])
+                    snapshot.set(configMapsState, [])
+                    snapshot.set(hostedClustersState, mockHostedClusters)
+                }}
+            >
+                <MemoryRouter
+                    initialEntries={[NavigationPath.clusterDetails.replace(':id', mockHostedCluster1.metadata.name)]}
+                >
+                    <Switch>
+                        <Route path={NavigationPath.clusterDetails} component={ClusterDetails} />
+                    </Switch>
+                </MemoryRouter>
+            </RecoilRoot>
+        )
 
-const AIComponent = () => <Component clusterDeployment={mockAIClusterDeployment} />
+        await waitForText(mockHostedCluster1.metadata.name, true)
+        await waitFor(() =>
+            expect(
+                screen.getByRole('button', {
+                    name: /https:\/\/console-openshift-console\.apps\.hostedcluster1\.test\.com/i,
+                })
+            )
+        )
 
-describe('ClusterDetails for On Premise', () => {
-    beforeEach(async () => {
-        nockIgnoreRBAC()
-    })
+        const mockImportHostedCluster = [
+            nockCreate(createManagedcluster1, createManagedcluster1),
+            nockPatch(mockHostedCluster1, [
+                {
+                    op: 'replace',
+                    path: '/metadata/annotations',
+                    value: {
+                        'cluster.open-cluster-management.io/managedcluster-name': 'hostedCluster1',
+                        'cluster.open-cluster-management.io/hypershiftdeployment': 'test-cluster/hostedCluster1',
+                    },
+                },
+            ]),
+        ]
+        userEvent.click(
+            screen.getByRole('button', {
+                name: /import cluster/i,
+            })
+        )
 
-    test('overview page renders AI empty details', async () => {
-        const nocks: Scope[] = [nockGet(mockRHACMNamespace, undefined, 404), nockGet(mockOCMNamespace, undefined, 200)]
-        render(<AIComponent />)
-        await waitForNocks(nocks)
-
-        await waitForText(clusterName, true)
-        await waitForText('Overview')
-        await waitForText('Details')
-
-        await waitForText('Cluster hosts')
-        await waitForTestId('col-header-hostname', true) // Multiple === true since the Empty state reuses the column
-        await waitForTestId('col-header-role')
-        await waitForTestId('col-header-infraenvstatus')
-        await waitForTestId('col-header-infraenv')
-        await waitForTestId('col-header-cpucores')
-        await waitForTestId('col-header-memory')
-        await waitForTestId('col-header-disk')
-
-        await waitForText('Waiting for hosts...')
-
-        // TODO(mlibra): If only we can address titles/headers in the table by ID. That would require changes to the AcmDescriptionList component
-        await waitForText('On Premise')
-
-        // screen.debug(undefined, -1)
+        await waitForNocks(mockImportHostedCluster)
     })
 })

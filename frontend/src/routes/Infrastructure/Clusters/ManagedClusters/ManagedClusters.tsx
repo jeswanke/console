@@ -4,7 +4,6 @@ import { ButtonVariant, PageSection, Stack, StackItem, Text, TextContent, TextVa
 import { fitContent } from '@patternfly/react-table'
 import {
     AcmAlertContext,
-    AcmButton,
     AcmEmptyState,
     AcmInlineProvider,
     AcmInlineStatusGroup,
@@ -19,16 +18,14 @@ import {
     ITableFilter,
     Provider,
     ProviderLongTextMap,
-} from '@stolostron/ui-components'
+} from '../../../../ui-components'
 import { Fragment, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { Link, useHistory } from 'react-router-dom'
-import { useRecoilState } from 'recoil'
-import { clusterCuratorsState, clusterManagementAddonsState } from '../../../../atoms'
 import { BulkActionModel, errorIsNot, IBulkActionModelProps } from '../../../../components/BulkActionModel'
 import { Trans, useTranslation } from '../../../../lib/acm-i18next'
 import { deleteCluster, detachCluster } from '../../../../lib/delete-cluster'
 import { canUser } from '../../../../lib/rbac-util'
-import { NavigationPath } from '../../../../NavigationPath'
+import { createBackCancelLocation, NavigationPath } from '../../../../NavigationPath'
 import {
     addonPathKey,
     addonTextKey,
@@ -41,28 +38,19 @@ import {
     patchResource,
     ResourceErrorCode,
 } from '../../../../resources'
+import { getDateTimeCell } from '../../helpers/table-row-helpers'
 import { usePageContext } from '../ClustersPage'
 import { AddCluster } from './components/AddCluster'
 import { BatchChannelSelectModal } from './components/BatchChannelSelectModal'
 import { BatchUpgradeModal } from './components/BatchUpgradeModal'
-import { OnPremiseBanner } from './components/cim/OnPremiseBanner'
 import { ClusterActionDropdown } from './components/ClusterActionDropdown'
 import { DistributionField } from './components/DistributionField'
 import { StatusField } from './components/StatusField'
 import { useAllClusters } from './components/useAllClusters'
-import { getDateTimeCell } from '../../helpers/table-row-helpers'
+import { UpdateAutomationModal } from './components/UpdateAutomationModal'
+import { HostedClusterK8sResource } from 'openshift-assisted-ui-lib/cim'
+import { useSharedAtoms, useRecoilState } from '../../../../shared-recoil'
 
-function InfraEnvLinkButton() {
-    const { t } = useTranslation()
-
-    return (
-        <Link to={NavigationPath.infraEnvironments} style={{ marginRight: '16px' }}>
-            <AcmButton key="enableDiscovery" variant={ButtonVariant.primary}>
-                {t('cim.onpremise.banner.infraenv.link')}
-            </AcmButton>
-        </Link>
-    )
-}
 export default function ManagedClusters() {
     const { t } = useTranslation()
     const alertContext = useContext(AcmAlertContext)
@@ -95,12 +83,6 @@ export default function ManagedClusters() {
         <AcmPageContent id="clusters">
             <PageSection>
                 <Stack hasGutter={true}>
-                    <OnPremiseBanner
-                        id="banner.managedclusters"
-                        extraButton={<InfraEnvLinkButton />}
-                        titleKey="cim.onpremise.banner.header"
-                        textKey="cim.onpremise.banner.body"
-                    />
                     <StackItem>
                         <ClustersTable
                             clusters={clusters}
@@ -108,7 +90,7 @@ export default function ManagedClusters() {
                                 {
                                     id: 'createCluster',
                                     title: t('managed.createCluster'),
-                                    click: () => history.push(NavigationPath.createCluster),
+                                    click: () => history.push(createBackCancelLocation(NavigationPath.createCluster)),
                                     isDisabled: !canCreateCluster,
                                     tooltip: t('rbac.unauthorized'),
                                     variant: ButtonVariant.primary,
@@ -116,7 +98,7 @@ export default function ManagedClusters() {
                                 {
                                     id: 'importCluster',
                                     title: t('managed.importCluster'),
-                                    click: () => history.push(NavigationPath.importCluster),
+                                    click: () => history.push(createBackCancelLocation(NavigationPath.importCluster)),
                                     isDisabled: !canCreateCluster,
                                     tooltip: t('rbac.unauthorized'),
                                     variant: ButtonVariant.secondary,
@@ -141,6 +123,7 @@ export default function ManagedClusters() {
 }
 
 const PageActions = () => {
+    const { clusterManagementAddonsState } = useSharedAtoms()
     const [clusterManagementAddons] = useRecoilState(clusterManagementAddonsState)
     const addons = clusterManagementAddons.filter(
         (cma) => cma.metadata.annotations?.[addonTextKey] && cma.metadata.annotations?.[addonPathKey]
@@ -167,11 +150,13 @@ export function ClustersTable(props: {
         sessionStorage.removeItem('DiscoveredClusterConsoleURL')
         sessionStorage.removeItem('DiscoveredClusterApiURL')
     }, [])
-
+    const { clusterCuratorsState, hostedClustersState } = useSharedAtoms()
     const [clusterCurators] = useRecoilState(clusterCuratorsState)
+    const [hostedClusters] = useRecoilState(hostedClustersState)
 
     const { t } = useTranslation()
     const [upgradeClusters, setUpgradeClusters] = useState<Array<Cluster> | undefined>()
+    const [updateAutomationTemplates, setUpdateAutomationTemplates] = useState<Array<Cluster> | undefined>()
     const [selectChannels, setSelectChannels] = useState<Array<Cluster> | undefined>()
     const [modalProps, setModalProps] = useState<IBulkActionModelProps<Cluster> | { open: false }>({
         open: false,
@@ -184,7 +169,8 @@ export function ClustersTable(props: {
     const clusterNameColumn = useClusterNameColumn()
     const clusterStatusColumn = useClusterStatusColumn()
     const clusterProviderColumn = useClusterProviderColumn()
-    const clusterDistributionColumn = useClusterDistributionColumn(clusterCurators)
+    const clusterControlPlaneColumn = useClusterControlPlaneColumn()
+    const clusterDistributionColumn = useClusterDistributionColumn(clusterCurators, hostedClusters)
     const clusterLabelsColumn = useClusterLabelsColumn()
     const clusterNodesColumn = useClusterNodesColumn()
     const clusterCreatedDataColumn = useClusterCreatedDateColumn()
@@ -199,6 +185,7 @@ export function ClustersTable(props: {
             clusterNameColumn,
             clusterStatusColumn,
             clusterProviderColumn,
+            clusterControlPlaneColumn,
             clusterDistributionColumn,
             clusterLabelsColumn,
             clusterNodesColumn,
@@ -215,6 +202,7 @@ export function ClustersTable(props: {
             clusterNameColumn,
             clusterStatusColumn,
             clusterProviderColumn,
+            clusterControlPlaneColumn,
             clusterDistributionColumn,
             clusterLabelsColumn,
             clusterNodesColumn,
@@ -229,7 +217,8 @@ export function ClustersTable(props: {
                 title: t('managed.upgrade.plural'),
                 click: (managedClusters: Array<Cluster>) => {
                     if (!managedClusters) return
-                    setUpgradeClusters(managedClusters)
+                    const managedClustersNoHypershift = managedClusters.filter((mc) => !mc.isHostedCluster)
+                    setUpgradeClusters(managedClustersNoHypershift)
                 },
                 variant: 'bulk-action',
             },
@@ -239,6 +228,15 @@ export function ClustersTable(props: {
                 click: (managedClusters: Array<Cluster>) => {
                     if (!managedClusters) return
                     setSelectChannels(managedClusters)
+                },
+                variant: 'bulk-action',
+            },
+            {
+                id: 'updateAutomationTemplates',
+                title: t('Update automation template'),
+                click: (managedClusters: Array<Cluster>) => {
+                    if (!managedClusters) return
+                    setUpdateAutomationTemplates(managedClusters)
                 },
                 variant: 'bulk-action',
             },
@@ -323,7 +321,7 @@ export function ClustersTable(props: {
                         title: t('bulk.title.detach'),
                         action: t('detach'),
                         processing: t('detaching'),
-                        resources: clusters,
+                        resources: clusters.filter((cluster) => !cluster.isHostedCluster),
                         description: t('bulk.message.detach'),
                         columns: modalColumns,
                         keyFn: (cluster) => cluster.name as string,
@@ -346,7 +344,7 @@ export function ClustersTable(props: {
                         title: t('bulk.title.destroy'),
                         action: t('destroy'),
                         processing: t('destroying'),
-                        resources: clusters,
+                        resources: clusters.filter((cluster) => !cluster.isHostedCluster),
                         description: t('bulk.message.destroy'),
                         columns: modalColumns,
                         keyFn: (cluster) => cluster.name as string,
@@ -398,6 +396,13 @@ export function ClustersTable(props: {
     return (
         <Fragment>
             <BulkActionModel<Cluster> {...modalProps} />
+            <UpdateAutomationModal
+                clusters={updateAutomationTemplates}
+                open={!!updateAutomationTemplates}
+                close={() => {
+                    setUpdateAutomationTemplates(undefined)
+                }}
+            />
             <BatchUpgradeModal
                 clusters={upgradeClusters}
                 open={!!upgradeClusters}
@@ -476,7 +481,33 @@ export function useClusterProviderColumn(): IAcmTableColumn<Cluster> {
     }
 }
 
-export function useClusterDistributionColumn(clusterCurators: ClusterCurator[]): IAcmTableColumn<Cluster> {
+export function useClusterControlPlaneColumn(): IAcmTableColumn<Cluster> {
+    const { t } = useTranslation()
+    return {
+        header: t('table.controlplane'),
+        cell: (cluster) => {
+            if (cluster.name === 'local-cluster') {
+                return t('Hub')
+            }
+            if (cluster.isRegionalHubCluster) {
+                if (cluster.isHostedCluster || cluster.isHypershift) {
+                    return t('Hub, Hosted')
+                }
+                return t('Hub')
+            }
+            if (cluster.isHostedCluster || cluster.isHypershift) {
+                return t('Hosted')
+            } else {
+                return t('Standalone')
+            }
+        },
+    }
+}
+
+export function useClusterDistributionColumn(
+    clusterCurators: ClusterCurator[],
+    hostedClusters: HostedClusterK8sResource[]
+): IAcmTableColumn<Cluster> {
     const { t } = useTranslation()
     return {
         header: t('table.distribution'),
@@ -486,6 +517,9 @@ export function useClusterDistributionColumn(clusterCurators: ClusterCurator[]):
             <DistributionField
                 cluster={cluster}
                 clusterCurator={clusterCurators.find((curator) => curator.metadata.name === cluster.name)}
+                hostedCluster={hostedClusters.find(
+                    (hc) => cluster.namespace === hc.metadata.namespace && cluster.name === hc.metadata.name
+                )}
             />
         ),
     }

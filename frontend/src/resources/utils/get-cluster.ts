@@ -1,8 +1,16 @@
 /* Copyright Contributors to the Open Cluster Management project */
 
 import { V1CustomResourceDefinitionCondition } from '@kubernetes/client-node/dist/gen/model/v1CustomResourceDefinitionCondition'
-import { Provider } from '@stolostron/ui-components'
-import { CIM } from 'openshift-assisted-ui-lib'
+import { Provider } from '../../ui-components'
+import {
+    isDraft,
+    getIsSNOCluster,
+    getConsoleUrl as getConsoleUrlAI,
+    getClusterApiUrl as getClusterApiUrlAI,
+    AgentClusterInstallK8sResource,
+    HostedClusterK8sResource,
+    NodePoolK8sResource,
+} from 'openshift-assisted-ui-lib/cim'
 import { CertificateSigningRequest, CSR_CLUSTER_LABEL } from '../certificate-signing-requests'
 import { ClusterClaim } from '../cluster-claim'
 import { ClusterCurator } from '../cluster-curator'
@@ -14,8 +22,7 @@ import { managedClusterSetLabel } from '../managed-cluster-set'
 import { AddonStatus } from './get-addons'
 import { getLatest } from './utils'
 import { AgentClusterInstallKind } from '../agent-cluster-install'
-
-const { isDraft, getIsSNOCluster, getConsoleUrl: getConsoleUrlAI, getClusterApiUrl: getClusterApiUrlAI } = CIM
+import semver from 'semver'
 
 export enum ClusterStatus {
     'pending' = 'pending',
@@ -61,17 +68,20 @@ export const clusterDangerStatuses = [
 ]
 
 export type Cluster = {
-    name?: string
+    name: string
     displayName?: string
     namespace?: string
+    uid: string
     status: ClusterStatus
     statusMessage?: string
     provider?: Provider
     distribution?: DistributionInfo
+    acmDistribution?: ACMDistributionInfo
     labels?: Record<string, string>
     nodes?: Nodes
     kubeApiServer?: string
     consoleURL?: string
+    acmConsoleURL?: string
     hive: {
         clusterPool?: string
         clusterPoolNamespace?: string
@@ -83,6 +93,8 @@ export type Cluster = {
     isHive: boolean
     isManaged: boolean
     isCurator: boolean
+    isHostedCluster: boolean
+    isRegionalHubCluster: boolean
     clusterSet?: string
     owner: {
         createdBy?: string
@@ -90,6 +102,15 @@ export type Cluster = {
     }
     isSNOCluster: boolean
     creationTimestamp?: string
+    isHypershift: boolean
+    kubeconfig?: string
+    kubeadmin?: string
+    hypershift?: {
+        agent: boolean
+        nodePools?: NodePoolK8sResource[]
+        secretNames: string[]
+        hostingNamespace: string
+    }
 }
 
 export type DistributionInfo = {
@@ -100,9 +121,12 @@ export type DistributionInfo = {
     upgradeInfo?: UpgradeInfo
 }
 
+export type ACMDistributionInfo = {
+    version?: string
+    channel?: string
+}
+
 export type HiveSecrets = {
-    kubeconfig?: string
-    kubeadmin?: string
     installConfig?: string
 }
 
@@ -155,7 +179,9 @@ export function mapClusters(
     managedClusterAddOns: ManagedClusterAddOn[] = [],
     clusterClaims: ClusterClaim[] = [],
     clusterCurators: ClusterCurator[] = [],
-    agentClusterInstalls: CIM.AgentClusterInstallK8sResource[] = []
+    agentClusterInstalls: AgentClusterInstallK8sResource[] = [],
+    hostedClusters: HostedClusterK8sResource[] = [],
+    nodePools: NodePoolK8sResource[] = []
 ) {
     const mcs = managedClusters.filter((mc) => mc.metadata?.name) ?? []
     const uniqueClusterNames = Array.from(
@@ -163,6 +189,7 @@ export function mapClusters(
             ...clusterDeployments.map((cd) => cd.metadata.name),
             ...managedClusterInfos.map((mc) => mc.metadata.name),
             ...mcs.map((mc) => mc.metadata.name),
+            ...hostedClusters.map((hc) => hc.metadata.name),
         ])
     )
     return uniqueClusterNames.map((cluster) => {
@@ -179,6 +206,7 @@ export function mapClusters(
                     aci.metadata.namespace === clusterDeployment.metadata.namespace &&
                     aci.metadata.name === clusterDeployment?.spec?.clusterInstallRef?.name
             )
+        const hostedCluster = hostedClusters.find((hc) => hc.metadata.name === cluster)
         return getCluster(
             managedClusterInfo,
             clusterDeployment,
@@ -187,7 +215,10 @@ export function mapClusters(
             addons,
             clusterClaim,
             clusterCurator,
-            agentClusterInstall
+            agentClusterInstall,
+            hostedCluster,
+            undefined,
+            nodePools
         )
     })
 }
@@ -200,7 +231,10 @@ export function getCluster(
     managedClusterAddOns: ManagedClusterAddOn[],
     clusterClaim: ClusterClaim | undefined,
     clusterCurator: ClusterCurator | undefined,
-    agentClusterInstall: CIM.AgentClusterInstallK8sResource | undefined
+    agentClusterInstall: AgentClusterInstallK8sResource | undefined,
+    hostedCluster: HostedClusterK8sResource | undefined,
+    selectedHostedCluster: HostedClusterK8sResource | undefined,
+    nodePools: NodePoolK8sResource[] | undefined
 ): Cluster {
     const { status, statusMessage } = getClusterStatus(
         clusterDeployment,
@@ -210,29 +244,66 @@ export function getCluster(
         managedClusterAddOns,
         clusterCurator,
         agentClusterInstall,
-        clusterClaim
+        clusterClaim,
+        hostedCluster
     )
+
+    const clusterNodePools = nodePools?.filter(
+        (np) =>
+            np.spec.clusterName === hostedCluster?.metadata.name &&
+            np.metadata.namespace === hostedCluster?.metadata.namespace
+    )
+
+    const acmDistributionInfo = getACMDistributionInfo(managedCluster)
+    const consoleURL = getConsoleUrl(
+        clusterDeployment,
+        managedClusterInfo,
+        managedCluster,
+        agentClusterInstall,
+        hostedCluster,
+        selectedHostedCluster
+    )
+
     return {
-        name: clusterDeployment?.metadata.name ?? managedCluster?.metadata.name ?? managedClusterInfo?.metadata.name,
+        name:
+            clusterDeployment?.metadata.name ??
+            managedCluster?.metadata.name ??
+            managedClusterInfo?.metadata.name ??
+            hostedCluster?.metadata?.name ??
+            selectedHostedCluster?.name,
         displayName:
             // clusterDeployment?.spec?.clusterPoolRef?.claimName ??
-            clusterDeployment?.metadata.name ?? managedCluster?.metadata.name ?? managedClusterInfo?.metadata.name,
+            clusterDeployment?.metadata.name ??
+            managedCluster?.metadata.name ??
+            managedClusterInfo?.metadata.name ??
+            hostedCluster?.metadata?.name ??
+            selectedHostedCluster?.name,
         namespace:
             managedCluster?.metadata.name ??
             clusterDeployment?.metadata.namespace ??
             managedClusterInfo?.metadata.namespace,
+        uid:
+            managedCluster?.metadata.uid ??
+            clusterDeployment?.metadata.uid ??
+            managedClusterInfo?.metadata.uid ??
+            hostedCluster?.metadata.uid,
         status,
         statusMessage,
-        provider: getProvider(managedClusterInfo, managedCluster, clusterDeployment),
+        provider: getProvider(managedClusterInfo, managedCluster, clusterDeployment, hostedCluster),
         distribution: getDistributionInfo(managedClusterInfo, managedCluster, clusterDeployment, clusterCurator),
+        acmDistribution: acmDistributionInfo,
+        acmConsoleURL: getACMConsoleURL(acmDistributionInfo.version, consoleURL),
         labels: managedCluster?.metadata.labels ?? managedClusterInfo?.metadata.labels,
         nodes: getNodes(managedClusterInfo),
         kubeApiServer: getKubeApiServer(clusterDeployment, managedClusterInfo, agentClusterInstall),
-        consoleURL: getConsoleUrl(clusterDeployment, managedClusterInfo, managedCluster, agentClusterInstall),
-        isHive: !!clusterDeployment,
+        consoleURL: consoleURL,
+        isHive: !!clusterDeployment && !hostedCluster,
+        isHypershift: !!hostedCluster || selectedHostedCluster?.isHypershift,
         isManaged: !!managedCluster || !!managedClusterInfo,
         isCurator: !!clusterCurator,
+        isHostedCluster: getIsHostedCluster(managedCluster),
         isSNOCluster: getIsSNOCluster(agentClusterInstall),
+        isRegionalHubCluster: getIsRegionalHubCluster(managedCluster),
         hive: getHiveConfig(clusterDeployment, clusterClaim),
         clusterSet:
             managedCluster?.metadata?.labels?.[managedClusterSetLabel] ||
@@ -243,6 +314,23 @@ export function getCluster(
             clusterDeployment?.metadata.creationTimestamp ??
             managedCluster?.metadata.creationTimestamp ??
             managedClusterInfo?.metadata.creationTimestamp,
+        kubeconfig:
+            clusterDeployment?.spec?.clusterMetadata?.adminKubeconfigSecretRef?.name ||
+            hostedCluster?.status?.kubeconfig?.name,
+        kubeadmin:
+            clusterDeployment?.spec?.clusterMetadata?.adminPasswordSecretRef?.name ||
+            hostedCluster?.status?.kubeadminPassword?.name,
+        hypershift: hostedCluster
+            ? {
+                  agent: !!hostedCluster.spec.platform?.agent,
+                  nodePools: clusterNodePools,
+                  secretNames: [
+                      hostedCluster.spec?.sshKey?.name || '',
+                      hostedCluster.spec?.pullSecret?.name || '',
+                  ].filter((name) => !!name),
+                  hostingNamespace: hostedCluster.metadata.namespace,
+              }
+            : undefined,
     }
 }
 
@@ -327,8 +415,8 @@ export function getHiveConfig(clusterDeployment?: ClusterDeployment, clusterClai
         clusterPoolNamespace: clusterDeployment?.spec?.clusterPoolRef?.namespace,
         clusterClaimName: clusterDeployment?.spec?.clusterPoolRef?.claimName,
         secrets: {
-            kubeconfig: clusterDeployment?.spec?.clusterMetadata?.adminKubeconfigSecretRef.name,
-            kubeadmin: clusterDeployment?.spec?.clusterMetadata?.adminPasswordSecretRef.name,
+            kubeconfig: clusterDeployment?.spec?.clusterMetadata?.adminKubeconfigSecretRef?.name,
+            kubeadmin: clusterDeployment?.spec?.clusterMetadata?.adminPasswordSecretRef?.name,
             installConfig: clusterDeployment?.spec?.provisioning?.installConfigSecretRef?.name,
         },
         lifetime: clusterClaim?.spec?.lifetime,
@@ -338,11 +426,20 @@ export function getHiveConfig(clusterDeployment?: ClusterDeployment, clusterClai
 export function getProvider(
     managedClusterInfo?: ManagedClusterInfo,
     managedCluster?: ManagedCluster,
-    clusterDeployment?: ClusterDeployment
+    clusterDeployment?: ClusterDeployment,
+    hostedCluster?: HostedClusterK8sResource
 ) {
+    if (hostedCluster?.spec?.platform?.agent) {
+        return Provider.hostinventory
+    }
+
+    if (hostedCluster) {
+        return Provider.hypershift
+    }
+
     const clusterInstallRef = clusterDeployment?.spec?.clusterInstallRef
     if (clusterInstallRef?.kind === AgentClusterInstallKind) {
-        return Provider.hybrid
+        return Provider.hostinventory
     }
 
     const cloudLabel = managedClusterInfo?.metadata?.labels?.['cloud']
@@ -428,6 +525,25 @@ export enum CuratorCondition {
     upgrade = 'DesiredCuration: upgrade',
 }
 
+export function getACMDistributionInfo(managedCluster?: ManagedCluster): ACMDistributionInfo {
+    let version: string | undefined
+    let channel: string | undefined
+
+    if (managedCluster?.status?.clusterClaims) {
+        version =
+            managedCluster?.status?.clusterClaims?.find((claim) => claim.name === 'version.open-cluster-management.io')
+                ?.value ?? undefined
+        if (version) {
+            channel = `release-` + version.substring(0, version.lastIndexOf('.'))
+        }
+    }
+
+    return {
+        version: version,
+        channel: channel,
+    }
+}
+
 export function getDistributionInfo(
     managedClusterInfo?: ManagedClusterInfo,
     managedCluster?: ManagedCluster,
@@ -508,7 +624,58 @@ export function getDistributionInfo(
             break
     }
 
+    const versionRegex = /([\d]{1,5})\.([\d]{1,5})\.([\d]{1,5})/
+
+    function isVersionGreater(versionX: string, versionY: string) {
+        const matchesA = versionX.match(versionRegex)
+        const matchesB = versionY.match(versionRegex)
+        if (matchesA && matchesB && matchesA.length === 4 && matchesB.length === 4) {
+            for (let index = 1; index < 4; index++) {
+                const parsedMatchA = parseInt(matchesA[index], 10)
+                const parsedMatchB = parseInt(matchesB[index], 10)
+                if (parsedMatchA > parsedMatchB) {
+                    return true
+                }
+                if (parsedMatchA < parsedMatchB) {
+                    return false
+                }
+            }
+            return false
+        }
+    }
+
+    function isVersionEqual(versionX: string, versionY: string) {
+        const matchesA = versionX.match(versionRegex)
+        const matchesB = versionY.match(versionRegex)
+        if (matchesA && matchesB && matchesA.length === 4 && matchesB.length === 4) {
+            for (let index = 1; index < 4; index++) {
+                const parsedMatchA = parseInt(matchesA[index], 10)
+                const parsedMatchB = parseInt(matchesB[index], 10)
+                if (parsedMatchA !== parsedMatchB) {
+                    return false
+                }
+            }
+            return true
+        }
+    }
+    const desiredVersion =
+        managedClusterInfo?.status?.distributionInfo?.ocp?.desired?.version ||
+        managedClusterInfo?.status?.distributionInfo?.ocp.desiredVersion || // backward compatibility
+        ''
+    const currentVersionMCI = managedClusterInfo?.status?.distributionInfo?.ocp.version
+    const desiredVersionCC = clusterCurator?.spec?.upgrade?.desiredUpdate
+
     if (clusterCurator || managedClusterInfo) {
+        // check that currentVersionMCI && desiredVersionCC && desiredVersion exist,
+        // then validate that CC desiredVersion is greater than current MCI version
+        // and that CC desiredVersion is greater than or equal to MCI desiredVersion
+        const curatorUpgradeVersionValid =
+            currentVersionMCI &&
+            desiredVersionCC &&
+            desiredVersion &&
+            isVersionGreater(desiredVersionCC, currentVersionMCI) &&
+            (isVersionEqual(desiredVersionCC, desiredVersion) || isVersionGreater(desiredVersionCC, desiredVersion))
+
         const curatorConditions = clusterCurator?.status?.conditions ?? []
         const isUpgradeCuration =
             clusterCurator?.spec?.desiredCuration === 'upgrade' ||
@@ -529,13 +696,7 @@ export function getDistributionInfo(
         upgradeInfo.hooksInProgress =
             checkCuratorConditionInProgress(CuratorCondition.prehook, curatorConditions) ||
             checkCuratorConditionInProgress(CuratorCondition.posthook, curatorConditions)
-        const curatorIsUpgrading =
-            isUpgradeCuration &&
-            clusterCurator?.spec?.upgrade?.desiredUpdate &&
-            clusterCurator?.spec?.upgrade?.desiredUpdate !==
-                managedClusterInfo?.status?.distributionInfo?.ocp?.version &&
-            !curatorIsIdle
-
+        const curatorIsUpgrading = curatorUpgradeVersionValid && isUpgradeCuration && !curatorIsIdle
         const isSelectingChannel =
             isUpgradeCuration &&
             clusterCurator?.spec?.upgrade?.channel &&
@@ -544,11 +705,7 @@ export function getDistributionInfo(
 
         const upgradeDetailedMessage = getCuratorConditionMessage('monitor-upgrade', curatorConditions) || ''
         const percentageMatch = upgradeDetailedMessage.match(/\d+%/) || []
-        upgradeInfo.upgradePercentage = percentageMatch.length > 0 ? percentageMatch[0] : ''
-        const desiredVersion =
-            managedClusterInfo?.status?.distributionInfo?.ocp?.desired?.version ||
-            managedClusterInfo?.status?.distributionInfo?.ocp.desiredVersion || // backward compatibility
-            ''
+        upgradeInfo.upgradePercentage = percentageMatch.length > 0 && curatorIsUpgrading ? percentageMatch[0] : ''
         upgradeInfo.isSelectingChannel = !!isSelectingChannel
         upgradeInfo.isUpgrading =
             curatorIsUpgrading ||
@@ -623,7 +780,7 @@ export function getDistributionInfo(
 export function getKubeApiServer(
     clusterDeployment?: ClusterDeployment,
     managedClusterInfo?: ManagedClusterInfo,
-    agentClusterInstall?: CIM.AgentClusterInstallK8sResource
+    agentClusterInstall?: AgentClusterInstallK8sResource
 ) {
     return (
         clusterDeployment?.status?.apiURL ??
@@ -633,11 +790,31 @@ export function getKubeApiServer(
     )
 }
 
+const getHypershiftConsoleURL = (hostedCluster?: HostedClusterK8sResource) => {
+    if (!hostedCluster) {
+        return undefined
+    }
+    return `https://console-openshift-console.apps.${hostedCluster.metadata.name}.${hostedCluster.spec.dns.baseDomain}`
+}
+
+const getACMConsoleURL = (acmVersion: string | undefined, consoleURL: string | undefined) => {
+    if (!acmVersion) {
+        return undefined
+    }
+    if (semver.gte(acmVersion, '2.7.0')) {
+        return consoleURL + '/multicloud/infrastructure/clusters/managed?perspective=acm'
+    } else {
+        return consoleURL?.replace('console-openshift', 'multicloud')
+    }
+}
+
 export function getConsoleUrl(
     clusterDeployment?: ClusterDeployment,
     managedClusterInfo?: ManagedClusterInfo,
     managedCluster?: ManagedCluster,
-    agentClusterInstall?: CIM.AgentClusterInstallK8sResource
+    agentClusterInstall?: AgentClusterInstallK8sResource,
+    hostedCluster?: HostedClusterK8sResource,
+    selectedHostedCluster?: HostedClusterK8sResource
 ) {
     const consoleUrlClaim = managedCluster?.status?.clusterClaims?.find(
         (cc) => cc.name === 'consoleurl.cluster.open-cluster-management.io'
@@ -647,7 +824,9 @@ export function getConsoleUrl(
         clusterDeployment?.status?.webConsoleURL ??
         managedClusterInfo?.status?.consoleURL ??
         // Temporary workaround until https://issues.redhat.com/browse/HIVE-1666
-        getConsoleUrlAI(clusterDeployment, agentClusterInstall)
+        getConsoleUrlAI(clusterDeployment, agentClusterInstall) ??
+        getHypershiftConsoleURL(hostedCluster) ??
+        selectedHostedCluster?.consoleURL
     )
 }
 
@@ -681,8 +860,9 @@ export function getClusterStatus(
     managedCluster: ManagedCluster | undefined,
     managedClusterAddOns: ManagedClusterAddOn[],
     clusterCurator: ClusterCurator | undefined,
-    agentClusterInstall: CIM.AgentClusterInstallK8sResource | undefined,
-    clusterClaim: ClusterClaim | undefined
+    agentClusterInstall: AgentClusterInstallK8sResource | undefined,
+    clusterClaim: ClusterClaim | undefined,
+    hostedCluster: HostedClusterK8sResource | undefined
 ) {
     let statusMessage: string | undefined
 
@@ -756,8 +936,18 @@ export function getClusterStatus(
         }
     }
 
+    if (hostedCluster) {
+        if (hostedCluster?.metadata?.deletionTimestamp) {
+            return { status: ClusterStatus.destroying }
+        }
+        const availableCondition = hostedCluster?.status?.conditions?.find((c: any) => c.type === 'Available')
+        if (!availableCondition || availableCondition.status === 'False') {
+            return { status: ClusterStatus.creating }
+        }
+    }
+
     // ClusterDeployment status
-    let cdStatus = ClusterStatus.pending
+    let cdStatus = ClusterStatus.pendingimport
     if (clusterDeployment) {
         const cdConditions: V1CustomResourceDefinitionCondition[] = clusterDeployment?.status?.conditions ?? []
         //const hasInvalidImageSet = checkForCondition('ClusterImageSetNotFound', cdConditions)
@@ -955,5 +1145,28 @@ export function getClusterStatus(
         return { status: cdStatus, statusMessage }
     } else {
         return { status: mcStatus, statusMessage }
+    }
+}
+
+export function getIsHostedCluster(managedCluster?: ManagedCluster) {
+    if (
+        managedCluster?.metadata.annotations &&
+        managedCluster?.metadata.annotations['import.open-cluster-management.io/klusterlet-deploy-mode'] &&
+        managedCluster?.metadata.annotations['import.open-cluster-management.io/klusterlet-deploy-mode'] === 'Hosted'
+    ) {
+        return true
+    } else {
+        return false
+    }
+}
+
+export function getIsRegionalHubCluster(managedCluster?: ManagedCluster) {
+    if (
+        managedCluster?.metadata.labels &&
+        managedCluster?.metadata.labels?.['feature.open-cluster-management.io/addon-multicluster-global-hub-controller']
+    ) {
+        return true
+    } else {
+        return false
     }
 }

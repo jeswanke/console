@@ -12,7 +12,7 @@ import {
 import { render, waitFor } from '@testing-library/react'
 import { RecoilRoot } from 'recoil'
 import { clusterProvisionsState, configMapsState } from '../../../../../atoms'
-import { nockNamespacedList } from '../../../../../lib/nock-util'
+import { nockIgnoreApiPaths, nockNamespacedList } from '../../../../../lib/nock-util'
 import { mockOpenShiftConsoleConfigMap } from '../../../../../lib/test-metadata'
 import { clickByTestId, waitForNock, waitForNotTestId, waitForTestId, waitForText } from '../../../../../lib/test-util'
 import { ClusterContext } from '../ClusterDetails/ClusterDetails'
@@ -22,6 +22,7 @@ const mockCluster: Cluster = {
     name: 'test-cluster',
     displayName: 'test-cluster',
     namespace: 'test-cluster',
+    uid: 'test-cluster-uid',
     status: ClusterStatus.pendingimport,
     distribution: {
         k8sVersion: '1.19',
@@ -37,16 +38,19 @@ const mockCluster: Cluster = {
         isHibernatable: true,
         clusterPool: undefined,
         secrets: {
-            kubeconfig: '',
-            kubeadmin: '',
             installConfig: '',
         },
     },
     isHive: false,
     isManaged: true,
     isCurator: false,
+    isHostedCluster: false,
     isSNOCluster: false,
     owner: {},
+    kubeconfig: '',
+    kubeadmin: '',
+    isHypershift: false,
+    isRegionalHubCluster: false,
 }
 
 const mockClusterProvision: ClusterProvision = {
@@ -106,6 +110,7 @@ const mockPodList = {
 }
 
 describe('HiveNotification', () => {
+    beforeEach(() => nockIgnoreApiPaths())
     window.open = jest.fn()
     const Component = () => {
         return (

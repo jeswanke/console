@@ -7,7 +7,7 @@ import {
     AcmInlineStatusGroup,
     AcmPageContent,
     ListItems,
-} from '@stolostron/ui-components'
+} from '../../../../ui-components'
 import { useTranslation } from '../../../../lib/acm-i18next'
 import {
     Button,
@@ -27,15 +27,7 @@ import {
     OutlinedQuestionCircleIcon,
     SyncAltIcon,
 } from '@patternfly/react-icons'
-import { useRecoilState } from 'recoil'
-import { Fragment, useEffect, useState } from 'react'
-import {
-    argoApplicationsState,
-    channelsState,
-    namespacesState,
-    placementRulesState,
-    subscriptionsState,
-} from '../../../../atoms'
+import { Fragment, useContext, useEffect, useState } from 'react'
 import {
     getClusterCount,
     getClusterCountField,
@@ -43,9 +35,9 @@ import {
     getClusterCountString,
     getClusterList,
     getShortDateTime,
+    getSearchLink,
 } from '../../helpers/resource-helper'
 import { TimeWindowLabels } from '../../components/TimeWindowLabels'
-import { getSearchLink } from '../../helpers/resource-helper'
 import _ from 'lodash'
 import { REQUEST_STATUS } from './actions'
 import {
@@ -70,7 +62,11 @@ import { getAuthorizedNamespaces, rbacCreate } from '../../../../lib/rbac-util'
 import { Link } from 'react-router-dom'
 import { useAllClusters } from '../../../Infrastructure/Clusters/ManagedClusters/components/useAllClusters'
 import { DiagramIcons } from '../../../../components/Topology/shapes/DiagramIcons'
+import { useRecoilState } from '../../../../shared-recoil'
+import { PluginContext } from '../../../../lib/PluginContext'
 
+const clusterResourceStatusText = 'Cluster resource status'
+const clusterResourceStatusTooltip = 'Status represents the subscription selection within Resource topology.'
 let leftItems: ListItems[] = []
 let rightItems: ListItems[] = []
 
@@ -79,12 +75,16 @@ export function ApplicationOverviewPageContent(props: { applicationData: Applica
     const { t } = useTranslation()
     const localClusterStr = 'local-cluster'
 
+    const { dataContext } = useContext(PluginContext)
+    const { atoms } = useContext(dataContext)
+    const { argoApplicationsState, channelsState, namespacesState, placementRulesState, subscriptionsState } = atoms
+
     const [argoApplications] = useRecoilState(argoApplicationsState)
     const [channels] = useRecoilState(channelsState)
     const [subscriptions] = useRecoilState(subscriptionsState)
     const [placementRules] = useRecoilState(placementRulesState)
     const [namespaces] = useRecoilState(namespacesState)
-    //const [managedClusters] = useRecoilState(managedClustersState)
+
     let managedClusters = useAllClusters()
     managedClusters = managedClusters.filter((cluster) => {
         // don't show clusters in cluster pools in table
@@ -104,6 +104,8 @@ export function ApplicationOverviewPageContent(props: { applicationData: Applica
 
     let isArgoApp = false
     let isAppSet = false
+    let isOCPApp = false
+    let isFluxApp = false
     let isSubscription = false
     let disableBtn
     let subsList = []
@@ -112,7 +114,7 @@ export function ApplicationOverviewPageContent(props: { applicationData: Applica
         if (namespaces.length) {
             const fetchAuthorizedNamespaces = async () => {
                 const authorizedNamespaces = await getAuthorizedNamespaces(
-                    [rbacCreate(SubscriptionDefinition)],
+                    [await rbacCreate(SubscriptionDefinition)],
                     namespaces
                 )
                 return {
@@ -120,9 +122,9 @@ export function ApplicationOverviewPageContent(props: { applicationData: Applica
                     namespaces,
                 }
             }
-            fetchAuthorizedNamespaces().then(({ authorizedNamespaces, namespaces }) => {
+            fetchAuthorizedNamespaces().then(({ authorizedNamespaces, namespaces: fetchedNamespaces }) => {
                 // see if the user has access to all namespaces
-                if (!authorizedNamespaces || authorizedNamespaces?.length < namespaces?.length) {
+                if (!authorizedNamespaces || authorizedNamespaces?.length < fetchedNamespaces?.length) {
                     setHasSyncPermission(false)
                 } else {
                     setHasSyncPermission(true)
@@ -138,7 +140,10 @@ export function ApplicationOverviewPageContent(props: { applicationData: Applica
     if (applicationData) {
         isArgoApp = applicationData.application?.isArgoApp
         isAppSet = applicationData.application?.isAppSet
-        isSubscription = !isArgoApp && !isAppSet
+        isOCPApp = applicationData.application?.isOCPApp
+        isFluxApp = applicationData.application?.isFluxApp
+
+        isSubscription = !isArgoApp && !isAppSet && !isOCPApp && !isFluxApp
         const { name, namespace } = applicationData.application.metadata
         const applicationResource = applicationData.application.app
         const appRepos = getApplicationRepos(applicationData.application.app, subscriptions, channels)
@@ -156,7 +161,28 @@ export function ApplicationOverviewPageContent(props: { applicationData: Applica
         const clusterCountSearchLink = getClusterCountSearchLink(applicationResource, clusterCount, clusterList)
 
         ////////////////////////////////// argo items ////////////////////////////////////
-        if (!isSubscription) {
+        if (isOCPApp || isFluxApp) {
+            const cluster = applicationData.application?.app.cluster.name
+            leftItems = [
+                { key: 'Name', value: name },
+                { key: 'Namespace', value: namespace },
+            ]
+            rightItems = [
+                {
+                    key: t('Clusters'),
+                    value: cluster,
+                },
+                {
+                    key: t(clusterResourceStatusText),
+                    value: createStatusIcons(applicationData, t),
+                    keyAction: (
+                        <Tooltip content={t(clusterResourceStatusTooltip)}>
+                            <OutlinedQuestionCircleIcon className="help-icon" />
+                        </Tooltip>
+                    ),
+                },
+            ]
+        } else if (!isSubscription) {
             let lastSyncedTimeStamp = ''
             if (isArgoApp) {
                 lastSyncedTimeStamp = _.get(applicationData, 'application.app.status.reconciledAt', '')
@@ -226,16 +252,16 @@ export function ApplicationOverviewPageContent(props: { applicationData: Applica
                     ),
                 },
                 {
-                    key: t('Cluster resource status'),
+                    key: t(clusterResourceStatusText),
                     value: createStatusIcons(applicationData, t),
                     keyAction: (
-                        <Tooltip content={t('Status represents the subscription selection within Resource topology.')}>
+                        <Tooltip content={t(clusterResourceStatusTooltip)}>
                             <OutlinedQuestionCircleIcon className="help-icon" />
                         </Tooltip>
                     ),
                 },
                 {
-                    key: t('Respository Resource'),
+                    key: t('Repository Resource'),
                     value: (
                         <ResourceLabels
                             appRepos={appRepos as any[]}
@@ -311,10 +337,10 @@ export function ApplicationOverviewPageContent(props: { applicationData: Applica
                     value: getClusterCountField(clusterCount, clusterCountString, clusterCountSearchLink),
                 },
                 {
-                    key: t('Cluster resource status'),
+                    key: t(clusterResourceStatusText),
                     value: createStatusIcons(applicationData, t),
                     keyAction: (
-                        <Tooltip content={t('Status represents the subscription selection within Resource topology.')}>
+                        <Tooltip content={t(clusterResourceStatusTooltip)}>
                             <OutlinedQuestionCircleIcon className="help-icon" />
                         </Tooltip>
                     ),
@@ -543,20 +569,13 @@ function createSubsCards(
             const appRepos = getApplicationRepos(appResource, [sub] as Subscription[], channels)
             if (sub) {
                 return (
-                    <Fragment key={sub.metadata.name}>
-                        <div
-                            className="sub-card-container"
-                            style={{
-                                width: '100%',
-                                height: '6.75rem',
-                                display: 'grid',
-                                marginTop: '16px',
-                                fontSize: '14px',
-                                backgroundColor: 'white',
-                                boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.1)',
-                                gridTemplateColumns: '33% 34% 33%',
-                            }}
-                        >
+                    <Card
+                        key={sub.metadata.name}
+                        style={{
+                            marginTop: '16px',
+                        }}
+                    >
+                        <CardBody className="sub-card-container">
                             <div className="sub-card-column add-right-border">
                                 <GripHorizontalIcon />
                                 <div className="sub-card-content">
@@ -605,8 +624,8 @@ function createSubsCards(
                                     )}
                                 </div>
                             </div>
-                        </div>
-                    </Fragment>
+                        </CardBody>
+                    </Card>
                 )
             }
             return ''

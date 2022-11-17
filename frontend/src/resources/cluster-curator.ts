@@ -3,12 +3,15 @@ import { V1CustomResourceDefinitionCondition } from '@kubernetes/client-node/dis
 import { createResource, getResource, listResources, replaceResource } from './utils/resource-request'
 import { IResourceDefinition } from './resource'
 import { Metadata } from './metadata'
+import { set } from 'lodash'
 
 export const ClusterCuratorApiVersion = 'cluster.open-cluster-management.io/v1beta1'
 export type ClusterCuratorApiVersionType = 'cluster.open-cluster-management.io/v1beta1'
 
 export const ClusterCuratorKind = 'ClusterCurator'
 export type ClusterCuratorKindType = 'ClusterCurator'
+
+export type Curation = 'install' | 'upgrade' | 'scale' | 'destroy'
 
 export const ClusterCuratorDefinition: IResourceDefinition = {
     apiVersion: ClusterCuratorApiVersion,
@@ -20,7 +23,7 @@ export interface ClusterCurator {
     kind: ClusterCuratorKindType
     metadata: Metadata
     spec?: {
-        desiredCuration?: string | undefined
+        desiredCuration?: Curation
         install?: {
             towerAuthSecret?: string
             prehook?: ClusterCuratorAnsibleJob[]
@@ -56,13 +59,7 @@ export interface ClusterCuratorAnsibleJob {
 }
 
 export function createClusterCurator(clusterCurator: ClusterCurator) {
-    if (!clusterCurator.metadata) {
-        clusterCurator.metadata = {}
-    }
-    if (!clusterCurator.metadata.labels) {
-        clusterCurator.metadata.labels = {}
-    }
-    clusterCurator.metadata.labels['open-cluster-management'] = 'curator'
+    set(clusterCurator, 'metadata.labels["open-cluster-management"]', 'curator')
     return createResource<ClusterCurator>(clusterCurator)
 }
 
@@ -75,12 +72,6 @@ export function listClusterCurators() {
         apiVersion: ClusterCuratorApiVersion,
         kind: ClusterCuratorKind,
     })
-}
-
-export function filterForTemplatedCurators(clusterCurators: ClusterCurator[]) {
-    return clusterCurators.filter(
-        (curator) => curator.spec?.desiredCuration === undefined && curator.status === undefined
-    )
 }
 
 export function getTemplateJobsNum(clusterCurator: ClusterCurator) {

@@ -2,11 +2,10 @@
 
 import { PageSection, Title } from '@patternfly/react-core'
 import { CheckCircleIcon, ExclamationCircleIcon, ExclamationTriangleIcon } from '@patternfly/react-icons'
-import { AcmTable, AcmTablePaginationContextProvider, compareStrings } from '@stolostron/ui-components'
+import { AcmTable, AcmTablePaginationContextProvider, compareStrings } from '../../../../ui-components'
 import moment from 'moment'
 import { useMemo } from 'react'
-import { useRecoilState } from 'recoil'
-import { policiesState } from '../../../../atoms'
+import { useRecoilState, useSharedAtoms } from '../../../../shared-recoil'
 import { useTranslation } from '../../../../lib/acm-i18next'
 import { Policy, PolicyStatusDetails } from '../../../../resources'
 
@@ -22,6 +21,7 @@ export function PolicyDetailsHistory(props: {
     templateName: string
 }) {
     const { t } = useTranslation()
+    const { policiesState } = useSharedAtoms()
     const { policyName, policyNamespace, clusterName, templateName } = props
     const [policies] = useRecoilState(policiesState)
 
@@ -76,6 +76,13 @@ export function PolicyDetailsHistory(props: {
                                 <div>
                                     <ExclamationCircleIcon color="var(--pf-global--danger-color--100)" />{' '}
                                     {t('With violations')}
+                                </div>
+                            )
+                        case 'pending':
+                            return (
+                                <div>
+                                    <ExclamationTriangleIcon color="var(--pf-global--warning-color--100)" />{' '}
+                                    {t('Pending')}
                                 </div>
                             )
                         default:

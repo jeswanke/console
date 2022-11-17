@@ -2,15 +2,6 @@
 
 import { ApolloError } from '@apollo/client'
 import { Alert } from '@patternfly/react-core'
-import {
-    AcmActionGroup,
-    AcmAlert,
-    AcmLoadingPage,
-    AcmPage,
-    AcmPageHeader,
-    AcmSecondaryNav,
-    AcmSecondaryNavItem,
-} from '@stolostron/ui-components'
 import { TFunction } from 'i18next'
 import {
     createContext,
@@ -26,21 +17,9 @@ import {
     useState,
 } from 'react'
 import { Link, Redirect, Route, RouteComponentProps, Switch, useHistory, useLocation } from 'react-router-dom'
-import { useRecoilCallback } from 'recoil'
-import {
-    ansibleJobState,
-    applicationSetsState,
-    applicationsState,
-    argoApplicationsState,
-    channelsState,
-    placementRulesState,
-    placementsState,
-    subscriptionReportsState,
-    subscriptionsState,
-    THROTTLE_EVENTS_DELAY,
-} from '../../../atoms'
 import { RbacDropdown } from '../../../components/Rbac'
 import { useTranslation } from '../../../lib/acm-i18next'
+import { PluginContext } from '../../../lib/PluginContext'
 import { canUser, rbacPatch } from '../../../lib/rbac-util'
 import { NavigationPath } from '../../../NavigationPath'
 import {
@@ -50,11 +29,26 @@ import {
     ApplicationSetDefinition,
     ApplicationSetKind,
 } from '../../../resources'
+import { useRecoilCallback, useSharedAtoms } from '../../../shared-recoil'
+import {
+    AcmActionGroup,
+    AcmAlert,
+    AcmLoadingPage,
+    AcmPage,
+    AcmPageHeader,
+    AcmSecondaryNav,
+    AcmSecondaryNavItem,
+} from '../../../ui-components'
 import { searchClient } from '../../Home/Search/search-sdk/search-client'
 import { useSearchCompleteQuery } from '../../Home/Search/search-sdk/search-sdk'
 import { useAllClusters } from '../../Infrastructure/Clusters/ManagedClusters/components/useAllClusters'
 import { DeleteResourceModal, IDeleteResourceModalProps } from '../components/DeleteResourceModal'
-import { getAppChildResources, getAppSetRelatedResources, getSearchLink } from '../helpers/resource-helper'
+import {
+    getAppChildResources,
+    getAppSetRelatedResources,
+    getSearchLink,
+    isResourceTypeOf,
+} from '../helpers/resource-helper'
 import { getAppSetApps } from '../Overview'
 import { ApplicationOverviewPageContent } from './ApplicationOverview/ApplicationOverview'
 import { ApplicationTopologyPageContent } from './ApplicationTopology/ApplicationTopology'
@@ -112,6 +106,19 @@ function searchError(completeError: ApolloError | undefined, t: TFunction) {
 export default function ApplicationDetailsPage({ match }: RouteComponentProps<{ name: string; namespace: string }>) {
     const location = useLocation()
     const { t } = useTranslation()
+    const {
+        ansibleJobState,
+        applicationSetsState,
+        applicationsState,
+        argoApplicationsState,
+        channelsState,
+        placementRulesState,
+        placementsState,
+        subscriptionReportsState,
+        subscriptionsState,
+        THROTTLE_EVENTS_DELAY,
+    } = useSharedAtoms()
+
     const [waitForApplication, setWaitForApplication] = useState<boolean>(true)
     const [applicationNotFound, setApplicationNotFound] = useState<boolean>(false)
     const [activeChannel, setActiveChannel] = useState<string>()
@@ -121,11 +128,15 @@ export default function ApplicationDetailsPage({ match }: RouteComponentProps<{ 
     })
     const [canDeleteApplication, setCanDeleteApplication] = useState<boolean>(false)
     const [canDeleteApplicationSet, setCanDeleteApplicationSet] = useState<boolean>(false)
+    const [pluginModal, setPluginModal] = useState<JSX.Element>()
+    const { acmExtensions } = useContext(PluginContext)
 
     const lastRefreshRef = useRef<any>()
     const history = useHistory()
     const isArgoApp = applicationData?.application?.isArgoApp
     const isAppSet = applicationData?.application?.isAppSet
+    const isOCPApp = applicationData?.application?.isOCPApp
+    const isFluxApp = applicationData?.application?.isFluxApp
     let clusters = useAllClusters()
     clusters = clusters.filter((cluster) => {
         // don't show clusters in cluster pools in table
@@ -156,7 +167,17 @@ export default function ApplicationDetailsPage({ match }: RouteComponentProps<{ 
             subscriptions: subscriptionsState,
             subscriptionReports: subscriptionReportsState,
         }),
-        []
+        [
+            applicationsState,
+            applicationSetsState,
+            argoApplicationsState,
+            ansibleJobState,
+            channelsState,
+            placementsState,
+            placementRulesState,
+            subscriptionsState,
+            subscriptionReportsState,
+        ]
     )
 
     const getRecoilStates = useCallback(async () => {
@@ -180,22 +201,33 @@ export default function ApplicationDetailsPage({ match }: RouteComponentProps<{ 
             click: () => {
                 if (applicationData) {
                     const [apigroup, apiversion] = applicationData.application.app.apiVersion.split('/')
-                    const searchLink = getSearchLink({
-                        properties: {
-                            name: applicationData?.application.app.metadata?.name,
-                            namespace: applicationData?.application.app.metadata?.namespace,
-                            kind: applicationData?.application.app.kind.toLowerCase(),
-                            apigroup: apigroup as string,
-                            apiversion: apiversion as string,
-                        },
-                    })
+                    const isOCPorFluxApp = applicationData.application.isOCPApp || applicationData.application.isFluxApp
+                    const searchLink = isOCPorFluxApp
+                        ? getSearchLink({
+                              properties: {
+                                  namespace: applicationData?.application.app.metadata?.namespace,
+                                  label: applicationData?.application.isOCPApp
+                                      ? `app=${applicationData?.application.app.metadata?.name},app.kubernetes.io/part-of=${applicationData?.application.app.metadata?.name}`
+                                      : `kustomize.toolkit.fluxcd.io/name=${applicationData?.application.app.metadata?.name},helm.toolkit.fluxcd.io/name=${applicationData?.application.app.metadata?.name}`,
+                                  cluster: applicationData?.application.app.cluster.name,
+                              },
+                          })
+                        : getSearchLink({
+                              properties: {
+                                  name: applicationData?.application.app.metadata?.name,
+                                  namespace: applicationData?.application.app.metadata?.namespace,
+                                  kind: applicationData?.application.app.kind.toLowerCase(),
+                                  apigroup: apigroup as string,
+                                  apiversion: apiversion as string,
+                              },
+                          })
                     history.push(searchLink)
                 }
             },
         },
     ]
 
-    if (!isArgoApp) {
+    if (!isArgoApp && !isOCPApp && !isFluxApp) {
         const selectedApp = applicationData?.application.app
         actions.push({
             id: 'edit-application',
@@ -263,6 +295,25 @@ export default function ApplicationDetailsPage({ match }: RouteComponentProps<{ 
         })
     }
 
+    if (acmExtensions?.applicationAction?.length) {
+        if (applicationData) {
+            const selectedApp = applicationData.application.app
+            acmExtensions.applicationAction.forEach((appAction) => {
+                if (appAction?.model ? isResourceTypeOf(selectedApp, appAction?.model) : isOCPApp) {
+                    const ModalComp = appAction.component
+                    const close = () => setPluginModal(<></>)
+                    actions.push({
+                        id: appAction.id,
+                        text: appAction.title,
+                        click: async (item: any) => {
+                            setPluginModal(<ModalComp isOpen={true} close={close} resource={item} />)
+                        },
+                    })
+                }
+            })
+        }
+    }
+
     const searchCompleteResults = useSearchCompleteQuery({
         skip: false,
         client: process.env.NODE_ENV === 'test' ? undefined : searchClient,
@@ -271,7 +322,7 @@ export default function ApplicationDetailsPage({ match }: RouteComponentProps<{ 
             query: {
                 filters: [],
                 keywords: [],
-                limit: 10000,
+                limit: 1000,
             },
         },
     })
@@ -310,7 +361,7 @@ export default function ApplicationDetailsPage({ match }: RouteComponentProps<{ 
                 setWaitForApplication(false)
             }, THROTTLE_EVENTS_DELAY)
         }
-    }, [applicationNotFound])
+    }, [applicationNotFound, THROTTLE_EVENTS_DELAY])
 
     // refresh application the first time and then every n seconds
     useEffect(() => {
@@ -335,9 +386,14 @@ export default function ApplicationDetailsPage({ match }: RouteComponentProps<{ 
                         setApplicationNotFound(true)
                     } else {
                         setApplicationNotFound(false)
-                        const topology = getTopology(application, clusters, lastRefreshRef?.current?.relatedResources, {
-                            cluster,
-                        })
+                        const topology = await getTopology(
+                            application,
+                            clusters,
+                            lastRefreshRef?.current?.relatedResources,
+                            {
+                                cluster,
+                            }
+                        )
                         const appData = getApplicationData(topology?.nodes)
 
                         // when first opened, refresh topology with wait statuses
@@ -358,7 +414,7 @@ export default function ApplicationDetailsPage({ match }: RouteComponentProps<{ 
                             appData,
                             topology
                         )
-                        const topologyWithRelated = getTopology(application, clusters, relatedResources, {
+                        const topologyWithRelated = await getTopology(application, clusters, relatedResources, {
                             topology,
                             cluster,
                         })
@@ -449,6 +505,7 @@ export default function ApplicationDetailsPage({ match }: RouteComponentProps<{ 
                                 {[
                                     <RbacDropdown<Application>
                                         id={`${applicationData?.application.app?.metadata.name ?? 'app'}-actions`}
+                                        key={`${applicationData?.application.app?.metadata.name ?? 'app'}-actions`}
                                         item={applicationData?.application.app}
                                         isKebab={false}
                                         text={t('actions')}
@@ -469,6 +526,7 @@ export default function ApplicationDetailsPage({ match }: RouteComponentProps<{ 
                 <Fragment>
                     {searchError(searchCompleteResults.error, t)}
                     <DeleteResourceModal {...modalProps} />
+                    {pluginModal}
                     <Suspense fallback={<Fragment />}>
                         <Switch>
                             <Route exact path={NavigationPath.applicationOverview}>
