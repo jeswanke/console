@@ -4,21 +4,27 @@ import {
     DEFAULT_LAYER,
     Layer,
     Node,
+    Ellipse,
+    Decorator,
     observer,
     TOP_LAYER,
     useHover,
+    getDefaultShapeDecoratorCenter,
+    ShapeProps,
+    TopologyQuadrant,
+    ScaleDetailsLevel,
     WithContextMenuProps,
     WithCreateConnectorProps,
     WithDragNodeProps,
     WithSelectionProps,
+    DefaultNode,
 } from '@patternfly/react-topology'
 
-// topology 4.85
-import Ellipse from './future/Ellipse'
-import DefaultNode from './future/DefaultNode'
-import Decorator from './future/Decorator'
-import { getDefaultShapeDecoratorCenter, ShapeProps } from './future/shapeUtils'
-import { TopologyQuadrant, ScaleDetailsLevel } from './future/types'
+// TODO
+//import DefaultNode from './DefaultNode'
+//import { DefaultNode } from '/Users/johnswanke/Development/git2/patternfly-react-latest/packages/react-topology/src'
+//import { DefaultNode } from '@patternfly/react-topology'
+
 const DEFAULT_DECORATOR_RADIUS = 12
 
 import { SVGIconProps } from '@patternfly/react-icons/dist/esm/createIcon'
