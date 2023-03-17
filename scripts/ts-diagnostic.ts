@@ -3,148 +3,81 @@
 import path from 'path'
 import ts from 'typescript'
 
-function isFunctionLikeKind(kind) {
+function isFunctionLikeKind(kind: ts.SyntaxKind) {
   switch (kind) {
-    case 256:
-    case 169:
-    case 171:
-    case 172:
-    case 173:
-    case 213:
-    case 214:
-    case 168:
-    case 174:
-    case 323:
-    case 175:
-    case 176:
-    case 179:
-    case 317:
-    case 180:
+    case ts.SyntaxKind.ClassDeclaration:
+    case ts.SyntaxKind.ClassStaticBlockDeclaration:
+    case ts.SyntaxKind.GetAccessor:
+    case ts.SyntaxKind.SetAccessor:
+    case ts.SyntaxKind.CallSignature:
+    case ts.SyntaxKind.ConstructSignature:
+    case ts.SyntaxKind.ArrowFunction:
+    case ts.SyntaxKind.DeleteExpression:
+    case ts.SyntaxKind.MethodDeclaration:
+    case ts.SyntaxKind.IndexSignature:
+    case ts.SyntaxKind.TypePredicate:
+    case ts.SyntaxKind.ConstructorType:
+    case ts.SyntaxKind.TypeQuery:
       return true
     default:
       return false
   }
 }
 
-function getMappedTypes(property, name) {
+function getPropertyMap(property, map = {}) {
   const mapper = property.mapper2 || property.mapper
   const properties = property.resolvedProperties || property.properties
-  if (mapper && !properties) {
+  if (properties) {
+    for (const p of properties) {
+      const declaration = p.declarations[0]
+      const sf = declaration.getSourceFile()
+      const { line } = sf.getLineAndCharacterOfPosition(p.declarations[0].getStart())
+      map[p.escapedName] = {
+        type: checker.typeToString(checker.getTypeOfSymbol(declaration.symbol)),
+        isOptional: !!(p.flags & ts.SymbolFlags.Optional),
+        sourceLine: sf.text.split('\n')[line].trim(),
+        url: `${sf.fileName}:${line + 1}`,
+        properties: checker.getTypeOfSymbol(declaration.symbol).getProperties(),
+      }
+    }
+  } else if (mapper) {
     if (mapper.mapper2) {
-      getMappedTypes(mapper, name)
+      getPropertyMap(mapper, map)
     } else if (mapper.target) {
-      getMappedTypes(mapper.target, name)
+      getPropertyMap(mapper.target, map)
     } else if (mapper.targets) {
       for (const target of mapper.targets) {
-        getMappedTypes(target, name)
+        getPropertyMap(target, map)
       }
     }
   }
-  //const prop9erties = property.getProperties()
-  if (properties) {
-    for (const p of properties) {
-      // if (p.mapper) {
-      //   getMappedTypes(p, name)
-      // } else {
-      const asrvds = checker.getTypeOfSymbol(p.declarations[0].symbol)
-      const srds = p.declarations[0].getText()
-      const sf = p.declarations[0].getSourceFile()
-      const { line, character } = sf.getLineAndCharacterOfPosition(p.declarations[0].getStart())
-      const srcLine = sf.text.split('\n')[line]
-
-      const isOptional = p.flags & ts.SymbolFlags.Optional
-      const propertyTypeName2 = checker.typeToString(asrvds)
-      console.log(name)
-      console.log(`${srcLine.trim()}`)
-      console.log(`${p.escapedName}${!!isOptional ? '?' : ''}: ${propertyTypeName2}`)
-      console.log(`${sf.fileName}:${line + 1}\n\n`)
-      const gg = 0
-      // }
-      //const fdsg = p.getProperties()
-    }
-  }
-  const ff = 0
+  return map
 }
 
-function logUnassignableProperties(
-  logOut: string[],
-  node: ts.Node,
-  targetType: ts.Type,
-  sourceType: ts.Type,
-  level = 0
-) {
-  // if (level === 0) {
-  //   console.group(`.\n└──Processing '${checker.typeToString(targetType)}'`)
-  // }
-
-  for (const property of sourceType.getProperties()) {
-    const propertyType = checker.getTypeOfSymbolAtLocation(property, node)
-    const ggg = checker.getPropertyOfType(sourceType, property.escapedName)
-    const propertyTypeName = checker.typeToString(sourceType)
-
-    console.log(`===========${property.escapedName}===============`)
-    console.log(`===========${property.escapedName}===============`)
-    console.log(`===========${property.escapedName}===============`)
-    console.log(`===========${property.escapedName}===============`)
-    console.log(`===========${property.escapedName}===============`)
-    console.log(`===========${property.escapedName}===============`)
-    getMappedTypes(property, property.escapedName)
-
-    //logUnassignableProperties(propertyType, node, level + 1)
-    //console.log(`  ├── ${property.name}: ${propertyTypeName}`)
-  }
-
-  //checker.getBestMatchingType()
-  console.log(`===========TARGET===============`)
-  console.log(`===========TARGET===============`)
-  console.log(`===========TARGET===============`)
-  console.log(`===========TARGET===============`)
-  console.log(`===========TARGET===============`)
-  console.log(`===========TARGET===============`)
-  console.log(`===========TARGET===============`)
-  console.log(`===========TARGET===============`)
-  console.log(`===========TARGET===============`)
-  console.log(`===========TARGET===============`)
-  console.log(`===========TARGET===============`)
-  console.log(`===========TARGET===============`)
-
-  //  else if (source.flags & 1048576 /* Union */) {
-  //       // Source is a union or intersection type, infer from each constituent type
-  //       var sourceTypes = source.types;
-  //       for (var _e = 0, sourceTypes_2 = sourceTypes; _e < sourceTypes_2.length; _e++) {
-  //           var sourceType = sourceTypes_2[_e];
-  //           inferFromTypes(sourceType, target);
-  //       }
-  //   }
-
-  const targetTypes = targetType.types || [targetType]
-  for (const tt of targetTypes) {
-    for (const property of tt.getProperties()) {
-      const sd99f = checker.getUnmatchedProperties(tt, sourceType, true).next()
-      const propertyTypeName4 = checker.typeToString(tt)
-      const propertyType = checker.getTypeOfSymbolAtLocation(property, node)
-      const ggg = checker.getPropertyOfType(sourceType, property.escapedName)
-      const propertyTypeName = checker.typeToString(sourceType)
-      console.log(`===========${property.escapedName}===============`)
-      console.log(`===========${property.escapedName}===============`)
-      console.log(`===========${property.escapedName}===============`)
-      console.log(`===========${property.escapedName}===============`)
-
-      getMappedTypes(property, property.escapedName)
-
-      //logUnassignableProperties(propertyType, node, level + 1)
-      //console.log(`  ├── ${property.name}: ${propertyTypeName}`)
+function getTypeProperties(node) {
+  const properties = {}
+  const types = node.types || [node] // could be a union (ex: string | undefined)
+  types.forEach((type) => {
+    const map = {}
+    properties[type.intrinsicName || type.symbol.escapedName] = map
+    for (const property of type.getProperties()) {
+      const declaration = property.declarations[0]
+      map[property.escapedName] = {
+        type: checker.typeToString(checker.getTypeOfSymbol(declaration.symbol)),
+        map: getPropertyMap(property),
+      }
     }
-  }
-  //console.groupEnd()
+  })
+  return properties
 }
 
-export function logUnassignables(sourceFile: ts.SourceFile) {
-  logUnassignablesNode(sourceFile)
+export function logMismatchedTypes(sourceFile: ts.SourceFile) {
+  logMismatchedNodeType(sourceFile)
 
-  function logUnassignablesNode(node: ts.Node) {
+  function logMismatchedNodeType(node: ts.Node) {
     const logOut: string[] = []
     switch (node.kind) {
+      // where ():TARGET => {return SOURCE}
       case ts.SyntaxKind.ReturnStatement:
         // the source is a return statement
         const sourceFile = node.getSourceFile()
@@ -161,8 +94,22 @@ export function logUnassignables(sourceFile: ts.SourceFile) {
           const targetSignature = checker.getSignatureFromDeclaration(returnContainer)
           const targetType = checker.getReturnTypeOfSignature(targetSignature)
           const targetTypeText = checker.typeToString(targetType)
-          logOut.push(`${targetTypeText} <<<< ${sourceTypeText}`)
-          logUnassignableProperties(logOut, node, targetType, sourceType)
+          //logUnassignableProperties(logOut, node, targetType, sourceType)
+
+          logOut.push('TS2322 Target type !== Source type:')
+          logOut.push(
+            `Target = ${sourceFile.getLineAndCharacterOfPosition(returnContainer.getStart()).line}: ${targetTypeText}`
+          )
+          logOut.push(`Source = ${sourceFile.getLineAndCharacterOfPosition(node.getStart()).line}:   ${sourceTypeText}`)
+
+          const sourceTypeProperties = getTypeProperties(sourceType)
+          const targetTypeProperties = getTypeProperties(targetType)
+          const key = Object.keys(sourceTypeProperties)[0]
+          const srcProps = sourceTypeProperties[key]
+          const tgtProps = targetTypeProperties[key]
+
+          logOut.push('\n\n\n\n')
+          console.log(logOut.join('\n'))
 
           // var token = ts.getTokenAtPosition(sourceFile, returnContainer.getStart())
           // const dsf789 = targetSignature?.declaration.getText()
@@ -536,7 +483,7 @@ export function logUnassignables(sourceFile: ts.SourceFile) {
         //   }
         break
     }
-    ts.forEachChild(node, logUnassignablesNode)
+    ts.forEachChild(node, logMismatchedNodeType)
   }
 }
 
@@ -560,7 +507,7 @@ const checker = program.getTypeChecker()
 fileNames.forEach((fileName) => {
   const sourceFile = program.getSourceFile(fileName)
   if (sourceFile) {
-    logUnassignables(sourceFile)
+    logMismatchedTypes(sourceFile)
   }
 })
 
@@ -573,3 +520,77 @@ fileNames.forEach((fileName) => {
 //       break
 //   }
 // })
+
+// function logUnassignableProperties(
+//   logOut: string[],
+//   node: ts.Node,
+//   targetType: ts.Type,
+//   sourceType: ts.Type,
+//   level = 0
+// ) {
+//   // if (level === 0) {
+//   //   console.group(`.\n└──Processing '${checker.typeToString(targetType)}'`)
+//   // }
+
+//   for (const property of sourceType.getProperties()) {
+//     const propertyType = checker.getTypeOfSymbolAtLocation(property, node)
+//     const ggg = checker.getPropertyOfType(sourceType, property.escapedName)
+//     const propertyTypeName = checker.typeToString(sourceType)
+
+//     console.log(`===========${property.escapedName}===============`)
+//     console.log(`===========${property.escapedName}===============`)
+//     console.log(`===========${property.escapedName}===============`)
+//     console.log(`===========${property.escapedName}===============`)
+//     console.log(`===========${property.escapedName}===============`)
+//     console.log(`===========${property.escapedName}===============`)
+//     getMappedTypes(property, property.escapedName)
+
+//     //logUnassignableProperties(propertyType, node, level + 1)
+//     //console.log(`  ├── ${property.name}: ${propertyTypeName}`)
+//   }
+
+//   //checker.getBestMatchingType()
+//   console.log(`===========TARGET===============`)
+//   console.log(`===========TARGET===============`)
+//   console.log(`===========TARGET===============`)
+//   console.log(`===========TARGET===============`)
+//   console.log(`===========TARGET===============`)
+//   console.log(`===========TARGET===============`)
+//   console.log(`===========TARGET===============`)
+//   console.log(`===========TARGET===============`)
+//   console.log(`===========TARGET===============`)
+//   console.log(`===========TARGET===============`)
+//   console.log(`===========TARGET===============`)
+//   console.log(`===========TARGET===============`)
+
+//   //  else if (source.flags & 1048576 /* Union */) {
+//   //       // Source is a union or intersection type, infer from each constituent type
+//   //       var sourceTypes = source.types;
+//   //       for (var _e = 0, sourceTypes_2 = sourceTypes; _e < sourceTypes_2.length; _e++) {
+//   //           var sourceType = sourceTypes_2[_e];
+//   //           inferFromTypes(sourceType, target);
+//   //       }
+//   //   }
+//   const sd = targetType.flags & ts.TypeFlags.Union
+
+//   const targetTypes = targetType.types || [targetType]
+//   for (const tt of targetTypes) {
+//     for (const property of tt.getProperties()) {
+//       const sd99f = checker.getUnmatchedProperties(tt, sourceType, true).next()
+//       const propertyTypeName4 = checker.typeToString(tt)
+//       const propertyType = checker.getTypeOfSymbolAtLocation(property, node)
+//       const ggg = checker.getPropertyOfType(sourceType, property.escapedName)
+//       const propertyTypeName = checker.typeToString(sourceType)
+//       console.log(`===========${property.escapedName}===============`)
+//       console.log(`===========${property.escapedName}===============`)
+//       console.log(`===========${property.escapedName}===============`)
+//       console.log(`===========${property.escapedName}===============`)
+
+//       getMappedTypes(property, property.escapedName)
+
+//       //logUnassignableProperties(propertyType, node, level + 1)
+//       //console.log(`  ├── ${property.name}: ${propertyTypeName}`)
+//     }
+//   }
+//   //console.groupEnd()
+// }
