@@ -24,51 +24,208 @@ function isFunctionLikeKind(kind: ts.SyntaxKind) {
   }
 }
 
-function getPropertyMap(property, map = {}) {
-  const mapper = property.mapper2 || property.mapper
-  const properties = property.resolvedProperties || property.properties
-  if (properties) {
-    for (const p of properties) {
-      const declaration = p.declarations[0]
-      const sf = declaration.getSourceFile()
-      const { line } = sf.getLineAndCharacterOfPosition(p.declarations[0].getStart())
-      map[p.escapedName] = {
-        type: checker.typeToString(checker.getTypeOfSymbol(declaration.symbol)),
-        isOptional: !!(p.flags & ts.SymbolFlags.Optional),
-        sourceLine: sf.text.split('\n')[line].trim(),
-        url: `${sf.fileName}:${line + 1}`,
-        properties: checker.getTypeOfSymbol(declaration.symbol).getProperties(),
+//Type made up of properties that each have types that are made up of properties
+
+// [{
+//   Type: name
+//   Required: prop joined
+//   Props: {
+//       Prop: {
+//          Type: name
+//           Map: {same}
+//   }
+//   }
+// ]
+// allTypeProperties: TypeMap
+// requiredTypeProperties: string
+
+interface PropInfo {
+  types: any[]
+  //  allTypeProperties: TypeMap
+  requiredTypeProperties: string
+  isOptional: boolean
+  //  sourceLine?: string
+  //  url?: string
+}
+interface TypeMap {
+  [key: string]: TypeInfo
+}
+interface TypeInfo {
+  type: string
+  typeArgs?: string
+  sourceLine?: string
+  url?: string
+}
+
+function getTypes(type: any): TypeInfo | TypeInfo[] | undefined {
+  // if union of types, return an array of TypeInfo
+  const dict = {}
+  if (type.types) {
+    return type.types.map((t: any) => getTypes(t))
+  } else {
+    if (type.intrinsicName) {
+      return {
+        type: type.intrinsicName,
+      }
+    } else if (type.symbol || type.aliasSymbol) {
+      const symbol = type.symbol || type.aliasSymbol
+      const typeName = symbol.escapedName
+      //const declaration = symbol.declarations[0]
+      // const sf = declaration.getSourceFile()
+      // const { line } = sf.getLineAndCharacterOfPosition(declaration.getStart())
+      const properties = getPropertyMap(type, dict)
+      return {
+        type: typeName, // ex: 'FunctionalComponent'
+        typeArgs: type?.typeArguments?.map((arg) => checker.typeToString(arg)).join(','), // ex: "{ element: GraphElement<ElementModel, any;'
+        //sourceLine: sf.text.split('\n')[line].trim(),
+        //url: `${sf.fileName}:${line + 1}`,
+        //properties: checker.getTypeOfSymbol(declaration.symbol).getProperties(),
+      }
+
+      // const map: TypeMap = {}
+      // properties[type.intrinsicName || type.symbol.escapedName] = map
+      // for (const property of type.getProperties()) {
+      //   const declaration = property.declarations[0]
+      //   const allTypeProperties = getPropertyMap(property)
+      //   const requiredTypeProperties = Object.entries(allTypeProperties)
+      //     .filter(([_k, { isOptional }]) => !isOptional)
+      //     .map(([k, _v]) => k)
+      //     .join(',')
+      //   map[property.escapedName] = {
+      //     type: checker.typeToString(checker.getTypeOfSymbol(declaration.symbol)),
+      //     allTypeProperties,
+      //     requiredTypeProperties,
+      //     isOptional: !!(property.flags & ts.SymbolFlags.Optional),
+      //   }
+      // }
+
+      // return {
+      //   type: type.symbol.escapedName,
+      //   isOptional: !!(p.flags & ts.SymbolFlags.Optional),
+      //   sourceLine: sf.text.split('\n')[line].trim(),
+      //   url: `${sf.fileName}:${line + 1}`,
+      //   properties: checker.getTypeOfSymbol(declaration.symbol).getProperties(),
+      // }
+    } else {
+      debugger
+    }
+  }
+}
+
+const ignore = ['string', 'number', 'boolean', 'any', 'unknown', 'never', 'undefined']
+
+function getPropertyMap(type, dict, map = {}) {
+  //const fd = type.getProperties()
+
+  const symbols = type.getProperties ? type.getProperties() : type.resolvedProperties || type.properties
+  if (symbols) {
+    console.log('=========getPropertyMap=============')
+    for (const symbol of symbols) {
+      const propertyName = symbol.escapedName
+      //const declaration = symbol.declarations[0]
+      const dwds = checker.getTypeOfSymbol(symbol).getProperties()
+      const propertyType = checker.typeToString(checker.getTypeOfSymbol(symbol))
+      const isOptional = !!(symbol.flags & ts.SymbolFlags.Optional)
+      console.log(`${propertyName}${isOptional ? '?' : ''}: ${propertyType}`)
+      const ssr = getMappedSymbols(symbol, dict)
+      //      const sf = declaration.getSourceFile()
+      //      const { line } = sf.getLineAndCharacterOfPosition(declaration.getStart())
+      map[propertyName] = {
+        // types: getTypes(checker.getTypeOfSymbol(declaration.symbol)),
+        // isOptional: !!(symbol.flags & ts.SymbolFlags.Optional),
+        // //        sourceLine: sf.text.split('\n')[line].trim(),
+        // //        url: `${sf.fileName}:${line + 1}`,
+        // //        properties: checker.getTypeOfSymbol(declaration.symbol).getProperties(),
+      }
+    }
+  }
+}
+
+export function getMappedSymbols(target, dict, map = {}) {
+  if (target.intrinsicName) return
+  const ff = target.symbol ? target.symbol.escapedName : checker.typeToString(checker.getTypeOfSymbol(target))
+  const sdfgs = checker.getTypeOfSymbol(target)
+  const fff = sdfgs.types[0].typeArguments() //?.map((arg) => checker.typeToString(arg)).join(',')
+  const ffh = sdfgs.types[1].typeArguments() //?.map((arg) => checker.typeToString(arg)).join(',')
+  const mapper = target.mapper2 || target.mapper
+  const psym = target.symbol || target.aliasSymbol
+  const symbols = target.getProperties ? target.getProperties() : target.resolvedProperties || target.properties
+  if (symbols) {
+    const symbols = target.resolvedProperties || target.properties
+    if (symbols) {
+      if (!dict[psym.escapedName] || psym.escapedName === '__type') {
+        dict[psym.escapedName] = {}
+        console.log(`-------getMappedSymbols---------${ff}`)
+        for (const symbol of symbols) {
+          const propertyName = symbol.escapedName
+          //const declaration = symbol.declarations[0]
+          const propertyType = checker.typeToString(checker.getTypeOfSymbol(symbol))
+          const isOptional = !!(symbol.flags & ts.SymbolFlags.Optional)
+          console.log(`  ${propertyName}${isOptional ? '?' : ''}: ${propertyType}`)
+          if (!ignore.includes(propertyType)) {
+            const sdfsd = getMappedTypes(symbol, dict)
+          }
+          //const ssr = getMappedSymbols(symbol)
+          //      const sf = declaration.getSourceFile()
+          //      const { line } = sf.getLineAndCharacterOfPosition(declaration.getStart())
+          map[propertyName] = {
+            // types: getTypes(checker.getTypeOfSymbol(declaration.symbol)),
+            // isOptional: !!(symbol.flags & ts.SymbolFlags.Optional),
+            // //        sourceLine: sf.text.split('\n')[line].trim(),
+            // //        url: `${sf.fileName}:${line + 1}`,
+            // //        properties: checker.getTypeOfSymbol(declaration.symbol).getProperties(),
+          }
+        }
+      } else {
+        console.log(`-------no  need for getMappedSymbols---------${psym ? psym.escapedName : ff}`)
       }
     }
   } else if (mapper) {
     if (mapper.mapper2) {
-      getPropertyMap(mapper, map)
+      getMappedSymbols(mapper, dict, map)
     } else if (mapper.target) {
-      getPropertyMap(mapper.target, map)
+      getMappedSymbols(mapper.target, dict, map)
     } else if (mapper.targets) {
       for (const target of mapper.targets) {
-        getPropertyMap(target, map)
+        getMappedSymbols(target, dict, map)
       }
     }
   }
-  return map
 }
 
-function getTypeProperties(node) {
-  const properties = {}
-  const types = node.types || [node] // could be a union (ex: string | undefined)
-  types.forEach((type) => {
-    const map = {}
-    properties[type.intrinsicName || type.symbol.escapedName] = map
-    for (const property of type.getProperties()) {
-      const declaration = property.declarations[0]
-      map[property.escapedName] = {
-        type: checker.typeToString(checker.getTypeOfSymbol(declaration.symbol)),
-        map: getPropertyMap(property),
+export function getMappedTypes(isymbol, dict, map = {}) {
+  const symbols = checker.getTypeOfSymbol(isymbol).getProperties()
+  if (symbols.length) {
+    const pt = checker.typeToString(checker.getTypeOfSymbol(isymbol))
+    if (dict[pt]) return
+    dict[pt] = {}
+    console.log(`-------getMappedTypes---------${isymbol.escapedName}: ${pt}`)
+    console.log(`-------  properties of: ${pt}`)
+    for (const symbol of symbols) {
+      const propertyName = symbol.escapedName
+      const declaration = symbol.declarations[0]
+      const type = checker.getTypeOfSymbol(symbol)
+      const propertyType = checker.typeToString(type)
+      const gg = checker.getSignaturesOfType(type)
+      if (type.callSignatures) {
+        //const sourceType = checker.getReturnTypeOfSignature(type.callSignatures[0])
+        // const propertyType2 = checker.typeToString(sourceType)
+
+        //const sourceSignature = checker.getSignaturesOfType.getResolvedSignature(type.callSignatures[0])
+        const fd = 0
+      } else if (!ignore.includes(propertyType)) {
+        const ssr = getMappedSymbols(symbol, dict)
       }
+
+      const isOptional = !!(symbol.flags & ts.SymbolFlags.Optional)
+      console.log(`    ${propertyName}${isOptional ? '?' : ''}: ${propertyType}`)
+      const g = 0
     }
-  })
-  return properties
+  } else {
+    const propertyType = checker.typeToString(checker.getTypeOfSymbol(isymbol))
+    const f = 0
+  }
+  //const sra = checker.typeToString(checker.getTypeOfSymbol(ff[3]))
 }
 
 export function logMismatchedTypes(sourceFile: ts.SourceFile) {
@@ -102,11 +259,21 @@ export function logMismatchedTypes(sourceFile: ts.SourceFile) {
           )
           logOut.push(`Source = ${sourceFile.getLineAndCharacterOfPosition(node.getStart()).line}:   ${sourceTypeText}`)
 
-          const sourceTypeProperties = getTypeProperties(sourceType)
-          const targetTypeProperties = getTypeProperties(targetType)
+          console.log('$$$$$$$$$$$$$$$ SOURCE $$$$$$$$$$$$$$$$$$$$')
+          const sourceTypeProperties = getTypes(sourceType)
+          console.log('\n\n\n\n\n$$$$$$$$$$$$$$$ TARGET $$$$$$$$$$$$$$$$$$$$')
+          const targetTypeProperties = getTypes(targetType)
           const key = Object.keys(sourceTypeProperties)[0]
           const srcProps = sourceTypeProperties[key]
           const tgtProps = targetTypeProperties[key]
+          //   function getBestMatchingType(source, target, isRelatedTo) {
+          //     if (isRelatedTo === void 0) { isRelatedTo = compareTypesAssignable; }
+          //     return findMatchingDiscriminantType(source, target, isRelatedTo, /*skipPartial*/ true) ||
+          //         findMatchingTypeReferenceOrTypeAliasReference(source, target) ||
+          //         findBestTypeForObjectLiteral(source, target) ||
+          //         findBestTypeForInvokable(source, target) ||
+          //         findMostOverlappyType(source, target);
+          // }
 
           logOut.push('\n\n\n\n')
           console.log(logOut.join('\n'))
@@ -502,7 +669,7 @@ options.isolatedModules = false
 const program = ts.createProgram(fileNames, options)
 const checker = program.getTypeChecker()
 
-//const semantics = program.getSemanticDiagnostics()
+const semantics = program.getSemanticDiagnostics()
 
 fileNames.forEach((fileName) => {
   const sourceFile = program.getSourceFile(fileName)
