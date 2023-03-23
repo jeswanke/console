@@ -95,11 +95,11 @@
       "program": "${workspaceFolder}/frontend/node_modules/.bin/jest"
     },
     {
-      "name": "Launch Diagnostics",
+      "name": "Launch Daug",
       "request": "launch",
       "args": [
         "run",
-        "ts-diagnostics",
+        "the-daug",
         // "${file}"
         "${workspaceFolder}/frontend/src/routes/Applications/ApplicationDetails/ApplicationTopology/topology/components/componentFactory.ts"
       ],
