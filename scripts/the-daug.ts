@@ -3,6 +3,12 @@
 import path from 'path'
 import ts from 'typescript'
 
+let options: ts.CompilerOptions = {
+  target: ts.ScriptTarget.ES5,
+  module: ts.ModuleKind.CommonJS,
+}
+let semanticDiagnostics
+
 function isFunctionLikeKind(kind: ts.SyntaxKind) {
   switch (kind) {
     case ts.SyntaxKind.ClassDeclaration:
@@ -28,135 +34,73 @@ interface PropMap {
   [key: string]: TypeInfo
 }
 interface TypeInfo {
-  type: ts.Type
-  name: string
-  propMap: PropMap
+  type: string
+  isOptional?: boolean
+  maps?: PropMap[]
+  property: any
 }
 
-export function getMappedSymbols(parent, parentMap = {}) {
-  const mapper = parent.mapper2 || parent.mapper
-  const symbols = parent.getProperties ? parent.getProperties() : parent.resolvedProperties || parent.properties
-  if (symbols) {
-    for (const symbol of symbols) {
-      const propertyName = symbol.escapedName
-      parentMap[propertyName] = {
-        type: checker.typeToString(checker.getTypeOfSymbol(symbol)),
-        isOptional: !!(symbol.flags & ts.SymbolFlags.Optional),
-        _symbol: symbol,
-      }
-      if (symbol.type) {
-        const map = {}
-        getMappedSymbols(symbol.type, map)
-        if (Object.keys(map).length) {
-          parentMap[propertyName].map = map
-        }
-      }
-    }
-  } else if (mapper) {
-    if (mapper.targets) {
-      for (const target of mapper.targets) {
-        getMappedSymbols(target, parentMap)
-      }
+const ignore = ['string', 'number', 'boolean', 'any', 'unknown', 'never', 'undefined']
+
+export function compareProperties(targetProps: PropMap, sourceProps: PropMap) {}
+
+function getPropertyMap(type: ts.Type, properties = type.getProperties()) {
+  const map = {}
+  for (const property of properties) {
+    const propertyName = property.escapedName as string
+    map[propertyName] = {
+      type: checker.typeToString(checker.getTypeOfSymbol(property)),
+      isOptional: !!(property.flags & ts.SymbolFlags.Optional),
+      property,
     }
   }
+  return map
 }
 
-function getPropertyMap(type, parentMap = {}) {
-  const symbols = type.getProperties ? type.getProperties() : type.resolvedProperties || type.properties
-  if (symbols) {
-    for (const symbol of symbols) {
-      const propertyName = symbol.escapedName
-      parentMap[propertyName] = {
-        type: checker.typeToString(checker.getTypeOfSymbol(symbol)),
-        isOptional: !!(symbol.flags & ts.SymbolFlags.Optional),
-        _symbol: symbol,
-      }
-      const map = {}
-      getMappedSymbols(symbol, map)
-      if (Object.keys(map).length) {
-        parentMap[propertyName].map = map
-      }
+function compareTypes(
+  parentType: ts.Type,
+  compareMap: {} | undefined = undefined,
+  logOut: string[] | undefined = undefined,
+  parentProperties = parentType.getProperties(),
+  parentMap: PropMap = {}
+) {
+  if (!compareMap) {
+    Object.assign(parentMap, getPropertyMap(parentType, parentProperties))
+  } else {
+    const log = []
+    if (parentType.types) {
+      parentType.types.forEach((type) => {
+        const sadf = getPropertyMap(type)
+        const sdf = 0
+      })
     }
+    const sfs = checker.typeToString(parentType)
+    const dsf = Object.keys(parentMap).sort().join(', ')
+    compareProperties(parentMap, compareMap)
+  }
+
+  // for each property's type--collect those properties, iterating down
+  if (!ignore.includes(checker.typeToString(parentType))) {
+    Object.entries(parentMap).forEach(([k, v]) => {
+      if (v.property.type) {
+        const types = v.property.type.types || [v.property.type]
+        types.forEach((type) => {
+          const properties = type.getProperties()
+          if (properties.length) {
+            let maps = parentMap[k].maps
+            if (!maps) {
+              maps = parentMap[k].maps = []
+            }
+            const map: PropMap = {}
+            maps.push(map)
+            compareTypes(type, compareMap, logOut, properties, map)
+          }
+        })
+      }
+    })
   }
   return parentMap
 }
-
-export function compareTypes(targetType: ts.Type, sourceType: ts.Type) {
-  const sourcePropMap = getPropertyMap(sourceType)
-
-  const sadwsax = 0
-
-  //const targetTypes = getTypes(targetType)
-
-  // try to find by exact type name
-  // keep track of other possibilities
-  // if (
-  //   !sourceTypes.some((source) => {
-  //     return (
-  //       source.name !== 'undefined' &&
-  //       targetTypes.find((target) => {
-  //         if (source.name !== target.name) {
-  //           if (source.symbol === target.symbol) {
-  //             const propMap = {}
-  //             const propertyNamesMatch = (first, second) => {
-  //               const props = checker.getPropertiesOfType(first.type)
-  //               return props.every((prop1) => {
-  //                 const propName = prop1.escapedName as string
-  //                 const prop2 = checker.getPropertyOfType(second.type, propName)
-  //                 if (prop2) {
-  //                   if (!propMap[propName]) {
-  //                     propMap[propName] = { sourcePropType: checker.getTypeOfSymbol(prop2) }
-  //                   } else {
-  //                     propMap[propName].targetPropType = checker.getTypeOfSymbol(prop2)
-  //                   }
-  //                 }
-  //                 return !!prop2
-  //               })
-  //             }
-  //             if (propertyNamesMatch(source, target) && propertyNamesMatch(source, target)) {
-  //               return Object.values(propMap).every(({ targetPropType, sourcePropType }) => {
-  //                 compareTypes(targetPropType, sourcePropType)
-  //                 return true
-  //               })
-  //             }
-
-  //             //   // if (
-  //             //   //  return symbol.flags & 33554432 /* Transient */ ? symbol.checkFlags : 0;
-  //             //   const fg = targetProp.flags & 16777216
-
-  //             //   const ff = !(targetProp.flags & 16777216 /* Optional */ || ts.getCheckFlags(targetProp) & 48)
-  //             //   propMap[propName] = { tprop: checker.getTypeOfSymbol(tprop) }
-  //             // })
-  //             // const tprops = checker.getPropertiesOfType(target.type)
-  //             // tprops.forEach((prop) => {
-  //             //   const propName = prop.escapedName as string
-  //             //   // if !map[prop.escapedName] -- log
-  //             //   const sprop = checker.getPropertyOfType(source.type, propName)
-  //             //   propMap[propName].sprop = checker.getTypeOfSymbol(sprop)
-  //             // })
-  //             // // for each prop in map
-  //             // // compare types (target, source)
-  //           }
-  //           return false
-  //         }
-  //         return target.name !== 'undefined'
-  //       })
-  //     )
-  //   })
-  // ) {
-  //   // no dice
-  // }
-}
-
-// properties = getPropertiesOfType(target);
-// targetProp = properties_2[_i];
-// if (!(requireOptionalProperties || !(targetProp.flags & 16777216 /* Optional */ || ts.getCheckFlags(targetProp) & 48 /* Partial */))) return [3 /*break*/, 5];
-// sourceProp = getPropertyOfType(source, targetProp.escapedName);
-
-// targetType = getTypeOfSymbol(targetProp);
-// if (!(targetType.flags & 109440 /* Unit */)) return [3 /*break*/, 5];
-// sourceType = getTypeOfSymbol(sourceProp);
-// if (!!(sourceType.flags & 1 /* Any */ || getRegularTypeOfLiteralType(sourceType) === getRegularTypeOfLiteralType(targetType))) return [3 /*break*/, 5];
 
 export function logMismatches(sourceFile: ts.SourceFile) {
   logMismatchedNodes(sourceFile)
@@ -193,7 +137,10 @@ export function logMismatches(sourceFile: ts.SourceFile) {
           logOut.push(`Source = ${sourceFile.getLineAndCharacterOfPosition(node.getStart()).line}:   ${sourceTypeText}`)
           //const sd99f = checker.getUnmatchedProperties(targetType.types[1], sourceType, true).next()
 
-          compareTypes(targetType, sourceType, logOut)
+          //function compareTypes(parentType, compareMap=undefined, logOut=[], parentProperties = parentType.getProperties(), parentMap = {}) {
+          const sourceMap = compareTypes(sourceType)
+          compareTypes(targetType, sourceMap, logOut)
+          const f = 0
 
           // console.log('$$$$$$$$$$$$$$$ SOURCE $$$$$$$$$$$$$$$$$$$$')
           // const sourceTypeProperties = getTypes(sourceType)
@@ -233,10 +180,6 @@ export function logMismatches(sourceFile: ts.SourceFile) {
 /////////////////////////////////////////////////////////////
 const fileNames = process.argv.slice(2)
 // Read tsconfig.json file
-let options: ts.CompilerOptions = {
-  target: ts.ScriptTarget.ES5,
-  module: ts.ModuleKind.CommonJS,
-}
 const tsconfigPath = ts.findConfigFile(fileNames[0], ts.sys.fileExists, 'tsconfig.json')
 if (tsconfigPath) {
   const tsconfigFile = ts.readConfigFile(tsconfigPath, ts.sys.readFile)
@@ -246,14 +189,18 @@ options.isolatedModules = false
 const program = ts.createProgram(fileNames, options)
 const checker = program.getTypeChecker()
 
-//const semantics = program.getSemanticDiagnostics()
-
-fileNames.forEach((fileName) => {
-  const sourceFile = program.getSourceFile(fileName)
-  if (sourceFile) {
-    logMismatches(sourceFile)
-  }
-})
+const syntactic = program.getSyntacticDiagnostics()
+if (!syntactic.length) {
+  semanticDiagnostics = program.getSemanticDiagnostics()
+  fileNames.forEach((fileName) => {
+    const sourceFile = program.getSourceFile(fileName)
+    if (sourceFile) {
+      logMismatches(sourceFile)
+    }
+  })
+} else {
+  console.log('Fix syntactic', syntactic)
+}
 /////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////
@@ -464,9 +411,6 @@ fileNames.forEach((fileName) => {
 // const asdf = node.getFullText()
 // const sdf = checker.getShorthandAssignmentValueSymbol(node)
 // const sd99f = checker.getUnmatchedProperties(targetType.types[1], sourceType, true).next()
-
-const dfg = 0
-
 // const targetProperties1 = checker.getPropertiesOfType(targetType.types[0])
 // const targetProperties2 = checker.getPropertiesOfType(targetType.types[1])
 // const propertyType = checker.getTypeOfSymbolAtLocation(targetProperties2[0], node)
@@ -835,4 +779,142 @@ const f = 0
 //     return [getType(type)]
 //   }
 // }
-///const ignore = ['string', 'number', 'boolean', 'any', 'unknown', 'never', 'undefined']
+
+// export function getMappedSymbols(parent, parentMap = {}) {
+//   const mapper = parent.mapper2 || parent.mapper
+//   if (parent.getProperties && mapper) {
+//     const f = 0
+//   }
+//   if (!parent.getProperties && mapper) {
+//     const f = 0
+//   }
+
+//   // only if parent is type
+//   const symbols = parent.getProperties ? parent.getProperties() : parent.resolvedProperties || parent.properties
+//   if (symbols) {
+//     for (const symbol of symbols) {
+//       const propertyName = symbol.escapedName
+//       parentMap[propertyName] = {
+//         type: checker.typeToString(checker.getTypeOfSymbol(symbol)),
+//         isOptional: !!(symbol.flags & ts.SymbolFlags.Optional),
+//         symbol,
+//       }
+
+//       if (!symbol.type) {
+//         const asdfx = 3
+//         const ds = checker.typeToString(checker.getTypeOfSymbol(symbol))
+//         const sdrg = 9
+//       }
+//       if (symbol.type) {
+//         const f = checker.getTypeOfSymbol(symbol)
+//         const r = symbol.type
+//         const u = checker.typeToString(checker.getTypeOfSymbol(symbol))
+//         const k = checker.typeToString(symbol.type)
+//         if (symbol.type.types) {
+//           const sdf = symbol.type.types[0].getProperties()
+//           const skdf = symbol.type.types[1].getProperties()
+//           const fsd = 9
+//         }
+//         const map = {}
+//         getMappedSymbols(symbol.type, map)
+//         if (Object.keys(map).length) {
+//           parentMap[propertyName].map = map
+//         }
+//       }
+//     }
+//   } else if (mapper) {
+//     if (mapper.mapper2) {
+//       getMappedSymbols(mapper, parentMap)
+//     } else if (mapper.target) {
+//       getMappedSymbols(mapper.target, parentMap)
+//     } else if (mapper.targets) {
+//       for (const target of mapper.targets) {
+//         getMappedSymbols(target, parentMap)
+//       }
+//     }
+//   }
+// }
+
+//const ignore = ['string', 'number', 'boolean', 'any', 'unknown', 'never', 'undefined']
+
+// export function compareTypefs(targetType: ts.Type, sourceType: ts.Type) {
+//   const sfs = checker.typeToString(sourceType)
+
+//   const sourcePropMap = getPropertyMap(sourceType)
+//   const targetPropMap1 = getPropertyMap(targetType.types[0])
+//   const targetPropMap2 = getPropertyMap(targetType.types[1])
+//   const targetPropMap3 = getPropertyMap(targetType.types[2])
+
+//   const sadwsax = 0
+
+//const targetTypes = getTypes(targetType)
+
+// try to find by exact type name
+// keep track of other possibilities
+// if (
+//   !sourceTypes.some((source) => {
+//     return (
+//       source.name !== 'undefined' &&
+//       targetTypes.find((target) => {
+//         if (source.name !== target.name) {
+//           if (source.symbol === target.symbol) {
+//             const propMap = {}
+//             const propertyNamesMatch = (first, second) => {
+//               const props = checker.getPropertiesOfType(first.type)
+//               return props.every((prop1) => {
+//                 const propName = prop1.escapedName as string
+//                 const prop2 = checker.getPropertyOfType(second.type, propName)
+//                 if (prop2) {
+//                   if (!propMap[propName]) {
+//                     propMap[propName] = { sourcePropType: checker.getTypeOfSymbol(prop2) }
+//                   } else {
+//                     propMap[propName].targetPropType = checker.getTypeOfSymbol(prop2)
+//                   }
+//                 }
+//                 return !!prop2
+//               })
+//             }
+//             if (propertyNamesMatch(source, target) && propertyNamesMatch(source, target)) {
+//               return Object.values(propMap).every(({ targetPropType, sourcePropType }) => {
+//                 compareTypes(targetPropType, sourcePropType)
+//                 return true
+//               })
+//             }
+
+//             //   // if (
+//             //   //  return symbol.flags & 33554432 /* Transient */ ? symbol.checkFlags : 0;
+//             //   const fg = targetProp.flags & 16777216
+
+//             //   const ff = !(targetProp.flags & 16777216 /* Optional */ || ts.getCheckFlags(targetProp) & 48)
+//             //   propMap[propName] = { tprop: checker.getTypeOfSymbol(tprop) }
+//             // })
+//             // const tprops = checker.getPropertiesOfType(target.type)
+//             // tprops.forEach((prop) => {
+//             //   const propName = prop.escapedName as string
+//             //   // if !map[prop.escapedName] -- log
+//             //   const sprop = checker.getPropertyOfType(source.type, propName)
+//             //   propMap[propName].sprop = checker.getTypeOfSymbol(sprop)
+//             // })
+//             // // for each prop in map
+//             // // compare types (target, source)
+//           }
+//           return false
+//         }
+//         return target.name !== 'undefined'
+//       })
+//     )
+//   })
+// ) {
+//   // no dice
+// }
+//}
+
+// properties = getPropertiesOfType(target);
+// targetProp = properties_2[_i];
+// if (!(requireOptionalProperties || !(targetProp.flags & 16777216 /* Optional */ || ts.getCheckFlags(targetProp) & 48 /* Partial */))) return [3 /*break*/, 5];
+// sourceProp = getPropertyOfType(source, targetProp.escapedName);
+
+// targetType = getTypeOfSymbol(targetProp);
+// if (!(targetType.flags & 109440 /* Unit */)) return [3 /*break*/, 5];
+// sourceType = getTypeOfSymbol(sourceProp);
+// if (!!(sourceType.flags & 1 /* Any */ || getRegularTypeOfLiteralType(sourceType) === getRegularTypeOfLiteralType(targetType))) return [3 /*break*/, 5];
