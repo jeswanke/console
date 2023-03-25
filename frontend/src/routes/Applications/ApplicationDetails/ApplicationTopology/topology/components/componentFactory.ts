@@ -13,27 +13,48 @@ import {
 import StyledNode from './StyledNode'
 import StyledEdge from './StyledEdge'
 
-const defaultComponentFactory: ComponentFactory = (
-  kind: ModelKind
-): ComponentType<{ element: GraphElement }> | undefined => {
+const defaultComponentFactory: ComponentFactory = (kind: ModelKind): ComponentType<{ element: GraphElement }> => {
   switch (kind) {
     case ModelKind.graph:
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore: Fixed in next pf topology
       return withPanZoom()(GraphComponent)
-    case ModelKind.node:
-      // 4.86 return withDragNode(nodeDragSourceSpec('node', true, true))(withSelection()(StyledNode))
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore: Fixed in next pf topology
-      return withDragNode()(withSelection()(StyledNode))
-    case ModelKind.edge:
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore: Fixed in next pf topology
-      return StyledEdge
-    /* istanbul ignore next */
+    // case ModelKind.node:
+    //   return withDragNode()(withSelection()(StyledNode))
+    // case ModelKind.edge:
+    //   return StyledEdge
     default:
       return undefined
   }
+  return 33
+}
+
+interface test {
+  prop?: {
+    ese: number
+  }
+}
+interface ting {
+  prop?: {}
+}
+
+const test = () => {
+  let fffg: ting
+  const fff: test = fffg
+  console.log(fff)
+  const ddd: test = 44
+  console.log(ddd)
+  const sdf: string = 55
+  console.log(sdf)
+  fu5nc(66, { news: 'fsas' })
+  const sd: number = fu6nc()
+  console.log(sd)
+}
+
+export const fu5nc = (ff: string, gg: number) => {
+  console.log(ff, gg)
+}
+
+export const fu6nc = (): ting => {
+  return 'sdsad'
 }
 
 export default defaultComponentFactory

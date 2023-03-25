@@ -7,6 +7,7 @@ let options: ts.CompilerOptions = {
   target: ts.ScriptTarget.ES5,
   module: ts.ModuleKind.CommonJS,
 }
+let semanticDiagnostics
 
 function isFunctionLikeKind(kind: ts.SyntaxKind) {
   switch (kind) {
@@ -33,191 +34,145 @@ interface PropMap {
   [key: string]: TypeInfo
 }
 interface TypeInfo {
-  parent: TypeInfo
   type: string
+  isOptional?: boolean
   maps?: PropMap[]
   property: any
 }
 
-// function compareProperties(targetProps: PropMap, sourceProps: PropMap) {}
+const ignore = ['string', 'number', 'boolean', 'any', 'unknown', 'never', 'undefined']
 
-// function getPropertyMap(type: ts.Type, properties = type.getProperties()) {
-//   const map = {}
-//   for (const property of properties) {
-//     const propertyName = property.escapedName as string
-//     map[propertyName] = {
-//       parent: type,
-//       type: checker.typeToString(checker.getTypeOfSymbol(property)),
-//       property,
-//     }
-//   }
-//   return map
-// }
+export function compareProperties(targetProps: PropMap, sourceProps: PropMap) {}
 
-// const ignore = ['string', 'String', 'number', 'boolean', 'any', 'unknown', 'never', 'undefined', 'true', 'false']
-// function compareTypes(
-//   parentType: ts.Type,
-//   compareMap: {} | undefined = undefined,
-//   logOut: string[] | undefined = undefined,
-//   parentProperties = parentType.getProperties(),
-//   parentMap: PropMap = {}
-// ) {
-//   if (!compareMap) {
-//     Object.assign(parentMap, getPropertyMap(parentType, parentProperties))
-//   } else {
-//     const log = []
-//     if (parentType.types) {
-//       parentType.types.forEach((type) => {
-//         const sadf = getPropertyMap(type)
-//         const sdf = 0
-//       })
-//     }
-//     const sfs = checker.typeToString(parentType)
-//     const dsf = Object.keys(parentMap).sort().join(', ')
-//     compareProperties(parentMap, compareMap)
-//   }
-
-//   // for each property's type--collect those properties, iterating down
-//   const sd = checker.typeToString(parentType)
-//   if (!ignore.includes(checker.typeToString(parentType))) {
-//     Object.entries(parentMap).forEach(([k, v]) => {
-//       if (v.property.type) {
-//         const types = v.property.type.types || [v.property.type]
-//         types.forEach((type) => {
-//           const properties = type.getProperties()
-//           if (properties.length) {
-//             let maps = parentMap[k].maps
-//             if (!maps) {
-//               maps = parentMap[k].maps = []
-//             }
-//             const map: PropMap = {}
-//             maps.push(map)
-//             compareTypes(type, compareMap, logOut, properties, map)
-//           }
-//         })
-//       }
-//     })
-//   }
-//   return parentMap
-// }
-
-function compareTypes(target, source) {
-  // stop when we find a problem
-  ;(target.types || [target]).some((target) => {
-    if (source.symbol === target.symbol) {
-      const propMap = {}
-      const propertyNamesMatch = (first, second) => {
-        const props = first.getProperties()
-        return props.every((prop1) => {
-          const propName = prop1.escapedName as string
-          const prop2 = checker.getPropertyOfType(second, propName)
-          if (prop2) {
-            // properties = getPropertiesOfType(target);
-            // targetProp = properties_2[_i];
-            // if (!(requireOptionalProperties || !(targetProp.flags & 16777216 /* Optional */ || ts.getCheckFlags(targetProp) & 48 /* Partial */))) return [3 /*break*/, 5];
-            // sourceProp = getPropertyOfType(source, targetProp.escapedName);
-
-            // targetType = getTypeOfSymbol(targetProp);
-            // if (!(targetType.flags & 109440 /* Unit */)) return [3 /*break*/, 5];
-            // sourceType = getTypeOfSymbol(sourceProp);
-            // if (!!(sourceType.flags & 1 /* Any */ || getRegularTypeOfLiteralType(sourceType) === getRegularTypeOfLiteralType(targetType))) return [3 /*break*/, 5];
-
-            if (!propMap[propName]) {
-              propMap[propName] = { sourcePropType: checker.getTypeOfSymbol(prop2) }
-            } else {
-              propMap[propName].targetPropType = checker.getTypeOfSymbol(prop2)
-            }
-          }
-          return !!prop2
-        })
-      }
-      if (propertyNamesMatch(source, target) && propertyNamesMatch(source, target)) {
-        return Object.values(propMap).every(({ targetPropType, sourcePropType }) => {
-          compareTypes(targetPropType, sourcePropType)
-          return true
-        })
-      }
-
-      //   // if (
-      //   //  return symbol.flags & 33554432 /* Transient */ ? symbol.checkFlags : 0;
-      //   const fg = targetProp.flags & 16777216
-
-      //   const ff = !(targetProp.flags & 16777216 /* Optional */ || ts.getCheckFlags(targetProp) & 48)
-      //   propMap[propName] = { tprop: checker.getTypeOfSymbol(tprop) }
-      // })
-      // const tprops = checker.getPropertiesOfType(target.type)
-      // tprops.forEach((prop) => {
-      //   const propName = prop.escapedName as string
-      //   // if !map[prop.escapedName] -- log
-      //   const sprop = checker.getPropertyOfType(source.type, propName)
-      //   propMap[propName].sprop = checker.getTypeOfSymbol(sprop)
-      // })
-      // // for each prop in map
-      // // compare types (target, source)
-    }
-    return false
-    //}
-  })
-}
-
-function elaborateMismatch(code, node: ts.Node) {
-  const children = node.getChildren()
-  switch (node.kind) {
-    // can't return this type
-    case ts.SyntaxKind.ReturnStatement: {
-      const sourceType: ts.Type = checker.getTypeAtLocation(children[1])
-      const returnContainer = ts.findAncestor(node.parent, (node) => {
-        return !!node && (isFunctionLikeKind(node.kind) || ts.isClassStaticBlockDeclaration(node))
-      })
-      if (returnContainer) {
-        const targetType: ts.Type = checker
-          .getSignaturesOfType(checker.getTypeAtLocation(returnContainer), 0)[0]
-          .getReturnType()
-        const sourceTypeText = node.getText()
-        const targetTypeText = checker.typeToString(targetType)
-        console.log(`TS${code} Types don't match! "(...): ${targetTypeText}" !== "${sourceTypeText}"`)
-        compareTypes(targetType, sourceType)
-      }
-
-      break
-    }
-    // can't set A = B, or A = func()
-    case ts.SyntaxKind.VariableDeclaration: {
-      const targetType: ts.Type = checker.getTypeAtLocation(children[0])
-      const sourceType: ts.Type = checker.getTypeAtLocation(children[children.length - 1])
-      const sourceTypeText = checker.typeToString(sourceType)
-      const targetTypeText = checker.typeToString(targetType)
-      console.log(`TS${code} Types don't match! "${targetTypeText}" !== "${sourceTypeText}"`)
-      compareTypes(targetType, sourceType)
-      break
-    }
-
-    // can't pass these values to this call
-    case ts.SyntaxKind.CallExpression: {
-      const signature = checker.getSignaturesOfType(checker.getTypeAtLocation(children[0]), 0)[0]
-      const args = children[2].getChildren()
-      signature.getParameters().forEach((param) => {
-        const targetType = checker.getTypeOfSymbolAtLocation(param, node)
-        const sourceType = checker.getTypeAtLocation(args[0])
-      })
-      break
+function getPropertyMap(type: ts.Type, properties = type.getProperties()) {
+  const map = {}
+  for (const property of properties) {
+    const propertyName = property.escapedName as string
+    map[propertyName] = {
+      type: checker.typeToString(checker.getTypeOfSymbol(property)),
+      isOptional: !!(property.flags & ts.SymbolFlags.Optional),
+      property,
     }
   }
+  return map
 }
 
-function elaborate(semanticDiagnostics: readonly ts.Diagnostic[]) {
-  semanticDiagnostics.forEach(({ code, file, start, messageText }) => {
-    const token = ts.getTokenAtPosition(file, start)
-    const node = token.parent
-    switch (code) {
-      case 2322:
-      case 2559:
-      case 2345:
-        console.log('\n\n=======================')
-        elaborateMismatch(code, node)
+function compareTypes(
+  parentType: ts.Type,
+  compareMap: {} | undefined = undefined,
+  logOut: string[] | undefined = undefined,
+  parentProperties = parentType.getProperties(),
+  parentMap: PropMap = {}
+) {
+  if (!compareMap) {
+    Object.assign(parentMap, getPropertyMap(parentType, parentProperties))
+  } else {
+    const log = []
+    if (parentType.types) {
+      parentType.types.forEach((type) => {
+        const sadf = getPropertyMap(type)
+        const sdf = 0
+      })
+    }
+    const sfs = checker.typeToString(parentType)
+    const dsf = Object.keys(parentMap).sort().join(', ')
+    compareProperties(parentMap, compareMap)
+  }
+
+  // for each property's type--collect those properties, iterating down
+  if (!ignore.includes(checker.typeToString(parentType))) {
+    Object.entries(parentMap).forEach(([k, v]) => {
+      if (v.property.type) {
+        const types = v.property.type.types || [v.property.type]
+        types.forEach((type) => {
+          const properties = type.getProperties()
+          if (properties.length) {
+            let maps = parentMap[k].maps
+            if (!maps) {
+              maps = parentMap[k].maps = []
+            }
+            const map: PropMap = {}
+            maps.push(map)
+            compareTypes(type, compareMap, logOut, properties, map)
+          }
+        })
+      }
+    })
+  }
+  return parentMap
+}
+
+export function logMismatches(sourceFile: ts.SourceFile) {
+  logMismatchedNodes(sourceFile)
+
+  function logMismatchedNodes(node: ts.Node) {
+    const logOut: string[] = []
+    switch (node.kind) {
+      // ex: const func():TARGET => {return SOURCE}
+      case ts.SyntaxKind.ReturnStatement:
+        // when the TARGET is a function declaration and the SOURCE is a return statement
+
+        // get the return type which is the SOURCE
+        const sourceFile = node.getSourceFile()
+        const sourceSignature = checker.getResolvedSignature(node.expression)
+        const sourceType = checker.getReturnTypeOfSignature(sourceSignature)
+        const sourceTypeText = node.getText()
+
+        // get the function/class/etc container, which is the TARGET
+        const returnContainer = ts.findAncestor(node.parent, (node) => {
+          return !!node && (isFunctionLikeKind(node.kind) || ts.isClassStaticBlockDeclaration(node))
+        })
+        if (returnContainer) {
+          // get what type this  container's
+          const targetSignature = checker.getSignatureFromDeclaration(returnContainer)
+          const targetType = checker.getReturnTypeOfSignature(targetSignature)
+          const targetTypeText = checker.typeToString(targetType)
+
+          // try to find a TARGET type that matches this source
+
+          logOut.push('TS2322 Target type !== Source type:')
+          logOut.push(
+            `Target = ${sourceFile.getLineAndCharacterOfPosition(returnContainer.getStart()).line}: ${targetTypeText}`
+          )
+          logOut.push(`Source = ${sourceFile.getLineAndCharacterOfPosition(node.getStart()).line}:   ${sourceTypeText}`)
+          //const sd99f = checker.getUnmatchedProperties(targetType.types[1], sourceType, true).next()
+
+          //function compareTypes(parentType, compareMap=undefined, logOut=[], parentProperties = parentType.getProperties(), parentMap = {}) {
+          const sourceMap = compareTypes(sourceType)
+          compareTypes(targetType, sourceMap, logOut)
+          const f = 0
+
+          // console.log('$$$$$$$$$$$$$$$ SOURCE $$$$$$$$$$$$$$$$$$$$')
+          // const sourceTypeProperties = getTypes(sourceType)
+          // console.log('\n\n\n\n\n$$$$$$$$$$$$$$$ TARGET $$$$$$$$$$$$$$$$$$$$')
+          // const targetTypeProperties = getTypes(targetType)
+          // const key = Object.keys(sourceTypeProperties)[0]
+          // const srcProps = sourceTypeProperties[key]
+          // const tgtProps = targetTypeProperties[key]
+          //   function getBestMatchingType(source, target, isRelatedTo) {
+          //     if (isRelatedTo === void 0) { isRelatedTo = compareTypesAssignable; }
+          //     return findMatchingDiscriminantType(source, target, isRelatedTo, /*skipPartial*/ true) ||
+          //         findMatchingTypeReferenceOrTypeAliasReference(source, target) ||
+          //         findBestTypeForObjectLiteral(source, target) ||
+          //         findBestTypeForInvokable(source, target) ||
+          //         findMostOverlappyType(source, target);
+          // }
+
+          // logOut.push('\n\n\n\n')
+          // console.log(logOut.join('\n'))
+        }
+
+        break
+
+      case ts.SyntaxKind.CallExpression:
+        break
+      case ts.SyntaxKind.NewExpression:
+        break
+      case ts.SyntaxKind.FunctionExpression:
         break
     }
-  })
+    ts.forEachChild(node, logMismatchedNodes)
+  }
 }
 
 /////////////////////////////////////////////////////////////
@@ -233,109 +188,24 @@ if (tsconfigPath) {
 options.isolatedModules = false
 const program = ts.createProgram(fileNames, options)
 const checker = program.getTypeChecker()
+
 const syntactic = program.getSyntacticDiagnostics()
 if (!syntactic.length) {
-  elaborate(program.getSemanticDiagnostics())
+  semanticDiagnostics = program.getSemanticDiagnostics()
+  const token = ts.getTokenAtPosition(semanticDiagnostics[4].file, semanticDiagnostics[4].start)
+  const node = token.parent
+  const sads = node.getText()
+  const { line, character } = semanticDiagnostics[4].file.getLineAndCharacterOfPosition(node.getStart())
+
+  fileNames.forEach((fileName) => {
+    const sourceFile = program.getSourceFile(fileName)
+    if (sourceFile) {
+      logMismatches(sourceFile)
+    }
+  })
 } else {
-  console.log('Fix syntactic errors first', syntactic)
+  console.log('Fix syntactic', syntactic)
 }
-
-// switch (expression.kind) {
-//   case ts.SyntaxKind.CallExpression:
-//     const sourceSignature = checker.getResolvedSignature(expression)
-//     sourceType = checker.getReturnTypeOfSignature(sourceSignature)
-//     const sdfls = checker.getTypeAtLocation(expression)
-//     if (sourceType !== sdfls) {
-//       const sdf = 0
-//     }
-//     break
-//   default:
-//   case ts.SyntaxKind.Identifier:
-//     const symbol = checker.getSymbolAtLocation(node.expression)
-//     sourceType = checker.getTypeOfSymbolAtLocation(symbol!, expression)
-//     const sdufs = checker.getTypeAtLocation(expression)
-//     if (sourceType !== sdufs) {
-//       const sdf = 0
-//     }
-//     break
-// }
-// get the return type which is the SOURCE
-// node.expression.kind === ts.SyntaxKind.CallExpression returning a call expression
-// node.expression.kind === ts.SyntaxKind.Identifier returning variable
-
-// export function logMismatches(sourceFile: ts.SourceFile) {
-//   logMismatchedNodes(sourceFile)
-
-//   function logMismatchedNodes(node: ts.Node) {
-//     const logOut: string[] = []
-//     switch (node.kind) {
-//       // ex: const func():TARGET => {return SOURCE}
-//       case ts.SyntaxKind.ReturnStatement:
-//         // when the TARGET is a function declaration and the SOURCE is a return statement
-
-//         // get the return type which is the SOURCE
-//         const sourceFile = node.getSourceFile()
-//         const sourceSignature = checker.getResolvedSignature(node.expression)
-//         const sourceType = checker.getReturnTypeOfSignature(sourceSignature)
-//         const sourceTypeText = node.getText()
-
-//         // get the function/class/etc container, which is the TARGET
-//         const returnContainer = ts.findAncestor(node.parent, (node) => {
-//           return !!node && (isFunctionLikeKind(node.kind) || ts.isClassStaticBlockDeclaration(node))
-//         })
-//         if (returnContainer) {
-//           // get what type this  container's
-//           const targetSignature = checker.getSignatureFromDeclaration(returnContainer)
-//           const targetType = checker.getReturnTypeOfSignature(targetSignature)
-//           const targetTypeText = checker.typeToString(targetType)
-
-//           // try to find a TARGET type that matches this source
-
-//           logOut.push('TS2322 Target type !== Source type:')
-//           logOut.push(
-//             `Target = ${sourceFile.getLineAndCharacterOfPosition(returnContainer.getStart()).line}: ${targetTypeText}`
-//           )
-//           logOut.push(`Source = ${sourceFile.getLineAndCharacterOfPosition(node.getStart()).line}:   ${sourceTypeText}`)
-//           //const sd99f = checker.getUnmatchedProperties(targetType.types[1], sourceType, true).next()
-
-//           //function compareTypes(parentType, compareMap=undefined, logOut=[], parentProperties = parentType.getProperties(), parentMap = {}) {
-//           const sourceMap = compareTypes(sourceType)
-//           compareTypes(targetType, sourceMap, logOut)
-//           const f = 0
-
-//           // console.log('$$$$$$$$$$$$$$$ SOURCE $$$$$$$$$$$$$$$$$$$$')
-//           // const sourceTypeProperties = getTypes(sourceType)
-//           // console.log('\n\n\n\n\n$$$$$$$$$$$$$$$ TARGET $$$$$$$$$$$$$$$$$$$$')
-//           // const targetTypeProperties = getTypes(targetType)
-//           // const key = Object.keys(sourceTypeProperties)[0]
-//           // const srcProps = sourceTypeProperties[key]
-//           // const tgtProps = targetTypeProperties[key]
-//           //   function getBestMatchingType(source, target, isRelatedTo) {
-//           //     if (isRelatedTo === void 0) { isRelatedTo = compareTypesAssignable; }
-//           //     return findMatchingDiscriminantType(source, target, isRelatedTo, /*skipPartial*/ true) ||
-//           //         findMatchingTypeReferenceOrTypeAliasReference(source, target) ||
-//           //         findBestTypeForObjectLiteral(source, target) ||
-//           //         findBestTypeForInvokable(source, target) ||
-//           //         findMostOverlappyType(source, target);
-//           // }
-
-//           // logOut.push('\n\n\n\n')
-//           // console.log(logOut.join('\n'))
-//         }
-
-//         break
-
-//       case ts.SyntaxKind.CallExpression:
-//         break
-//       case ts.SyntaxKind.NewExpression:
-//         break
-//       case ts.SyntaxKind.FunctionExpression:
-//         break
-//     }
-//     ts.forEachChild(node, logMismatchedNodes)
-//   }
-// }
-
 /////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////
@@ -572,6 +442,7 @@ if (!syntactic.length) {
 // const m = checker.getAmbientModules()
 // const d = checker.symbolToString(sourceType.symbol)
 
+const f = 0
 // for each sourceProperties, get that property from target
 // for each of targetType's types
 //   const targetProperties = checker.getPropertiesOfType(targetType.types[1])
@@ -1042,3 +913,13 @@ if (!syntactic.length) {
 //   // no dice
 // }
 //}
+
+// properties = getPropertiesOfType(target);
+// targetProp = properties_2[_i];
+// if (!(requireOptionalProperties || !(targetProp.flags & 16777216 /* Optional */ || ts.getCheckFlags(targetProp) & 48 /* Partial */))) return [3 /*break*/, 5];
+// sourceProp = getPropertyOfType(source, targetProp.escapedName);
+
+// targetType = getTypeOfSymbol(targetProp);
+// if (!(targetType.flags & 109440 /* Unit */)) return [3 /*break*/, 5];
+// sourceType = getTypeOfSymbol(sourceProp);
+// if (!!(sourceType.flags & 1 /* Any */ || getRegularTypeOfLiteralType(sourceType) === getRegularTypeOfLiteralType(targetType))) return [3 /*break*/, 5];
