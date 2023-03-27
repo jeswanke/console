@@ -52,7 +52,7 @@
     "podman:deploy:mce": "npm run podman:build:mce && podman tag console-mce quay.io/$USER/console-mce:latest && podman push quay.io/$USER/console-mce:latest && ./scripts/patch-deployment.sh latest quay.io/$USER/console-mce",
     "setup": "./setup.sh",
     "prepare": "husky install",
-    "the-daug": "ts-node --transpileOnly scripts/the-daug.ts"
+    "the-hound": "ts-node --transpileOnly scripts/the-hound.ts"
   },
   "devDependencies": {
     "@types/node": "14.18.22",

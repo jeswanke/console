@@ -95,11 +95,11 @@
       "program": "${workspaceFolder}/frontend/node_modules/.bin/jest"
     },
     {
-      "name": "Launch Daug",
+      "name": "Release The Hound",
       "request": "launch",
       "args": [
         "run",
-        "the-daug",
+        "the-hound",
         // "${file}"
         "${workspaceFolder}/frontend/src/routes/Applications/ApplicationDetails/ApplicationTopology/topology/components/componentFactory.ts"
       ],

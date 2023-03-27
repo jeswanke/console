@@ -8,6 +8,16 @@ let options: ts.CompilerOptions = {
   module: ts.ModuleKind.CommonJS,
 }
 
+interface PropMap {
+  [key: string]: TypeInfo
+}
+interface TypeInfo {
+  parent: TypeInfo
+  type: string
+  maps?: PropMap[]
+  property: any
+}
+
 function isFunctionLikeKind(kind: ts.SyntaxKind) {
   switch (kind) {
     case ts.SyntaxKind.ClassDeclaration:
@@ -29,15 +39,292 @@ function isFunctionLikeKind(kind: ts.SyntaxKind) {
   }
 }
 
-interface PropMap {
-  [key: string]: TypeInfo
+function link(node: ts.Node) {
+  const file = node.getSourceFile()
+  const relative = path.relative(process.argv[1], file.fileName).replace(/\.\.\//g, '')
+  return `${relative}:${file.getLineAndCharacterOfPosition(node.getStart()).line + 1}`
 }
-interface TypeInfo {
-  parent: TypeInfo
-  type: string
-  maps?: PropMap[]
-  property: any
+
+// !!!!!!!!!!!!!THE PAYOFF!!!!!!!!!!
+function thePayoff(missings, mismatches, context) {
+  if (missings.length) {
+    console.log('\nmake these properties optional here:')
+    const links = []
+    missings.forEach(({ target, theProp }) => {
+      context.container
+      // need to add these properties here:
+      // or make these properties optinal here:
+      const declaration = theProp.declarations[0]
+      console.log('  ' + declaration.getText())
+      links.push(link(declaration))
+      const sf = declaration.getSourceFile()
+      const parentType = checker.getTypeAtLocation(declaration.parent)
+      const sdg = checker.typeToString(parentType)
+      const { line } = sf.getLineAndCharacterOfPosition(declaration.getStart())
+      const fi9 = sf.text.split('\n')[line]
+
+      const f = 0
+    })
+    console.log(links)
+  } else if (mismatches.length) {
+    const sdfsdrfx = 0
+  }
 }
+
+function compareProperties(first, second) {
+  const missings = []
+  const mismatches = []
+  const recurses = []
+  first.getProperties().forEach((firstProp) => {
+    firstProp = firstProp?.syntheticOrigin || firstProp
+    const propName = firstProp.escapedName as string
+    const secondProp = checker.getPropertyOfType(second, propName)
+    if (secondProp) {
+      const firstType = checker.getTypeOfSymbol(firstProp)
+      const secondType = checker.getTypeOfSymbol(secondProp)
+      if (firstType !== secondType) {
+        if ((firstType.intrinsicName || 'not') !== (secondType.intrinsicName || 'not')) {
+          mismatches.push({
+            source: firstProp,
+            sourceType: firstType,
+            target: secondProp,
+            targettype: secondType,
+          })
+        } else {
+          recurses.push({ target: firstType, source: secondType })
+        }
+      }
+    } else if (!(firstProp.flags & ts.SymbolFlags.Optional)) {
+      missings.push({ target: second, theProp: firstProp })
+    }
+  })
+  return { missings, mismatches, recurses }
+}
+
+// we know TS found a mismatch here -- we just have to find it again
+function compareTypes(itarget, isource, context, bothWays = false) {
+  let reversed = false
+  let missings = []
+  let mismatches = []
+  let recurses: any[] = []
+  const propertyTypes: any = []
+  const sources = isource.types || [isource]
+  const targets = itarget.types || [itarget]
+  // every source type must have a matching target type
+  if (
+    !sources.every((source) => {
+      return targets.some((target) => {
+        if (source !== target && source.intrinsicName !== 'undefined') {
+          if (source.value) {
+            mismatches.push({
+              source: source,
+              sourceType: typeof source.value,
+              targetProp: target,
+              targetType: checker.typeToString(target),
+            })
+          } else if (target.intrinsicName !== 'undefined') {
+            ;({ missings, mismatches, recurses } = compareProperties(source, target))
+            if (!missings.length && !mismatches.length && bothWays) {
+              reversed = true
+              ;({ missings, mismatches } = compareProperties(target, source))
+            }
+            if (!missings.length && !mismatches.length && recurses.length) {
+              propertyTypes.push(recurses)
+              return true
+            }
+          }
+          return false
+        }
+        return true
+      })
+    })
+  ) {
+    context.reversed = reversed
+    thePayoff(missings, mismatches, context)
+    return false
+  }
+  if (propertyTypes.length) {
+    // when properties types are made up of other properties
+    // (ex: a structure and not an intrinsicName like 'string')
+    return propertyTypes.every((recurses) => {
+      return recurses.every(({ target, source }) => {
+        return compareTypes(target, source, context, bothWays)
+      })
+    })
+  }
+  return true
+}
+
+function elaborateMismatch(code, node: ts.Node) {
+  const children = node.getChildren()
+  switch (node.kind) {
+    // can't return this type
+    case ts.SyntaxKind.ReturnStatement: {
+      const sourceType: ts.Type = checker.getTypeAtLocation(children[1])
+      const container = ts.findAncestor(node.parent, (node) => {
+        return !!node && (isFunctionLikeKind(node.kind) || ts.isClassStaticBlockDeclaration(node))
+      })
+      if (container) {
+        const targetType: ts.Type = checker
+          .getSignaturesOfType(checker.getTypeAtLocation(container), 0)[0]
+          .getReturnType()
+        const sourceTypeText = node.getText()
+        const targetTypeText = checker.typeToString(targetType)
+        console.log(`TS${code} Mismatch! (...): ${targetTypeText} !== ${sourceTypeText}\n${link(node)}`)
+        compareTypes(
+          targetType,
+          sourceType,
+          { code, container, sourceTypeText, targetTypeText },
+          options.strictFunctionTypes
+        )
+      }
+
+      break
+    }
+    // can't set A = B, or A = func()
+    case ts.SyntaxKind.VariableDeclaration: {
+      const targetType: ts.Type = checker.getTypeAtLocation(children[0])
+      const sourceType: ts.Type = checker.getTypeAtLocation(children[children.length - 1])
+      const sourceTypeText = checker.typeToString(sourceType)
+      const targetTypeText = checker.typeToString(targetType)
+      console.log(`TS${code} Mismatch! ${targetTypeText} !== ${sourceTypeText}\n${link(node)}`)
+      compareTypes(targetType, sourceType, { code, sourceTypeText, targetTypeText })
+      break
+    }
+
+    // can't pass these values to this call
+    case ts.SyntaxKind.CallExpression: {
+      const signature = checker.getSignaturesOfType(checker.getTypeAtLocation(children[0]), 0)[0]
+      const args = children[2].getChildren()
+      signature.getParameters().forEach((param) => {
+        const targetType = checker.getTypeOfSymbolAtLocation(param, node)
+        const sourceType = checker.getTypeAtLocation(args[0])
+      })
+      break
+    }
+  }
+}
+
+function elaborate(semanticDiagnostics: readonly ts.Diagnostic[]) {
+  semanticDiagnostics.forEach(({ code, file, start, messageText }) => {
+    const token = ts.getTokenAtPosition(file, start)
+    const node = token.parent
+    switch (code) {
+      case 2322:
+      case 2559:
+      case 2345:
+        console.log('\n\n=======================')
+        elaborateMismatch(code, node)
+        break
+    }
+  })
+}
+
+/////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////
+const fileNames = process.argv.slice(2)
+// Read tsconfig.json file
+const tsconfigPath = ts.findConfigFile(fileNames[0], ts.sys.fileExists, 'tsconfig.json')
+if (tsconfigPath) {
+  const tsconfigFile = ts.readConfigFile(tsconfigPath, ts.sys.readFile)
+  options = ts.parseJsonConfigFileContent(tsconfigFile.config, ts.sys, path.dirname(tsconfigPath)).options
+}
+options.isolatedModules = false
+const program = ts.createProgram(fileNames, options)
+const checker = program.getTypeChecker()
+const syntactic = program.getSyntacticDiagnostics()
+if (!syntactic.length) {
+  elaborate(program.getSemanticDiagnostics())
+} else {
+  console.log('Fix syntactic errors first', syntactic)
+}
+
+// // if (!reverseMisses) {
+// //   return nextTypes.some(({ firstType, secondType }) => {
+// //     // still looking...
+// //     return compareTypes(firstType, secondType, bothWays)
+// //   })
+// // }
+
+// const possibility: any = {}
+// const nextTypes = []
+// possibility.misses = findMismatches(target, source, nextTypes)
+// possibility.nextTypes = nextTypes
+// possibility.reverseMisses = findMismatches(target, source)
+// possibilities.push(possibility)
+//})
+
+// possibilities.forEach((f) => {
+//   return f.nextTypes.some(({ firstType, secondType }) => {
+//     // still looking...
+//     return compareTypes(firstType, secondType, bothWays)
+//   })
+// })
+// // if (!reverseMisses) {
+// //   return nextTypes.some(({ firstType, secondType }) => {
+// //     // still looking...
+// //     return compareTypes(firstType, secondType, bothWays)
+// //   })
+// // }
+
+//})
+
+// return props.every((prop1) => {
+//   const propName = prop1.escapedName as string
+//   const prop2 = checker.getPropertyOfType(second, propName)
+//   if (prop2) {
+//     // properties = getPropertiesOfType(target);
+//     // targetProp = properties_2[_i];
+//     // if (!(requireOptionalProperties || !(targetProp.flags & 16777216 /* Optional */ || ts.getCheckFlags(targetProp) & 48 /* Partial */))) return [3 /*break*/, 5];
+//     // sourceProp = getPropertyOfType(source, targetProp.escapedName);
+
+//     // targetType = getTypeOfSymbol(targetProp);
+//     // if (!(targetType.flags & 109440 /* Unit */)) return [3 /*break*/, 5];
+//     // sourceType = getTypeOfSymbol(sourceProp);
+//     // if (!!(sourceType.flags & 1 /* Any */ || getRegularTypeOfLiteralType(sourceType) === getRegularTypeOfLiteralType(targetType))) return [3 /*break*/, 5];
+
+//     // function getRegularTypeOfLiteralType(type) {
+//     //   return type.flags & 2944 /* Literal */
+//     //     ? type.regularType
+//     //     : type.flags & 1048576 /* Union */
+//     //     ? type.regularType || (type.regularType = mapType(type, getRegularTypeOfLiteralType))
+//     //     : type
+//     // }
+
+//     if (!propMap[propName]) {
+//       propMap[propName] = { sourcePropType: checker.getTypeOfSymbol(prop2) }
+//     } else {
+//       propMap[propName].targetPropType = checker.getTypeOfSymbol(prop2)
+//     }
+//   }
+//   return !!prop2
+// })
+//}
+// if (propertyNamesMatch(source, target) && propertyNamesMatch(source, target)) {
+//   return Object.values(propMap).every(({ targetPropType, sourcePropType }) => {
+//     compareTypes(targetPropType, sourcePropType)
+//     return true
+//   })
+// }
+
+//   // if (
+//   //  return symbol.flags & 33554432 /* Transient */ ? symbol.checkFlags : 0;
+//   const fg = targetProp.flags & 16777216
+
+//   const ff = !(targetProp.flags & 16777216 /* Optional */ || ts.getCheckFlags(targetProp) & 48)
+//   propMap[propName] = { tprop: checker.getTypeOfSymbol(tprop) }
+// })
+// const tprops = checker.getPropertiesOfType(target.type)
+// tprops.forEach((prop) => {
+//   const propName = prop.escapedName as string
+//   // if !map[prop.escapedName] -- log
+//   const sprop = checker.getPropertyOfType(source.type, propName)
+//   propMap[propName].sprop = checker.getTypeOfSymbol(sprop)
+// })
+// // for each prop in map
+// // compare types (target, source)
+//    }
 
 // function compareProperties(targetProps: PropMap, sourceProps: PropMap) {}
 
@@ -101,144 +388,13 @@ interface TypeInfo {
 //   return parentMap
 // }
 
-function compareTypes(target, source) {
-  // stop when we find a problem
-  ;(target.types || [target]).some((target) => {
-    if (source.symbol === target.symbol) {
-      const propMap = {}
-      const propertyNamesMatch = (first, second) => {
-        const props = first.getProperties()
-        return props.every((prop1) => {
-          const propName = prop1.escapedName as string
-          const prop2 = checker.getPropertyOfType(second, propName)
-          if (prop2) {
-            // properties = getPropertiesOfType(target);
-            // targetProp = properties_2[_i];
-            // if (!(requireOptionalProperties || !(targetProp.flags & 16777216 /* Optional */ || ts.getCheckFlags(targetProp) & 48 /* Partial */))) return [3 /*break*/, 5];
-            // sourceProp = getPropertyOfType(source, targetProp.escapedName);
-
-            // targetType = getTypeOfSymbol(targetProp);
-            // if (!(targetType.flags & 109440 /* Unit */)) return [3 /*break*/, 5];
-            // sourceType = getTypeOfSymbol(sourceProp);
-            // if (!!(sourceType.flags & 1 /* Any */ || getRegularTypeOfLiteralType(sourceType) === getRegularTypeOfLiteralType(targetType))) return [3 /*break*/, 5];
-
-            if (!propMap[propName]) {
-              propMap[propName] = { sourcePropType: checker.getTypeOfSymbol(prop2) }
-            } else {
-              propMap[propName].targetPropType = checker.getTypeOfSymbol(prop2)
-            }
-          }
-          return !!prop2
-        })
-      }
-      if (propertyNamesMatch(source, target) && propertyNamesMatch(source, target)) {
-        return Object.values(propMap).every(({ targetPropType, sourcePropType }) => {
-          compareTypes(targetPropType, sourcePropType)
-          return true
-        })
-      }
-
-      //   // if (
-      //   //  return symbol.flags & 33554432 /* Transient */ ? symbol.checkFlags : 0;
-      //   const fg = targetProp.flags & 16777216
-
-      //   const ff = !(targetProp.flags & 16777216 /* Optional */ || ts.getCheckFlags(targetProp) & 48)
-      //   propMap[propName] = { tprop: checker.getTypeOfSymbol(tprop) }
-      // })
-      // const tprops = checker.getPropertiesOfType(target.type)
-      // tprops.forEach((prop) => {
-      //   const propName = prop.escapedName as string
-      //   // if !map[prop.escapedName] -- log
-      //   const sprop = checker.getPropertyOfType(source.type, propName)
-      //   propMap[propName].sprop = checker.getTypeOfSymbol(sprop)
-      // })
-      // // for each prop in map
-      // // compare types (target, source)
-    }
-    return false
-    //}
-  })
-}
-
-function elaborateMismatch(code, node: ts.Node) {
-  const children = node.getChildren()
-  switch (node.kind) {
-    // can't return this type
-    case ts.SyntaxKind.ReturnStatement: {
-      const sourceType: ts.Type = checker.getTypeAtLocation(children[1])
-      const returnContainer = ts.findAncestor(node.parent, (node) => {
-        return !!node && (isFunctionLikeKind(node.kind) || ts.isClassStaticBlockDeclaration(node))
-      })
-      if (returnContainer) {
-        const targetType: ts.Type = checker
-          .getSignaturesOfType(checker.getTypeAtLocation(returnContainer), 0)[0]
-          .getReturnType()
-        const sourceTypeText = node.getText()
-        const targetTypeText = checker.typeToString(targetType)
-        console.log(`TS${code} Types don't match! "(...): ${targetTypeText}" !== "${sourceTypeText}"`)
-        compareTypes(targetType, sourceType)
-      }
-
-      break
-    }
-    // can't set A = B, or A = func()
-    case ts.SyntaxKind.VariableDeclaration: {
-      const targetType: ts.Type = checker.getTypeAtLocation(children[0])
-      const sourceType: ts.Type = checker.getTypeAtLocation(children[children.length - 1])
-      const sourceTypeText = checker.typeToString(sourceType)
-      const targetTypeText = checker.typeToString(targetType)
-      console.log(`TS${code} Types don't match! "${targetTypeText}" !== "${sourceTypeText}"`)
-      compareTypes(targetType, sourceType)
-      break
-    }
-
-    // can't pass these values to this call
-    case ts.SyntaxKind.CallExpression: {
-      const signature = checker.getSignaturesOfType(checker.getTypeAtLocation(children[0]), 0)[0]
-      const args = children[2].getChildren()
-      signature.getParameters().forEach((param) => {
-        const targetType = checker.getTypeOfSymbolAtLocation(param, node)
-        const sourceType = checker.getTypeAtLocation(args[0])
-      })
-      break
-    }
-  }
-}
-
-function elaborate(semanticDiagnostics: readonly ts.Diagnostic[]) {
-  semanticDiagnostics.forEach(({ code, file, start, messageText }) => {
-    const token = ts.getTokenAtPosition(file, start)
-    const node = token.parent
-    switch (code) {
-      case 2322:
-      case 2559:
-      case 2345:
-        console.log('\n\n=======================')
-        elaborateMismatch(code, node)
-        break
-    }
-  })
-}
-
-/////////////////////////////////////////////////////////////
-/////////////////////////////////////////////////////////////
-/////////////////////////////////////////////////////////////
-const fileNames = process.argv.slice(2)
-// Read tsconfig.json file
-const tsconfigPath = ts.findConfigFile(fileNames[0], ts.sys.fileExists, 'tsconfig.json')
-if (tsconfigPath) {
-  const tsconfigFile = ts.readConfigFile(tsconfigPath, ts.sys.readFile)
-  options = ts.parseJsonConfigFileContent(tsconfigFile.config, ts.sys, path.dirname(tsconfigPath)).options
-}
-options.isolatedModules = false
-const program = ts.createProgram(fileNames, options)
-const checker = program.getTypeChecker()
-const syntactic = program.getSyntacticDiagnostics()
-if (!syntactic.length) {
-  elaborate(program.getSemanticDiagnostics())
-} else {
-  console.log('Fix syntactic errors first', syntactic)
-}
+// function getRegularTypeOfLiteralType(type) {
+//   return type.flags & 2944 /* Literal */
+//     ? type.regularType
+//     : type.flags & 1048576 /* Union */
+//     ? type.regularType || (type.regularType = mapType(type, getRegularTypeOfLiteralType))
+//     : type
+// }
 
 // switch (expression.kind) {
 //   case ts.SyntaxKind.CallExpression:

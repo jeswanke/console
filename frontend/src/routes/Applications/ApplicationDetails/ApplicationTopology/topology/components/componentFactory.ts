@@ -8,6 +8,7 @@ import {
   ComponentFactory,
   withDragNode,
   withSelection,
+  ConnectDropTarget,
 } from '@patternfly/react-topology'
 
 import StyledNode from './StyledNode'
@@ -17,16 +18,18 @@ const defaultComponentFactory: ComponentFactory = (kind: ModelKind): ComponentTy
   switch (kind) {
     case ModelKind.graph:
       return withPanZoom()(GraphComponent)
-    // case ModelKind.node:
-    //   return withDragNode()(withSelection()(StyledNode))
-    // case ModelKind.edge:
-    //   return StyledEdge
+    case ModelKind.node:
+      return withDragNode()(withSelection()(StyledNode))
+    case ModelKind.edge:
+      return StyledEdge
     default:
       return undefined
   }
   return 33
 }
 
+const dffs = null
+console.log(dffs)
 interface test {
   prop?: {
     ese: number
