@@ -2,6 +2,7 @@
 
 import path from 'path'
 import ts from 'typescript'
+import cloneDeep from 'lodash/cloneDeep'
 
 let options: ts.CompilerOptions = {
   target: ts.ScriptTarget.ES5,
@@ -40,17 +41,35 @@ function isFunctionLikeKind(kind: ts.SyntaxKind) {
   }
 }
 
+function isElaboratableKind(kind: ts.SyntaxKind) {
+  switch (kind) {
+    case ts.SyntaxKind.ReturnStatement:
+    case ts.SyntaxKind.VariableDeclaration:
+    case ts.SyntaxKind.CallExpression:
+      return true
+    default:
+      return false
+  }
+}
+
 function link(node: ts.Node) {
   const file = node.getSourceFile()
   const relative = path.relative(process.argv[1], file.fileName).replace(/\.\.\//g, '')
   return `${relative}:${file.getLineAndCharacterOfPosition(node.getStart()).line + 1}`
 }
 
+function nodeInfo(node: ts.Node) {
+  return {
+    text: node.getText(),
+    link: link(node),
+  }
+}
+
 // !!!!!!!!!!!!!THE PAYOFF!!!!!!!!!!
-function thePayoff(missings, mismatches, context) {
+function thePayoff(missings, mismatches, parents, context) {
   const links: any = []
   if (context.noUndefined) {
-    console.log(`\nAPPEND "| undefined" here: ${context.targetTypeText} "| undefined"`)
+    console.log(`\nADD "| undefined" here: ${context.targetTypeText} "| undefined"`)
     console.log(context.links)
   } else if (missings.length) {
     console.log('\nFOR these properties:\n')
@@ -59,25 +78,20 @@ function thePayoff(missings, mismatches, context) {
       console.log('\u2022 ' + declaration.getText())
       links.push(link(declaration))
     })
-    console.log(`\nAPPEND them here: ${context.targetTypeText}`)
+    console.log(`\nADD them here: ${context.targetTypeText}`)
     console.log([context.targetLink])
     console.log('\nOR make them optional:')
     console.log(links)
   } else if (mismatches.length) {
-    console.log('\nMISMATCH')
-    const sf = context.node.getText()
-    const sd = link(context.node)
-    const sdf = 0
+    mismatches.forEach(({ source, sourceType, target, targetType }) => {
+      console.log(`\nEITHER make the source === ${targetType}`)
+      console.log(`\nOR union the target type with ${sourceType}`)
+      console.log(links)
 
-    // ON this line:
-    // DO THIS make 55 a string
-    // OR THIS sdf: string | number
-
-    mismatches.forEach(({ source, target }) => {
-      if (target.node) {
-        const sd = link(target.node)
-        const sdr = 0
-      }
+      // if (target.node) {
+      //   const sd = link(target.node)
+      //   const sdr = 0
+      // }
 
       // let declaration = source.declarations[0]
       // console.log('\u2022 ' + declaration.getText())
@@ -89,7 +103,7 @@ function thePayoff(missings, mismatches, context) {
       // console.log(links)
     })
   } else {
-    console.log(context.code)
+    console.log("Oh man--this ain't good!!!")
   }
 }
 
@@ -113,7 +127,12 @@ function compareProperties(first, second) {
             targettype: secondType,
           })
         } else {
-          recurses.push({ target: firstType, source: secondType })
+          recurses.push({
+            target: firstType,
+            targetDeclarations: (secondProp?.parent || secondProp?.syntheticOrigin).declarations,
+            source: secondType,
+            sourceDeclarations: (firstProp?.parent || firstProp?.syntheticOrigin).declarations,
+          })
         }
       }
     } else if (!(firstProp.flags & ts.SymbolFlags.Optional)) {
@@ -124,7 +143,7 @@ function compareProperties(first, second) {
 }
 
 // we know TS found a mismatch here -- we just have to find it again
-function compareTypes(itarget, isource, context, bothWays = false) {
+function compareTypes(itarget, isource, parents, context, bothWays = false) {
   let reversed = false
   let missings = []
   let mismatches: any = []
@@ -138,23 +157,41 @@ function compareTypes(itarget, isource, context, bothWays = false) {
       return targets.some((target) => {
         if (source !== target) {
           if (source.intrinsicName !== 'undefined') {
+            const targetType = checker.typeToString(target)
+            const sourceType = checker.typeToString(source)
             if (source.value) {
               mismatches.push({
                 source: source,
                 sourceType: typeof source.value,
                 target: target,
-                targetType: checker.typeToString(target),
+                targetType,
               })
-            } else if (target.intrinsicName !== 'undefined') {
+            } else if (!target.intrinsicName) {
               ;({ missings, mismatches, recurses } = compareProperties(source, target))
               if (!missings.length && !mismatches.length && bothWays) {
                 reversed = true
                 ;({ missings, mismatches } = compareProperties(target, source))
               }
-              if (!missings.length && !mismatches.length && recurses.length) {
-                propertyTypes.push(recurses)
-                return true
+              if (!missings.length && !mismatches.length) {
+                if (!recurses.length) {
+                  mismatches.push({
+                    source: source,
+                    sourceType,
+                    target: target,
+                    targetType,
+                  })
+                } else {
+                  propertyTypes.push(recurses)
+                  return true
+                }
               }
+            } else if (target.intrinsicName !== 'undefined') {
+              mismatches.push({
+                source: source,
+                sourceType,
+                target: target,
+                targetType,
+              })
             }
           } else {
             noUndefined = true
@@ -167,22 +204,34 @@ function compareTypes(itarget, isource, context, bothWays = false) {
   ) {
     context.reversed = reversed
     context.noUndefined = noUndefined
-    thePayoff(missings, mismatches, context)
+    thePayoff(missings, mismatches, parents, context)
     return false
   }
   if (propertyTypes.length) {
     // when properties types are made up of other properties
     // (ex: a structure and not an intrinsicName like 'string')
     return propertyTypes.every((recurses) => {
-      return recurses.every(({ target, source }) => {
-        return compareTypes(target, source, context, bothWays)
+      return recurses.every(({ target, targetDeclarations, source, sourceDeclarations }) => {
+        const cloneParents = cloneDeep(parents)
+        cloneParents.push({
+          targetType: checker.typeToString(target),
+          sourceType: checker.typeToString(source),
+          sourceDeclarations: sourceDeclarations.map(nodeInfo),
+          targetDeclarations: targetDeclarations.map(nodeInfo),
+        })
+
+        return compareTypes(target, source, cloneParents, context, bothWays)
       })
     })
   }
   return true
 }
 
-function elaborateMismatch(code, node: ts.Node) {
+function elaborateOnTheMismatch(code, node: ts.Node) {
+  node =
+    ts.findAncestor(node, (node) => {
+      return !!node && isElaboratableKind(node.kind)
+    }) || node
   const children = node.getChildren()
   switch (node.kind) {
     // can't return this type
@@ -228,7 +277,22 @@ function elaborateMismatch(code, node: ts.Node) {
         compareTypes(
           targetType,
           sourceType,
-          { code, node, targetTypeText, targetLink, sourceTypeText, links: [link(node), targetLink] },
+          [
+            {
+              targetType: targetTypeText,
+              sourceType: sourceTypeText,
+              sourceDeclarations: [[nodeInfo(node)]],
+              targetDeclarations: [[{ text: targetTypeText, link: targetLink }]],
+            },
+          ],
+          {
+            code,
+            node,
+            targetTypeText,
+            targetLink,
+            sourceTypeText,
+            links: [link(node), targetLink],
+          },
           options.strictFunctionTypes
         )
       }
@@ -242,12 +306,30 @@ function elaborateMismatch(code, node: ts.Node) {
       const sourceTypeText = checker.typeToString(sourceType)
       const targetTypeText = checker.typeToString(targetType)
       console.log(`TS${code}: ${targetTypeText} !== ${sourceTypeText}`)
-      compareTypes(targetType, sourceType, { code, node, targetTypeText, sourceTypeText })
+      compareTypes(
+        targetType,
+        sourceType,
+        [
+          {
+            targetType: targetTypeText,
+            sourceType: sourceTypeText,
+            // targetDeclarations: [targetType.symbol.declarations?.map(nodeInfo)],
+            // sourceDeclarations: [sourceType.symbol.declarations?.map(nodeInfo)],
+          },
+        ],
+        {
+          code,
+          node,
+          targetTypeText,
+          sourceTypeText,
+        }
+      )
       break
     }
 
     // can't pass these values to this call
     case ts.SyntaxKind.CallExpression: {
+      console.log('call')
       const signature = checker.getSignaturesOfType(checker.getTypeAtLocation(children[0]), 0)[0]
       const args = children[2].getChildren()
       signature.getParameters().forEach((param) => {
@@ -256,6 +338,8 @@ function elaborateMismatch(code, node: ts.Node) {
       })
       break
     }
+    default:
+      console.log("Oh man--this ain't good!!!")
   }
 }
 
@@ -263,13 +347,7 @@ function getNodeMap(sourceFile: ts.SourceFile) {
   let nodeMap = {}
   mapNodes(sourceFile)
   function mapNodes(node: ts.Node) {
-    switch (node.kind) {
-      case ts.SyntaxKind.ReturnStatement:
-      case ts.SyntaxKind.VariableDeclaration:
-      case ts.SyntaxKind.CallExpression:
-        nodeMap[node.getStart()] = node
-        break
-    }
+    nodeMap[node.getStart()] = node
     ts.forEachChild(node, mapNodes)
   }
   return nodeMap
@@ -290,13 +368,15 @@ function elaborate(semanticDiagnostics: readonly ts.Diagnostic[]) {
           case 2559:
           case 2345:
             console.log('\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n')
-            elaborateMismatch(code, node)
+            elaborateOnTheMismatch(code, node)
             break
+          // default:
+          //   console.log(`TS${code}: ${messageText}\n  ${link(node)}\n  https://typescript.tv/errors/#TS${code}`)
         }
       }
     }
   })
-  console.log('\n-33-\n---------------------')
+  console.log('\n\n--------------------------------------------------------------------------')
 }
 
 /////////////////////////////////////////////////////////////
