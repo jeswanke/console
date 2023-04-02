@@ -3,6 +3,7 @@
 import path from 'path'
 import ts from 'typescript'
 import cloneDeep from 'lodash/cloneDeep'
+const { Table } = require('console-table-printer')
 
 let options: ts.CompilerOptions = {
   target: ts.ScriptTarget.ES5,
@@ -58,19 +59,57 @@ function link(node: ts.Node) {
   return `${relative}:${file.getLineAndCharacterOfPosition(node.getStart()).line + 1}`
 }
 
-function nodeInfo(node: ts.Node) {
-  return {
-    text: node.getText(),
-    link: link(node),
-  }
-}
-
 // !!!!!!!!!!!!!THE PAYOFF!!!!!!!!!!
-function thePayoff(missings, mismatches, parents, context) {
+function thePayoff(missings, mismatches, stack, context) {
+  // const gg = [
+  //   ['help', 'me'],
+  //   ['frick', 'frck'],
+  // ]
+  //Create a table
+  const p = new Table({
+    columns: [
+      { name: 'target', title: 'Target', alignment: 'left' },
+      { name: 'source', title: 'Source', alignment: 'left' },
+    ],
+    // colorMap: {
+    //   custom_green: '\x1b[32m', // define customized color
+    // },
+  })
+  //  p.addRow({ target: 'rosa hemd wie immer', source: 'adsdgfs' }, { color: 'cyan' })
+
+  stack.forEach(({ source, target, targetType, sourceType }, inx) => {
+    if (inx === 0) {
+      p.addRow({ target: target?.text, source: source?.text }, { color: 'green' })
+    } else {
+      //const dsf =
+      const sdf = checker.typeToString(checker.getTypeOfSymbol(source.declarations[0].parent.symbol))
+      const f = source.declarations[0].getText()
+      const x = source.declarations[0].parent.symbol.declarations[0].getText()
+      const g = target.declarations[0].getText()
+      const y = target.declarations[0].parent.getText()
+      p.addRow(
+        {
+          target: ` └─${targetType}`,
+          source: ` └-${sourceType}`,
+        },
+        { color: 'green' }
+      )
+      p.addRow(
+        { target: `   └─${target.declarations[0].getText()}`, source: `   └─${source.declarations[0].getText()}` },
+        { color: 'green' }
+      )
+      //console.log(`    ${target.declarations[0].getText()}     ${source.declarations[0].getText()}`)
+      //      console.log(`  ${target.escapedName}: ${targetType} !==  ${source.escapedName}: ${sourceType}`)
+    }
+  })
+  p.printTable()
+  // source: (firstProp?.parent || firstProp?.syntheticOrigin).declarations,
+  // target: (secondProp?.parent || secondProp?.syntheticOrigin).declarations,
+
+  if (stack.length) return
   const links: any = []
   if (context.noUndefined) {
     console.log(`\nADD "| undefined" here: ${context.targetTypeText} "| undefined"`)
-    console.log(context.links)
   } else if (missings.length) {
     console.log('\nFOR these properties:\n')
     missings.forEach(({ theProp }) => {
@@ -78,15 +117,15 @@ function thePayoff(missings, mismatches, parents, context) {
       console.log('\u2022 ' + declaration.getText())
       links.push(link(declaration))
     })
-    console.log(`\nADD them here: ${context.targetTypeText}`)
-    console.log([context.targetLink])
-    console.log('\nOR make them optional:')
-    console.log(links)
+    // console.log(`\nADD them here: ${context.targetTypeText}`)
+    // console.log([context.targetLink])
+    // console.log('\nOR make them optional:')
+    // console.log(links)
   } else if (mismatches.length) {
     mismatches.forEach(({ source, sourceType, target, targetType }) => {
       console.log(`\nEITHER make the source === ${targetType}`)
       console.log(`\nOR union the target type with ${sourceType}`)
-      console.log(links)
+      //      console.log(links)
 
       // if (target.node) {
       //   const sd = link(target.node)
@@ -103,47 +142,53 @@ function thePayoff(missings, mismatches, parents, context) {
       // console.log(links)
     })
   } else {
-    console.log("Oh man--this ain't good!!!")
+    console.log('Unidentified assignment error')
   }
 }
 
-function compareProperties(first, second) {
+function compareProperties(firstType, secondType) {
   const missings: any = []
   const mismatches: any = []
   const recurses: any = []
-  first.getProperties().forEach((firstProp) => {
+  firstType.getProperties().forEach((firstProp) => {
     firstProp = firstProp?.syntheticOrigin || firstProp
     const propName = firstProp.escapedName as string
-    const secondProp = checker.getPropertyOfType(second, propName)
+    const secondProp = checker.getPropertyOfType(secondType, propName)
     if (secondProp) {
-      const firstType = checker.getTypeOfSymbol(firstProp)
-      const secondType = checker.getTypeOfSymbol(secondProp)
+      const firstPropType = checker.getTypeOfSymbol(firstProp)
+      const secondPropType = checker.getTypeOfSymbol(secondProp)
       if (firstType !== secondType) {
+        // if both are simple types, just log the error
         if ((firstType.intrinsicName || 'not') !== (secondType.intrinsicName || 'not')) {
           mismatches.push({
             source: firstProp,
-            sourceType: firstType,
+            sourceType: firstPropType,
             target: secondProp,
-            targettype: secondType,
+            targettype: secondPropType,
           })
         } else {
+          // else recurse the complex types of these properties
           recurses.push({
-            target: firstType,
-            targetDeclarations: (secondProp?.parent || secondProp?.syntheticOrigin).declarations,
-            source: secondType,
-            sourceDeclarations: (firstProp?.parent || firstProp?.syntheticOrigin).declarations,
+            target: secondPropType,
+            source: firstPropType,
+            branch: {
+              source: firstProp,
+              target: secondProp,
+              sourceType: checker.typeToString(firstPropType),
+              targetType: checker.typeToString(secondPropType),
+            },
           })
         }
       }
     } else if (!(firstProp.flags & ts.SymbolFlags.Optional)) {
-      missings.push({ target: second, theProp: firstProp })
+      missings.push({ target: secondType, theProp: firstProp })
     }
   })
   return { missings, mismatches, recurses }
 }
 
 // we know TS found a mismatch here -- we just have to find it again
-function compareTypes(itarget, isource, parents, context, bothWays = false) {
+function compareTypes(itarget, isource, stack, context, bothWays = false) {
   let reversed = false
   let missings = []
   let mismatches: any = []
@@ -204,23 +249,19 @@ function compareTypes(itarget, isource, parents, context, bothWays = false) {
   ) {
     context.reversed = reversed
     context.noUndefined = noUndefined
-    thePayoff(missings, mismatches, parents, context)
+    thePayoff(missings, mismatches, stack, context)
     return false
   }
   if (propertyTypes.length) {
     // when properties types are made up of other properties
     // (ex: a structure and not an intrinsicName like 'string')
     return propertyTypes.every((recurses) => {
-      return recurses.every(({ target, targetDeclarations, source, sourceDeclarations }) => {
-        const cloneParents = cloneDeep(parents)
-        cloneParents.push({
-          targetType: checker.typeToString(target),
-          sourceType: checker.typeToString(source),
-          sourceDeclarations: sourceDeclarations.map(nodeInfo),
-          targetDeclarations: targetDeclarations.map(nodeInfo),
+      return recurses.every(({ target, source, branch }) => {
+        const clonedStack = cloneDeep(stack)
+        clonedStack.push({
+          ...branch,
         })
-
-        return compareTypes(target, source, cloneParents, context, bothWays)
+        return compareTypes(target, source, clonedStack, context, bothWays)
       })
     })
   }
@@ -233,6 +274,7 @@ function elaborateOnTheMismatch(code, node: ts.Node) {
       return !!node && isElaboratableKind(node.kind)
     }) || node
   const children = node.getChildren()
+  console.log(`TS${code}: Target !== Source`)
   switch (node.kind) {
     // can't return this type
     case ts.SyntaxKind.ReturnStatement: {
@@ -273,16 +315,13 @@ function elaborateOnTheMismatch(code, node: ts.Node) {
           targetLink = link(container)
         }
         const sourceTypeText = node.getText()
-        console.log(`TS${code}: ${targetTypeText} !== ${sourceTypeText}`)
         compareTypes(
           targetType,
           sourceType,
           [
             {
-              targetType: targetTypeText,
-              sourceType: sourceTypeText,
-              sourceDeclarations: [[nodeInfo(node)]],
-              targetDeclarations: [[{ text: targetTypeText, link: targetLink }]],
+              target: { text: targetTypeText, link: targetLink },
+              source: { text: sourceTypeText, link: link(node) },
             },
           ],
           {
@@ -291,7 +330,6 @@ function elaborateOnTheMismatch(code, node: ts.Node) {
             targetTypeText,
             targetLink,
             sourceTypeText,
-            links: [link(node), targetLink],
           },
           options.strictFunctionTypes
         )
@@ -305,16 +343,13 @@ function elaborateOnTheMismatch(code, node: ts.Node) {
       const sourceType: ts.Type = checker.getTypeAtLocation(children[children.length - 1])
       const sourceTypeText = checker.typeToString(sourceType)
       const targetTypeText = checker.typeToString(targetType)
-      console.log(`TS${code}: ${targetTypeText} !== ${sourceTypeText}`)
       compareTypes(
         targetType,
         sourceType,
         [
           {
-            targetType: targetTypeText,
-            sourceType: sourceTypeText,
-            // targetDeclarations: [targetType.symbol.declarations?.map(nodeInfo)],
-            // sourceDeclarations: [sourceType.symbol.declarations?.map(nodeInfo)],
+            source: sourceType.symbol,
+            target: targetType.symbol,
           },
         ],
         {
@@ -339,7 +374,7 @@ function elaborateOnTheMismatch(code, node: ts.Node) {
       break
     }
     default:
-      console.log("Oh man--this ain't good!!!")
+      console.log(`Missing support for kind === ${node.kind}`)
   }
 }
 
@@ -367,7 +402,7 @@ function elaborate(semanticDiagnostics: readonly ts.Diagnostic[]) {
           case 2322:
           case 2559:
           case 2345:
-            console.log('\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n')
+            console.log('\n\n')
             elaborateOnTheMismatch(code, node)
             break
           // default:
@@ -393,8 +428,7 @@ options.isolatedModules = false
 const program = ts.createProgram(fileNames, options)
 const checker = program.getTypeChecker()
 const syntactic = program.getSyntacticDiagnostics()
-if (!syntactic.length) {
-  elaborate(program.getSemanticDiagnostics())
-} else {
-  console.log('Fix syntactic errors first', syntactic)
+elaborate(program.getSemanticDiagnostics())
+if (!!syntactic.length) {
+  console.log('Warning: there were syntax errors.', syntactic)
 }
