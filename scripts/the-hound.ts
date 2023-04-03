@@ -60,7 +60,7 @@ function link(node: ts.Node) {
 }
 
 // !!!!!!!!!!!!!THE PAYOFF!!!!!!!!!!
-function thePayoff(missings, mismatches, stack, context) {
+function theBigPayoff(missings, mismatches, stack, context) {
   // const gg = [
   //   ['help', 'me'],
   //   ['frick', 'frck'],
@@ -78,15 +78,18 @@ function thePayoff(missings, mismatches, stack, context) {
   //  p.addRow({ target: 'rosa hemd wie immer', source: 'adsdgfs' }, { color: 'cyan' })
 
   stack.forEach(({ source, target, targetType, sourceType }, inx) => {
-    if (inx === 0) {
+    if (target?.text) {
       p.addRow({ target: target?.text, source: source?.text }, { color: 'green' })
     } else {
-      //const dsf =
-      const sdf = checker.typeToString(checker.getTypeOfSymbol(source.declarations[0].parent.symbol))
-      const f = source.declarations[0].getText()
-      const x = source.declarations[0].parent.symbol.declarations[0].getText()
-      const g = target.declarations[0].getText()
-      const y = target.declarations[0].parent.getText()
+      // //const dsf =
+      // const sdf = checker.typeToString(checker.getTypeOfSymbol(source.declarations[0].parent.symbol))
+      // const sdfe = checker.typeToString(checker.getTypeAtLocation(source.declarations[0].parent.symbol.declarations[0]))
+      // const sdje = checker.typeToString(checker.getTypeAtLocation(target.declarations[0].parent.symbol.declarations[0]))
+      // const f = source.declarations[0].getText()
+      // const x = source.declarations[0].parent.symbol.declarations[0].getText()
+      // const g = target.declarations[0].getText()
+      // const y = target.declarations[0].parent.getText()
+
       p.addRow(
         {
           target: ` └─${targetType}`,
@@ -95,7 +98,7 @@ function thePayoff(missings, mismatches, stack, context) {
         { color: 'green' }
       )
       p.addRow(
-        { target: `   └─${target.declarations[0].getText()}`, source: `   └─${source.declarations[0].getText()}` },
+        { target: `   └─${target?.declarations[0].getText()}`, source: `   └─${source?.declarations[0].getText()}` },
         { color: 'green' }
       )
       //console.log(`    ${target.declarations[0].getText()}     ${source.declarations[0].getText()}`)
@@ -249,7 +252,7 @@ function compareTypes(itarget, isource, stack, context, bothWays = false) {
   ) {
     context.reversed = reversed
     context.noUndefined = noUndefined
-    thePayoff(missings, mismatches, stack, context)
+    theBigPayoff(missings, mismatches, stack, context)
     return false
   }
   if (propertyTypes.length) {
@@ -285,45 +288,30 @@ function elaborateOnTheMismatch(code, node: ts.Node) {
         return !!node && (isFunctionLikeKind(node.kind) || ts.isClassStaticBlockDeclaration(node))
       })
       if (container) {
-        let targetType
         let targetLink
         let targetTypeText
-        const typeReference = container
-          .getChildren()
-          .reverse()
-          .find(
-            (c) =>
-              c.kind === ts.SyntaxKind.TypeReference ||
-              c.kind === ts.SyntaxKind.UnionType ||
-              c.kind === ts.SyntaxKind.IntersectionType
-          )
-        if (typeReference) {
-          targetType = checker.getTypeAtLocation(typeReference)
-          targetTypeText = typeReference
-            .getText()
-            .split('\n')
-            .map((l) => l.split('//')[0].trim())
-            .join('')
 
-          targetLink = link(typeReference)
-        } else {
-          const targetType: ts.Type = checker
-            .getSignaturesOfType(checker.getTypeAtLocation(container), 0)[0]
-            .getReturnType()
+        const targetType: ts.Type = checker
+          .getSignaturesOfType(checker.getTypeAtLocation(container), 0)[0]
+          .getReturnType()
 
-          targetTypeText = checker.typeToString(targetType)
-          targetLink = link(container)
-        }
+        targetTypeText = checker.typeToString(targetType)
+        targetLink = link(container)
         const sourceTypeText = node.getText()
+        const stack = [
+          {
+            target: { text: targetTypeText, link: targetLink },
+            source: { text: sourceTypeText, link: link(node) },
+          },
+          {
+            target: { text: targetTypeText, link: targetLink },
+            source: { text: checker.typeToString(sourceType), link: link(node) },
+          },
+        ]
         compareTypes(
           targetType,
           sourceType,
-          [
-            {
-              target: { text: targetTypeText, link: targetLink },
-              source: { text: sourceTypeText, link: link(node) },
-            },
-          ],
+          stack,
           {
             code,
             node,
