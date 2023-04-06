@@ -1,9 +1,11 @@
+import { join } from 'path'
 /* Copyright Contributors to the Open Cluster Management project */
 
 import path from 'path'
 import ts from 'typescript'
+import set from 'lodash/set'
 import cloneDeep from 'lodash/cloneDeep'
-const { Table } = require('console-table-printer')
+import { Table } from 'console-table-printer'
 
 let options: ts.CompilerOptions = {
   target: ts.ScriptTarget.ES5,
@@ -59,101 +61,158 @@ function link(node: ts.Node) {
   return `${relative}:${file.getLineAndCharacterOfPosition(node.getStart()).line + 1}`
 }
 
+function getTypeMap(type: ts.Type) {
+  const map = {}
+  type.getProperties().forEach((prop) => {
+    const propName = prop.escapedName as string
+    const declarations = prop?.declarations
+    let info = {}
+    if (Array.isArray(declarations)) {
+      info = {
+        parentType: checker.typeToString(checker.getTypeAtLocation(declarations[0].parent)),
+        text: declarations[0].getText(),
+        link: link(declarations[0]),
+      }
+    }
+    map[propName] = info
+  })
+  return map
+}
+
 // !!!!!!!!!!!!!THE PAYOFF!!!!!!!!!!
-function theBigPayoff(missings, mismatches, stack, context) {
-  // const gg = [
-  //   ['help', 'me'],
-  //   ['frick', 'frck'],
-  // ]
-  //Create a table
+function theBigPayoff(stack, problem, context) {
+  // Create a table
   const p = new Table({
     columns: [
       { name: 'target', title: 'Target', alignment: 'left' },
       { name: 'source', title: 'Source', alignment: 'left' },
     ],
-    // colorMap: {
-    //   custom_green: '\x1b[32m', // define customized color
-    // },
   })
-  //  p.addRow({ target: 'rosa hemd wie immer', source: 'adsdgfs' }, { color: 'cyan' })
 
-  stack.forEach(({ source, target, targetType, sourceType }, inx) => {
-    if (target?.text) {
-      p.addRow({ target: target?.text, source: source?.text }, { color: 'green' })
+  // log the call stack
+  let index = 0
+  stack.forEach(({ sourceInfo, targetInfo, parentSourceInfo, parentTargetInfo }, inx) => {
+    if (inx === 0) {
+      p.addRow({ target: targetInfo?.text, source: sourceInfo?.text }, { color: 'green' })
     } else {
-      // //const dsf =
-      // const sdf = checker.typeToString(checker.getTypeOfSymbol(source.declarations[0].parent.symbol))
-      // const sdfe = checker.typeToString(checker.getTypeAtLocation(source.declarations[0].parent.symbol.declarations[0]))
-      // const sdje = checker.typeToString(checker.getTypeAtLocation(target.declarations[0].parent.symbol.declarations[0]))
-      // const f = source.declarations[0].getText()
-      // const x = source.declarations[0].parent.symbol.declarations[0].getText()
-      // const g = target.declarations[0].getText()
-      // const y = target.declarations[0].parent.getText()
-
+      if (parentSourceInfo) {
+        p.addRow(
+          {
+            target: ` └${parentTargetInfo.text}`,
+            source: ` └${parentSourceInfo.text}`,
+          },
+          { color: 'green' }
+        )
+      }
       p.addRow(
         {
-          target: ` └─${targetType}`,
-          source: ` └-${sourceType}`,
+          target: `   └${targetInfo.text}`,
+          source: `   └${sourceInfo.text}`,
         },
         { color: 'green' }
       )
-      p.addRow(
-        { target: `   └─${target?.declarations[0].getText()}`, source: `   └─${source?.declarations[0].getText()}` },
-        { color: 'green' }
-      )
-      //console.log(`    ${target.declarations[0].getText()}     ${source.declarations[0].getText()}`)
-      //      console.log(`  ${target.escapedName}: ${targetType} !==  ${source.escapedName}: ${sourceType}`)
     }
   })
-  p.printTable()
-  // source: (firstProp?.parent || firstProp?.syntheticOrigin).declarations,
-  // target: (secondProp?.parent || secondProp?.syntheticOrigin).declarations,
 
-  if (stack.length) return
-  const links: any = []
-  if (context.noUndefined) {
-    console.log(`\nADD "| undefined" here: ${context.targetTypeText} "| undefined"`)
-  } else if (missings.length) {
-    console.log('\nFOR these properties:\n')
-    missings.forEach(({ theProp }) => {
-      const declaration = theProp.declarations[0]
-      console.log('\u2022 ' + declaration.getText())
-      links.push(link(declaration))
+  if (problem) {
+    const mismatch: string[] = []
+    const missing: string[] = []
+    const targetMap = getTypeMap(context.reversed ? problem.sourceType : problem.targetType)
+    const sourceMap = getTypeMap(context.reversed ? problem.targetType : problem.sourceType)
+    Object.keys(sourceMap).forEach((propName) => {
+      if (targetMap[propName] || OPTIONAL) {
+        if (sourceMap[propName].text === targetMap[propName].text) {
+          p.addRow(
+            {
+              target: `     └${targetMap[propName].text}`,
+              source: `     └${sourceMap[propName].text}`,
+            },
+            { color: 'green' }
+          )
+        } else {
+          mismatch.push(propName)
+        }
+      } else {
+        missing.push(propName)
+      }
     })
-    // console.log(`\nADD them here: ${context.targetTypeText}`)
-    // console.log([context.targetLink])
-    // console.log('\nOR make them optional:')
-    // console.log(links)
-  } else if (mismatches.length) {
-    mismatches.forEach(({ source, sourceType, target, targetType }) => {
-      console.log(`\nEITHER make the source === ${targetType}`)
-      console.log(`\nOR union the target type with ${sourceType}`)
-      //      console.log(links)
-
-      // if (target.node) {
-      //   const sd = link(target.node)
-      //   const sdr = 0
-      // }
-
-      // let declaration = source.declarations[0]
-      // console.log('\u2022 ' + declaration.getText())
-      // links.push(link(declaration))
-      // console.log('\nMISMATCH')
-      // declaration = target.declarations[0]
-      // console.log('\u2022 ' + declaration.getText())
-      // links.push(link(declaration))
-      // console.log(links)
+    mismatch.forEach((propName) => {
+      p.addRow(
+        {
+          target: `     ${targetMap[propName].text}`,
+          source: `     ${sourceMap[propName].text}`,
+        },
+        { color: 'yellow' }
+      )
+    })
+    missing.forEach((propName) => {
+      p.addRow(
+        {
+          target: '',
+          source: `     ${sourceMap[propName].text}`,
+        },
+        { color: 'red' }
+      )
     })
   } else {
     console.log('Unidentified assignment error')
   }
+
+  p.printTable()
+  // return
+  // // log the error
+  // // if (context.noUndefined) {
+  // //   console.log(`\nADD "| undefined" here: ${context.targetTypeText} "| undefined"`)
+  // // } else
+  // if (missings.length) {
+  //   missings.forEach(({ theProp, sourcePropNames, targetPropNames }) => {
+  //     const declaration = theProp.declarations[0]
+  //     const sdf = checker.getTypeAtLocation((theProp?.parent || theProp?.syntheticOrigin).parent.declarations[0])
+  //     const parent = checker.typeToString(sdf)
+  //     // target: (secondProp?.parent || secondProp?.syntheticOrigin).declarations,
+
+  //     //      links.push(link(declaration))
+  //     p.addRow({ target: targetPropNames.join(), source: sourcePropNames.join() }, { color: 'green' })
+  //     p.addRow({ target: '', source: declaration.getText() }, { color: 'red' })
+  //   })
+  // } else if (mismatches.length) {
+  //   mismatches.forEach(({ source, sourceType, target, targetType, sourcePropNames = [], targetPropNames = [] }) => {
+  //     p.addRow({ target: targetPropNames.join(), source: sourcePropNames.join() }, { color: 'green' })
+  //     p.addRow({ target: targetType, source: sourceType }, { color: 'red' })
+  //     const sdf = 0
+  //     //      console.log(links)
+
+  //     // if (target.node) {
+  //     //   const sd = link(target.node)
+  //     //   const sdr = 0
+  //     // }
+
+  //     // let declaration = source.declarations[0]
+  //     // console.log('\u2022 ' + declaration.getText())
+  //     // links.push(link(declaration))
+  //     // console.log('\nMISMATCH')
+  //     // declaration = target.declarations[0]
+  //     // console.log('\u2022 ' + declaration.getText())
+  //     // links.push(link(declaration))
+  //     // console.log(links)
+  //   })
+  // }
+
+  // p.printTable()
+
+  // // source: (firstProp?.parent || firstProp?.syntheticOrigin).declarations,
+  // // target: (secondProp?.parent || secondProp?.syntheticOrigin).declarations,
+
+  // if (!missings.length && !mismatches.length) {
+  // }
+  // // if (stack.length) return
+  // // const links: any = []
 }
 
 function compareProperties(firstType, secondType) {
-  const missings: any = []
-  const mismatches: any = []
+  let problem: any | undefined = undefined
   const recurses: any = []
-  firstType.getProperties().forEach((firstProp) => {
+  firstType.getProperties().every((firstProp) => {
     firstProp = firstProp?.syntheticOrigin || firstProp
     const propName = firstProp.escapedName as string
     const secondProp = checker.getPropertyOfType(secondType, propName)
@@ -163,83 +222,75 @@ function compareProperties(firstType, secondType) {
       if (firstType !== secondType) {
         // if both are simple types, just log the error
         if ((firstType.intrinsicName || 'not') !== (secondType.intrinsicName || 'not')) {
-          mismatches.push({
-            source: firstProp,
-            sourceType: firstPropType,
-            target: secondProp,
-            targettype: secondPropType,
-          })
+          problem = {
+            sourceType: firstType,
+            targetType: secondType,
+          }
+          return false
         } else {
           // else recurse the complex types of these properties
           recurses.push({
-            target: secondPropType,
-            source: firstPropType,
+            targetType: secondPropType,
+            sourceType: firstPropType,
             branch: {
-              source: firstProp,
-              target: secondProp,
-              sourceType: checker.typeToString(firstPropType),
-              targetType: checker.typeToString(secondPropType),
+              sourceInfo: { text: checker.typeToString(firstPropType) },
+              targetInfo: { text: checker.typeToString(secondPropType) },
+              parentTargetInfo: { text: checker.typeToString(secondType) },
+              parentSourceInfo: { text: checker.typeToString(firstType) },
             },
           })
         }
       }
     } else if (!(firstProp.flags & ts.SymbolFlags.Optional)) {
-      missings.push({ target: secondType, theProp: firstProp })
+      problem = { sourceType: firstType, targetType: secondType }
+      return false
     }
+    return true
   })
-  return { missings, mismatches, recurses }
+  return { problem, recurses }
 }
 
 // we know TS found a mismatch here -- we just have to find it again
-function compareTypes(itarget, isource, stack, context, bothWays = false) {
+function compareTypes(targetType, sourceType, stack, context, bothWays = false) {
   let reversed = false
-  let missings = []
-  let mismatches: any = []
+  let problem: any | undefined = undefined
   let recurses: any[] = []
   let noUndefined = false
   const propertyTypes: any = []
-  const sources = isource.types || [isource]
-  const targets = itarget.types || [itarget]
+  const sources = sourceType.types || [sourceType]
+  const targets = targetType.types || [targetType]
   if (
     !sources.every((source) => {
       return targets.some((target) => {
         if (source !== target) {
           if (source.intrinsicName !== 'undefined') {
-            const targetType = checker.typeToString(target)
-            const sourceType = checker.typeToString(source)
             if (source.value) {
-              mismatches.push({
-                source: source,
-                sourceType: typeof source.value,
-                target: target,
-                targetType,
-              })
-            } else if (!target.intrinsicName) {
-              ;({ missings, mismatches, recurses } = compareProperties(source, target))
-              if (!missings.length && !mismatches.length && bothWays) {
-                reversed = true
-                ;({ missings, mismatches } = compareProperties(target, source))
+              problem = {
+                sourceType: source,
+                targetType: target,
               }
-              if (!missings.length && !mismatches.length) {
+            } else if (!target.intrinsicName) {
+              ;({ problem, recurses } = compareProperties(source, target))
+              if (!problem && bothWays) {
+                reversed = true
+                ;({ problem } = compareProperties(target, source))
+              }
+              if (!problem) {
                 if (!recurses.length) {
-                  mismatches.push({
-                    source: source,
-                    sourceType,
-                    target: target,
-                    targetType,
-                  })
+                  problem = {
+                    sourceType: source,
+                    targetType: target,
+                  }
                 } else {
                   propertyTypes.push(recurses)
                   return true
                 }
               }
             } else if (target.intrinsicName !== 'undefined') {
-              mismatches.push({
-                source: source,
-                sourceType,
-                target: target,
-                targetType,
-              })
+              problem = {
+                sourceType: source,
+                targetType: target,
+              }
             }
           } else {
             noUndefined = true
@@ -252,19 +303,19 @@ function compareTypes(itarget, isource, stack, context, bothWays = false) {
   ) {
     context.reversed = reversed
     context.noUndefined = noUndefined
-    theBigPayoff(missings, mismatches, stack, context)
+    theBigPayoff(stack, problem, context)
     return false
   }
   if (propertyTypes.length) {
     // when properties types are made up of other properties
     // (ex: a structure and not an intrinsicName like 'string')
     return propertyTypes.every((recurses) => {
-      return recurses.every(({ target, source, branch }) => {
+      return recurses.every(({ targetType, sourceType, branch }) => {
         const clonedStack = cloneDeep(stack)
         clonedStack.push({
           ...branch,
         })
-        return compareTypes(target, source, clonedStack, context, bothWays)
+        return compareTypes(targetType, sourceType, clonedStack, context, bothWays)
       })
     })
   }
@@ -300,12 +351,8 @@ function elaborateOnTheMismatch(code, node: ts.Node) {
         const sourceTypeText = node.getText()
         const stack = [
           {
-            target: { text: targetTypeText, link: targetLink },
-            source: { text: sourceTypeText, link: link(node) },
-          },
-          {
-            target: { text: targetTypeText, link: targetLink },
-            source: { text: checker.typeToString(sourceType), link: link(node) },
+            targetInfo: { text: targetTypeText, link: targetLink },
+            sourceInfo: { text: sourceTypeText, link: link(node) },
           },
         ]
         compareTypes(
@@ -336,8 +383,8 @@ function elaborateOnTheMismatch(code, node: ts.Node) {
         sourceType,
         [
           {
-            source: sourceType.symbol,
-            target: targetType.symbol,
+            sourceInfo: { text: sourceTypeText }, //sourceType.symbol,
+            targetInfo: { text: targetTypeText }, //targetType.symbol,
           },
         ],
         {
