@@ -1,25 +1,13 @@
-import { join } from 'path'
 /* Copyright Contributors to the Open Cluster Management project */
 
 import path from 'path'
 import ts from 'typescript'
-import set from 'lodash/set'
 import cloneDeep from 'lodash/cloneDeep'
 import { Table } from 'console-table-printer'
 
 let options: ts.CompilerOptions = {
   target: ts.ScriptTarget.ES5,
   module: ts.ModuleKind.CommonJS,
-}
-
-interface PropMap {
-  [key: string]: TypeInfo
-}
-interface TypeInfo {
-  parent: TypeInfo
-  type: string
-  maps?: PropMap[]
-  property: any
 }
 
 function isFunctionLikeKind(kind: ts.SyntaxKind) {
@@ -55,23 +43,33 @@ function isElaboratableKind(kind: ts.SyntaxKind) {
   }
 }
 
-function link(node: ts.Node) {
+function getLink(node: ts.Node) {
   const file = node.getSourceFile()
-  const relative = path.relative(process.argv[1], file.fileName).replace(/\.\.\//g, '')
+  let relative: string
+  const relativeArr = path
+    .relative(process.argv[1], file.fileName)
+    .replace(/\.\.\//g, '')
+    .split('node_modules/')
+  if (relativeArr.length > 1) {
+    relative = `node_modules/${relativeArr[1]}`
+  } else {
+    relative = relativeArr[0].split('/').slice(-4).join('/')
+  }
   return `${relative}:${file.getLineAndCharacterOfPosition(node.getStart()).line + 1}`
 }
 
 function getTypeMap(type: ts.Type) {
   const map = {}
   type.getProperties().forEach((prop) => {
+    prop = prop?.syntheticOrigin || prop
     const propName = prop.escapedName as string
     const declarations = prop?.declarations
     let info = {}
     if (Array.isArray(declarations)) {
       info = {
-        parentType: checker.typeToString(checker.getTypeAtLocation(declarations[0].parent)),
+        isOptional: prop.flags & ts.SymbolFlags.Optional,
         text: declarations[0].getText(),
-        link: link(declarations[0]),
+        link: getLink(declarations[0]),
       }
     }
     map[propName] = info
@@ -79,21 +77,28 @@ function getTypeMap(type: ts.Type) {
   return map
 }
 
+function minimize(type) {
+  return type.replace(' | undefined', '')
+}
+
 // !!!!!!!!!!!!!THE PAYOFF!!!!!!!!!!
 function theBigPayoff(stack, problem, context) {
-  // Create a table
+  // error
+  const { sourceInfo, targetInfo } = stack[0]
+  console.log(`TS${context.code}: ${targetInfo.text}  <==  ${sourceInfo.text}`)
+
+  // log the call stack
   const p = new Table({
     columns: [
-      { name: 'target', title: 'Target', alignment: 'left' },
-      { name: 'source', title: 'Source', alignment: 'left' },
+      { name: 'target', title: targetInfo.link, alignment: 'left' },
+      { name: 'source', title: sourceInfo.link, alignment: 'left' },
     ],
   })
 
-  // log the call stack
   let index = 0
   stack.forEach(({ sourceInfo, targetInfo, parentSourceInfo, parentTargetInfo }, inx) => {
     if (inx === 0) {
-      p.addRow({ target: targetInfo?.text, source: sourceInfo?.text }, { color: 'green' })
+      p.addRow({ target: targetInfo?.text, source: sourceInfo?.text.replace('return ', '') }, { color: 'green' })
     } else {
       if (parentSourceInfo) {
         p.addRow(
@@ -114,24 +119,33 @@ function theBigPayoff(stack, problem, context) {
     }
   })
 
+  // problem assignment
   if (problem) {
     const mismatch: string[] = []
     const missing: string[] = []
     const targetMap = getTypeMap(context.reversed ? problem.sourceType : problem.targetType)
     const sourceMap = getTypeMap(context.reversed ? problem.targetType : problem.sourceType)
     Object.keys(sourceMap).forEach((propName) => {
-      if (targetMap[propName] || OPTIONAL) {
+      if (targetMap[propName]) {
         if (sourceMap[propName].text === targetMap[propName].text) {
           p.addRow(
             {
-              target: `     └${targetMap[propName].text}`,
-              source: `     └${sourceMap[propName].text}`,
+              target: `     ${targetMap[propName].text}`,
+              source: `     ${sourceMap[propName].text}`,
             },
             { color: 'green' }
           )
         } else {
           mismatch.push(propName)
         }
+      } else if (sourceMap[propName].isOptional) {
+        // p.addRow(
+        //   {
+        //     target: '',
+        //     source: `     ${sourceMap[propName].text}`,
+        //   },
+        //   { color: 'green' }
+        // )
       } else {
         missing.push(propName)
       }
@@ -154,59 +168,9 @@ function theBigPayoff(stack, problem, context) {
         { color: 'red' }
       )
     })
-  } else {
-    console.log('Unidentified assignment error')
   }
 
   p.printTable()
-  // return
-  // // log the error
-  // // if (context.noUndefined) {
-  // //   console.log(`\nADD "| undefined" here: ${context.targetTypeText} "| undefined"`)
-  // // } else
-  // if (missings.length) {
-  //   missings.forEach(({ theProp, sourcePropNames, targetPropNames }) => {
-  //     const declaration = theProp.declarations[0]
-  //     const sdf = checker.getTypeAtLocation((theProp?.parent || theProp?.syntheticOrigin).parent.declarations[0])
-  //     const parent = checker.typeToString(sdf)
-  //     // target: (secondProp?.parent || secondProp?.syntheticOrigin).declarations,
-
-  //     //      links.push(link(declaration))
-  //     p.addRow({ target: targetPropNames.join(), source: sourcePropNames.join() }, { color: 'green' })
-  //     p.addRow({ target: '', source: declaration.getText() }, { color: 'red' })
-  //   })
-  // } else if (mismatches.length) {
-  //   mismatches.forEach(({ source, sourceType, target, targetType, sourcePropNames = [], targetPropNames = [] }) => {
-  //     p.addRow({ target: targetPropNames.join(), source: sourcePropNames.join() }, { color: 'green' })
-  //     p.addRow({ target: targetType, source: sourceType }, { color: 'red' })
-  //     const sdf = 0
-  //     //      console.log(links)
-
-  //     // if (target.node) {
-  //     //   const sd = link(target.node)
-  //     //   const sdr = 0
-  //     // }
-
-  //     // let declaration = source.declarations[0]
-  //     // console.log('\u2022 ' + declaration.getText())
-  //     // links.push(link(declaration))
-  //     // console.log('\nMISMATCH')
-  //     // declaration = target.declarations[0]
-  //     // console.log('\u2022 ' + declaration.getText())
-  //     // links.push(link(declaration))
-  //     // console.log(links)
-  //   })
-  // }
-
-  // p.printTable()
-
-  // // source: (firstProp?.parent || firstProp?.syntheticOrigin).declarations,
-  // // target: (secondProp?.parent || secondProp?.syntheticOrigin).declarations,
-
-  // if (!missings.length && !mismatches.length) {
-  // }
-  // // if (stack.length) return
-  // // const links: any = []
 }
 
 function compareProperties(firstType, secondType) {
@@ -222,6 +186,7 @@ function compareProperties(firstType, secondType) {
       if (firstType !== secondType) {
         // if both are simple types, just log the error
         if ((firstType.intrinsicName || 'not') !== (secondType.intrinsicName || 'not')) {
+          // mismatch
           problem = {
             sourceType: firstType,
             targetType: secondType,
@@ -233,15 +198,16 @@ function compareProperties(firstType, secondType) {
             targetType: secondPropType,
             sourceType: firstPropType,
             branch: {
-              sourceInfo: { text: checker.typeToString(firstPropType) },
-              targetInfo: { text: checker.typeToString(secondPropType) },
-              parentTargetInfo: { text: checker.typeToString(secondType) },
-              parentSourceInfo: { text: checker.typeToString(firstType) },
+              sourceInfo: { text: minimize(checker.typeToString(firstPropType)) },
+              targetInfo: { text: minimize(checker.typeToString(secondPropType)) },
+              parentTargetInfo: { text: minimize(checker.typeToString(secondType)) },
+              parentSourceInfo: { text: minimize(checker.typeToString(firstType)) },
             },
           })
         }
       }
     } else if (!(firstProp.flags & ts.SymbolFlags.Optional)) {
+      // missing
       problem = { sourceType: firstType, targetType: secondType }
       return false
     }
@@ -328,7 +294,6 @@ function elaborateOnTheMismatch(code, node: ts.Node) {
       return !!node && isElaboratableKind(node.kind)
     }) || node
   const children = node.getChildren()
-  console.log(`TS${code}: Target !== Source`)
   switch (node.kind) {
     // can't return this type
     case ts.SyntaxKind.ReturnStatement: {
@@ -347,12 +312,12 @@ function elaborateOnTheMismatch(code, node: ts.Node) {
           .getReturnType()
 
         targetTypeText = checker.typeToString(targetType)
-        targetLink = link(container)
+        targetLink = getLink(container)
         const sourceTypeText = node.getText()
         const stack = [
           {
             targetInfo: { text: targetTypeText, link: targetLink },
-            sourceInfo: { text: sourceTypeText, link: link(node) },
+            sourceInfo: { text: sourceTypeText, link: getLink(node) },
           },
         ]
         compareTypes(
@@ -369,7 +334,6 @@ function elaborateOnTheMismatch(code, node: ts.Node) {
           options.strictFunctionTypes
         )
       }
-
       break
     }
     // can't set A = B, or A = func()
@@ -378,13 +342,14 @@ function elaborateOnTheMismatch(code, node: ts.Node) {
       const sourceType: ts.Type = checker.getTypeAtLocation(children[children.length - 1])
       const sourceTypeText = checker.typeToString(sourceType)
       const targetTypeText = checker.typeToString(targetType)
+      const link = getLink(node)
       compareTypes(
         targetType,
         sourceType,
         [
           {
-            sourceInfo: { text: sourceTypeText }, //sourceType.symbol,
-            targetInfo: { text: targetTypeText }, //targetType.symbol,
+            sourceInfo: { text: sourceTypeText, link },
+            targetInfo: { text: targetTypeText, link },
           },
         ],
         {
@@ -441,7 +406,7 @@ function elaborate(semanticDiagnostics: readonly ts.Diagnostic[]) {
             elaborateOnTheMismatch(code, node)
             break
           // default:
-          //   console.log(`TS${code}: ${messageText}\n  ${link(node)}\n  https://typescript.tv/errors/#TS${code}`)
+          //   console.log(`TS${code}: ${messageText}\n  ${getLink(node)}\n  https://typescript.tv/errors/#TS${code}`)
         }
       }
     }
@@ -467,3 +432,51 @@ elaborate(program.getSemanticDiagnostics())
 if (!!syntactic.length) {
   console.log('Warning: there were syntax errors.', syntactic)
 }
+// return
+// // log the error
+// // if (context.noUndefined) {
+// //   console.log(`\nADD "| undefined" here: ${context.targetTypeText} "| undefined"`)
+// // } else
+// if (missings.length) {
+//   missings.forEach(({ theProp, sourcePropNames, targetPropNames }) => {
+//     const declaration = theProp.declarations[0]
+//     const sdf = checker.getTypeAtLocation((theProp?.parent || theProp?.syntheticOrigin).parent.declarations[0])
+//     const parent = checker.typeToString(sdf)
+//     // target: (secondProp?.parent || secondProp?.syntheticOrigin).declarations,
+
+//     //      links.push(link(declaration))
+//     p.addRow({ target: targetPropNames.join(), source: sourcePropNames.join() }, { color: 'green' })
+//     p.addRow({ target: '', source: declaration.getText() }, { color: 'red' })
+//   })
+// } else if (mismatches.length) {
+//   mismatches.forEach(({ source, sourceType, target, targetType, sourcePropNames = [], targetPropNames = [] }) => {
+//     p.addRow({ target: targetPropNames.join(), source: sourcePropNames.join() }, { color: 'green' })
+//     p.addRow({ target: targetType, source: sourceType }, { color: 'red' })
+//     const sdf = 0
+//     //      console.log(links)
+
+//     // if (target.node) {
+//     //   const sd = link(target.node)
+//     //   const sdr = 0
+//     // }
+
+//     // let declaration = source.declarations[0]
+//     // console.log('\u2022 ' + declaration.getText())
+//     // links.push(link(declaration))
+//     // console.log('\nMISMATCH')
+//     // declaration = target.declarations[0]
+//     // console.log('\u2022 ' + declaration.getText())
+//     // links.push(link(declaration))
+//     // console.log(links)
+//   })
+// }
+
+// p.printTable()
+
+// // source: (firstProp?.parent || firstProp?.syntheticOrigin).declarations,
+// // target: (secondProp?.parent || secondProp?.syntheticOrigin).declarations,
+
+// if (!missings.length && !mismatches.length) {
+// }
+// // if (stack.length) return
+// // const links: any = []
