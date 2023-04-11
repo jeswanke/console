@@ -12,23 +12,55 @@ let options: ts.CompilerOptions = {
   module: ts.ModuleKind.CommonJS,
 }
 
+const MAX_SHOWN_PROP_MISMATCH = 6
+
 // ===============================================================================
 // ===============================================================================
 // ===============================================================================
 
-function addSolution(solutions, layer, simpleConflict) {
-  if (simpleConflict) {
-    let num = String.fromCharCode('\u2460'.charCodeAt(0) + solutions.length)
-    num = chalk.bold(chalk.green(num))
-    solutions.push(`${num}  ${chalk.green('The solution!')}  `)
-    return num
-  }
-  return ''
+enum Solutions {
+  StrictFunc = '(These errors were caught because the "strictFunctionTypes" option was set)',
 }
 
 // ===============================================================================
 // ===============================================================================
 // ===============================================================================
+
+function addNote(notes: string[], note: string, link?: ts.Node | string, conflict?: boolean) {
+  const num = String.fromCharCode('\u2460'.charCodeAt(0) + notes.length)
+  let fullNote = `${chalk.bold(num)}`
+  if (note) {
+    fullNote += `  ${note}`
+  }
+  if (link) {
+    fullNote += `  ${typeof link === 'string' ? link : getLink(link)}`
+  }
+  if (conflict === true) {
+    fullNote = chalk.red(fullNote)
+  }
+  notes.push(fullNote)
+  return num
+}
+
+function min(notes, type) {
+  type = type.replace(' | undefined', '').replace(/\\n/g, '')
+  if (type.length > 90) {
+    type = `${type.substr(0, 25)}..${type.substr(-45)}  ${addNote(notes, type)}`
+  }
+  return type
+}
+
+function getLink(node: ts.Node | undefined) {
+  if (node) {
+    const file = node.getSourceFile()
+    let relative: string = path.relative(process.argv[1], file.fileName)
+    if (!relative.includes('node_modules/')) {
+      relative = relative.split('/').slice(-4).join('/')
+    }
+    return `${relative}:${file.getLineAndCharacterOfPosition(node.getStart()).line + 1}`
+  }
+  return ''
+}
 
 const simpleTypes = ['string', 'number', 'boolean', 'any', 'unknown', 'never', 'undefined']
 function isSimpleType(type) {
@@ -45,21 +77,6 @@ function typeToString(type) {
   return checker.typeToString(type)
 }
 
-function getLink(node: ts.Node) {
-  const file = node.getSourceFile()
-  let relative: string
-  const relativeArr = path
-    .relative(process.argv[1], file.fileName)
-    .replace(/\.\.\//g, '')
-    .split('node_modules/')
-  if (relativeArr.length > 1) {
-    relative = `node_modules/${relativeArr[1]}`
-  } else {
-    relative = relativeArr[0].split('/').slice(-4).join('/')
-  }
-  return `${relative}:${file.getLineAndCharacterOfPosition(node.getStart()).line + 1}`
-}
-
 function getTypeMap(type: ts.Type) {
   const map = {}
   type.getProperties().forEach((prop) => {
@@ -68,23 +85,23 @@ function getTypeMap(type: ts.Type) {
     const declarations = prop?.declarations
     let info = {}
     if (Array.isArray(declarations)) {
+      const declaration = declarations[0]
+      const text = declaration
+        .getText()
+        .split('\n')
+        .map((seg) => seg.trimStart())
+        .join('')
+      const parentType = checker.typeToString(checker.getTypeAtLocation(declaration.parent))
       info = {
         isOptional: prop.flags & ts.SymbolFlags.Optional,
-        text: declarations[0].getText(),
-        link: getLink(declarations[0]),
+        text,
+        link: getLink(declaration),
+        parentType: parentType.startsWith('{') ? '' : parentType,
       }
     }
     map[propName] = info
   })
   return map
-}
-
-function minimize(type) {
-  type = type.replace(' | undefined', '').replace(/\\n/g, '')
-  if (type.length > 70) {
-    type = type.substr(0, 25) + '..' + type.substr(-45)
-  }
-  return type
 }
 
 // !!!!!!!!!!!!!THE PAYOFF!!!!!!!!!!
@@ -101,11 +118,13 @@ function theBigPayoff(stack, problem, context) {
   })
 
   let index = 0
-  const solutions = []
+  const notes = []
+  const solutions: string[] = []
   let simpleConflict = false
   let lastTargetType
   let lastSourceType
 
+  let spacer = ''
   stack.forEach((layer, inx) => {
     const { sourceInfo, targetInfo, parentSourceInfo, parentTargetInfo } = layer
     simpleConflict = isSimpleConflict(targetInfo?.text, sourceInfo?.text)
@@ -113,40 +132,39 @@ function theBigPayoff(stack, problem, context) {
     if (inx === 0) {
       p.addRow(
         {
-          source: `${minimize(sourceInfo?.text)}  ${addSolution(solutions, layer, simpleConflict)}`,
-          target: `${minimize(targetInfo?.text)}  ${addSolution(solutions, layer, simpleConflict)}`,
+          target: `${min(notes, targetInfo?.text)}`,
+          source: `${min(notes, sourceInfo?.text)}`,
         },
         { color }
       )
+      spacer += '  '
     } else {
       if (parentSourceInfo && parentTargetInfo.text !== lastTargetType && parentSourceInfo.text !== lastSourceType) {
         p.addRow(
           {
-            target: ` └${minimize(parentTargetInfo.text)}  ${addSolution(solutions, layer, simpleConflict)}`,
-            source: ` └${minimize(parentSourceInfo.text)}  ${addSolution(solutions, layer, simpleConflict)}`,
+            source: `${spacer}└${min(notes, parentSourceInfo.text)}`,
+            target: `${spacer}└${min(notes, parentTargetInfo.text)}`,
           },
           { color }
         )
+        spacer += '  '
       }
       if (targetInfo.text !== lastTargetType && sourceInfo.text !== lastSourceType) {
         p.addRow(
           {
-            target: `   ${simpleConflict ? '  ' : '└'}${minimize(targetInfo.text)}`,
-            source: `   ${simpleConflict ? '  ' : '└'}${minimize(sourceInfo.text)}  ${addSolution(
-              solutions,
-              layer,
-              simpleConflict
-            )}`,
+            target: `${spacer}${simpleConflict ? '  ' : '└'}${min(notes, targetInfo.text)}`,
+            source: `${spacer}${simpleConflict ? '  ' : '└'}${min(notes, sourceInfo.text)}`,
           },
           { color }
         )
+        spacer += '  '
       }
     }
     lastTargetType = targetInfo.text
     lastSourceType = sourceInfo.text
   })
 
-  // problem assignment
+  // there were missing/mismatched properties
   if (!simpleConflict && problem) {
     const mismatch: string[] = []
     const missingS2T: string[] = []
@@ -158,8 +176,8 @@ function theBigPayoff(stack, problem, context) {
         if (sourceMap[propName].text === targetMap[propName].text || context.reversed) {
           p.addRow(
             {
-              target: `     ${minimize(targetMap[propName].text)}`,
-              source: `     ${minimize(sourceMap[propName].text)}`,
+              target: `${spacer}${min(notes, targetMap[propName].text)}`,
+              source: `${spacer}${min(notes, sourceMap[propName].text)}`,
             },
             { color: 'green' }
           )
@@ -171,7 +189,7 @@ function theBigPayoff(stack, problem, context) {
           p.addRow(
             {
               target: '',
-              source: `     ${minimize(sourceMap[propName].text)}`,
+              source: `${spacer}${min(notes, sourceMap[propName].text)}`,
             },
             { color: 'green' }
           )
@@ -181,43 +199,85 @@ function theBigPayoff(stack, problem, context) {
       }
     })
     Object.keys(targetMap).forEach((propName) => {
-      if (!sourceMap[propName] || !sourceMap[propName].text) {
+      if (!targetMap[propName].isOptional && (!sourceMap[propName] || !sourceMap[propName].text)) {
         missingT2S.push(propName)
       }
     })
     mismatch.forEach((propName) => {
       p.addRow(
         {
-          target: `     ${minimize(targetMap[propName].text)}`,
-          source: `     ${minimize(sourceMap[propName].text)}  ${addSolution(solutions, propName, true)}`,
+          target: `${spacer}${min(notes, targetMap[propName].text)}`,
+          source: `${spacer}${min(notes, sourceMap[propName].text)}  ${addNote(
+            notes,
+            sourceMap[propName].parentType,
+            sourceMap[propName].link,
+            true
+          )}`,
         },
         { color: 'yellow' }
       )
     })
     missingS2T.some((propName, inx) => {
-      p.addRow(
-        {
-          source: `     ${minimize(sourceMap[propName].text)}  ${addSolution(solutions, propName, true)}  `,
-          target: `      ${addSolution(solutions, propName, true)}`,
-        },
-        { color: 'red' }
-      )
-      return inx > 10
+      if (inx < MAX_SHOWN_PROP_MISMATCH) {
+        p.addRow(
+          {
+            source: `${spacer}${min(notes, sourceMap[propName].text)}  ${addNote(
+              notes,
+              sourceMap[propName].parentType,
+              sourceMap[propName].link,
+              true
+            )}`,
+            target: '',
+          },
+          { color: 'red' }
+        )
+        return false
+      } else {
+        p.addRow(
+          {
+            source: `${spacer}...and ${missingS2T.length - 6} more ...`,
+            target: '',
+          },
+          { color: 'red' }
+        )
+        return true
+      }
     })
     missingT2S.some((propName, inx) => {
-      p.addRow(
-        {
-          target: `     ${minimize(targetMap[propName].text)}  ${addSolution(solutions, propName, true)}}  `,
-          source: `      ${addSolution(solutions, propName, true)}`,
-        },
-        { color: 'red' }
-      )
-      return inx > 10
+      if (inx < MAX_SHOWN_PROP_MISMATCH) {
+        p.addRow(
+          {
+            target: `${spacer}${min(notes, targetMap[propName].text)}  ${addNote(
+              notes,
+              targetMap[propName].parentType,
+              targetMap[propName].link,
+              true
+            )}`,
+            source: '',
+          },
+          { color: 'red' }
+        )
+        return false
+      } else {
+        p.addRow(
+          {
+            target: `${spacer} ...and ${missingT2S.length - 6} more ...`,
+            source: '',
+          },
+          { color: 'red' }
+        )
+        return true
+      }
     })
   }
 
   p.printTable()
-  solutions.forEach((solution) => console.log(solution))
+  solutions.forEach((solution) => console.log(chalk.whiteBright(solution)))
+  if (solutions.length) console.log('')
+  notes.forEach((solution) => console.log(solution))
+  if (context.reversed) {
+    console.log(chalk.red(Solutions.StrictFunc))
+  }
 }
 
 function compareProperties(firstType, secondType) {
@@ -290,15 +350,10 @@ function compareTypes(targetType, sourceType, stack, context, bothWays = false) 
               ;({ problem } = compareProperties(target, source))
             }
             if (!problem) {
-              if (!recurses.length) {
-                problem = {
-                  sourceType: source,
-                  targetType: target,
-                }
-              } else {
+              if (recurses.length) {
                 propertyTypes.push(recurses)
-                return true
               }
+              return true
             }
           }
           return false
@@ -393,7 +448,7 @@ function elaborateAssignmentMismatch(code, node: ts.Node, nodeMaps) {
     const link = getLink(sourceNode)
     const context = {
       code,
-      message: `${node.getText()}`,
+      message: `Bad assignment: ${node.getText()}`,
       hadPayoff: false,
     }
     compareTypes(
@@ -421,11 +476,11 @@ function elaborateReturnMismatch(code, node: ts.Node, containerType: ts.Type | u
   if (container) {
     containerType = containerType || checker.getTypeAtLocation(container)
     const targetType: ts.Type = checker.getSignaturesOfType(containerType, 0)[0].getReturnType()
-    const targetTypeText = typeToString(containerType || targetType)
+    const targetTypeText = typeToString(targetType)
     const sourceTypeText = sourceType.value ? typeof sourceType.value : node.getText()
     const context = {
       code,
-      message: `${targetTypeText} { ${node.getText()} }`,
+      message: `Bad return type: ${targetTypeText} { ${chalk.whiteBright(node.getText())} }`,
       hadPayoff: false,
     }
     compareTypes(
@@ -446,25 +501,28 @@ function elaborateReturnMismatch(code, node: ts.Node, containerType: ts.Type | u
 }
 
 // call func(..A...) => (...B...)
-function elaborateCallMismatches(code, node: ts.Node) {
+function elaborateCallMismatches(code, node: ts.Node, errorNode: ts.Node) {
   const children = node.getChildren()
   // signature of function being called
   const signature = checker.getSignaturesOfType(checker.getTypeAtLocation(children[0]), 0)[0]
   // args that are being passed
   const args = children[2].getChildren().filter((node) => node.kind !== ts.SyntaxKind.CommaToken)
+  const index = args.findIndex((node) => node === errorNode)
   // for each arg, compare its type to call parameter type
   let hadPayoff = false
   const functionName = children[0].getText()
   args.some((arg, inx) => {
+    //if (inx === index) {
     const param = signature.getParameters()[inx]
     const sourceType = checker.getTypeOfSymbolAtLocation(param, node)
     const sourceTypeText = typeToString(sourceType)
     const targetType = checker.getTypeAtLocation(arg)
     const targetTypeText = typeToString(targetType)
     const paramName = chalk.whiteBright(`${param.escapedName}: ${sourceTypeText}`)
-    const message = `${functionName}( ${chalk.whiteBright(arg.getText())}, ) => ${functionName}( ${paramName}, )`
+    const message = `Bad call argument #${inx + 1} type: ${functionName}( ${chalk.whiteBright(
+      arg.getText()
+    )}, ) => ${functionName}( ${paramName}, )`
 
-    //chalk.Level.
     const context = {
       code,
       message,
@@ -486,15 +544,16 @@ function elaborateCallMismatches(code, node: ts.Node) {
     )
     hadPayoff = context.hadPayoff
     return hadPayoff
+    //}
   })
   return hadPayoff
 }
 
-function elaborateMismatch(code, node: ts.Node, nodeMaps) {
-  node =
-    ts.findAncestor(node, (node) => {
+function elaborateMismatch(code, errorNode: ts.Node, nodeMaps) {
+  const node =
+    ts.findAncestor(errorNode, (node) => {
       return !!node && isElaboratableKind(node.kind)
-    }) || node
+    }) || errorNode
   switch (node.kind) {
     // func type !== return type
     case ts.SyntaxKind.ReturnStatement:
@@ -502,7 +561,7 @@ function elaborateMismatch(code, node: ts.Node, nodeMaps) {
 
     // can't call this func with this argument type
     case ts.SyntaxKind.CallExpression:
-      return elaborateCallMismatches(code, node)
+      return elaborateCallMismatches(code, node, errorNode)
 
     // can't set A = B, or A = func()
     case ts.SyntaxKind.VariableDeclaration:
