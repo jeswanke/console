@@ -18,30 +18,120 @@ const MAX_SHOWN_PROP_MISMATCH = 6
 // ===============================================================================
 // ===============================================================================
 
-function showTheResults({ node }, stack) {
-  //}, { targetType, sourceType }) {
+const simpleTypes = ['string', 'number', 'boolean', 'any', 'unknown', 'never']
+function showTheSolutions({ targetInfo, sourceInfo }, context, stack) {
+  // find first real parent links
+  let sourceLink
+  let targetLink
+  let sourceText
+  let targetText
+  stack.reverse().forEach(({ sourceInfo, targetInfo }) => {
+    if (!sourceLink && sourceInfo.link) {
+      sourceLink = sourceInfo.link
+      sourceText = sourceInfo.text
+    }
+    if (!targetLink && targetInfo.link) {
+      targetLink = targetInfo.link
+      targetText = targetInfo.text
+    }
+  })
+  sourceLink = chalk.blueBright(sourceLink)
+  targetLink = chalk.blueBright(targetLink)
+  targetText = chalk.blueBright(targetText)
+  sourceText = chalk.blueBright(sourceText)
+
+  // then bang out the solutions
   const solutions: string[] = []
-  // const as = typeToString(sourceType)
-  // const bs = typeToString(targetType)
-  // const assa = getNodeLink(sourceType)
-  // const bssa = getNodeLink(targetType)
-  switch (node.kind) {
-    case ts.SyntaxKind.ReturnStatement:
-      solutions.push('The results')
+  const addEliminateMsg = (link) => {
+    solutions.push(`\u25C9 Eliminate any code path that can lead to executing the line here: ${link}`)
+  }
+  const addUnionMsg = () => {
+    const sourceType = chalk.blueBright(`"| ${sourceInfo.text}"`)
+    solutions.push(`\u25C9 Append ${sourceType} to this type: ${targetText} here: ${targetLink}`)
+  }
+  switch (true) {
+    case targetInfo.text === 'never':
+      addEliminateMsg(targetLink)
       break
-
-    // can't call this func with this argument type
-    case ts.SyntaxKind.CallExpression:
+    case sourceInfo.text === 'never':
+      addEliminateMsg(sourceLink)
       break
-
-    // can't set A = B, or A = func()
-    case ts.SyntaxKind.VariableDeclaration:
+    case targetInfo.text === 'undefined':
+      solutions.push('Ruh Roh')
       break
+    case targetInfo.text === 'unknown':
+      solutions.push('Ruh Roh')
+      break
+    case sourceInfo.text === 'undefined':
+      if (isSimpleType(targetInfo.text)) {
+        solutions.push('Ruh Roh')
+      } else {
+        addUnionMsg()
+      }
+      break
+    case sourceInfo.text === 'unknown':
+      solutions.push('Ruh Roh')
+      break
+    case isSimpleType(targetInfo.text) && isSimpleType(sourceInfo.text):
+      addUnionMsg()
+      break
+    case isSimpleType(targetInfo.text):
+      solutions.push('Ruh Roh')
+      break
+    case isSimpleType(sourceInfo.text):
+      addUnionMsg()
+      break
+    default:
+      if (context.externalLinks.length) {
+        const libs = new Set()
+        context.externalLinks.forEach((link) => {
+          const linkArr = link.split('node_modules/')[1].split('/')
+          link = linkArr[0]
+          if (link.startsWith('@')) {
+            link += `/${linkArr[1]}`
+          }
+          libs.add(link)
+        })
+        const externalLibs = `"${Array.from(libs).join(',')}"`
+        solutions.push(
+          `\u25C9 Ask the owners of ${chalk.blueBright(externalLibs)} to make the listed properties optional.`
+        )
+        solutions.push(`\u25C9 Until there's a fix, disable this error by inserting these comments here: ${sourceLink}`)
+        solutions.push(`    ${chalk.greenBright('// eslint-disable-next-line @typescript-eslint/ban-ts-comment')} `)
+        solutions.push(`    ${chalk.greenBright(`// @ts-ignore: Fixed required in ${externalLibs}`)} `)
 
-    // can't set A = B
-    case ts.SyntaxKind.Identifier:
+        //     ask 'library' to make these properties optional
+        //     add this above here: LINK
+        //        eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        //
+      } else {
+        solutions.push('Ruh Roh')
+        //    add missing properties to 'type1' here:ff or make them optional here:ee
+        //    add missing properties to 'type2' here:ff or make them optional here:ee
+      }
+
+      // if type is an inferred structure
+      //    recommend converting it into this interface:
+      //    and replace here LINK
+      //    and replace here LINK
       break
   }
+  // switch (context.node.kind) {
+  //   case ts.SyntaxKind.ReturnStatement:
+  //     break
+
+  //   // can't call this func with this argument type
+  //   case ts.SyntaxKind.CallExpression:
+  //     break
+
+  //   // can't set A = B, or A = func()
+  //   case ts.SyntaxKind.VariableDeclaration:
+  //     break
+
+  //   // can't set A = B
+  //   case ts.SyntaxKind.Identifier:
+  //     break
+  // }
   return solutions
 }
 
@@ -49,15 +139,20 @@ function showTheResults({ node }, stack) {
 // ===============================================================================
 // ===============================================================================
 
-function showTheMath(stack, problem, context) {
+function showTheMath(problem, stack, context) {
   // error
   console.log(`TS${context.code}: ${context.message}`)
   // log the call stack
   const { sourceInfo, targetInfo } = stack[0]
   const p = new Table({
     columns: [
-      { name: 'target', title: targetInfo.link, alignment: 'left' },
-      { name: 'source', title: sourceInfo.link === targetInfo.link ? 'same link' : sourceInfo.link, alignment: 'left' },
+      { name: 'target', minLen: 60, title: targetInfo.link, alignment: 'left' },
+      {
+        name: 'source',
+        minLen: 60,
+        title: sourceInfo.link === targetInfo.link ? 'on the same line' : sourceInfo.link,
+        alignment: 'left',
+      },
     ],
   })
 
@@ -107,12 +202,22 @@ function showTheMath(stack, problem, context) {
   })
 
   // there were missing/mismatched properties
+  let sourceProps: { missing: any[]; mismatch: any[] } | undefined = undefined
+  let targetProps: { missing: any[]; mismatch: any[] } | undefined = undefined
   if (!simpleConflict && problem) {
     const mismatch: string[] = []
-    const missingS2T: string[] = []
-    const missingT2S: string[] = []
-    const targetMap = getTypeMap(context.reversed ? problem.targetType : problem.sourceType)
-    const sourceMap = getTypeMap(context.reversed ? problem.sourceType : problem.targetType)
+    const missing: { source?: string; target?: string }[] = []
+    context.externalLinks = []
+    const targetMap = getTypeMap(
+      context.reversed ? problem.targetInfo.type : problem.sourceInfo.type,
+      context.externalLinks
+    )
+    const sourceMap = getTypeMap(
+      context.reversed ? problem.sourceInfo.type : problem.targetInfo.type,
+      context.externalLinks
+    )
+    sourceProps = { missing: [], mismatch: [] }
+    targetProps = { missing: [], mismatch: [] }
     Object.keys(sourceMap).forEach((propName) => {
       if (targetMap[propName] && targetMap[propName].text) {
         if (sourceMap[propName].text === targetMap[propName].text || context.reversed) {
@@ -137,12 +242,18 @@ function showTheMath(stack, problem, context) {
           )
         }
       } else {
-        missingS2T.push(propName)
+        missing.push({ source: propName })
       }
     })
+    let inx = 0
     Object.keys(targetMap).forEach((propName) => {
       if (!targetMap[propName].isOptional && (!sourceMap[propName] || !sourceMap[propName].text)) {
-        missingT2S.push(propName)
+        if (inx < missing.length) {
+          missing[inx].target = propName
+        } else {
+          missing.push({ target: propName })
+        }
+        inx++
       }
     })
     mismatch.forEach((propName) => {
@@ -158,18 +269,37 @@ function showTheMath(stack, problem, context) {
         },
         { color: 'yellow' }
       )
+      sourceProps?.mismatch.push(sourceMap[propName])
+      targetProps?.mismatch.push(targetMap[propName])
     })
-    missingS2T.some((propName, inx) => {
+    missing.some(({ target, source }, inx) => {
       if (inx < MAX_SHOWN_PROP_MISMATCH) {
+        if (source) {
+          sourceProps?.missing.push(sourceMap[source])
+        }
+        if (target) {
+          targetProps?.missing.push(targetMap[target])
+        }
+        target = target
+          ? `${spacer}${min(notes, targetMap[target].text)}  ${addNote(
+              notes,
+              targetMap[target].parentType,
+              targetMap[target].link,
+              true
+            )}`
+          : ''
+        source = source
+          ? `${spacer}${min(notes, sourceMap[source].text)}  ${addNote(
+              notes,
+              sourceMap[source].parentType,
+              sourceMap[source].link,
+              true
+            )}`
+          : ''
         p.addRow(
           {
-            source: `${spacer}${min(notes, sourceMap[propName].text)}  ${addNote(
-              notes,
-              sourceMap[propName].parentType,
-              sourceMap[propName].link,
-              true
-            )}`,
-            target: '',
+            source,
+            target,
           },
           { color: 'red' }
         )
@@ -177,34 +307,8 @@ function showTheMath(stack, problem, context) {
       } else {
         p.addRow(
           {
-            source: `${spacer}...and ${missingS2T.length - 6} more ...`,
+            source: `${spacer}...and ${missing.length - 6} more ...`,
             target: '',
-          },
-          { color: 'red' }
-        )
-        return true
-      }
-    })
-    missingT2S.some((propName, inx) => {
-      if (inx < MAX_SHOWN_PROP_MISMATCH) {
-        p.addRow(
-          {
-            target: `${spacer}${min(notes, targetMap[propName].text)}  ${addNote(
-              notes,
-              targetMap[propName].parentType,
-              targetMap[propName].link,
-              true
-            )}`,
-            source: '',
-          },
-          { color: 'red' }
-        )
-        return false
-      } else {
-        p.addRow(
-          {
-            target: `${spacer} ...and ${missingT2S.length - 6} more ...`,
-            source: '',
           },
           { color: 'red' }
         )
@@ -214,22 +318,21 @@ function showTheMath(stack, problem, context) {
   }
 
   p.printTable()
+  notes.forEach((note) => console.log(note))
+  if (notes.length) console.log('')
 
-  const solutions: string[] = showTheResults(context, stack, problem)
+  problem.sourceInfo.props = sourceProps
+  problem.targetInfo.props = targetProps
+  const solutions: string[] = showTheSolutions(problem, context, stack)
   solutions.forEach((solution) => console.log(chalk.whiteBright(solution)))
   if (solutions.length) console.log('')
-  notes.forEach((note) => console.log(note))
 }
 
-const simpleTypes = ['string', 'number', 'boolean', 'any', 'unknown', 'never']
-function isSimpleType(type) {
-  return simpleTypes.includes(type)
-}
 function isSimpleConflict(targetTypeText, sourceTypeText) {
   return targetTypeText !== sourceTypeText && (isSimpleType(targetTypeText) || isSimpleType(sourceTypeText))
 }
 
-function getTypeMap(type: ts.Type) {
+function getTypeMap(type: ts.Type, externalLinks) {
   const map = {}
   type.getProperties().forEach((prop) => {
     prop = prop?.syntheticOrigin || prop
@@ -244,10 +347,14 @@ function getTypeMap(type: ts.Type) {
         .map((seg) => seg.trimStart())
         .join('')
       const parentType = checker.typeToString(checker.getTypeAtLocation(declaration.parent))
+      const link = getNodeLink(declaration)
+      if (link.indexOf('node_modules/') !== -1) {
+        externalLinks.push(link)
+      }
       info = {
         isOptional: prop.flags & ts.SymbolFlags.Optional,
         text,
-        link: getNodeLink(declaration),
+        link,
         parentType: parentType.startsWith('{') ? '' : parentType,
       }
     }
@@ -279,6 +386,9 @@ function addNote(notes: string[], note: string, link?: ts.Node | string, conflic
 // ===============================================================================
 // ===============================================================================
 // ===============================================================================
+function isSimpleType(type) {
+  return simpleTypes.includes(type)
+}
 
 function min(notes, type) {
   type = type.replace(' | undefined', '').replace(/\\n/g, '')
@@ -324,6 +434,8 @@ function getNodeLink(node: ts.Node | undefined) {
 function compareProperties(firstType, secondType) {
   let problem: any | undefined = undefined
   const recurses: any = []
+  const sourceTypeText = typeToString(firstType)
+  const targetTypeText = typeToString(secondType)
   firstType.getProperties().every((firstProp) => {
     firstProp = firstProp?.syntheticOrigin || firstProp
     const propName = firstProp.escapedName as string
@@ -336,8 +448,8 @@ function compareProperties(firstType, secondType) {
         if ((secondPropType.intrinsicName || 'not') !== (firstPropType.intrinsicName || 'not')) {
           // mismatch
           problem = {
-            sourceType: firstType,
-            targetType: secondType,
+            sourceInfo: { type: firstType, text: sourceTypeText },
+            targetInfo: { type: secondType, text: targetTypeText },
           }
           return false
         } else {
@@ -354,15 +466,18 @@ function compareProperties(firstType, secondType) {
                 text: typeToString(secondPropType),
                 link: firstPropType.types ? '' : getTypeLink(secondPropType),
               },
-              parentTargetInfo: { text: typeToString(secondType) },
-              parentSourceInfo: { text: typeToString(firstType) },
+              parentTargetInfo: { text: targetTypeText },
+              parentSourceInfo: { text: sourceTypeText },
             },
           })
         }
       }
     } else if (!(firstProp.flags & ts.SymbolFlags.Optional)) {
       // missing
-      problem = { sourceType: firstType, targetType: secondType }
+      problem = {
+        sourceInfo: { type: firstType, text: sourceTypeText },
+        targetInfo: { type: secondType, text: targetTypeText },
+      }
       return false
     }
     return true
@@ -387,8 +502,8 @@ function compareTypes(targetType, sourceType, stack, context, bothWays = false) 
             // if source or target don't have properties, just log the mismatch
             if (isSimpleType(sourceTypeText) || isSimpleType(targetTypeText)) {
               problem = {
-                sourceType: source,
-                targetType: target,
+                sourceInfo: { type: source, text: sourceTypeText },
+                targetInfo: { type: target, text: targetTypeText },
               }
             } else if (targetTypeText !== 'undefined') {
               // else recurse into the properties of these types
@@ -404,6 +519,11 @@ function compareTypes(targetType, sourceType, stack, context, bothWays = false) 
                 return true
               }
             }
+          } else {
+            problem = {
+              sourceInfo: { type: source, text: sourceTypeText },
+              targetInfo: { type: target, text: targetTypeText },
+            }
           }
           return false
         }
@@ -411,7 +531,7 @@ function compareTypes(targetType, sourceType, stack, context, bothWays = false) 
       })
     })
   ) {
-    showTheMath(stack, problem, context)
+    showTheMath(problem, stack, context)
     context.hadPayoff = true
     return false
   }
