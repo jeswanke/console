@@ -18,94 +18,38 @@ const MAX_SHOWN_PROP_MISMATCH = 6
 // ===============================================================================
 // ===============================================================================
 
-enum Solutions {
-  StrictFunc = '(These errors were caught because the "strictFunctionTypes" option was set)',
+function showTheResults({ node }, stack) {
+  //}, { targetType, sourceType }) {
+  const solutions: string[] = []
+  // const as = typeToString(sourceType)
+  // const bs = typeToString(targetType)
+  // const assa = getNodeLink(sourceType)
+  // const bssa = getNodeLink(targetType)
+  switch (node.kind) {
+    case ts.SyntaxKind.ReturnStatement:
+      solutions.push('The results')
+      break
+
+    // can't call this func with this argument type
+    case ts.SyntaxKind.CallExpression:
+      break
+
+    // can't set A = B, or A = func()
+    case ts.SyntaxKind.VariableDeclaration:
+      break
+
+    // can't set A = B
+    case ts.SyntaxKind.Identifier:
+      break
+  }
+  return solutions
 }
 
 // ===============================================================================
 // ===============================================================================
 // ===============================================================================
 
-function addNote(notes: string[], note: string, link?: ts.Node | string, conflict?: boolean) {
-  const num = String.fromCharCode('\u2460'.charCodeAt(0) + notes.length)
-  let fullNote = `${chalk.bold(num)}`
-  if (note) {
-    fullNote += `  ${note}`
-  }
-  if (link) {
-    fullNote += `  ${typeof link === 'string' ? link : getLink(link)}`
-  }
-  if (conflict === true) {
-    fullNote = chalk.red(fullNote)
-  }
-  notes.push(fullNote)
-  return num
-}
-
-function min(notes, type) {
-  type = type.replace(' | undefined', '').replace(/\\n/g, '')
-  if (type.length > 90) {
-    type = `${type.substr(0, 25)}..${type.substr(-45)}  ${addNote(notes, type)}`
-  }
-  return type
-}
-
-function getLink(node: ts.Node | undefined) {
-  if (node) {
-    const file = node.getSourceFile()
-    let relative: string = path.relative(process.argv[1], file.fileName)
-    if (!relative.includes('node_modules/')) {
-      relative = relative.split('/').slice(-4).join('/')
-    }
-    return `${relative}:${file.getLineAndCharacterOfPosition(node.getStart()).line + 1}`
-  }
-  return ''
-}
-
-const simpleTypes = ['string', 'number', 'boolean', 'any', 'unknown', 'never', 'undefined']
-function isSimpleType(type) {
-  return simpleTypes.includes(type)
-}
-function isSimpleConflict(targetTypeText, sourceTypeText) {
-  return targetTypeText !== sourceTypeText && (isSimpleType(targetTypeText) || isSimpleType(sourceTypeText))
-}
-
-function typeToString(type) {
-  if (type.value) {
-    return typeof type.value
-  }
-  return checker.typeToString(type)
-}
-
-function getTypeMap(type: ts.Type) {
-  const map = {}
-  type.getProperties().forEach((prop) => {
-    prop = prop?.syntheticOrigin || prop
-    const propName = prop.escapedName as string
-    const declarations = prop?.declarations
-    let info = {}
-    if (Array.isArray(declarations)) {
-      const declaration = declarations[0]
-      const text = declaration
-        .getText()
-        .split('\n')
-        .map((seg) => seg.trimStart())
-        .join('')
-      const parentType = checker.typeToString(checker.getTypeAtLocation(declaration.parent))
-      info = {
-        isOptional: prop.flags & ts.SymbolFlags.Optional,
-        text,
-        link: getLink(declaration),
-        parentType: parentType.startsWith('{') ? '' : parentType,
-      }
-    }
-    map[propName] = info
-  })
-  return map
-}
-
-// !!!!!!!!!!!!!THE PAYOFF!!!!!!!!!!
-function theBigPayoff(stack, problem, context) {
+function showTheMath(stack, problem, context) {
   // error
   console.log(`TS${context.code}: ${context.message}`)
   // log the call stack
@@ -113,13 +57,11 @@ function theBigPayoff(stack, problem, context) {
   const p = new Table({
     columns: [
       { name: 'target', title: targetInfo.link, alignment: 'left' },
-      { name: 'source', title: sourceInfo.link, alignment: 'left' },
+      { name: 'source', title: sourceInfo.link === targetInfo.link ? 'same link' : sourceInfo.link, alignment: 'left' },
     ],
   })
 
-  let index = 0
   const notes = []
-  const solutions: string[] = []
   let simpleConflict = false
   let lastTargetType
   let lastSourceType
@@ -272,13 +214,112 @@ function theBigPayoff(stack, problem, context) {
   }
 
   p.printTable()
+
+  const solutions: string[] = showTheResults(context, stack, problem)
   solutions.forEach((solution) => console.log(chalk.whiteBright(solution)))
   if (solutions.length) console.log('')
-  notes.forEach((solution) => console.log(solution))
-  if (context.reversed) {
-    console.log(chalk.red(Solutions.StrictFunc))
-  }
+  notes.forEach((note) => console.log(note))
 }
+
+const simpleTypes = ['string', 'number', 'boolean', 'any', 'unknown', 'never']
+function isSimpleType(type) {
+  return simpleTypes.includes(type)
+}
+function isSimpleConflict(targetTypeText, sourceTypeText) {
+  return targetTypeText !== sourceTypeText && (isSimpleType(targetTypeText) || isSimpleType(sourceTypeText))
+}
+
+function getTypeMap(type: ts.Type) {
+  const map = {}
+  type.getProperties().forEach((prop) => {
+    prop = prop?.syntheticOrigin || prop
+    const propName = prop.escapedName as string
+    const declarations = prop?.declarations
+    let info = {}
+    if (Array.isArray(declarations)) {
+      const declaration = declarations[0]
+      const text = declaration
+        .getText()
+        .split('\n')
+        .map((seg) => seg.trimStart())
+        .join('')
+      const parentType = checker.typeToString(checker.getTypeAtLocation(declaration.parent))
+      info = {
+        isOptional: prop.flags & ts.SymbolFlags.Optional,
+        text,
+        link: getNodeLink(declaration),
+        parentType: parentType.startsWith('{') ? '' : parentType,
+      }
+    }
+    map[propName] = info
+  })
+  return map
+}
+
+// ===============================================================================
+// ===============================================================================
+// ===============================================================================
+
+function addNote(notes: string[], note: string, link?: ts.Node | string, conflict?: boolean) {
+  const num = String.fromCharCode('\u2460'.charCodeAt(0) + notes.length)
+  let fullNote = `${chalk.bold(num)}`
+  if (note) {
+    fullNote += `  ${note}`
+  }
+  if (link) {
+    fullNote += `  ${typeof link === 'string' ? link : getNodeLink(link)}`
+  }
+  if (conflict === true) {
+    fullNote = chalk.red(fullNote)
+  }
+  notes.push(fullNote)
+  return num
+}
+
+// ===============================================================================
+// ===============================================================================
+// ===============================================================================
+
+function min(notes, type) {
+  type = type.replace(' | undefined', '').replace(/\\n/g, '')
+  if (type.length > 90) {
+    type = `${type.substr(0, 25)}..${type.substr(-45)}  ${addNote(notes, type)}`
+  }
+  return type
+}
+
+function typeToString(type) {
+  if (type.value) {
+    return typeof type.value
+  }
+  return checker.typeToString(type)
+}
+
+function getTypeLink(type: ts.Type) {
+  if (type) {
+    //const declarations = type.symbol.declarations
+    // if (Array.isArray(declarations)) {
+    //   return getNodeLink(declarations[0])
+    // }
+  }
+  return ''
+}
+
+function getNodeLink(node: ts.Node | undefined) {
+  if (node) {
+    const file = node.getSourceFile()
+    let relative: string = path.relative(process.argv[1], file.fileName)
+    if (!relative.includes('node_modules/')) {
+      relative = relative.split('/').slice(-4).join('/')
+    }
+    return `${relative}:${file.getLineAndCharacterOfPosition(node.getStart()).line + 1}`
+  }
+  return ''
+}
+
+// ===============================================================================
+// ===============================================================================
+// ===============================================================================
 
 function compareProperties(firstType, secondType) {
   let problem: any | undefined = undefined
@@ -305,8 +346,14 @@ function compareProperties(firstType, secondType) {
             targetType: secondPropType,
             sourceType: firstPropType,
             branch: {
-              sourceInfo: { text: typeToString(firstPropType) },
-              targetInfo: { text: typeToString(secondPropType) },
+              sourceInfo: {
+                text: typeToString(firstPropType),
+                link: firstPropType.types ? '' : getTypeLink(firstPropType),
+              },
+              targetInfo: {
+                text: typeToString(secondPropType),
+                link: firstPropType.types ? '' : getTypeLink(secondPropType),
+              },
               parentTargetInfo: { text: typeToString(secondType) },
               parentSourceInfo: { text: typeToString(firstType) },
             },
@@ -336,24 +383,26 @@ function compareTypes(targetType, sourceType, stack, context, bothWays = false) 
         const sourceTypeText = typeToString(source)
         const targetTypeText = typeToString(target)
         if (sourceTypeText !== targetTypeText) {
-          // if source or target don't have properties, just log the mismatch
-          if (isSimpleType(sourceTypeText) || isSimpleType(targetTypeText)) {
-            problem = {
-              sourceType: source,
-              targetType: target,
-            }
-          } else {
-            // else recurse into the properties of these types
-            ;({ problem, recurses } = compareProperties(source, target))
-            if (!problem && bothWays) {
-              context.reversed = true
-              ;({ problem } = compareProperties(target, source))
-            }
-            if (!problem) {
-              if (recurses.length) {
-                propertyTypes.push(recurses)
+          if (sourceTypeText !== 'undefined') {
+            // if source or target don't have properties, just log the mismatch
+            if (isSimpleType(sourceTypeText) || isSimpleType(targetTypeText)) {
+              problem = {
+                sourceType: source,
+                targetType: target,
               }
-              return true
+            } else if (targetTypeText !== 'undefined') {
+              // else recurse into the properties of these types
+              ;({ problem, recurses } = compareProperties(source, target))
+              if (!problem) {
+                context.reversed = true
+                ;({ problem } = compareProperties(target, source))
+              }
+              if (!problem) {
+                if (recurses.length) {
+                  propertyTypes.push(recurses)
+                }
+                return true
+              }
             }
           }
           return false
@@ -362,7 +411,7 @@ function compareTypes(targetType, sourceType, stack, context, bothWays = false) 
       })
     })
   ) {
-    theBigPayoff(stack, problem, context)
+    showTheMath(stack, problem, context)
     context.hadPayoff = true
     return false
   }
@@ -445,9 +494,10 @@ function elaborateAssignmentMismatch(code, node: ts.Node, nodeMaps) {
   } else {
     const sourceType: ts.Type = checker.getTypeAtLocation(sourceNode)
     const sourceTypeText = typeToString(sourceType)
-    const link = getLink(sourceNode)
+    const link = getNodeLink(sourceNode)
     const context = {
       code,
+      node,
       message: `Bad assignment: ${node.getText()}`,
       hadPayoff: false,
     }
@@ -480,6 +530,7 @@ function elaborateReturnMismatch(code, node: ts.Node, containerType: ts.Type | u
     const sourceTypeText = sourceType.value ? typeof sourceType.value : node.getText()
     const context = {
       code,
+      node,
       message: `Bad return type: ${targetTypeText} { ${chalk.whiteBright(node.getText())} }`,
       hadPayoff: false,
     }
@@ -488,8 +539,8 @@ function elaborateReturnMismatch(code, node: ts.Node, containerType: ts.Type | u
       sourceType,
       [
         {
-          targetInfo: { text: targetTypeText, link: getLink(container) },
-          sourceInfo: { text: sourceTypeText.replace('return ', ''), link: getLink(node) },
+          targetInfo: { text: targetTypeText, link: getNodeLink(container) },
+          sourceInfo: { text: sourceTypeText.replace('return ', ''), link: getNodeLink(node) },
         },
       ],
       context,
@@ -512,7 +563,6 @@ function elaborateCallMismatches(code, node: ts.Node, errorNode: ts.Node) {
   let hadPayoff = false
   const functionName = children[0].getText()
   args.some((arg, inx) => {
-    //if (inx === index) {
     const param = signature.getParameters()[inx]
     const sourceType = checker.getTypeOfSymbolAtLocation(param, node)
     const sourceTypeText = typeToString(sourceType)
@@ -525,6 +575,7 @@ function elaborateCallMismatches(code, node: ts.Node, errorNode: ts.Node) {
 
     const context = {
       code,
+      node,
       message,
       hadPayoff: false,
     }
@@ -536,15 +587,14 @@ function elaborateCallMismatches(code, node: ts.Node, errorNode: ts.Node) {
       sourceType,
       [
         {
-          sourceInfo: { text: sourceTypeText, link: getLink(param.valueDeclaration) },
-          targetInfo: { text: targetTypeText, link: getLink(node) },
+          sourceInfo: { text: sourceTypeText, link: getNodeLink(param.valueDeclaration) },
+          targetInfo: { text: targetTypeText, link: getNodeLink(node) },
         },
       ],
       context
     )
     hadPayoff = context.hadPayoff
     return hadPayoff
-    //}
   })
   return hadPayoff
 }
@@ -573,7 +623,7 @@ function elaborateMismatch(code, errorNode: ts.Node, nodeMaps) {
 
     default:
       console.log(`Missing support for kind === ${node.kind}`)
-      console.log(getLink(node))
+      console.log(getNodeLink(node))
       return false
   }
 }
@@ -636,7 +686,7 @@ function elaborate(semanticDiagnostics: readonly ts.Diagnostic[], fileNames: str
             anyPayoff = anyPayoff || hadPayoff
             break
           // default:
-          //   console.log(`TS${code}: ${messageText}\n  ${getLink(node)}\n  https://typescript.tv/errors/#TS${code}`)
+          //   console.log(`TS${code}: ${messageText}\n  ${getNodeLink(node)}\n  https://typescript.tv/errors/#TS${code}`)
         }
       }
     }
