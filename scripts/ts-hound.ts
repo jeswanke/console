@@ -19,7 +19,7 @@ const MAX_SHOWN_PROP_MISMATCH = 6
 // ===============================================================================
 
 const simpleTypes = ['string', 'number', 'boolean', 'any', 'unknown', 'never']
-function showTheSolutions({ targetInfo, sourceInfo }, context, stack) {
+function showTheOptions({ targetInfo, sourceInfo }, context, stack) {
   // find first real parent links
   let sourceLink
   let targetLink
@@ -39,46 +39,48 @@ function showTheSolutions({ targetInfo, sourceInfo }, context, stack) {
   targetLink = chalk.blueBright(targetLink)
   targetText = chalk.blueBright(targetText)
   sourceText = chalk.blueBright(sourceText)
+  //const errorVar = chalk.blueBright(context.errorNode.getText())
+  const errorLink = chalk.blueBright(getNodeLink(context.errorNode))
 
-  // then bang out the solutions
-  const solutions: string[] = []
+  // then bang out the options
+  const options: string[] = []
   const addEliminateMsg = (link) => {
-    solutions.push(`\u25C9 Eliminate any code path that can lead to executing the line here: ${link}`)
+    options.push(`Option 1: Eliminate any code path that can lead to executing the line here: ${link}`)
   }
   const addUnionMsg = () => {
     const sourceType = chalk.blueBright(`"| ${sourceInfo.text}"`)
-    solutions.push(`\u25C9 Append ${sourceType} to this type: ${targetText} here: ${targetLink}`)
+    options.push(`Option 1: Append ${sourceType} to this type: ${targetText} here: ${targetLink}`)
   }
   switch (true) {
-    case targetInfo.text === 'never':
+    case targetInfo.typeText === 'never':
       addEliminateMsg(targetLink)
       break
-    case sourceInfo.text === 'never':
+    case sourceInfo.typeText === 'never':
       addEliminateMsg(sourceLink)
       break
-    case targetInfo.text === 'undefined':
-      solutions.push('Ruh Roh')
+    case targetInfo.typeText === 'undefined':
+      options.push('ruh roh')
       break
-    case targetInfo.text === 'unknown':
-      solutions.push('Ruh Roh')
+    case targetInfo.typeText === 'unknown':
+      options.push('ruh roh')
       break
-    case sourceInfo.text === 'undefined':
-      if (isSimpleType(targetInfo.text)) {
-        solutions.push('Ruh Roh')
+    case sourceInfo.typeText === 'undefined':
+      if (isSimpleType(targetInfo.typeText)) {
+        options.push('ruh roh')
       } else {
         addUnionMsg()
       }
       break
-    case sourceInfo.text === 'unknown':
-      solutions.push('Ruh Roh')
+    case sourceInfo.typeText === 'unknown':
+      options.push('ruh roh')
       break
-    case isSimpleType(targetInfo.text) && isSimpleType(sourceInfo.text):
+    case isSimpleType(targetInfo.typeText) && isSimpleType(sourceInfo.typeText):
       addUnionMsg()
       break
-    case isSimpleType(targetInfo.text):
-      solutions.push('Ruh Roh')
+    case isSimpleType(targetInfo.typeText):
+      options.push('ruh roh')
       break
-    case isSimpleType(sourceInfo.text):
+    case isSimpleType(sourceInfo.typeText):
       addUnionMsg()
       break
     default:
@@ -92,20 +94,15 @@ function showTheSolutions({ targetInfo, sourceInfo }, context, stack) {
           }
           libs.add(link)
         })
-        const externalLibs = `"${Array.from(libs).join(',')}"`
-        solutions.push(
-          `\u25C9 Ask the owners of ${chalk.blueBright(externalLibs)} to make the listed properties optional.`
+        const externalLibs = `"${Array.from(libs).join(', ')}"`
+        options.push(
+          `Option 1: Ask the owners of ${chalk.blueBright(externalLibs)} to make the listed properties optional.`
         )
-        solutions.push(`\u25C9 Until there's a fix, disable this error by inserting these comments here: ${sourceLink}`)
-        solutions.push(`    ${chalk.greenBright('// eslint-disable-next-line @typescript-eslint/ban-ts-comment')} `)
-        solutions.push(`    ${chalk.greenBright(`// @ts-ignore: Fixed required in ${externalLibs}`)} `)
-
-        //     ask 'library' to make these properties optional
-        //     add this above here: LINK
-        //        eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        //
+        options.push(`Note: Until there's a fix, disable this error by inserting these comments here: ${errorLink}`)
+        options.push(`    ${chalk.greenBright('// eslint-disable-next-line @typescript-eslint/ban-ts-comment')} `)
+        options.push(`    ${chalk.greenBright(`// @ts-ignore: Fixed required in ${externalLibs}`)} `)
       } else {
-        solutions.push('Ruh Roh')
+        options.push('ruh roh')
         //    add missing properties to 'type1' here:ff or make them optional here:ee
         //    add missing properties to 'type2' here:ff or make them optional here:ee
       }
@@ -132,15 +129,17 @@ function showTheSolutions({ targetInfo, sourceInfo }, context, stack) {
   //   case ts.SyntaxKind.Identifier:
   //     break
   // }
-  return solutions
+  return options
 }
 
 // ===============================================================================
 // ===============================================================================
 // ===============================================================================
 
-function showTheMath(problem, stack, context) {
-  // error
+function doTheMath(problem, stack, context) {
+  // dont' get here unless there' a conflict
+
+  // show error and start the table
   console.log(`TS${context.code}: ${context.message}`)
   // log the call stack
   const { sourceInfo, targetInfo } = stack[0]
@@ -150,21 +149,21 @@ function showTheMath(problem, stack, context) {
       {
         name: 'source',
         minLen: 60,
-        title: sourceInfo.link === targetInfo.link ? 'on the same line' : sourceInfo.link,
+        title: `${sourceInfo.link} ${sourceInfo.link === targetInfo.link ? '(same)' : ''}`,
         alignment: 'left',
       },
     ],
   })
 
+  // display the path we took to get here
+  let spacer = ''
   const notes = []
   let simpleConflict = false
   let lastTargetType
   let lastSourceType
-
-  let spacer = ''
   stack.forEach((layer, inx) => {
-    const { sourceInfo, targetInfo, parentSourceInfo, parentTargetInfo } = layer
-    simpleConflict = isSimpleConflict(targetInfo?.text, sourceInfo?.text)
+    const { sourceInfo, targetInfo } = layer
+    simpleConflict = isSimpleConflict(targetInfo?.typeText, sourceInfo?.typeText)
     const color = simpleConflict ? 'red' : 'green'
     if (inx === 0) {
       p.addRow(
@@ -176,51 +175,47 @@ function showTheMath(problem, stack, context) {
       )
       spacer += '  '
     } else {
-      if (parentSourceInfo && parentTargetInfo.text !== lastTargetType && parentSourceInfo.text !== lastSourceType) {
+      if (targetInfo.typeText !== lastTargetType && sourceInfo.typeText !== lastSourceType) {
         p.addRow(
           {
-            source: `${spacer}└${min(notes, parentSourceInfo.text)}`,
-            target: `${spacer}└${min(notes, parentTargetInfo.text)}`,
-          },
-          { color }
-        )
-        spacer += '  '
-      }
-      if (targetInfo.text !== lastTargetType && sourceInfo.text !== lastSourceType) {
-        p.addRow(
-          {
-            target: `${spacer}${simpleConflict ? '  ' : '└'}${min(notes, targetInfo.text)}`,
-            source: `${spacer}${simpleConflict ? '  ' : '└'}${min(notes, sourceInfo.text)}`,
+            target: `${spacer}${simpleConflict ? '  ' : '└'}${min(notes, targetInfo.text)} ${addNote(
+              notes,
+              '',
+              targetInfo.link,
+              simpleConflict
+            )}`,
+            source: `${spacer}${simpleConflict ? '  ' : '└'}${min(notes, sourceInfo.text)}  ${addNote(
+              notes,
+              '',
+              sourceInfo.link,
+              simpleConflict
+            )}`,
           },
           { color }
         )
         spacer += '  '
       }
     }
-    lastTargetType = targetInfo.text
-    lastSourceType = sourceInfo.text
+    lastTargetType = targetInfo.typeText
+    lastSourceType = sourceInfo.typeText
   })
 
-  // there were missing/mismatched properties
-  let sourceProps: { missing: any[]; mismatch: any[] } | undefined = undefined
-  let targetProps: { missing: any[]; mismatch: any[] } | undefined = undefined
+  // if the conflict involves an object, show the properties that conflict
   if (!simpleConflict && problem) {
+    // if the conflict involves an object, show the properties that conflict
+    // show properties that match
     const mismatch: string[] = []
     const missing: { source?: string; target?: string }[] = []
-    context.externalLinks = []
-    const targetMap = getTypeMap(
-      context.reversed ? problem.targetInfo.type : problem.sourceInfo.type,
-      context.externalLinks
-    )
-    const sourceMap = getTypeMap(
-      context.reversed ? problem.sourceInfo.type : problem.targetInfo.type,
-      context.externalLinks
-    )
-    sourceProps = { missing: [], mismatch: [] }
-    targetProps = { missing: [], mismatch: [] }
+    const targetMap = getTypeMap(context.reversed ? problem.targetInfo.type : problem.sourceInfo.type)
+    const sourceMap = getTypeMap(context.reversed ? problem.sourceInfo.type : problem.targetInfo.type)
+    const sourceProps: { missing: any[]; mismatch: any[] } | undefined = { missing: [], mismatch: [] }
+    const targetProps: { missing: any[]; mismatch: any[] } | undefined = { missing: [], mismatch: [] }
+
+    // properties that are in source but not target
     Object.keys(sourceMap).forEach((propName) => {
       if (targetMap[propName] && targetMap[propName].text) {
-        if (sourceMap[propName].text === targetMap[propName].text || context.reversed) {
+        if (sourceMap[propName].text === targetMap[propName].text) {
+          //} || context.reversed) {
           p.addRow(
             {
               target: `${spacer}${min(notes, targetMap[propName].text)}`,
@@ -245,6 +240,8 @@ function showTheMath(problem, stack, context) {
         missing.push({ source: propName })
       }
     })
+
+    // properties in target but not source
     let inx = 0
     Object.keys(targetMap).forEach((propName) => {
       if (!targetMap[propName].isOptional && (!sourceMap[propName] || !sourceMap[propName].text)) {
@@ -256,13 +253,14 @@ function showTheMath(problem, stack, context) {
         inx++
       }
     })
+
     mismatch.forEach((propName) => {
       p.addRow(
         {
           target: `${spacer}${min(notes, targetMap[propName].text)}`,
           source: `${spacer}${min(notes, sourceMap[propName].text)}  ${addNote(
             notes,
-            sourceMap[propName].parentType,
+            '',
             sourceMap[propName].link,
             true
           )}`,
@@ -272,30 +270,65 @@ function showTheMath(problem, stack, context) {
       sourceProps?.mismatch.push(sourceMap[propName])
       targetProps?.mismatch.push(targetMap[propName])
     })
+
+    // sort conflicting properties by their direct parent types
+    let lastSourceParent
+    let lastTargetParent
+    context.externalLinks = []
     missing.some(({ target, source }, inx) => {
+      let sourceParent
+      let targetParent
       if (inx < MAX_SHOWN_PROP_MISMATCH) {
-        if (source) {
-          sourceProps?.missing.push(sourceMap[source])
-        }
         if (target) {
           targetProps?.missing.push(targetMap[target])
+          if (targetMap[target].parentInfo && targetMap[target].parentInfo.text !== lastTargetParent) {
+            lastSourceParent = targetMap[target].parentInfo.text
+            targetParent = `${spacer}└─${min(notes, targetMap[target].parentInfo.text)}  ${addNote(
+              notes,
+              '',
+              targetMap[target].parentInfo.link,
+              true
+            )}`
+          }
+          target = `${lastTargetParent ? '   ' : ''}${spacer}${min(notes, targetMap[target].text)}  ${addNote(
+            notes,
+            '',
+            targetMap[target].link,
+            true
+          )}`
+        } else {
+          target = ''
         }
-        target = target
-          ? `${spacer}${min(notes, targetMap[target].text)}  ${addNote(
+        if (source) {
+          sourceProps?.missing.push(sourceMap[source])
+          if (sourceMap[source].parentInfo && sourceMap[source].parentInfo.text !== lastSourceParent) {
+            lastSourceParent = sourceMap[source].parentInfo.text
+            sourceParent = `${spacer}└─${min(notes, sourceMap[source].parentInfo.text)}  ${addNote(
               notes,
-              targetMap[target].parentType,
-              targetMap[target].link,
+              '',
+              sourceMap[source].parentInfo.link,
               true
             )}`
-          : ''
-        source = source
-          ? `${spacer}${min(notes, sourceMap[source].text)}  ${addNote(
-              notes,
-              sourceMap[source].parentType,
-              sourceMap[source].link,
-              true
-            )}`
-          : ''
+          }
+          source = `${lastSourceParent ? '   ' : ''}${spacer}${min(notes, sourceMap[source].text)}  ${addNote(
+            notes,
+            '',
+            sourceMap[source].link,
+            true
+          )}`
+        } else {
+          source = ''
+        }
+        if (sourceParent || targetParent) {
+          p.addRow(
+            {
+              source: sourceParent,
+              target: targetParent,
+            },
+            { color: 'red' }
+          )
+          sourceParent = targetParent = undefined
+        }
         p.addRow(
           {
             source,
@@ -307,7 +340,7 @@ function showTheMath(problem, stack, context) {
       } else {
         p.addRow(
           {
-            source: `${spacer}...and ${missing.length - 6} more ...`,
+            source: `                ...and ${missing.length - 6} more ...`,
             target: '',
           },
           { color: 'red' }
@@ -317,57 +350,19 @@ function showTheMath(problem, stack, context) {
     })
   }
 
+  // print the table. notes and options
   p.printTable()
   notes.forEach((note) => console.log(note))
   if (notes.length) console.log('')
-
-  problem.sourceInfo.props = sourceProps
-  problem.targetInfo.props = targetProps
-  const solutions: string[] = showTheSolutions(problem, context, stack)
-  solutions.forEach((solution) => console.log(chalk.whiteBright(solution)))
-  if (solutions.length) console.log('')
+  const options: string[] = showTheOptions(problem, context, stack)
+  options.forEach((solution) => console.log(chalk.whiteBright(solution)))
+  if (options.length) console.log('')
 }
-
-function isSimpleConflict(targetTypeText, sourceTypeText) {
-  return targetTypeText !== sourceTypeText && (isSimpleType(targetTypeText) || isSimpleType(sourceTypeText))
-}
-
-function getTypeMap(type: ts.Type, externalLinks) {
-  const map = {}
-  type.getProperties().forEach((prop) => {
-    prop = prop?.syntheticOrigin || prop
-    const propName = prop.escapedName as string
-    const declarations = prop?.declarations
-    let info = {}
-    if (Array.isArray(declarations)) {
-      const declaration = declarations[0]
-      const text = declaration
-        .getText()
-        .split('\n')
-        .map((seg) => seg.trimStart())
-        .join('')
-      const parentType = checker.typeToString(checker.getTypeAtLocation(declaration.parent))
-      const link = getNodeLink(declaration)
-      if (link.indexOf('node_modules/') !== -1) {
-        externalLinks.push(link)
-      }
-      info = {
-        isOptional: prop.flags & ts.SymbolFlags.Optional,
-        text,
-        link,
-        parentType: parentType.startsWith('{') ? '' : parentType,
-      }
-    }
-    map[propName] = info
-  })
-  return map
-}
-
 // ===============================================================================
 // ===============================================================================
 // ===============================================================================
 
-function addNote(notes: string[], note: string, link?: ts.Node | string, conflict?: boolean) {
+function addNote(notes: string[], note?: string, link?: ts.Node | string, conflict?: boolean) {
   const num = String.fromCharCode('\u2460'.charCodeAt(0) + notes.length)
   let fullNote = `${chalk.bold(num)}`
   if (note) {
@@ -405,16 +400,6 @@ function typeToString(type) {
   return checker.typeToString(type)
 }
 
-function getTypeLink(type: ts.Type) {
-  if (type) {
-    //const declarations = type.symbol.declarations
-    // if (Array.isArray(declarations)) {
-    //   return getNodeLink(declarations[0])
-    // }
-  }
-  return ''
-}
-
 function getNodeLink(node: ts.Node | undefined) {
   if (node) {
     const file = node.getSourceFile()
@@ -425,6 +410,69 @@ function getNodeLink(node: ts.Node | undefined) {
     return `${relative}:${file.getLineAndCharacterOfPosition(node.getStart()).line + 1}`
   }
   return ''
+}
+
+function isSimpleConflict(targetTypeText, sourceTypeText) {
+  return targetTypeText !== sourceTypeText && (isSimpleType(targetTypeText) || isSimpleType(sourceTypeText))
+}
+
+function getPropertyInfo(prop: ts.Symbol, type: ts.Type) {
+  const declarations = prop?.declarations
+  if (Array.isArray(declarations)) {
+    const declaration = declarations[0]
+    const typeText = typeToString(type)
+    const isOpt = prop.flags & ts.SymbolFlags.Optional
+    const text = `${prop.getName()}${isOpt ? '?' : ''}: ${isOpt ? typeText.replace(' | undefined', '') : typeText}`
+    const link = getNodeLink(declaration)
+    return { typeText, text, link, declaration }
+  }
+  return { typeText: '', text: '', link: '' }
+}
+
+function getDeclaratioInfo(prop: ts.Symbol) {
+  const declarations = prop?.declarations
+  if (Array.isArray(declarations)) {
+    const declaration = declarations[0]
+    const text = declaration
+      .getText()
+      .split('\n')
+      .map((seg) => seg.trimStart())
+      .join(', ')
+      .replace(/\{\,/g, '{')
+    const link = getNodeLink(declaration)
+    return { text, link, declaration }
+  }
+  return { text: '', link: '' }
+}
+
+function getTypeMap(type: ts.Type) {
+  const map = {}
+  type.getProperties().forEach((prop) => {
+    let info = {}
+    prop = prop?.syntheticOrigin || prop
+    const propName = prop.escapedName as string
+    const { text, link, declaration } = getDeclaratioInfo(prop)
+
+    // if this property belongs to a type other then the passed in 'type'
+    let parentInfo: { text: string; link: string } | undefined = undefined
+    if (declaration?.parent) {
+      const parentType = checker.getTypeAtLocation(declaration?.parent)
+      if (type !== parentType && !(parentType.symbol.flags & ts.SymbolFlags.TypeLiteral)) {
+        parentInfo = {
+          text: parentType.symbol.getName(),
+          link: getDeclaratioInfo(parentType.symbol).link,
+        }
+      }
+    }
+    info = {
+      isOptional: prop.flags & ts.SymbolFlags.Optional,
+      text,
+      link,
+      parentInfo,
+    }
+    map[propName] = info
+  })
+  return map
 }
 
 // ===============================================================================
@@ -448,8 +496,8 @@ function compareProperties(firstType, secondType) {
         if ((secondPropType.intrinsicName || 'not') !== (firstPropType.intrinsicName || 'not')) {
           // mismatch
           problem = {
-            sourceInfo: { type: firstType, text: sourceTypeText },
-            targetInfo: { type: secondType, text: targetTypeText },
+            sourceInfo: { type: firstType, typeText: sourceTypeText, text: sourceTypeText },
+            targetInfo: { type: secondType, typeText: targetTypeText, text: targetTypeText },
           }
           return false
         } else {
@@ -458,16 +506,8 @@ function compareProperties(firstType, secondType) {
             targetType: secondPropType,
             sourceType: firstPropType,
             branch: {
-              sourceInfo: {
-                text: typeToString(firstPropType),
-                link: firstPropType.types ? '' : getTypeLink(firstPropType),
-              },
-              targetInfo: {
-                text: typeToString(secondPropType),
-                link: firstPropType.types ? '' : getTypeLink(secondPropType),
-              },
-              parentTargetInfo: { text: targetTypeText },
-              parentSourceInfo: { text: sourceTypeText },
+              sourceInfo: getPropertyInfo(firstProp, firstPropType),
+              targetInfo: getPropertyInfo(secondProp, secondPropType),
             },
           })
         }
@@ -475,8 +515,8 @@ function compareProperties(firstType, secondType) {
     } else if (!(firstProp.flags & ts.SymbolFlags.Optional)) {
       // missing
       problem = {
-        sourceInfo: { type: firstType, text: sourceTypeText },
-        targetInfo: { type: secondType, text: targetTypeText },
+        sourceInfo: { type: firstType, typeText: sourceTypeText, text: sourceTypeText },
+        targetInfo: { type: secondType, typeText: targetTypeText, text: targetTypeText },
       }
       return false
     }
@@ -502,8 +542,8 @@ function compareTypes(targetType, sourceType, stack, context, bothWays = false) 
             // if source or target don't have properties, just log the mismatch
             if (isSimpleType(sourceTypeText) || isSimpleType(targetTypeText)) {
               problem = {
-                sourceInfo: { type: source, text: sourceTypeText },
-                targetInfo: { type: target, text: targetTypeText },
+                sourceInfo: { type: source, typeText: sourceTypeText, text: sourceTypeText },
+                targetInfo: { type: target, typeText: targetTypeText, text: targetTypeText },
               }
             } else if (targetTypeText !== 'undefined') {
               // else recurse into the properties of these types
@@ -521,8 +561,8 @@ function compareTypes(targetType, sourceType, stack, context, bothWays = false) 
             }
           } else {
             problem = {
-              sourceInfo: { type: source, text: sourceTypeText },
-              targetInfo: { type: target, text: targetTypeText },
+              sourceInfo: { type: source, typeText: sourceTypeText, text: sourceTypeText },
+              targetInfo: { type: target, typeText: targetTypeText, text: targetTypeText },
             }
           }
           return false
@@ -531,7 +571,7 @@ function compareTypes(targetType, sourceType, stack, context, bothWays = false) 
       })
     })
   ) {
-    showTheMath(problem, stack, context)
+    doTheMath(problem, stack, context)
     context.hadPayoff = true
     return false
   }
@@ -589,7 +629,7 @@ function isElaboratableKind(kind: ts.SyntaxKind) {
 }
 
 // B = A
-function elaborateAssignmentMismatch(code, node: ts.Node, nodeMaps) {
+function elaborateAssignmentMismatch(node: ts.Node, context) {
   let children = node.getChildren()
   const sourceNode = children[children.length - 1]
   const targetNode = children[0]
@@ -599,14 +639,14 @@ function elaborateAssignmentMismatch(code, node: ts.Node, nodeMaps) {
   // B = function()
   if (isFunctionLikeKind(sourceNode.kind)) {
     // if function, need to make sure each type returned can be assigned to target
-    const returns = nodeMaps.containerToReturns[sourceNode.getStart()]
+    const returns = context.nodeMaps.containerToReturns[sourceNode.getStart()]
     if (returns) {
       let hadPayoff = false
       returns.forEach((rn) => {
         if (hadPayoff) {
           console.log('\n\n')
         }
-        hadPayoff = elaborateReturnMismatch(code, rn, targetType, nodeMaps)
+        hadPayoff = elaborateReturnMismatch(rn, targetType, context)
       })
       return hadPayoff
     }
@@ -614,10 +654,8 @@ function elaborateAssignmentMismatch(code, node: ts.Node, nodeMaps) {
   } else {
     const sourceType: ts.Type = checker.getTypeAtLocation(sourceNode)
     const sourceTypeText = typeToString(sourceType)
-    const link = getNodeLink(sourceNode)
-    const context = {
-      code,
-      node,
+    const pathContext = {
+      ...context,
       message: `Bad assignment: ${node.getText()}`,
       hadPayoff: false,
     }
@@ -626,31 +664,38 @@ function elaborateAssignmentMismatch(code, node: ts.Node, nodeMaps) {
       sourceType,
       [
         {
-          sourceInfo: { text: sourceTypeText, link },
-          targetInfo: { text: targetTypeText, link },
+          sourceInfo: {
+            typeText: sourceTypeText,
+            text: `${sourceNode.getText()}: ${sourceTypeText}`,
+            link: getNodeLink(sourceNode),
+          },
+          targetInfo: {
+            typeText: targetTypeText,
+            text: `${targetNode.getText()}: ${targetTypeText}`,
+            link: getNodeLink(targetNode),
+          },
         },
       ],
-      context
+      pathContext
     )
-    return context.hadPayoff
+    return pathContext.hadPayoff
   }
 }
 
 // B => {return A}
-function elaborateReturnMismatch(code, node: ts.Node, containerType: ts.Type | undefined, nodeMaps) {
+function elaborateReturnMismatch(node: ts.Node, containerType: ts.Type | undefined, context) {
   const children = node.getChildren()
   // source is return type
   const sourceType: ts.Type = checker.getTypeAtLocation(children[1])
   // target is container type
-  const container = nodeMaps.returnToContainer[node.getStart()]
+  const container = context.nodeMaps.returnToContainer[node.getStart()]
   if (container) {
     containerType = containerType || checker.getTypeAtLocation(container)
     const targetType: ts.Type = checker.getSignaturesOfType(containerType, 0)[0].getReturnType()
     const targetTypeText = typeToString(targetType)
     const sourceTypeText = sourceType.value ? typeof sourceType.value : node.getText()
-    const context = {
-      code,
-      node,
+    const pathContext = {
+      ...context,
       message: `Bad return type: ${targetTypeText} { ${chalk.whiteBright(node.getText())} }`,
       hadPayoff: false,
     }
@@ -659,26 +704,34 @@ function elaborateReturnMismatch(code, node: ts.Node, containerType: ts.Type | u
       sourceType,
       [
         {
-          targetInfo: { text: targetTypeText, link: getNodeLink(container) },
-          sourceInfo: { text: sourceTypeText.replace('return ', ''), link: getNodeLink(node) },
+          targetInfo: {
+            typeText: targetTypeText,
+            text: `${container.parent.symbol.getName()}: ${targetTypeText}`,
+            link: getNodeLink(container),
+          },
+          sourceInfo: {
+            typeText: sourceTypeText.replace('return ', ''),
+            text: `${node.getText()}${sourceType.value ? ' // (' + typeof sourceType.value + ')' : ''}`,
+            link: getNodeLink(node),
+          },
         },
       ],
-      context,
+      pathContext,
       options.strictFunctionTypes
     )
-    return context.hadPayoff
+    return pathContext.hadPayoff
   }
   return false
 }
 
 // call func(..A...) => (...B...)
-function elaborateCallMismatches(code, node: ts.Node, errorNode: ts.Node) {
+function elaborateCallMismatches(node: ts.Node, context) {
   const children = node.getChildren()
   // signature of function being called
   const signature = checker.getSignaturesOfType(checker.getTypeAtLocation(children[0]), 0)[0]
   // args that are being passed
   const args = children[2].getChildren().filter((node) => node.kind !== ts.SyntaxKind.CommaToken)
-  const index = args.findIndex((node) => node === errorNode)
+  //const index = args.findIndex((node) => node === errorNode)
   // for each arg, compare its type to call parameter type
   let hadPayoff = false
   const functionName = children[0].getText()
@@ -687,15 +740,15 @@ function elaborateCallMismatches(code, node: ts.Node, errorNode: ts.Node) {
     const sourceType = checker.getTypeOfSymbolAtLocation(param, node)
     const sourceTypeText = typeToString(sourceType)
     const targetType = checker.getTypeAtLocation(arg)
+    const fds = arg.getText()
     const targetTypeText = typeToString(targetType)
-    const paramName = chalk.whiteBright(`${param.escapedName}: ${sourceTypeText}`)
+    const paramName = `${param.escapedName}: ${sourceTypeText}`
     const message = `Bad call argument #${inx + 1} type: ${functionName}( ${chalk.whiteBright(
       arg.getText()
-    )}, ) => ${functionName}( ${paramName}, )`
+    )}, ) => ${functionName}( ${chalk.whiteBright(paramName)}, )`
 
-    const context = {
-      code,
-      node,
+    const pathContext = {
+      ...context,
       message,
       hadPayoff: false,
     }
@@ -707,14 +760,14 @@ function elaborateCallMismatches(code, node: ts.Node, errorNode: ts.Node) {
       sourceType,
       [
         {
-          sourceInfo: { text: sourceTypeText, link: getNodeLink(param.valueDeclaration) },
-          targetInfo: { text: targetTypeText, link: getNodeLink(node) },
+          sourceInfo: { typeText: sourceTypeText, text: paramName, link: getNodeLink(param.valueDeclaration) },
+          targetInfo: { typeText: targetTypeText, text: arg.getText(), link: getNodeLink(node) },
         },
       ],
-      context
+      pathContext
     )
-    hadPayoff = context.hadPayoff
-    return hadPayoff
+    hadPayoff = pathContext.hadPayoff
+    return hadPayoff // stops on first conflict just like ts
   })
   return hadPayoff
 }
@@ -724,22 +777,23 @@ function elaborateMismatch(code, errorNode: ts.Node, nodeMaps) {
     ts.findAncestor(errorNode, (node) => {
       return !!node && isElaboratableKind(node.kind)
     }) || errorNode
+  const context = { code, node, errorNode, nodeMaps }
   switch (node.kind) {
     // func type !== return type
     case ts.SyntaxKind.ReturnStatement:
-      return elaborateReturnMismatch(code, node, undefined, nodeMaps)
+      return elaborateReturnMismatch(node, undefined, context)
 
     // can't call this func with this argument type
     case ts.SyntaxKind.CallExpression:
-      return elaborateCallMismatches(code, node, errorNode)
+      return elaborateCallMismatches(node, context)
 
     // can't set A = B, or A = func()
     case ts.SyntaxKind.VariableDeclaration:
-      return elaborateAssignmentMismatch(code, node, nodeMaps)
+      return elaborateAssignmentMismatch(node, context)
 
     // can't set A = B
     case ts.SyntaxKind.Identifier:
-      return elaborateAssignmentMismatch(code, node.parent, nodeMaps)
+      return elaborateAssignmentMismatch(node.parent, context)
 
     default:
       console.log(`Missing support for kind === ${node.kind}`)
