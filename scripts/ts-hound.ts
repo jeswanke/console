@@ -1,3 +1,4 @@
+import { ElementType } from 'react'
 /* Copyright Contributors to the Open Cluster Management project */
 
 import path from 'path'
@@ -49,7 +50,7 @@ function showTheOptions({ targetInfo, sourceInfo }, context, stack) {
   }
   const addUnionMsg = () => {
     const sourceType = chalk.blueBright(`"| ${sourceInfo.text}"`)
-    options.push(`Option 1: Append ${sourceType} to this type: ${targetText} here: ${targetLink}`)
+    options.push(`Option 1: Append ${sourceType} to this type: ${targetText} here: ${errorLink}`)
   }
   switch (true) {
     case targetInfo.typeText === 'never':
@@ -145,11 +146,11 @@ function doTheMath(problem, stack, context) {
   const { sourceInfo, targetInfo } = stack[0]
   const p = new Table({
     columns: [
-      { name: 'target', minLen: 60, title: targetInfo.link, alignment: 'left' },
+      { name: 'target', minLen: 60, title: `Target: ${targetInfo.link}`, alignment: 'left' },
       {
         name: 'source',
         minLen: 60,
-        title: `${sourceInfo.link} ${sourceInfo.link === targetInfo.link ? '(same)' : ''}`,
+        title: `Source: ${sourceInfo.link} ${sourceInfo.link === targetInfo.link ? '(same)' : ''}`,
         alignment: 'left',
       },
     ],
@@ -546,6 +547,8 @@ function compareTypes(targetType, sourceType, stack, context, bothWays?: boolean
     !sources.every((source) => {
       return targets.some((target) => {
         const sourceTypeText = typeToString(source)
+        const dgf = checker.typeToTypeNode(source, undefined, 0)
+        const dsr = checker.getTypeAtLocation(dgf.elementType)
         const targetTypeText = typeToString(target)
         if (sourceTypeText !== targetTypeText) {
           if (sourceTypeText !== 'undefined') {
@@ -818,7 +821,26 @@ function elaborateOnMismatch(code, errorNode: ts.Node, nodeMaps) {
           )
         }) as ts.ExpressionStatement) || errorNode
 
-      //TODO: if left side is like this: a.b.c, we need to create a faux type literal on the source side to compare
+      // if the target is a path into an object, need to find the property in type
+      const path = statement.expression.left.getText().split(/\W+/)
+      if (path.length > 1) {
+        path.shift()
+        let node: ts.Node | undefined = errorNode
+        do {
+          const propName = path.shift()
+          const type = checker.getTypeAtLocation(node)
+          const types = type.types || [type]
+          types.some((type) => {
+            const declarations = type.getProperty(propName)?.declarations
+            if (Array.isArray(declarations)) {
+              node = declarations[0]
+              return true
+            }
+            return false
+          })
+        } while (path.length)
+        context.errorNode = node
+      }
       return elaborateOnAssignmentMismatch(statement, statement.expression.left, statement.expression.right, context)
 
     default:
