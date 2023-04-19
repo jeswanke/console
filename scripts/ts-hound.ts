@@ -18,10 +18,10 @@ const MAX_SHOWN_PROP_MISMATCH = 6
 // ===============================================================================
 // ===============================================================================
 
-function getWhenCallArgumentsDontMatch({ targetInfo, sourceInfo }, context, stack) {
+function whenCallArgumentsDontMatch({ targetInfo, sourceInfo }, context, stack) {
   const solutions: string[] = []
 
-  return [...solutions, ...getOtherPossibleSolutions({ targetInfo, sourceInfo }, context, stack)]
+  return [...solutions, ...otherPossibleSolutions({ targetInfo, sourceInfo }, context, stack)]
 }
 
 // ===============================================================================
@@ -118,7 +118,7 @@ function whenArraysDontMatch({ targetInfo, sourceInfo }, context, stack) {
 // ===============================================================================
 // ===============================================================================
 
-function getOtherPossibleSolutions({ targetInfo, sourceInfo }, context, stack) {
+function otherPossibleSolutions({ targetInfo, sourceInfo }, context, stack) {
   // then log the possible solutions
   switch (true) {
     case targetInfo.typeText === 'never' || sourceInfo.typeText === 'never':
@@ -141,7 +141,7 @@ function getOtherPossibleSolutions({ targetInfo, sourceInfo }, context, stack) {
   }
 }
 
-function getPossibleSolutions({ targetInfo, sourceInfo }, context, stack) {
+function showSolutions({ targetInfo, sourceInfo }, context, stack) {
   // find first real parent links
   let sourceLink
   let targetLink
@@ -163,40 +163,20 @@ function getPossibleSolutions({ targetInfo, sourceInfo }, context, stack) {
     sourceText,
     targetText,
   }
-  if (context.node.kind === ts.SyntaxKind.CallExpression) {
-    return getWhenCallArgumentsDontMatch({ targetInfo, sourceInfo }, context, stack)
-  } else {
-    return getOtherPossibleSolutions({ targetInfo, sourceInfo }, context, stack)
-  }
+  const solutions: string[] = context.callMismatch
+    ? whenCallArgumentsDontMatch({ targetInfo, sourceInfo }, context, stack)
+    : otherPossibleSolutions({ targetInfo, sourceInfo }, context, stack)
+  solutions.forEach((solution) => console.log(chalk.whiteBright(solution)))
+  if (solutions.length) console.log('')
 }
 
 // ===============================================================================
 // ===============================================================================
 // ===============================================================================
 
-function showDifferencesAndSolutions(problem, stack, context) {
-  // doesn't get here unless there's a conflict
-
-  // show error and start the table
-  console.log(`TS${context.code}: ${context.message}`)
-  // log the call stack
-  const { sourceInfo, targetInfo } = stack[0]
-  const p = new Table({
-    columns: [
-      { name: 'target', minLen: 60, title: `Target: ${targetInfo.link}`, alignment: 'left' },
-      {
-        name: 'source',
-        minLen: 60,
-        title: `Source: ${sourceInfo.link} ${sourceInfo.link === targetInfo.link ? '(same)' : ''}`,
-        alignment: 'left',
-      },
-    ],
-  })
-
+function showTypeDifferences(p, problem, context, stack, links, maxs, arg?) {
   // display the path we took to get here
   let spacer = ''
-  const links = []
-  const maxs = []
   let simpleConflict = false
   let lastTargetType
   let lastSourceType
@@ -205,20 +185,22 @@ function showDifferencesAndSolutions(problem, stack, context) {
     simpleConflict =
       isSimpleConflict(targetInfo?.typeText, sourceInfo?.typeText) ||
       isArrayType(problem.sourceInfo.type) ||
-      isArrayType(problem.targetInfo.type) // ||
+      isArrayType(problem.targetInfo.type)
     const color = simpleConflict ? 'red' : 'green'
     if (inx === 0) {
-      p.addRow(
-        {
-          target: `${min(maxs, targetInfo?.text)} ${
-            isFunctionType(problem.targetInfo.type) ? `  // (${problem.targetInfo.typeText})` : ''
-          }`,
-          source: `${min(maxs, sourceInfo?.text)} ${
-            isFunctionType(problem.sourceInfo.type) ? `  // (${problem.sourceInfo.typeText})` : ''
-          }`,
-        },
-        { color }
-      )
+      const row: any = {
+        target: `${min(maxs, targetInfo?.text)} ${
+          isFunctionType(problem.targetInfo.type) ? `: ${problem.targetInfo.typeText}` : ''
+        }`,
+        source: `${min(maxs, sourceInfo?.text)} ${
+          isFunctionType(problem.sourceInfo.type) ? `: ${problem.sourceInfo.typeText}` : ''
+        }`,
+      }
+      if (arg) {
+        row.arg = `\u25B6 ${arg}`
+        row.parm = `\u25B6 ${arg}`
+      }
+      p.addRow(row, { color })
       spacer += '  '
     } else {
       if (targetInfo.typeText !== lastTargetType && sourceInfo.typeText !== lastSourceType) {
@@ -396,15 +378,86 @@ function showDifferencesAndSolutions(problem, stack, context) {
       })
     }
   }
+}
 
-  // print the table. notes and solutions
+function showCallDifferences(p, problem, context, stack, links, maxs) {
+  context.matchUps.forEach(({ argName, paramName, sourceTypeText, targetTypeText }, inx) => {
+    if (inx !== context.errorIndex) {
+      const conflict = sourceTypeText !== targetTypeText
+      p.addRow(
+        {
+          arg: inx + 1,
+          parm: inx + 1,
+          target: `${min(maxs, `${argName}: ${targetTypeText}`)}`,
+          source: `${min(maxs, `${paramName}: ${sourceTypeText}`)}`,
+        },
+        { color: conflict ? 'red' : 'green' }
+      )
+    } else {
+      showTypeDifferences(p, problem, context, stack, links, maxs, inx + 1)
+    }
+  })
+}
+
+// we get here unless there's a conflict
+function showDifferences(problem, context, stack) {
+  //show the error
+  console.log(`TS${context.code}: ${context.message}`)
+
+  // create the table
+  const { sourceInfo, targetInfo } = stack[0]
+  const columns: {
+    name: string
+    minLen?: number
+    title: string
+    alignment: string
+  }[] = []
+  if (context.callMismatch) {
+    columns.push({
+      name: 'arg',
+      title: 'Arg',
+      alignment: 'right',
+    })
+  }
+  columns.push({
+    name: 'target',
+    minLen: 60,
+    title: `${context.callMismatch ? 'Caller' : 'Target'}: ${targetInfo.link}`,
+    alignment: 'left',
+  })
+  if (context.callMismatch) {
+    columns.push({
+      name: 'parm',
+      title: 'Prm',
+      alignment: 'right',
+    })
+  }
+  columns.push({
+    name: 'source',
+    minLen: 60,
+    title: `${context.callMismatch ? 'Callee' : 'Source'}: ${sourceInfo.link} ${
+      sourceInfo.link === targetInfo.link ? '(same)' : ''
+    }`,
+    alignment: 'left',
+  })
+
+  const p = new Table({
+    columns,
+  })
+
+  const links = []
+  const maxs = []
+  if (context.callMismatch) {
+    showCallDifferences(p, problem, context, stack, links, maxs)
+  } else {
+    showTypeDifferences(p, problem, context, stack, links, maxs)
+  }
+
+  // print the table and table notes
   p.printTable()
   maxs.forEach((max) => console.log(max))
   links.forEach((link) => console.log(link))
   if (links.length) console.log('')
-  const solutions: string[] = getPossibleSolutions(problem, context, stack)
-  solutions.forEach((solution) => console.log(chalk.whiteBright(solution)))
-  if (solutions.length) console.log('')
 }
 
 // ===============================================================================
@@ -667,7 +720,8 @@ function compareTypes(targetType, sourceType, stack, context, bothWays?: boolean
       })
     })
   ) {
-    showDifferencesAndSolutions(problem, stack, context)
+    showDifferences(problem, context, stack)
+    showSolutions(problem, context, stack)
     context.hadPayoff = true
     return false
   }
@@ -793,7 +847,7 @@ function elaborateOnReturnMismatch(node: ts.Node, containerType: ts.Type | undef
           },
           sourceInfo: {
             typeText: sourceTypeText.replace('return ', ''),
-            text: `${node.getText()}${sourceType.value ? ' // (' + typeof sourceType.value + ')' : ''}`,
+            text: `${node.getText()}${sourceType.value ? ': ' + typeof sourceType.value : ''}`,
             link: getNodeLink(node),
           },
         },
@@ -852,6 +906,7 @@ function elaborateOnCallMismatches(node: ts.Node, errorNode, context) {
       ...context,
       matchUps,
       errorIndex,
+      callMismatch: true,
       message,
       hadPayoff: false,
     }
@@ -863,7 +918,7 @@ function elaborateOnCallMismatches(node: ts.Node, errorNode, context) {
       sourceType,
       [
         {
-          sourceInfo: { typeText: sourceTypeText, text: paramName, link: paramLink },
+          sourceInfo: { typeText: sourceTypeText, text: `${paramName}: ${sourceTypeText}`, link: paramLink },
           targetInfo: { typeText: targetTypeText, text: argName, link: getNodeLink(node) },
         },
       ],
