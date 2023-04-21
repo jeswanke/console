@@ -19,105 +19,226 @@ const simpleTypes = ['string', 'number', 'boolean', 'bigint', 'Date', 'any', 'un
 // ===============================================================================
 // ===============================================================================
 
-function whenSimpleTypesDontMatch(context) {
-  const solutions: string[] = []
-  const { sourceInfo, targetInfo } = context.parentInfo
-  const sourceName = sourceInfo.varText
+function whenSimpleTypesDontMatch(suggestions, _problem, context, stack) {
+  // at this point:
+  //  problem-- contains the conflicting types
+  //  stack-- contains all of the parent "var: type" that led us here
+  //  context-- if the types are shapes, the conflicting sourceProps/typeProps
+  //
+  const layer = stack[stack.length - 1]
+  const { sourceInfo, targetInfo } = layer
   switch (targetInfo.typeText) {
     case 'number':
       if (!Number.isNaN(Number(sourceInfo.typeValue))) {
-        solutions.push(
-          `\nBEST: Convert Source to number with ${chalk.blueBright(`Number(${sourceName})`)} here: ${chalk.blueBright(
-            sourceInfo.errorLink
-          )}`
-        )
+        suggestions.push(`\nBEST: Convert Source to number here: ${chalk.blueBright(sourceInfo.nodeLink)}`)
+        suggestions.push(`\n          ${chalk.greenBright(`${targetInfo.nodeText} = Number(${sourceInfo.nodeText})`)}`)
       }
       break
     case 'string':
-      solutions.push(
-        `\nBEST: Convert Source to string with ${chalk.blueBright(`String(${sourceName})`)} here: ${chalk.blueBright(
-          sourceInfo.errorLink
-        )}`
+      suggestions.push(
+        `\nBEST: Convert Source to string with ${chalk.green(
+          `String(${sourceInfo.nodeText}).toString()`
+        )} here: ${chalk.blueBright(sourceInfo.nodeLink)}`
       )
       break
     case 'boolean':
-      solutions.push(
-        `\nBEST: Convert Source to boolean with ${chalk.blueBright(`!!${sourceName}`)} here: ${chalk.blueBright(
-          sourceInfo.errorLink
-        )}`
-      )
+      suggestions.push(`\nBEST: Convert Source to boolean here: ${chalk.blueBright(sourceInfo.nodeLink)}`)
+      suggestions.push(`\n          ${chalk.greenBright(`${targetInfo.nodeText} = !!${sourceInfo.nodeText}`)}`)
       break
   }
-  solutions.push(
-    `\nGOOD: Union Target with  ${chalk.blueBright(`| ${sourceInfo.typeText}`)} here: ${chalk.blueBright(
-      targetInfo.hereLink || targetInfo.errorLink
+  suggestions.push(
+    `\nGOOD: Union Target with ${chalk.green(`| ${sourceInfo.typeText}`)} here: ${chalk.blueBright(
+      context.targetDeclared ? getNodeLink(context.targetDeclared) : targetInfo.nodeLink
     )}`
   )
-  return solutions
+  suggestions.push(`\n          ${chalk.greenBright(`${targetInfo.fullText} | ${sourceInfo.typeText}`)}`)
 }
 
 // ===============================================================================
 // ===============================================================================
 // ===============================================================================
 
-function whenUndefinedTypeDoesntMatch({ targetInfo, sourceInfo }, context, stack) {
-  const solutions: string[] = []
-  return solutions
+function whenArraysDontMatch(suggestions, problem, _context, stack) {
+  // at this point:
+  //  problem-- contains the conflicting types
+  //  stack-- contains all of the parent "var: type" that led us here
+  //  context-- if the types are shapes, the conflicting sourceProps/typeProps
+  //
+  const layer = stack[stack.length - 1]
+  const { sourceInfo, targetInfo } = layer
+  if (isArrayType(problem.sourceInfo.type)) {
+    suggestions.push(
+      `\n Did you mean to assign just one element of the ${chalk.blueBright(
+        sourceInfo.nodeText
+      )} array here?: ${chalk.blueBright(sourceInfo.nodeLink)}`
+    )
+    suggestions.push(`\n          ${chalk.greenBright(`${targetInfo.fullText} = ${sourceInfo.nodeText}[0]`)}`)
+  } else {
+    suggestions.push('ruh roh')
+  }
+}
+
+// ===============================================================================
+// ===============================================================================
+// ===============================================================================
+// at this point:
+//  problem-- contains the conflicting types
+//  stack-- contains all of the parent "var: type" that led us here
+//  context-- if the types are shapes, the conflicting sourceProps/typeProps
+//
+function whenUndefinedTypeDoesntMatch(suggestions, problem, context, stack) {
+  const layer = stack[stack.length - 1]
+  const { sourceInfo, targetInfo } = layer
+  if (problem.targetInfo.typeText === 'undefined') {
+    suggestions.push(
+      `\nBEST: Change the Target ${chalk.green(targetInfo.nodeText)} type to ${chalk.green(
+        sourceInfo.typeText
+      )} here: ${chalk.blueBright(targetInfo.nodeLink)}`
+    )
+  } else {
+    suggestions.push(
+      `\BEST: Union Target type with ${chalk.green('| undefined')} here: ${chalk.blueBright(
+        context.targetDeclared ? getNodeLink(context.targetDeclared) : targetInfo.nodeLink
+      )}`
+    )
+    suggestions.push(`\n          ${chalk.greenBright(`${targetInfo.typeText} | undefined`)}`)
+  }
+}
+
+// ===============================================================================
+// ===============================================================================
+// ===============================================================================
+// at this point:
+//  problem-- contains the conflicting types
+//  stack-- contains all of the parent "var: type" that led us here
+//  context-- if the types are shapes, the conflicting sourceProps/typeProps
+//
+function whenNeverTypeDoesntMatch(suggestions, problem, context, stack) {
+  const layer = stack[stack.length - 1]
+  const { sourceInfo, targetInfo } = layer
+  if (problem.sourceInfo.typeText === 'never[]' && context.targetDeclared) {
+    suggestions.push(
+      `\nBEST: Declare the following type for ${chalk.green(context.targetDeclared.name.text)} here: ${chalk.blueBright(
+        getNodeLink(context.targetDeclared)
+      )}`
+    )
+    suggestions.push(
+      `\n          ${chalk.greenBright(`${context.targetDeclared.name.text}: ${targetInfo.typeText}[]`)}`
+    )
+  } else if (problem.targetInfo.typeText.startsWith('never')) {
+    suggestions.push(`NOTE: Targets use the 'never' type to catch code paths that shouldn't be executing`)
+    suggestions.push(`\BEST: Determine what code path led to this point and fix it`)
+    suggestions.push(
+      `\GOOD: If appropriate, change the Target ${chalk.green(targetInfo.nodeText)} type to ${chalk.green(
+        sourceInfo.typeText
+      )} here: ${chalk.blueBright(context.targetDeclared ? getNodeLink(context.targetDeclared) : targetInfo.nodeLink)}`
+    )
+  } else {
+    suggestions.push('ruh roh')
+  }
+}
+
+// ===============================================================================
+// ===============================================================================
+// ===============================================================================
+// at this point:
+//  problem-- contains the conflicting types
+//  stack-- contains all of the parent "var: type" that led us here
+//  context-- if the types are shapes, the conflicting sourceProps/typeProps
+//
+
+function whenUnknownTypeDoesntMatch(suggestions, problem, context, stack) {
+  const sd = 0
+}
+
+// ===============================================================================
+// ===============================================================================
+// ===============================================================================
+// at this point:
+//  problem-- contains the conflicting types
+//  stack-- contains all of the parent "var: type" that led us here
+//  context-- if the types are shapes, the conflicting sourceProps/typeProps
+//
+
+function whenPrototypesDontMatch(suggestions, problem, context, stack) {
+  const sd = 0
+}
+
+// ===============================================================================
+// ===============================================================================
+// ===============================================================================
+// at this point:
+//  problem-- contains the conflicting types
+//  stack-- contains all of the parent "var: type" that led us here
+//  context-- if the types are shapes, the conflicting sourceProps/typeProps
+//
+
+function whenCallArgumentsDontMatch(suggestions, problem, context, stack) {
+  const sd = 0
+
+  otherPossibleSuggestions(suggestions, problem, context, stack)
+}
+
+// ===============================================================================
+// ===============================================================================
+// ===============================================================================
+// at this point:
+//  problem-- contains the conflicting types
+//  stack-- contains all of the parent "var: type" that led us here
+//  context-- if the types are shapes, the conflicting sourceProps/typeProps
+//
+
+function whenTypeShapesDontMatch(suggestions, problem, context, stack) {
+  const sd = 0
+
+  // if type is an inferred structure
+  //    recommend converting it into this interface:
+  //    and replace here LINK
+  //    and replace here LINK
 }
 
 // ===============================================================================
 // ===============================================================================
 // ===============================================================================
 
-function whenNeverTypeDoesntMatch({ targetInfo, sourceInfo }, context, stack) {
-  const solutions: string[] = []
-  return solutions
+function otherPossibleSuggestions(suggestions, problem, context, stack) {
+  // then log the possible suggestions
+  const { targetInfo, sourceInfo } = problem
+  switch (true) {
+    case targetInfo.typeText === 'never' ||
+      sourceInfo.typeText === 'never' ||
+      targetInfo.typeText === 'never[]' ||
+      sourceInfo.typeText === 'never[]':
+      return whenNeverTypeDoesntMatch(suggestions, problem, context, stack)
+
+    case targetInfo.typeText === 'undefined' || sourceInfo.typeText === 'undefined':
+      return whenUndefinedTypeDoesntMatch(suggestions, problem, context, stack)
+
+    case targetInfo.typeText === 'unknown' || sourceInfo.typeText === 'unknown':
+      return whenUnknownTypeDoesntMatch(suggestions, problem, context, stack)
+
+    case isArrayType(targetInfo.type) || isArrayType(sourceInfo.type):
+      return whenArraysDontMatch(suggestions, problem, context, stack)
+
+    case isFunctionType(targetInfo.type) || isFunctionType(sourceInfo.type):
+      return whenPrototypesDontMatch(suggestions, problem, context, stack)
+
+    case isSimpleType(targetInfo.typeText) && isSimpleType(sourceInfo.typeText):
+      return whenSimpleTypesDontMatch(suggestions, problem, context, stack)
+
+    default:
+      return whenTypeShapesDontMatch(suggestions, problem, context, stack)
+  }
 }
 
-// ===============================================================================
-// ===============================================================================
-// ===============================================================================
+function showSuggestions(problem, context, stack) {
+  // at this point:
+  //  problem-- contains the conflicting types
+  //  stack-- contains all of the parent "var: type" that led us here
+  //  context-- if the types are shapes, the conflicting sourceProps/typeProps
+  //
 
-function whenUnknownTypeDoesntMatch({ targetInfo, sourceInfo }, context, stack) {
-  const solutions: string[] = []
-  return solutions
-}
-
-// ===============================================================================
-// ===============================================================================
-// ===============================================================================
-
-function whenArraysDontMatch({ targetInfo, sourceInfo }, context, stack) {
-  const solutions: string[] = []
-  return solutions
-}
-
-// ===============================================================================
-// ===============================================================================
-// ===============================================================================
-
-function whenPrototypesDontMatch({ targetInfo, sourceInfo }, context, stack) {
-  const solutions: string[] = []
-  return solutions
-}
-
-// ===============================================================================
-// ===============================================================================
-// ===============================================================================
-
-function whenCallArgumentsDontMatch({ targetInfo, sourceInfo }, context, stack) {
-  const solutions: string[] = []
-
-  return [...solutions, ...otherPossibleSolutions({ targetInfo, sourceInfo }, context, stack)]
-}
-
-// ===============================================================================
-// ===============================================================================
-// ===============================================================================
-
-function whenTypeShapesDontMatch({ targetInfo, sourceInfo }, context, stack) {
-  const solutions: string[] = []
-
+  const suggestions: string[] = []
   if (context?.externalLinks?.length) {
     const libs = new Set()
     context.externalLinks.forEach((link) => {
@@ -128,79 +249,20 @@ function whenTypeShapesDontMatch({ targetInfo, sourceInfo }, context, stack) {
       }
       libs.add(link)
     })
-    const externalLibs = `"${Array.from(libs).join(', ')}"`
-    // solutions.push(
-    //   `Option 1: Ask the owners of ${chalk.blueBright(externalLibs)} to make the listed properties optional.`
-    // )
-    // solutions.push(`Note: Until there's a fix, disable this error by inserting these comments here: ${errorLink}`)
-    // solutions.push(`    ${chalk.greenBright('// eslint-disable-next-line @typescript-eslint/ban-ts-comment')} `)
-    // solutions.push(`    ${chalk.greenBright(`// @ts-ignore: Fixed required in ${externalLibs}`)} `)
-  } else {
-    solutions.push('ruh roh')
-    //    add missing properties to 'type1' here:ff or make them optional here:ee
-    //    add missing properties to 'type2' here:ff or make them optional here:ee
+    const externalLibs = `'${Array.from(libs).join(', ')}'`
+    suggestions.push(`NOTE: The problem is in these inaccessible external libraries: ${chalk.green(externalLibs)}`)
+    suggestions.push(
+      `\nBEST: Disable the error with these comments here: ${chalk.blueBright(getNodeLink(context.errorNode))}`
+    )
+    suggestions.push(`${chalk.greenBright('        // eslint-disable-next-line @typescript-eslint/ban-ts-comment')} `)
+    suggestions.push(`${chalk.greenBright(`        // @ts-ignore: Fixed required in ${externalLibs}`)} `)
   }
 
-  // if type is an inferred structure
-  //    recommend converting it into this interface:
-  //    and replace here LINK
-  //    and replace here LINK
-
-  return solutions
-}
-
-// ===============================================================================
-// ===============================================================================
-// ===============================================================================
-
-function otherPossibleSolutions({ targetInfo, sourceInfo }, context, stack) {
-  // then log the possible solutions
-  switch (true) {
-    case targetInfo.typeText === 'never' || sourceInfo.typeText === 'never':
-      return whenNeverTypeDoesntMatch({ targetInfo, sourceInfo }, context, stack)
-
-    case targetInfo.typeText === 'undefined' || sourceInfo.typeText === 'undefined':
-      return whenUndefinedTypeDoesntMatch({ targetInfo, sourceInfo }, context, stack)
-
-    case targetInfo.typeText === 'unknown' || sourceInfo.typeText === 'unknown':
-      return whenUnknownTypeDoesntMatch({ targetInfo, sourceInfo }, context, stack)
-
-    case isArrayType(targetInfo.type) || isArrayType(sourceInfo.type):
-      return whenArraysDontMatch({ targetInfo, sourceInfo }, context, stack)
-
-    case isFunctionType(targetInfo.type) || isFunctionType(sourceInfo.type):
-      return whenPrototypesDontMatch({ targetInfo, sourceInfo }, context, stack)
-
-    case isSimpleType(targetInfo.typeText) && isSimpleType(sourceInfo.typeText):
-      return whenSimpleTypesDontMatch(context)
-
-    default:
-      return whenTypeShapesDontMatch({ targetInfo, sourceInfo }, context, stack)
-  }
-}
-
-function showSolutions({ targetInfo, sourceInfo }, context, stack) {
-  // find first real parent links in stack
-  // other links might be to a generic type
-  let source
-  let target
-  stack.reverse().forEach(({ sourceInfo, targetInfo }) => {
-    if (!source && sourceInfo.errorLink) {
-      source = sourceInfo
-    }
-    if (!target && targetInfo.errorLink) {
-      target = targetInfo
-    }
-  })
-  context.parentInfo = {
-    sourceInfo: source,
-    targetInfo: target,
-  }
-  const solutions: string[] = context.callMismatch
-    ? whenCallArgumentsDontMatch({ targetInfo, sourceInfo }, context, stack)
-    : otherPossibleSolutions({ targetInfo, sourceInfo }, context, stack)
-  solutions.forEach((solution) => console.log(chalk.whiteBright(solution)))
-  if (solutions.length) console.log('')
+  context.callMismatch
+    ? whenCallArgumentsDontMatch(suggestions, problem, context, stack)
+    : otherPossibleSuggestions(suggestions, problem, context, stack)
+  suggestions.forEach((solution) => console.log(chalk.whiteBright(solution)))
+  if (suggestions.length) console.log('')
 }
 
 // ===============================================================================
@@ -243,13 +305,13 @@ function showTypeDifferences(p, problem, context, stack, links, maxs, arg?) {
               links,
               spacer,
               targetInfo.fullText,
-              targetInfo.errorLink
+              targetInfo.nodeLink
             )}`,
             source: `${spacer}${simpleConflict ? '  ' : '└'}${min(maxs, sourceInfo.fullText)}  ${addLink(
               links,
               spacer,
               sourceInfo.fullText,
-              sourceInfo.errorLink
+              sourceInfo.nodeLink
             )}`,
           },
           { color }
@@ -261,16 +323,16 @@ function showTypeDifferences(p, problem, context, stack, links, maxs, arg?) {
     lastSourceType = sourceInfo.typeText
   })
 
-  // if the conflict involves an object, show the properties that conflict
+  // if the conflict involves a type shape, show the properties that conflict
   if (!simpleConflict && problem) {
-    // if the conflict involves an object, show the properties that conflict
-    // show properties that match
     const mismatch: { source?: string; target?: string }[] = []
     const missing: { source?: string; target?: string }[] = []
     const targetMap = getTypeMap(problem.targetInfo.type)
     const sourceMap = getTypeMap(problem.sourceInfo.type)
     const sourceProps: { missing: any[]; mismatch: any[] } | undefined = { missing: [], mismatch: [] }
     const targetProps: { missing: any[]; mismatch: any[] } | undefined = { missing: [], mismatch: [] }
+    context.sourceProps = sourceProps
+    context.targetProps = targetProps
 
     // properties that are in source but not target
     Object.keys(sourceMap).forEach((propName) => {
@@ -331,8 +393,8 @@ function showTypeDifferences(p, problem, context, stack, links, maxs, arg?) {
         if (inx < MAX_SHOWN_PROP_MISMATCH) {
           if (target) {
             targetProps.push(targetMap[target])
-            if (targetMap[target].errorLink.indexOf('node_modules/') !== -1) {
-              context.externalLinks.push(targetMap[target].errorLink)
+            if (targetMap[target].nodeLink.indexOf('node_modules/') !== -1) {
+              context.externalLinks.push(targetMap[target].nodeLink)
             }
 
             if (targetMap[target].parentInfo && targetMap[target].parentInfo.fullText !== lastTargetParent) {
@@ -341,7 +403,7 @@ function showTypeDifferences(p, problem, context, stack, links, maxs, arg?) {
                 links,
                 spacer,
                 targetMap[target].parentInfo.fullText,
-                targetMap[target].parentInfo.errorLink
+                targetMap[target].parentInfo.nodeLink
               )}`
             }
             const bump = lastTargetParent ? '   ' : ''
@@ -349,7 +411,7 @@ function showTypeDifferences(p, problem, context, stack, links, maxs, arg?) {
               links,
               spacer + bump,
               targetMap[target].fullText,
-              targetMap[target].errorLink,
+              targetMap[target].nodeLink,
               color
             )}`
           } else {
@@ -357,8 +419,8 @@ function showTypeDifferences(p, problem, context, stack, links, maxs, arg?) {
           }
           if (source) {
             sourceProps.push(sourceMap[source])
-            if (sourceMap[source].errorLink.indexOf('node_modules/') !== -1) {
-              context.externalLinks.push(sourceMap[source].errorLink)
+            if (sourceMap[source].nodeLink.indexOf('node_modules/') !== -1) {
+              context.externalLinks.push(sourceMap[source].nodeLink)
             }
             if (sourceMap[source].parentInfo && sourceMap[source].parentInfo.fullText !== lastSourceParent) {
               lastSourceParent = sourceMap[source].parentInfo.fullText
@@ -366,7 +428,7 @@ function showTypeDifferences(p, problem, context, stack, links, maxs, arg?) {
                 links,
                 spacer,
                 sourceMap[source].parentInfo.fullText,
-                sourceMap[source].parentInfo.errorLink
+                sourceMap[source].parentInfo.nodeLink
               )}`
             }
             const bump = lastSourceParent ? '   ' : ''
@@ -374,7 +436,7 @@ function showTypeDifferences(p, problem, context, stack, links, maxs, arg?) {
               links,
               spacer + bump,
               sourceMap[source].fullText,
-              sourceMap[source].errorLink,
+              sourceMap[source].nodeLink,
               color
             )}`
           } else {
@@ -438,7 +500,6 @@ function showDifferences(problem, context, stack) {
   console.log(`TS${context.code}: ${context.message}`)
 
   // create the table
-  const { sourceInfo, targetInfo } = stack[0]
   const columns: {
     name: string
     minLen?: number
@@ -455,7 +516,7 @@ function showDifferences(problem, context, stack) {
   columns.push({
     name: 'target',
     minLen: 60,
-    title: `${context.callMismatch ? 'Caller' : 'Target'}: ${targetInfo.errorLink}`,
+    title: `${context.callMismatch ? 'Caller' : 'Target'}: ${context.targetLink}`,
     alignment: 'left',
   })
   if (context.callMismatch) {
@@ -468,8 +529,8 @@ function showDifferences(problem, context, stack) {
   columns.push({
     name: 'source',
     minLen: 60,
-    title: `${context.callMismatch ? 'Callee' : 'Source'}: ${sourceInfo.errorLink} ${
-      sourceInfo.errorLink === targetInfo.errorLink ? '(same)' : ''
+    title: `${context.callMismatch ? 'Callee' : 'Source'}: ${context.sourceLink} ${
+      context.sourceLink === context.targetLink ? '(same)' : ''
     }`,
     alignment: 'left',
   })
@@ -497,34 +558,18 @@ function showDifferences(problem, context, stack) {
 // ===============================================================================
 // ===============================================================================
 
-function getPropertyInfo(prop: ts.Symbol, type: ts.Type) {
+function getPropertyInfo(prop: ts.Symbol, type?: ts.Type) {
   const declarations = prop?.declarations
   if (Array.isArray(declarations)) {
     const declaration = declarations[0]
+    type = type || checker.getTypeAtLocation(declaration)
     const typeText = typeToString(type)
     const isOpt = prop.flags & ts.SymbolFlags.Optional
     const fullText = `${prop.getName()}${isOpt ? '?' : ''}: ${isOpt ? typeText.replace(' | undefined', '') : typeText}`
-    const errorLink = getNodeLink(declaration)
-    return { typeText, fullText, errorLink, declaration }
+    const nodeLink = getNodeLink(declaration)
+    return { nodeText: prop.getName(), typeText, fullText, typeValue: type.value, nodeLink, declaration }
   }
-  return { typeText: '', fullText: '', errorLink: '' }
-}
-
-function getDeclaratioInfo(prop: ts.Symbol) {
-  const declarations = prop?.declarations
-  if (Array.isArray(declarations)) {
-    const declaration = declarations[0]
-    const fullText = declaration
-      .getText()
-      .split('\n')
-      .map((seg) => seg.trimStart())
-      .join(', ')
-      .replace(/\{\,/g, '{')
-    const typeText = typeToString(checker.getTypeAtLocation(declaration))
-    const errorLink = getNodeLink(declaration)
-    return { fullText, typeText, errorLink, declaration }
-  }
-  return { fullText: '', errorLink: '' }
+  return { typeText: '', fullText: '', nodeLink: '' }
 }
 
 function getTypeMap(type: ts.Type) {
@@ -533,24 +578,23 @@ function getTypeMap(type: ts.Type) {
     let info = {}
     prop = prop?.syntheticOrigin || prop
     const propName = prop.escapedName as string
-    const { fullText, errorLink, typeText, declaration } = getDeclaratioInfo(prop)
+    const { nodeText, fullText, nodeLink, typeText, typeValue, declaration } = getPropertyInfo(prop)
 
     // if this property belongs to a type other then the passed in 'type'
-    let parentInfo: { fullText: string; errorLink?: string } | undefined = undefined
+    let parentInfo: { fullText: string; nodeLink?: string } | undefined = undefined
     if (declaration?.parent) {
       const parentType = checker.getTypeAtLocation(declaration?.parent)
       if (type !== parentType && !(parentType.symbol.flags & ts.SymbolFlags.TypeLiteral)) {
-        parentInfo = {
-          fullText: parentType.symbol.getName(),
-          errorLink: getDeclaratioInfo(parentType.symbol).errorLink,
-        }
+        parentInfo = getPropertyInfo(parentType.symbol)
       }
     }
     info = {
       isOptional: prop.flags & ts.SymbolFlags.Optional,
+      nodeText,
       fullText,
+      typeValue,
       typeText,
-      errorLink,
+      nodeLink,
       parentInfo,
     }
     map[propName] = info
@@ -612,6 +656,13 @@ function typeToString(type) {
   return checker.typeToString(type)
 }
 
+function getText(node) {
+  return node
+    .getText()
+    .split('\n')
+    .map((seg) => seg.trimStart())
+    .join(' ')
+}
 function getNodeLink(node: ts.Node | undefined) {
   if (node) {
     const file = node.getSourceFile()
@@ -622,6 +673,19 @@ function getNodeLink(node: ts.Node | undefined) {
     return `${relative}:${file.getLineAndCharacterOfPosition(node.getStart()).line + 1}`
   }
   return ''
+}
+
+function getNodeBlockId(node: ts.Node) {
+  const block = ts.findAncestor(node.parent, (node) => {
+    return !!node && node.kind === ts.SyntaxKind.Block
+  })
+  return block ? block.getStart() : 0
+}
+
+function getNodeDeclartion(node: ts.Node | ts.Identifier, nodeMaps) {
+  const declarationMap = nodeMaps.blocksToDeclarations[getNodeBlockId(node)]
+  const varName = node.getText()
+  return declarationMap && varName ? declarationMap[varName] : node
 }
 
 function isSimpleConflict(targetTypeText, sourceTypeText) {
@@ -648,9 +712,17 @@ function compareProperties(firstType, secondType) {
         // if both are simple types, just show the error
         if ((secondPropType.intrinsicName || 'not') !== (firstPropType.intrinsicName || 'not')) {
           // mismatch
+          // at this point we just know there's one or more problems in this type shape
+          // we fully analyze the properties in showDifferences
           problem = {
-            sourceInfo: { type: firstType, typeText: sourceTypeText, fullText: sourceTypeText },
-            targetInfo: { type: secondType, typeText: targetTypeText, fullText: targetTypeText },
+            sourceInfo: {
+              type: firstType,
+              typeText: sourceTypeText,
+            },
+            targetInfo: {
+              type: secondType,
+              typeText: targetTypeText,
+            },
           }
           return false
         } else {
@@ -667,9 +739,11 @@ function compareProperties(firstType, secondType) {
       }
     } else if (!(firstProp.flags & ts.SymbolFlags.Optional)) {
       // missing
+      // at this point we just know there's one or more problems in this type shape
+      // we fully analyze the properties in showDifferences
       problem = {
-        sourceInfo: { type: firstType, typeText: sourceTypeText, fullText: sourceTypeText },
-        targetInfo: { type: secondType, typeText: targetTypeText, fullText: targetTypeText },
+        sourceInfo: { type: firstType, typeText: sourceTypeText },
+        targetInfo: { type: secondType, typeText: targetTypeText },
       }
       return false
     }
@@ -729,8 +803,8 @@ function compareTypes(targetType, sourceType, stack, context, bothWays?: boolean
               } else {
                 // else we found a type mismatch
                 problem = {
-                  sourceInfo: { type: source, typeText: sourceTypeText, fullText: sourceTypeText },
-                  targetInfo: { type: target, typeText: targetTypeText, fullText: targetTypeText },
+                  sourceInfo: { type: source, typeText: sourceTypeText },
+                  targetInfo: { type: target, typeText: targetTypeText },
                 }
               }
               return false
@@ -738,15 +812,15 @@ function compareTypes(targetType, sourceType, stack, context, bothWays?: boolean
           } else {
             // this target doesn't match because array lengths are different
             problem = {
-              sourceInfo: { type: source, typeText: sourceTypeText, fullText: sourceTypeText },
-              targetInfo: { type: target, typeText: targetTypeText, fullText: targetTypeText },
+              sourceInfo: { type: source, typeText: sourceTypeText },
+              targetInfo: { type: target, typeText: targetTypeText },
             }
           }
         } else {
           // this target doesn't match cause source or target is an array but the other isn't
           problem = {
-            sourceInfo: { type: source, typeText: sourceTypeText, fullText: sourceTypeText },
-            targetInfo: { type: target, typeText: targetTypeText, fullText: targetTypeText },
+            sourceInfo: { type: source, typeText: sourceTypeText },
+            targetInfo: { type: target, typeText: targetTypeText },
           }
         }
         return false
@@ -754,7 +828,7 @@ function compareTypes(targetType, sourceType, stack, context, bothWays?: boolean
     })
   ) {
     showDifferences(problem, context, stack)
-    showSolutions(problem, context, stack)
+    showSuggestions(problem, context, stack)
     context.hadPayoff = true
     return false
   }
@@ -825,7 +899,9 @@ function elaborateOnAssignmentMismatch(errorNode, targetNode: ts.Node, sourceNod
     const sourceTypeText = typeToString(sourceType)
     const pathContext = {
       ...context,
-      message: `Bad assignment: ${errorNode.getText()}`,
+      message: `Bad assignment: ${getText(errorNode)}`,
+      sourceLink: getNodeLink(sourceNode),
+      targetLink: getNodeLink(targetNode),
       hadPayoff: false,
     }
     compareTypes(
@@ -834,19 +910,18 @@ function elaborateOnAssignmentMismatch(errorNode, targetNode: ts.Node, sourceNod
       [
         {
           sourceInfo: {
-            varText: sourceNode.getText(),
+            nodeText: getText(sourceNode),
             typeText: sourceTypeText,
             typeValue: sourceType?.value,
-            fullText: `${sourceNode.getText()}: ${sourceTypeText}`,
-            errorLink: getNodeLink(sourceNode),
+            fullText: `${getText(sourceNode)}: ${sourceTypeText}`,
+            nodeLink: getNodeLink(sourceNode),
           },
           targetInfo: {
-            varText: targetNode.getText(),
+            nodeText: getText(targetNode),
             typeText: targetTypeText,
             typeValue: targetType?.value,
-            fullText: `${targetNode.getText()}: ${targetTypeText}`,
-            errorLink: getNodeLink(targetNode),
-            hereLink: getNodeLink(context.errorNode),
+            fullText: `${getText(targetNode)}: ${targetTypeText}`,
+            nodeLink: getNodeLink(targetNode),
           },
         },
       ],
@@ -867,12 +942,14 @@ function elaborateOnReturnMismatch(node: ts.Node, containerType: ts.Type | undef
     containerType = containerType || checker.getTypeAtLocation(container)
     const targetType: ts.Type = checker.getSignaturesOfType(containerType, 0)[0].getReturnType()
     const targetTypeText = typeToString(targetType)
-    const sourceTypeText = sourceType.value ? typeof sourceType.value : node.getText()
+    const sourceTypeText = sourceType.value ? typeof sourceType.value : getText(node)
     const pathContext = {
       ...context,
       message: `Bad return type: ${container.parent.symbol.getName()}(): ${targetTypeText} => { ${chalk.red(
-        node.getText()
+        getText(node)
       )} }`,
+      sourceLink: getNodeLink(node),
+      targetLink: getNodeLink(container),
       hadPayoff: false,
     }
     compareTypes(
@@ -881,18 +958,18 @@ function elaborateOnReturnMismatch(node: ts.Node, containerType: ts.Type | undef
       [
         {
           targetInfo: {
-            varName: container.parent.symbol.getName(),
+            nodeText: container.parent.symbol.getName(),
             typeText: targetTypeText,
             typeValue: targetType?.value,
             fullText: `${container.parent.symbol.getName()}: ${targetTypeText}`,
-            errorLink: getNodeLink(container),
+            nodeLink: getNodeLink(container),
           },
           sourceInfo: {
-            varName: node.getText(),
+            nodeText: getText(node),
             typeText: sourceTypeText.replace('return ', ''),
             typeValue: sourceType?.value,
-            fullText: `${node.getText()}${sourceType.value ? ': ' + typeof sourceType.value : ''}`,
-            errorLink: getNodeLink(node),
+            fullText: `${getText(node)}${sourceType.value ? ': ' + typeof sourceType.value : ''}`,
+            nodeLink: getNodeLink(node),
           },
         },
       ],
@@ -923,7 +1000,7 @@ function elaborateOnCallMismatches(node: ts.Node, errorNode, context) {
       paramName?: string
       paramLink?: string
     } = {
-      argName: arg.getText(),
+      argName: getText(arg),
       targetType,
       targetTypeText: typeToString(targetType),
     }
@@ -939,7 +1016,7 @@ function elaborateOnCallMismatches(node: ts.Node, errorNode, context) {
   const errorIndex = args.findIndex((node) => node === errorNode)
   // for each arg, compare its type to call parameter type
   let hadPayoff = false
-  const functionName = children[0].getText()
+  const functionName = getText(children[0])
   matchUps.some(({ targetType, targetTypeText, sourceType, sourceTypeText, argName, paramName, paramLink }, inx) => {
     const comma = args.length > 1 && inx > args.length - 1 ? ',' : ''
     const message = `Bad call argument #${inx + 1} type: ${functionName}( ${chalk.red(
@@ -952,6 +1029,8 @@ function elaborateOnCallMismatches(node: ts.Node, errorNode, context) {
       errorIndex,
       callMismatch: true,
       message,
+      sourceLink: paramLink,
+      targetLink: getNodeLink(node),
       hadPayoff: false,
     }
     if (hadPayoff) {
@@ -963,18 +1042,18 @@ function elaborateOnCallMismatches(node: ts.Node, errorNode, context) {
       [
         {
           sourceInfo: {
-            varText: paramName,
+            nodeText: paramName,
             typeText: sourceTypeText,
             typeValue: sourceType?.value,
             fullText: `${paramName}: ${sourceTypeText}`,
-            errorLink: paramLink,
+            nodeLink: paramLink,
           },
           targetInfo: {
-            varText: argName,
+            nodeText: argName,
             typeText: targetTypeText,
             typeValue: targetType?.value,
-            fullText: argName,
-            errorLink: getNodeLink(node),
+            fullText: `${argName}: ${targetTypeText}`,
+            nodeLink: getNodeLink(node),
           },
         },
       ],
@@ -1002,69 +1081,102 @@ function elaborateOnMismatch(code, errorNode: ts.Node, nodeMaps) {
     ts.findAncestor(errorNode, (node) => {
       return !!node && isElaboratableKind(node.kind)
     }) || errorNode
-  const context = { code, node, errorNode, nodeMaps }
-  switch (node.kind) {
-    // func type !== return type
-    case ts.SyntaxKind.ReturnStatement:
-      return elaborateOnReturnMismatch(node, undefined, context)
+  if (!nodeMaps.processedNodes.has(node.getStart())) {
+    nodeMaps.processedNodes.add(node.getStart())
+    const context: {
+      code: any
+      node: ts.Node
+      errorNode: ts.Node
+      nodeMaps: any
+      sourceDeclared?: ts.Node
+      targetDeclared?: ts.Node
+    } = {
+      code,
+      node,
+      errorNode,
+      nodeMaps,
+    }
+    const children = node.getChildren()
+    switch (node.kind) {
+      // func type !== return type
+      case ts.SyntaxKind.ReturnStatement:
+        return elaborateOnReturnMismatch(node, undefined, context)
 
-    // can't call this func with this argument type
-    case ts.SyntaxKind.CallExpression:
-      return elaborateOnCallMismatches(node, errorNode, context)
+      // can't call this func with this argument type
+      case ts.SyntaxKind.CallExpression:
+        // if the function is a property of an object, where is that object defined
+        if (children[0].kind === ts.SyntaxKind.PropertyAccessExpression) {
+          const objectName = children[0].getFirstToken()
+          if (objectName) {
+            context.targetDeclared = getNodeDeclartion(objectName, nodeMaps)
+          }
+        }
+        return elaborateOnCallMismatches(node, errorNode, context)
 
-    // can't declare variable with this value, ex:  const A = B, or let A = func()
-    case ts.SyntaxKind.VariableDeclaration:
-      const children = node.getChildren()
-      const sourceNode = children[children.length - 1]
-      const targetNode = children[0]
-      return elaborateOnAssignmentMismatch(node, targetNode, sourceNode, context)
+      // can't declare variable with this value, ex:  const A = B, or let A = func()
+      case ts.SyntaxKind.VariableDeclaration:
+        const sourceNode = children[children.length - 1]
+        const targetNode = children[0]
+        return elaborateOnAssignmentMismatch(node, targetNode, sourceNode, context)
 
-    // can't set B to value A: a = b or b.d.e = 3
-    case ts.SyntaxKind.Identifier:
-      // get the whole expression (left = right)
-      const statement =
-        (ts.findAncestor(errorNode, (node) => {
-          return (
-            !!node &&
-            (function (kind: ts.SyntaxKind) {
-              switch (kind) {
-                case ts.SyntaxKind.ExpressionStatement:
+      // can't set B to value A: a = b or b.d.e = 3
+      case ts.SyntaxKind.Identifier:
+        // get the whole expression (left = right)
+        const statement =
+          (ts.findAncestor(errorNode, (node) => {
+            return (
+              !!node &&
+              (function (kind: ts.SyntaxKind) {
+                switch (kind) {
+                  case ts.SyntaxKind.ExpressionStatement:
+                    return true
+                  default:
+                    return false
+                }
+              })(node.kind)
+            )
+          }) as ts.ExpressionStatement) || errorNode
+
+        const target = statement.expression.left
+        const source = statement.expression.right
+        if (source && target) {
+          context.sourceDeclared = getNodeDeclartion(source, nodeMaps)
+          context.targetDeclared = getNodeDeclartion(target, nodeMaps)
+
+          // if the target is a path into an object, need to find the property in type
+          const path = target.getText().split(/\W+/)
+          if (path.length > 1) {
+            path.shift()
+            let node: ts.Node | undefined = errorNode
+            do {
+              const propName = path.shift()
+              const type = checker.getTypeAtLocation(node)
+              const types = type.types || [type]
+              types.some((type) => {
+                const declarations = type.getProperty(propName)?.declarations
+                if (Array.isArray(declarations)) {
+                  node = declarations[0]
                   return true
-                default:
-                  return false
-              }
-            })(node.kind)
-          )
-        }) as ts.ExpressionStatement) || errorNode
+                }
+                return false
+              })
+            } while (path.length)
+            context.targetDeclared = node
+          }
+          return elaborateOnAssignmentMismatch(statement, target, source, context)
+        }
 
-      // if the target is a path into an object, need to find the property in type
-      const path = statement.expression.left.getText().split(/\W+/)
-      if (path.length > 1) {
-        path.shift()
-        let node: ts.Node | undefined = errorNode
-        do {
-          const propName = path.shift()
-          const type = checker.getTypeAtLocation(node)
-          const types = type.types || [type]
-          types.some((type) => {
-            const declarations = type.getProperty(propName)?.declarations
-            if (Array.isArray(declarations)) {
-              node = declarations[0]
-              return true
-            }
-            return false
-          })
-        } while (path.length)
-        context.errorNode = node
-      }
-      return elaborateOnAssignmentMismatch(statement, statement.expression.left, statement.expression.right, context)
-
-    default:
-      console.log(`Missing support for kind === ${node.kind}`)
-      console.log(getNodeLink(node))
-      return false
+      default:
+        console.log(`Missing support for kind === ${node.kind}`)
+        console.log(getNodeLink(node))
+        return false
+    }
   }
 }
+
+/////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////
 
 function getNodeMaps(sourceFile: ts.SourceFile) {
   const nodeMaps = {
@@ -1072,6 +1184,8 @@ function getNodeMaps(sourceFile: ts.SourceFile) {
     kindToNodes: {},
     returnToContainer: {},
     containerToReturns: {},
+    blocksToDeclarations: {},
+    processedNodes: new Set(),
   }
   function mapNodes(node: ts.Node) {
     nodeMaps.startToNode[node.getStart()] = node
@@ -1079,6 +1193,17 @@ function getNodeMaps(sourceFile: ts.SourceFile) {
     if (!nodes) {
       nodes = nodeMaps.kindToNodes[node.kind] = []
     }
+
+    // remember where variables are declared
+    if (node.kind === ts.SyntaxKind.VariableDeclaration) {
+      const blockId = getNodeBlockId(node)
+      let declareMap = nodeMaps.blocksToDeclarations[blockId]
+      if (!declareMap) {
+        declareMap = nodeMaps.blocksToDeclarations[blockId] = {}
+      }
+      declareMap[node.getFirstToken()?.getText()] = node
+    }
+
     nodes.push(node)
     ts.forEachChild(node, mapNodes)
   }
