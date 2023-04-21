@@ -27,27 +27,28 @@ function whenSimpleTypesDontMatch(suggestions, _problem, context, stack) {
   //
   const layer = stack[stack.length - 1]
   const { sourceInfo, targetInfo } = layer
+  const { sourceName, targetName } = context
   switch (targetInfo.typeText) {
     case 'number':
       if (!Number.isNaN(Number(sourceInfo.typeValue))) {
-        suggestions.push(`\nBEST: Convert Source to number here: ${chalk.blueBright(sourceInfo.nodeLink)}`)
+        suggestions.push(`\nBEST: Convert ${sourceName} to number here: ${chalk.blueBright(sourceInfo.nodeLink)}`)
         suggestions.push(`\n          ${chalk.greenBright(`${targetInfo.nodeText} = Number(${sourceInfo.nodeText})`)}`)
       }
       break
     case 'string':
       suggestions.push(
-        `\nBEST: Convert Source to string with ${chalk.green(
+        `\nBEST: Convert ${sourceName} to string with ${chalk.green(
           `String(${sourceInfo.nodeText}).toString()`
         )} here: ${chalk.blueBright(sourceInfo.nodeLink)}`
       )
       break
     case 'boolean':
-      suggestions.push(`\nBEST: Convert Source to boolean here: ${chalk.blueBright(sourceInfo.nodeLink)}`)
+      suggestions.push(`\nBEST: Convert ${sourceName} to boolean here: ${chalk.blueBright(sourceInfo.nodeLink)}`)
       suggestions.push(`\n          ${chalk.greenBright(`${targetInfo.nodeText} = !!${sourceInfo.nodeText}`)}`)
       break
   }
   suggestions.push(
-    `\nGOOD: Union Target with ${chalk.green(`| ${sourceInfo.typeText}`)} here: ${chalk.blueBright(
+    `\nGOOD: Union ${targetName} with ${chalk.green(`| ${sourceInfo.typeText}`)} here: ${chalk.blueBright(
       context.targetDeclared ? getNodeLink(context.targetDeclared) : targetInfo.nodeLink
     )}`
   )
@@ -68,7 +69,7 @@ function whenArraysDontMatch(suggestions, problem, _context, stack) {
   const { sourceInfo, targetInfo } = layer
   if (isArrayType(problem.sourceInfo.type)) {
     suggestions.push(
-      `\n Did you mean to assign just one element of the ${chalk.blueBright(
+      `\n Did you mean to assign just one element of the ${chalk.greenBright(
         sourceInfo.nodeText
       )} array here?: ${chalk.blueBright(sourceInfo.nodeLink)}`
     )
@@ -89,15 +90,16 @@ function whenArraysDontMatch(suggestions, problem, _context, stack) {
 function whenUndefinedTypeDoesntMatch(suggestions, problem, context, stack) {
   const layer = stack[stack.length - 1]
   const { sourceInfo, targetInfo } = layer
+  const { targetName } = context
   if (problem.targetInfo.typeText === 'undefined') {
     suggestions.push(
-      `\nBEST: Change the Target ${chalk.green(targetInfo.nodeText)} type to ${chalk.green(
+      `\nBEST: Change the ${targetName} ${chalk.green(targetInfo.nodeText)} type to ${chalk.green(
         sourceInfo.typeText
       )} here: ${chalk.blueBright(targetInfo.nodeLink)}`
     )
   } else {
     suggestions.push(
-      `\BEST: Union Target type with ${chalk.green('| undefined')} here: ${chalk.blueBright(
+      `\nBEST: Union ${targetName} type with ${chalk.green('| undefined')} here: ${chalk.blueBright(
         context.targetDeclared ? getNodeLink(context.targetDeclared) : targetInfo.nodeLink
       )}`
     )
@@ -116,6 +118,7 @@ function whenUndefinedTypeDoesntMatch(suggestions, problem, context, stack) {
 function whenNeverTypeDoesntMatch(suggestions, problem, context, stack) {
   const layer = stack[stack.length - 1]
   const { sourceInfo, targetInfo } = layer
+  const { targetName } = context
   if (problem.sourceInfo.typeText === 'never[]' && context.targetDeclared) {
     suggestions.push(
       `\nBEST: Declare the following type for ${chalk.green(context.targetDeclared.name.text)} here: ${chalk.blueBright(
@@ -126,10 +129,10 @@ function whenNeverTypeDoesntMatch(suggestions, problem, context, stack) {
       `\n          ${chalk.greenBright(`${context.targetDeclared.name.text}: ${targetInfo.typeText}[]`)}`
     )
   } else if (problem.targetInfo.typeText.startsWith('never')) {
-    suggestions.push(`NOTE: Targets use the 'never' type to catch code paths that shouldn't be executing`)
-    suggestions.push(`\BEST: Determine what code path led to this point and fix it`)
+    suggestions.push(`NOTE: ${targetName}s use the 'never' type to catch code paths that shouldn't be executing`)
+    suggestions.push(`BEST: Determine what code path led to this point and fix it`)
     suggestions.push(
-      `\GOOD: If appropriate, change the Target ${chalk.green(targetInfo.nodeText)} type to ${chalk.green(
+      `GOOD: If appropriate, change the ${targetName} ${chalk.green(targetInfo.nodeText)} type to ${chalk.green(
         sourceInfo.typeText
       )} here: ${chalk.blueBright(context.targetDeclared ? getNodeLink(context.targetDeclared) : targetInfo.nodeLink)}`
     )
@@ -148,7 +151,7 @@ function whenNeverTypeDoesntMatch(suggestions, problem, context, stack) {
 //
 
 function whenUnknownTypeDoesntMatch(suggestions, problem, context, stack) {
-  const sd = 0
+  suggestions.push('whenUnknownTypeDoesntMatch')
 }
 
 // ===============================================================================
@@ -161,7 +164,35 @@ function whenUnknownTypeDoesntMatch(suggestions, problem, context, stack) {
 //
 
 function whenPrototypesDontMatch(suggestions, problem, context, stack) {
-  const sd = 0
+  const layer = stack[stack.length - 1]
+  const { sourceInfo, targetInfo } = layer
+  const { sourceName, targetName } = context
+  if (isFunctionType(problem.targetInfo.type) && isFunctionType(problem.sourceInfo.type)) {
+    suggestions.push(
+      `\nThe ${targetName} ${chalk.greenBright('function prototype')} here: ${chalk.blueBright(sourceInfo.nodeLink)}`
+    )
+    suggestions.push(
+      `\nDoes not match the ${sourceName} ${chalk.greenBright('function prototype')} here: ${chalk.blueBright(
+        sourceInfo.nodeLink
+      )}`
+    )
+  } else if (isFunctionType(problem.targetInfo.type)) {
+    suggestions.push(
+      `\n The ${targetName} is a ${chalk.greenBright(
+        'function prototype'
+      )} but the ${sourceName} is expecting a ${chalk.greenBright(sourceInfo.typeText)} here: ${chalk.blueBright(
+        sourceInfo.nodeLink
+      )}`
+    )
+  } else {
+    suggestions.push(
+      `\n The ${sourceName} is a ${chalk.greenBright(
+        'function prototype'
+      )} but the ${targetName} is expecting a ${chalk.greenBright(targetInfo.typeText)} here: ${chalk.blueBright(
+        targetInfo.nodeLink
+      )}`
+    )
+  }
 }
 
 // ===============================================================================
@@ -174,7 +205,31 @@ function whenPrototypesDontMatch(suggestions, problem, context, stack) {
 //
 
 function whenCallArgumentsDontMatch(suggestions, problem, context, stack) {
-  const sd = 0
+  const { matchUps } = context
+  if (matchUps.length > 1) {
+    // see if arg types are mismatched
+    const indexes: number[] = []
+    if (
+      matchUps.every(({ targetTypeText }) => {
+        return (
+          matchUps.findIndex(({ sourceTypeText }, inx) => {
+            if (targetTypeText === sourceTypeText && !indexes.includes(inx + 1)) {
+              indexes.push(inx + 1)
+              return true
+            }
+            return false
+          }) !== -1
+        )
+      })
+    ) {
+      suggestions.push(
+        `\nBEST: Change the order of your calling arguments to this ${chalk.greenBright(
+          indexes.join(', ')
+        )} here: ${chalk.blueBright(context.targetLink)}`
+      )
+      return
+    }
+  }
 
   otherPossibleSuggestions(suggestions, problem, context, stack)
 }
@@ -189,7 +244,7 @@ function whenCallArgumentsDontMatch(suggestions, problem, context, stack) {
 //
 
 function whenTypeShapesDontMatch(suggestions, problem, context, stack) {
-  const sd = 0
+  suggestions.push('whenTypeShapesDontMatch')
 
   // if type is an inferred structure
   //    recommend converting it into this interface:
@@ -250,13 +305,17 @@ function showSuggestions(problem, context, stack) {
       libs.add(link)
     })
     const externalLibs = `'${Array.from(libs).join(', ')}'`
-    suggestions.push(`NOTE: The problem is in these inaccessible external libraries: ${chalk.green(externalLibs)}`)
+    suggestions.push(`NOTE: Because the problem is in external libraries: ${chalk.green(externalLibs)}`)
     suggestions.push(
-      `\nBEST: Disable the error with these comments here: ${chalk.blueBright(getNodeLink(context.errorNode))}`
+      `BEST: You will neefd to disable the error with these comments here: ${chalk.blueBright(
+        getNodeLink(context.errorNode)
+      )}`
     )
     suggestions.push(`${chalk.greenBright('        // eslint-disable-next-line @typescript-eslint/ban-ts-comment')} `)
     suggestions.push(`${chalk.greenBright(`        // @ts-ignore: Fixed required in ${externalLibs}`)} `)
   }
+  context.targetName = context.callMismatch ? 'Caller Argument' : 'Target'
+  context.sourceName = context.callMismatch ? 'Callee Parameter' : 'Source'
 
   context.callMismatch
     ? whenCallArgumentsDontMatch(suggestions, problem, context, stack)
