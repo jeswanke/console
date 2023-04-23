@@ -328,7 +328,7 @@ function showSuggestions(problem, context, stack) {
 // ===============================================================================
 // ===============================================================================
 
-function showTypeDifferences(p, problem, context, stack, links, maxs, arg?) {
+function showTypeDifferences(p, problem, context, stack, links, maxs, interfaces, arg?) {
   // display the path we took to get here
   let spacer = ''
   let simpleConflict = false
@@ -441,11 +441,14 @@ function showTypeDifferences(p, problem, context, stack, links, maxs, arg?) {
 
     // sort conflicting properties by their direct parent types
     context.externalLinks = []
-    displayDifferences(mismatch, 'yellow', targetProps.mismatch, sourceProps.mismatch)
-    displayDifferences(missing, 'red', targetProps.missing, sourceProps.missing)
-    function displayDifferences(conflicts, color, targetProps, sourceProps) {
+    context.mismatchInterfaceMaps = asTypeInterfaces(mismatch, targetMap, sourceMap)
+    context.missingInterfaceMaps = asTypeInterfaces(missing, targetMap, sourceMap)
+    displayDifferences(mismatch, 'yellow', targetProps.mismatch, sourceProps.mismatch, context.mismatchInterfaceMaps)
+    displayDifferences(missing, 'red', targetProps.missing, sourceProps.missing, context.missingInterfaceMaps)
+    function displayDifferences(conflicts, color, targetProps, sourceProps, interfaceMaps) {
       let lastSourceParent
       let lastTargetParent
+
       conflicts.some(({ target, source }, inx) => {
         let sourceParent
         let targetParent
@@ -522,7 +525,7 @@ function showTypeDifferences(p, problem, context, stack, links, maxs, arg?) {
         } else {
           p.addRow(
             {
-              source: `                ...and ${conflicts.length - 6} more ...`,
+              source: andMore(interfaces, conflicts, interfaceMaps),
               target: '',
             },
             { color }
@@ -534,7 +537,7 @@ function showTypeDifferences(p, problem, context, stack, links, maxs, arg?) {
   }
 }
 
-function showCallDifferences(p, problem, context, stack, links, maxs) {
+function showCallDifferences(p, problem, context, stack, links, maxs, interfaces) {
   context.matchUps.forEach(({ argName, paramName, sourceTypeText, targetTypeText }, inx) => {
     if (inx !== context.errorIndex) {
       const conflict = sourceTypeText !== targetTypeText
@@ -548,7 +551,7 @@ function showCallDifferences(p, problem, context, stack, links, maxs) {
         { color: conflict ? 'red' : 'green' }
       )
     } else {
-      showTypeDifferences(p, problem, context, stack, links, maxs, inx + 1)
+      showTypeDifferences(p, problem, context, stack, links, maxs, interfaces, inx + 1)
     }
   })
 }
@@ -600,16 +603,18 @@ function showDifferences(problem, context, stack) {
 
   const links = []
   const maxs = []
+  const interfaces = []
   if (context.callMismatch) {
-    showCallDifferences(p, problem, context, stack, links, maxs)
+    showCallDifferences(p, problem, context, stack, links, maxs, interfaces)
   } else {
-    showTypeDifferences(p, problem, context, stack, links, maxs)
+    showTypeDifferences(p, problem, context, stack, links, maxs, interfaces)
   }
 
   // print the table and table notes
   p.printTable()
   maxs.forEach((max) => console.log(max))
   links.forEach((link) => console.log(link))
+  interfaces.forEach((inter) => console.log(inter))
   if (links.length) console.log('')
 }
 
@@ -639,11 +644,16 @@ function getTypeMap(type: ts.Type) {
     const propName = prop.escapedName as string
     const { nodeText, fullText, nodeLink, typeText, typeValue, declaration } = getPropertyInfo(prop)
 
-    // if this property belongs to a type other then the passed in 'type'
+    // see if type symbol was added thru an InterfaceDeclaration
     let parentInfo: { fullText: string; nodeLink?: string } | undefined = undefined
-    if (declaration?.parent) {
+    if (
+      declaration?.parent?.kind === ts.SyntaxKind.InterfaceDeclaration ||
+      declaration?.parent?.kind === ts.SyntaxKind.TypeAliasDeclaration
+    ) {
       const parentType = checker.getTypeAtLocation(declaration?.parent)
-      if (type !== parentType && !(parentType.symbol.flags & ts.SymbolFlags.TypeLiteral)) {
+      if (type !== parentType) {
+        //} && !(parentType.symbol.flags & ts.SymbolFlags.TypeLiteral)) {
+        // ignore '__type'
         parentInfo = getPropertyInfo(parentType.symbol)
       }
     }
@@ -671,6 +681,44 @@ function min(maxs, type) {
     type = `${type.substr(0, 25)}..${type.substr(-45)}  ${addNote(maxs, type)}`
   }
   return type
+}
+
+function typeInterfaces(key, map, moreMap) {
+  if (key) {
+    const prop = map[key]
+    const interfaceKey = prop.parentInfo.fullText || '-none-'
+    let props = moreMap[interfaceKey]
+    if (!props) {
+      props = moreMap[interfaceKey] = []
+    }
+    props.push(prop)
+  }
+}
+
+function asTypeInterfaces(conflicts, targetMap, sourceMap) {
+  const targetInterfaceMap = {}
+  const sourceInterfaceMap = {}
+  conflicts.forEach(({ target, source }) => {
+    typeInterfaces(target, targetMap, targetInterfaceMap)
+    typeInterfaces(source, sourceMap, sourceInterfaceMap)
+  })
+  return { targetInterfaceMap, sourceInterfaceMap }
+}
+
+function andMore(interfaces, conflicts, { sourceInterfaceMap, targetInterfaceMap }) {
+  let base = `                ...and ${conflicts.length - 6} more ...`
+  ;[sourceInterfaceMap, targetInterfaceMap].forEach((map) => {
+    Object.keys(map).forEach((key, inx) => {
+      const props = map[key]
+      if (props[0].parentInfo) {
+        const num = String.fromCharCode('\u2474'.charCodeAt(0) + inx)
+        interfaces.push(`\n${num}  ${key}: ${props[0].parentInfo.nodeLink}}`)
+        interfaces.push(chalk.red(`${props.map(({ nodeText }) => nodeText).join(', ')}`))
+        base += `${num}  `
+      }
+    })
+  })
+  return base
 }
 
 function addNote(maxs: string[], note?: string) {
