@@ -448,7 +448,6 @@ function showTypeDifferences(p, problem, context, stack, links, maxs, interfaces
     function displayDifferences(conflicts, color, targetProps, sourceProps, interfaceMaps) {
       let lastSourceParent
       let lastTargetParent
-
       conflicts.some(({ target, source }, inx) => {
         let sourceParent
         let targetParent
