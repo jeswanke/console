@@ -268,7 +268,27 @@ function didYouMeanChildProperty(suggestions, problem, context, stack) {
   }
 }
 
-function suggestPartialInterfaces(suggestions, problem, context, stack) {}
+function suggestPartialInterfaces(suggestions, _problem, context, _stack) {
+  const partialInterfaces: any[] = []
+  if (Object.keys(context?.missingInterfaceMaps?.sourceInterfaceMap || {}).length > 0) {
+    Object.values(context.missingInterfaceMaps.sourceInterfaceMap).forEach((inter: any) => {
+      const parentInfo = inter[0].parentInfo
+      if (parentInfo) {
+        partialInterfaces.push(parentInfo)
+      }
+    })
+  }
+  if (partialInterfaces.length) {
+    suggestions.push(`\nBEST: Make the missing properties optional using the ${chalk.green('Partial<type>')} utility:`)
+    partialInterfaces.forEach((parentInfo) => {
+      suggestions.push(
+        `   ${chalk.greenBright(`\u2022 interface Partial<${parentInfo.typeText}>`)} here: ${chalk.blueBright(
+          parentInfo.nodeLink
+        )}`
+      )
+    })
+  }
+}
 
 // ===============================================================================
 // ===============================================================================
@@ -360,12 +380,8 @@ function showTypeDifferences(p, problem, context, stack, links, maxs, interfaces
     const color = simpleConflict ? 'red' : 'green'
     if (inx === 0) {
       const row: any = {
-        target: `${min(maxs, targetInfo?.fullText)} ${
-          isFunctionType(problem.targetInfo.type) ? `: ${problem.targetInfo.typeText}` : ''
-        }`,
-        source: `${min(maxs, sourceInfo?.fullText)} ${
-          isFunctionType(problem.sourceInfo.type) ? `: ${problem.sourceInfo.typeText}` : ''
-        }`,
+        target: `${min(maxs, targetInfo?.fullText)}`,
+        source: `${min(maxs, sourceInfo?.fullText)}`,
       }
       if (arg) {
         row.arg = `\u25B6 ${arg}`
