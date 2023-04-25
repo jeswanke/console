@@ -23,7 +23,6 @@ function whenSimpleTypesDontMatch(suggestions, _problem, context, stack) {
   // at this point:
   //  problem-- contains the conflicting types
   //  stack-- contains all of the parent "var: type" that led us here
-  //  context-- if the types are shapes, the conflicting sourceProps/typeProps
   //
   const layer = stack[stack.length - 1]
   const { sourceInfo, targetInfo } = layer
@@ -63,7 +62,6 @@ function whenArraysDontMatch(suggestions, problem, _context, stack) {
   // at this point:
   //  problem-- contains the conflicting types
   //  stack-- contains all of the parent "var: type" that led us here
-  //  context-- if the types are shapes, the conflicting sourceProps/typeProps
   //
   const layer = stack[stack.length - 1]
   const { sourceInfo, targetInfo } = layer
@@ -85,7 +83,6 @@ function whenArraysDontMatch(suggestions, problem, _context, stack) {
 // at this point:
 //  problem-- contains the conflicting types
 //  stack-- contains all of the parent "var: type" that led us here
-//  context-- if the types are shapes, the conflicting sourceProps/typeProps
 //
 function whenUndefinedTypeDoesntMatch(suggestions, problem, context, stack) {
   const layer = stack[stack.length - 1]
@@ -113,7 +110,6 @@ function whenUndefinedTypeDoesntMatch(suggestions, problem, context, stack) {
 // at this point:
 //  problem-- contains the conflicting types
 //  stack-- contains all of the parent "var: type" that led us here
-//  context-- if the types are shapes, the conflicting sourceProps/typeProps
 //
 function whenNeverTypeDoesntMatch(suggestions, problem, context, stack) {
   const layer = stack[stack.length - 1]
@@ -147,7 +143,6 @@ function whenNeverTypeDoesntMatch(suggestions, problem, context, stack) {
 // at this point:
 //  problem-- contains the conflicting types
 //  stack-- contains all of the parent "var: type" that led us here
-//  context-- if the types are shapes, the conflicting sourceProps/typeProps
 //
 
 function whenUnknownTypeDoesntMatch(suggestions, problem, context, stack) {
@@ -160,7 +155,6 @@ function whenUnknownTypeDoesntMatch(suggestions, problem, context, stack) {
 // at this point:
 //  problem-- contains the conflicting types
 //  stack-- contains all of the parent "var: type" that led us here
-//  context-- if the types are shapes, the conflicting sourceProps/typeProps
 //
 
 function whenPrototypesDontMatch(suggestions, problem, context, stack) {
@@ -201,18 +195,17 @@ function whenPrototypesDontMatch(suggestions, problem, context, stack) {
 // at this point:
 //  problem-- contains the conflicting types
 //  stack-- contains all of the parent "var: type" that led us here
-//  context-- if the types are shapes, the conflicting sourceProps/typeProps
 //
 
 function whenCallArgumentsDontMatch(suggestions, problem, context, stack) {
-  const { matchUps } = context
-  if (matchUps.length > 1) {
+  const { callPrototypeMatchUps } = context
+  if (callPrototypeMatchUps.length > 1) {
     // see if arg types are mismatched
     const indexes: number[] = []
     if (
-      matchUps.every(({ targetTypeText }) => {
+      callPrototypeMatchUps.every(({ targetTypeText }) => {
         return (
-          matchUps.findIndex(({ sourceTypeText }, inx) => {
+          callPrototypeMatchUps.findIndex(({ sourceTypeText }, inx) => {
             if (targetTypeText === sourceTypeText && !indexes.includes(inx + 1)) {
               indexes.push(inx + 1)
               return true
@@ -223,9 +216,9 @@ function whenCallArgumentsDontMatch(suggestions, problem, context, stack) {
       })
     ) {
       suggestions.push(
-        `\nBEST: Change the order of your calling arguments to this ${chalk.greenBright(
+        `\nDid you mean to call the arguments in this order ${chalk.greenBright(
           indexes.join(', ')
-        )} here: ${chalk.blueBright(context.targetLink)}`
+        )} here?: ${chalk.blueBright(context.targetLink)}`
       )
       return
     }
@@ -240,17 +233,42 @@ function whenCallArgumentsDontMatch(suggestions, problem, context, stack) {
 // at this point:
 //  problem-- contains the conflicting types
 //  stack-- contains all of the parent "var: type" that led us here
-//  context-- if the types are shapes, the conflicting sourceProps/typeProps
 //
 
 function whenTypeShapesDontMatch(suggestions, problem, context, stack) {
-  suggestions.push('whenTypeShapesDontMatch')
-
+  didYouMeanChildProperty(suggestions, problem, context, stack)
+  suggestPartialInterfaces(suggestions, problem, context, stack)
   // if type is an inferred structure
   //    recommend converting it into this interface:
   //    and replace here LINK
   //    and replace here LINK
 }
+
+function didYouMeanChildProperty(suggestions, problem, context, stack) {
+  // see if the source type we are trying to match with the target type
+  // has an inner property type that matches the target type
+  // ex: target is this: resource: {resource: IResource} and source is this: resource: IResource
+  //      solution is to use resource.resource
+  if (context.targetMap) {
+    const layer = stack[stack.length - 1]
+    const { targetInfo } = layer
+    Object.values(context.targetMap).forEach((target: any) => {
+      if (
+        Object.values(context.sourceMap).every((source: any) => {
+          return source?.parentInfo?.typeText === target.typeText
+        })
+      ) {
+        suggestions.push(
+          `\n Did you mean to use ${chalk.greenBright(
+            `${targetInfo.nodeText}.${target.nodeText}`
+          )} instead of ${chalk.greenBright(targetInfo.nodeText)} here?: ${chalk.blueBright(targetInfo.nodeLink)}`
+        )
+      }
+    })
+  }
+}
+
+function suggestPartialInterfaces(suggestions, problem, context, stack) {}
 
 // ===============================================================================
 // ===============================================================================
@@ -290,7 +308,6 @@ function showSuggestions(problem, context, stack) {
   // at this point:
   //  problem-- contains the conflicting types
   //  stack-- contains all of the parent "var: type" that led us here
-  //  context-- if the types are shapes, the conflicting sourceProps/typeProps
   //
 
   const suggestions: string[] = []
@@ -388,10 +405,12 @@ function showTypeDifferences(p, problem, context, stack, links, maxs, interfaces
     const missing: { source?: string; target?: string }[] = []
     const targetMap = getTypeMap(problem.targetInfo.type)
     const sourceMap = getTypeMap(problem.sourceInfo.type)
-    const sourceProps: { missing: any[]; mismatch: any[] } | undefined = { missing: [], mismatch: [] }
-    const targetProps: { missing: any[]; mismatch: any[] } | undefined = { missing: [], mismatch: [] }
-    context.sourceProps = sourceProps
-    context.targetProps = targetProps
+    const sourcePropProblems: { missing: any[]; mismatch: any[] } | undefined = { missing: [], mismatch: [] }
+    const targetPropProblems: { missing: any[]; mismatch: any[] } | undefined = { missing: [], mismatch: [] }
+    context.sourcePropProblems = sourcePropProblems
+    context.targetPropProblems = targetPropProblems
+    context.targetMap = targetMap
+    context.sourceMap = sourceMap
 
     // properties that are in source but not target
     Object.keys(sourceMap).forEach((propName) => {
@@ -411,7 +430,7 @@ function showTypeDifferences(p, problem, context, stack, links, maxs, interfaces
         } else {
           mismatch.push({ source: propName, target: propName })
         }
-      } else if (sourceMap[propName].isOptional) {
+      } else if (sourceMap[propName].isOpt) {
         if (showOptionals) {
           p.addRow(
             {
@@ -429,7 +448,7 @@ function showTypeDifferences(p, problem, context, stack, links, maxs, interfaces
     // properties in target but not source
     let inx = 0
     Object.keys(targetMap).forEach((propName) => {
-      if (!targetMap[propName].isOptional && (!sourceMap[propName] || !sourceMap[propName].fullText)) {
+      if (!targetMap[propName].isOpt && (!sourceMap[propName] || !sourceMap[propName].fullText)) {
         if (inx < missing.length) {
           missing[inx].target = propName
         } else {
@@ -443,9 +462,21 @@ function showTypeDifferences(p, problem, context, stack, links, maxs, interfaces
     context.externalLinks = []
     context.mismatchInterfaceMaps = asTypeInterfaces(mismatch, targetMap, sourceMap)
     context.missingInterfaceMaps = asTypeInterfaces(missing, targetMap, sourceMap)
-    displayDifferences(mismatch, 'yellow', targetProps.mismatch, sourceProps.mismatch, context.mismatchInterfaceMaps)
-    displayDifferences(missing, 'red', targetProps.missing, sourceProps.missing, context.missingInterfaceMaps)
-    function displayDifferences(conflicts, color, targetProps, sourceProps, interfaceMaps) {
+    displayDifferences(
+      mismatch,
+      'yellow',
+      targetPropProblems.mismatch,
+      sourcePropProblems.mismatch,
+      context.mismatchInterfaceMaps
+    )
+    displayDifferences(
+      missing,
+      'red',
+      targetPropProblems.missing,
+      sourcePropProblems.missing,
+      context.missingInterfaceMaps
+    )
+    function displayDifferences(conflicts, color, targetPropProblems, sourcePropProblems, interfaceMaps) {
       let lastSourceParent
       let lastTargetParent
       conflicts.some(({ target, source }, inx) => {
@@ -453,7 +484,7 @@ function showTypeDifferences(p, problem, context, stack, links, maxs, interfaces
         let targetParent
         if (inx < MAX_SHOWN_PROP_MISMATCH) {
           if (target) {
-            targetProps.push(targetMap[target])
+            targetPropProblems.push(targetMap[target])
             if (targetMap[target].nodeLink.indexOf('node_modules/') !== -1) {
               context.externalLinks.push(targetMap[target].nodeLink)
             }
@@ -479,7 +510,7 @@ function showTypeDifferences(p, problem, context, stack, links, maxs, interfaces
             target = ''
           }
           if (source) {
-            sourceProps.push(sourceMap[source])
+            sourcePropProblems.push(sourceMap[source])
             if (sourceMap[source].nodeLink.indexOf('node_modules/') !== -1) {
               context.externalLinks.push(sourceMap[source].nodeLink)
             }
@@ -537,7 +568,7 @@ function showTypeDifferences(p, problem, context, stack, links, maxs, interfaces
 }
 
 function showCallDifferences(p, problem, context, stack, links, maxs, interfaces) {
-  context.matchUps.forEach(({ argName, paramName, sourceTypeText, targetTypeText }, inx) => {
+  context.callPrototypeMatchUps.forEach(({ argName, paramName, sourceTypeText, targetTypeText }, inx) => {
     if (inx !== context.errorIndex) {
       const conflict = sourceTypeText !== targetTypeText
       p.addRow(
@@ -628,7 +659,19 @@ function getPropertyInfo(prop: ts.Symbol, type?: ts.Type) {
     type = type || checker.getTypeAtLocation(declaration)
     const typeText = typeToString(type)
     const isOpt = prop.flags & ts.SymbolFlags.Optional
-    const fullText = `${prop.getName()}${isOpt ? '?' : ''}: ${isOpt ? typeText.replace(' | undefined', '') : typeText}`
+    let preface = `${prop.getName()}${isOpt ? '?' : ''}:`
+    switch (true) {
+      case !!(prop.flags & ts.SymbolFlags.Interface):
+        preface = 'interface'
+        break
+      case !!(prop.flags & ts.SymbolFlags.Class):
+        preface = 'class'
+        break
+      case !!(prop.flags & ts.SymbolFlags.TypeAlias):
+        preface = 'type'
+        break
+    }
+    const fullText = `${preface} ${isOpt ? typeText.replace(' | undefined', '') : typeText}`
     const nodeLink = getNodeLink(declaration)
     return { nodeText: prop.getName(), typeText, fullText, typeValue: type.value, nodeLink, declaration }
   }
@@ -657,7 +700,7 @@ function getTypeMap(type: ts.Type) {
       }
     }
     info = {
-      isOptional: prop.flags & ts.SymbolFlags.Optional,
+      isOpt: prop.flags & ts.SymbolFlags.Optional,
       nodeText,
       fullText,
       typeValue,
@@ -685,7 +728,7 @@ function min(maxs, type) {
 function typeInterfaces(key, map, moreMap) {
   if (key) {
     const prop = map[key]
-    const interfaceKey = prop.parentInfo.fullText || '-none-'
+    const interfaceKey = prop?.parentInfo?.fullText || '-none-'
     let props = moreMap[interfaceKey]
     if (!props) {
       props = moreMap[interfaceKey] = []
@@ -1095,7 +1138,7 @@ function elaborateOnCallMismatches(node: ts.Node, errorNode, context) {
   const parameters = signature.getParameters()
   // args that are being passed
   const args = children[2].getChildren().filter((node) => node.kind !== ts.SyntaxKind.CommaToken)
-  const matchUps = args.map((arg, inx) => {
+  const callPrototypeMatchUps = args.map((arg, inx) => {
     const targetType = checker.getTypeAtLocation(arg)
     const matchUp: {
       argName: string
@@ -1123,51 +1166,53 @@ function elaborateOnCallMismatches(node: ts.Node, errorNode, context) {
   // for each arg, compare its type to call parameter type
   let hadPayoff = false
   const functionName = getText(children[0])
-  matchUps.some(({ targetType, targetTypeText, sourceType, sourceTypeText, argName, paramName, paramLink }, inx) => {
-    const comma = args.length > 1 && inx > args.length - 1 ? ',' : ''
-    const message = `Bad call argument #${inx + 1} type: ${functionName}( ${chalk.red(
-      argName
-    )}${comma} ) => ${functionName}( ${chalk.red(`${paramName}: ${sourceTypeText}`)}${comma} )`
+  callPrototypeMatchUps.some(
+    ({ targetType, targetTypeText, sourceType, sourceTypeText, argName, paramName, paramLink }, inx) => {
+      const comma = args.length > 1 && inx > args.length - 1 ? ',' : ''
+      const message = `Bad call argument #${inx + 1} type: ${functionName}( ${chalk.red(
+        argName
+      )}${comma} ) => ${functionName}( ${chalk.red(`${paramName}: ${sourceTypeText}`)}${comma} )`
 
-    const pathContext = {
-      ...context,
-      matchUps,
-      errorIndex,
-      callMismatch: true,
-      message,
-      sourceLink: paramLink,
-      targetLink: getNodeLink(node),
-      hadPayoff: false,
-    }
-    if (hadPayoff) {
-      console.log('\n\n')
-    }
-    compareTypes(
-      targetType,
-      sourceType,
-      [
-        {
-          sourceInfo: {
-            nodeText: paramName,
-            typeText: sourceTypeText,
-            typeValue: sourceType?.value,
-            fullText: `${paramName}: ${sourceTypeText}`,
-            nodeLink: paramLink,
+      const pathContext = {
+        ...context,
+        callPrototypeMatchUps,
+        errorIndex,
+        callMismatch: true,
+        message,
+        sourceLink: paramLink,
+        targetLink: getNodeLink(node),
+        hadPayoff: false,
+      }
+      if (hadPayoff) {
+        console.log('\n\n')
+      }
+      compareTypes(
+        targetType,
+        sourceType,
+        [
+          {
+            sourceInfo: {
+              nodeText: paramName,
+              typeText: sourceTypeText,
+              typeValue: sourceType?.value,
+              fullText: `${paramName}: ${sourceTypeText}`,
+              nodeLink: paramLink,
+            },
+            targetInfo: {
+              nodeText: argName,
+              typeText: targetTypeText,
+              typeValue: targetType?.value,
+              fullText: `${argName}: ${targetTypeText}`,
+              nodeLink: getNodeLink(node),
+            },
           },
-          targetInfo: {
-            nodeText: argName,
-            typeText: targetTypeText,
-            typeValue: targetType?.value,
-            fullText: `${argName}: ${targetTypeText}`,
-            nodeLink: getNodeLink(node),
-          },
-        },
-      ],
-      pathContext
-    )
-    hadPayoff = pathContext.hadPayoff
-    return hadPayoff // stops on first conflict just like typescript
-  })
+        ],
+        pathContext
+      )
+      hadPayoff = pathContext.hadPayoff
+      return hadPayoff // stops on first conflict just like typescript
+    }
+  )
   return hadPayoff
 }
 
@@ -1379,9 +1424,11 @@ if (tsconfigPath) {
   options = ts.parseJsonConfigFileContent(tsconfigFile.config, ts.sys, path.dirname(tsconfigPath)).options
 }
 options.isolatedModules = false
+console.log('starting...')
 const program = ts.createProgram(fileNames, options)
 const checker = program.getTypeChecker()
 const syntactic = program.getSyntacticDiagnostics()
+console.log('looking...')
 elaborate(program.getSemanticDiagnostics(), fileNames)
 if (!!syntactic.length) {
   console.log('Warning: there were syntax errors.', syntactic)
