@@ -202,7 +202,7 @@ export default function AdvancedConfiguration() {
           })
 
           getSubscriptionClusterCount(tableItem, clusterCount, true)
-          const clusterString = getClusterCountString(t, clusterCount)
+          const clusterString = getClusterCountString(t, 44, clusterCount)
           _.set(transformedObject.transformed, 'clusterCount', clusterString)
           _.set(transformedObject.transformed, 'appCount', appCount)
         }

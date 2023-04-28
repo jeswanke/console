@@ -99,8 +99,9 @@
       "request": "launch",
       "args": [
         "run",
-        "the-hound",
-        // "${file}"
+        "ts-hound",
+        //"${file}"
+        //"${workspaceFolder}/frontend/src/routes/Applications/AdvancedConfiguration.tsx"
         "${workspaceFolder}/frontend/src/routes/Applications/ApplicationDetails/ApplicationTopology/topology/components/componentFactory.ts"
       ],
       "runtimeExecutable": "npm",
