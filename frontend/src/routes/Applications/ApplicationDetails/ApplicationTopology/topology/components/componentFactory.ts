@@ -21,7 +21,40 @@ import { Cluster } from '../../../../../../resources'
 
 const hasAnyAutomationTemplates = false
 
-const sd: IAcmTableAction<Cluster>[] = () => [
+function testing(): IAcmTableAction<Cluster>[] {
+  return [
+    {
+      id: 'upgradeClusters',
+      title: t('managed.upgrade.plural'),
+      click: (managedClusters: Array<Cluster>) => {
+        if (!managedClusters) return
+      },
+      variant: 'bulk-action',
+    },
+    ...(hasAnyAutomationTemplates
+      ? [
+          {
+            id: 'selectChannels',
+            title: t('managed.selectChannel.plural'),
+            click: (managedClusters: Array<Cluster>) => {
+              if (!managedClusters) return
+            },
+            variant: 'bulk-action',
+          },
+        ]
+      : []),
+    {
+      id: 'selectChannels',
+      title: t('managed.selectChannel.plural'),
+      click: (managedClusters: Array<Cluster>) => {
+        if (!managedClusters) return
+      },
+      variant: 'bulk-action',
+    },
+  ]
+}
+
+const sdrgsed: IAcmTableAction<Cluster>[] = [
   {
     id: 'upgradeClusters',
     title: t('managed.upgrade.plural'),
@@ -30,7 +63,18 @@ const sd: IAcmTableAction<Cluster>[] = () => [
     },
     variant: 'bulk-action',
   },
-  ...(hasAnyAutomationTemplates ? [{ id: 'sdf', title: 'sdrfr' }] : []),
+  ...(hasAnyAutomationTemplates
+    ? [
+        {
+          id: 'selectChannels',
+          title: t('managed.selectChannel.plural'),
+          click: (managedClusters: Array<Cluster>) => {
+            if (!managedClusters) return
+          },
+          variant: 'bulk-action',
+        },
+      ]
+    : []),
   {
     id: 'selectChannels',
     title: t('managed.selectChannel.plural'),
@@ -40,6 +84,39 @@ const sd: IAcmTableAction<Cluster>[] = () => [
     variant: 'bulk-action',
   },
 ]
+console.log(sdrgsed)
+
+const sd: IAcmTableAction<Cluster>[] = () =>
+  [
+    {
+      id: 'upgradeClusters',
+      title: t('managed.upgrade.plural'),
+      click: (managedClusters: Array<Cluster>) => {
+        if (!managedClusters) return
+      },
+      variant: 'bulk-action',
+    },
+    ...(hasAnyAutomationTemplates
+      ? [
+          {
+            id: 'selectChannels',
+            title: t('managed.selectChannel.plural'),
+            click: (managedClusters: Array<Cluster>) => {
+              if (!managedClusters) return
+            },
+            variant: 'bulk-action',
+          },
+        ]
+      : []),
+    {
+      id: 'selectChannels',
+      title: t('managed.selectChannel.plural'),
+      click: (managedClusters: Array<Cluster>) => {
+        if (!managedClusters) return
+      },
+      variant: 'bulk-action',
+    },
+  ].filter(({ title }) => !title)
 console.log(sd)
 // eslint-disable-next-line react-hooks/rules-of-hooks
 const tableActions = useMemo<IAcmTableAction<Cluster>[]>(
@@ -87,136 +164,136 @@ const tableActions = useMemo<IAcmTableAction<Cluster>[]>(
 )
 console.log(tableActions)
 
-// const tstFunc = (par: any) => {
-//   console.log(par)
-// }
+const tstFunc = (par: any) => {
+  console.log(par)
+}
 
-// const fds = fu5nc(tstFunc, 4, 3)
+const fds = fu5nc(tstFunc, 4, 3)
 
-// // const defaultComponentFactory: ComponentFactory = (
-// //   kind: ModelKind
-// // ): ComponentType<{
-// //   element: GraphElement // & ElementModel
-// //   // sourceDragRef?: ConnectDragSource
-// //   // targetDragRef?: ConnectDragSource
-// // }> => {
-// //   switch (kind) {
-// //     case ModelKind.graph:
-// //       return withPanZoom()(GraphComponent)
-// //     case ModelKind.node:
-// //       return withDragNode()(withSelection()(StyledNode))
-// //     case ModelKind.edge:
-// //       return StyledEdge
-// //     default:
-// //       return undefined
-// //   }
-// //   return 33
-// // }
-// const defaultComponentFactory: ComponentFactory = (kind: ModelKind) =>
-//   // : ComponentType<{
-//   //   element: GraphElement // & ElementModel
-//   //   // sourceDragRef?: ConnectDragSource
-//   //   // targetDragRef?: ConnectDragSource
-//   // }>
-
-//   {
-//     switch (kind) {
-//       case ModelKind.graph:
-//         return withPanZoom()(GraphComponent)
-//       case ModelKind.node:
-//         return withDragNode()(withSelection()(StyledNode))
-//       case ModelKind.edge:
-//         return StyledEdge
-//       default:
-//         return undefined
-//     }
-//     return 33
+// const defaultComponentFactory: ComponentFactory = (
+//   kind: ModelKind
+// ): ComponentType<{
+//   element: GraphElement // & ElementModel
+//   // sourceDragRef?: ConnectDragSource
+//   // targetDragRef?: ConnectDragSource
+// }> => {
+//   switch (kind) {
+//     case ModelKind.graph:
+//       return withPanZoom()(GraphComponent)
+//     case ModelKind.node:
+//       return withDragNode()(withSelection()(StyledNode))
+//     case ModelKind.edge:
+//       return StyledEdge
+//     default:
+//       return undefined
 //   }
-
-// const que = () => {
-//   let sdfsd: undefined
-//   sdfsd = 'rge'
+//   return 33
 // }
+const defaultComponentFactory: ComponentFactory = (kind: ModelKind) =>
+  // : ComponentType<{
+  //   element: GraphElement // & ElementModel
+  //   // sourceDragRef?: ConnectDragSource
+  //   // targetDragRef?: ConnectDragSource
+  // }>
 
-// export const fu5nc = (ddd: number, ff: string, gg: number) => {
-//   console.log(ddd, ff, gg)
-// }
+  {
+    switch (kind) {
+      case ModelKind.graph:
+        return withPanZoom()(GraphComponent)
+      case ModelKind.node:
+        return withDragNode()(withSelection()(StyledNode))
+      case ModelKind.edge:
+        return StyledEdge
+      default:
+        return undefined
+    }
+    return 33
+  }
 
-// const arr = []
+const que = () => {
+  let sdfsd: undefined
+  sdfsd = 'rge'
+}
 
-// let dsfa = true
-// const eee = 'what'
-// dsfa = eee
+export const fu5nc = (ddd: number, ff: string, gg: number) => {
+  console.log(ddd, ff, gg)
+}
 
-// arr.push({
-//   name: 'arg',
-//   title: 'Arg',
-//   alignment: 'right',
-// })
-// interface Test {
-//   prop?: {
-//     ltr: string
-//     ese: number
-//   }
-// }
-// interface Ting {
-//   prop?: {
-//     ltr: number
-//     wht: number
-//   }
-// }
+const arr = []
 
-// export const fu7nc = (ddd: number, ff: Ting, gg: number) => {
-//   console.log(ddd, ff, gg)
-// }
+let dsfa = true
+const eee = 'what'
+dsfa = eee
 
-// const sdf: Ting = {}
-// fu7nc(33, 33, sdf)
+arr.push({
+  name: 'arg',
+  title: 'Arg',
+  alignment: 'right',
+})
+interface Test {
+  prop?: {
+    ltr: string
+    ese: number
+  }
+}
+interface Ting {
+  prop?: {
+    ltr: number
+    wht: number
+  }
+}
 
-// let fffw: Test
-// fu7nc(44, fffw, 33)
+export const fu7nc = (ddd: number, ff: Ting, gg: number) => {
+  console.log(ddd, ff, gg)
+}
 
-// let fffg: Ting
-// const fff: Test[] = [fffg]
+const sdf: Ting = {}
+fu7nc(33, 33, sdf)
 
-// const fffd: Test = [fffg]
-// console.log(fff)
+let fffw: Test
+fu7nc(44, fffw, 33)
 
-// let sdfe: number = 4
-// sdfe = undefined
-// let fffb: Ting
-// fffb!.prop!.ltr = 'asdfd'
-// fffb!.prop!.ltr = true
-// const sgrdddxf = '4232'
-// fffb!.prop!.ltr = Number(sgrdddxf)
-// fffb!.prop!.ltr = '345'
-// fffb!.prop!.ltr = 9007199254740991
-// fffb!.prop!.ltr = new Date()
-// fu5nc(66, { sdf: 'dasd', rewre: 'sdgag' }, fffb)
-// let ggtg: never
-// ggtg = 4
+let fffg: Ting
+const fff: Test[] = [fffg]
 
-// const dffs = null
-// console.log(dffs)
+const fffd: Test = [fffg]
+console.log(fff)
 
-// let ff55 = 'ddsgdsd'
-// ff55 = 5
+let sdfe: number = 4
+sdfe = undefined
+let fffb: Ting
+fffb!.prop!.ltr = 'asdfd'
+fffb!.prop!.ltr = true
+const sgrdddxf = '4232'
+fffb!.prop!.ltr = Number(sgrdddxf)
+fffb!.prop!.ltr = '345'
+fffb!.prop!.ltr = 9007199254740991
+fffb!.prop!.ltr = new Date()
+fu5nc(66, { sdf: 'dasd', rewre: 'sdgag' }, fffb)
+let ggtg: never
+ggtg = 4
 
-// const test = () => {
-//   let fffg: Ting
-//   const fff: Test = fffg
-//   console.log(fff)
-//   const ddd: Test = 44
-//   console.log(ddd)
-//   const sdf: string = String(55).toString()
-//   console.log(sdf)
-//   fu5nc(66, 44, { news: 'fsas' })
-//   const sd: number = fu6nc()
-//   console.log(sd)
-// }
+const dffs = null
+console.log(dffs)
 
-// export const fu6nc = (): Ting => {
-//   return 'sdsad'
-// }
+let ff55 = 'ddsgdsd'
+ff55 = 5
 
-// export default defaultComponentFactory
+const test = () => {
+  let fffg: Ting
+  const fff: Test = fffg
+  console.log(fff)
+  const ddd: Test = 44
+  console.log(ddd)
+  const sdf: string = String(55).toString()
+  console.log(sdf)
+  fu5nc(66, 44, { news: 'fsas' })
+  const sd: number = fu6nc()
+  console.log(sd)
+}
+
+export const fu6nc = (): Ting => {
+  return 'sdsad'
+}
+
+export default defaultComponentFactory

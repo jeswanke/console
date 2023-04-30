@@ -93,7 +93,10 @@ function cacheNodes(sourceFile: ts.SourceFile) {
         nodes.forEach((node) => {
           const arrayNode =
             ts.findAncestor(node, (node) => {
-              return !!node && node.kind === ts.SyntaxKind.VariableDeclaration
+              return (
+                !!node &&
+                (node.kind === ts.SyntaxKind.VariableDeclaration || node.kind === ts.SyntaxKind.ReturnStatement)
+              )
             }) || node
 
           const syntaxList = node.getChildren().find(({ kind }) => kind === ts.SyntaxKind.SyntaxList)
@@ -351,24 +354,23 @@ function findReturnStatementTargetAndSourceToCompare(node: ts.Node, containerTyp
       nodeText: container.parent.symbol.getName(),
       typeText: targetTypeText,
       typeValue: targetType?.value,
-      fullText: `${container.parent.symbol.getName()}: ${targetTypeText}`,
+      fullText: `${
+        container.parent.kind !== ts.SyntaxKind.SourceFile ? `${container.parent.symbol.getName()}: ` : ''
+      }${targetTypeText}`,
       nodeLink: getNodeLink(container),
     }
 
-    const dsf = 0
-
-    const sourceInfo = {
-      nodeText: getText(node),
-      typeText: sourceTypeText.replace('return ', ''),
-      typeValue: sourceType?.value,
-      fullText: `${getText(node)}${sourceType.value ? ': ' + typeof sourceType.value : ''}`,
-      nodeLink: getNodeLink(node),
-    }
-
-    // individual array items mismatch the target
-    if (context.arrayItems) {
-      return findArrayItemTargetAndSourceToCompare(sourceType, sourceInfo, context)
+    const arrayItems = context.nodeMaps.arrayItemsToTarget[node.getStart()]
+    if (arrayItems) {
+      return findArrayItemTargetAndSourceToCompare(arrayItems, targetType, targetInfo, context)
     } else {
+      const sourceInfo = {
+        nodeText: getText(node),
+        typeText: sourceTypeText.replace('return ', ''),
+        typeValue: sourceType?.value,
+        fullText: `${getText(node)}${sourceType.value ? ': ' + typeof sourceType.value : ''}`,
+        nodeLink: getNodeLink(node),
+      }
       const pathContext = {
         ...context,
         message: min(
