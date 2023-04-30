@@ -21,6 +21,102 @@ const handlesTheseTsErrors = [2322, 2559, 2345]
 //======================================================================
 //======================================================================
 //======================================================================
+//   ____           _            _   _           _
+// /  ___|__ _  ___| |__   ___  | \ | | ___   __| | ___  ___
+// | |   / _` |/ __| '_ \ / _ \ |  \| |/ _ \ / _` |/ _ \/ __|
+// | |__| (_| | (__| | | |  __/ | |\  | (_) | (_| |  __/\__ \
+//  \____\__,_|\___|_| |_|\___| |_| \_|\___/ \__,_|\___||___/
+
+//======================================================================
+//======================================================================
+//======================================================================
+
+function cacheNodes(sourceFile: ts.SourceFile) {
+  const nodeMaps = {
+    startToNode: {},
+    kindToNodes: new Map<ts.SyntaxKind, any[]>(),
+    returnToContainer: {},
+    arrayItemsToTarget: {},
+    containerToReturns: {},
+    blocksToDeclarations: {},
+    processedNodes: new Set(),
+  }
+  function mapNodes(node: ts.Node) {
+    // STORE BY START OF NODE WHICH IS UNIQUE
+    nodeMaps.startToNode[node.getStart()] = node
+
+    // GROUP BY WHAT KIND THE NODE IS FOR BELOW
+    let nodes = nodeMaps.kindToNodes[node.kind]
+    if (!nodes) {
+      nodes = nodeMaps.kindToNodes[node.kind] = []
+    }
+    nodes.push(node)
+
+    // FOR EACH NODE IN SOURCE FILE
+    ts.forEachChild(node, mapNodes)
+  }
+  mapNodes(sourceFile)
+
+  Object.entries(nodeMaps.kindToNodes).forEach(([kind, nodes]) => {
+    switch (Number(kind)) {
+      // FOR A SIMPLE TARGET = SOURCE,
+      // THE ERROR WILL BE ON THIS LINE BUT THE TARGET/SOURCE WILL BE DEFINED ON OTHER LINES
+      // REMEMBER WHERE THEY"RE LOCATED FOR THE HERELINK IN THE SUGGESTIONS
+      case ts.SyntaxKind.VariableDeclaration:
+        nodes.forEach((node) => {
+          const blockId = getNodeBlockId(node)
+          let declareMap = nodeMaps.blocksToDeclarations[blockId]
+          if (!declareMap) {
+            declareMap = nodeMaps.blocksToDeclarations[blockId] = {}
+          }
+          declareMap[node.getFirstToken()?.getText()] = node
+        })
+        break
+
+      // FOR EACH 'RETURN' REMEBER WHAT ITS CONTAINER IS TO DO THAT CHECK
+      case ts.SyntaxKind.ReturnStatement:
+        nodes.forEach((returnNode) => {
+          const container = ts.findAncestor(returnNode.parent, (node) => {
+            return !!node && (isFunctionLikeKind(node.kind) || ts.isClassStaticBlockDeclaration(node))
+          })
+          if (container) {
+            nodeMaps.returnToContainer[returnNode.getStart()] = container
+            let returnNodes = nodeMaps.containerToReturns[container.getStart()]
+            if (!returnNodes) {
+              returnNodes = nodeMaps.containerToReturns[container.getStart()] = []
+            }
+            returnNodes.push(returnNode)
+          }
+        })
+        break
+      case ts.SyntaxKind.ArrayLiteralExpression:
+        nodes.forEach((node) => {
+          const arrayNode =
+            ts.findAncestor(node, (node) => {
+              return !!node && node.kind === ts.SyntaxKind.VariableDeclaration
+            }) || node
+
+          const syntaxList = node.getChildren().find(({ kind }) => kind === ts.SyntaxKind.SyntaxList)
+          let objectLiterals = syntaxList
+            .getChildren()
+            .filter(({ kind }) => kind === ts.SyntaxKind.ObjectLiteralExpression)
+          let arrayItems = nodeMaps.arrayItemsToTarget[arrayNode.getStart()]
+          if (!arrayItems) {
+            arrayItems = nodeMaps.arrayItemsToTarget[arrayNode.getStart()] = []
+          }
+          arrayItems.push(objectLiterals.length > 0 ? objectLiterals : node)
+          nodeMaps.arrayItemsToTarget[arrayNode.getStart()] = arrayItems.flat()
+        })
+
+        break
+    }
+  })
+  return nodeMaps
+}
+
+//======================================================================
+//======================================================================
+//======================================================================
 //  ____            _      ___
 // |  _ \ __ _ _ __| |_   / _ \ _ __   ___
 // | |_) / _` | '__| __| | | | | '_ \ / _ \
@@ -60,32 +156,6 @@ function findTargetAndSourceToCompare(code, errorNode: ts.Node, nodeMaps) {
       node,
       errorNode,
       nodeMaps,
-    }
-
-    //======================================================================
-    //=============== TARGET = array, SOURCE = array item =====================
-    //======================================================================
-    if (errorNode.parent.kind === ts.SyntaxKind.ArrayLiteralExpression) {
-      // if that source is a spread (...) that inner array is the sources
-      if (errorNode.kind === ts.SyntaxKind.SpreadElement) {
-        // scrape off ...( )
-        let children = errorNode.getChildren().filter(({ kind }) => kind !== ts.SyntaxKind.DotDotDotToken)
-        let innerNode = children.find(({ kind }) => kind === ts.SyntaxKind.ParenthesizedExpression)
-        if (innerNode) {
-          innerNode = innerNode.getChildren()[1]
-        } else {
-          innerNode = children[0]
-        }
-        // if conditional, both choices are sources
-        if (innerNode.kind === ts.SyntaxKind.ConditionalExpression) {
-          children = innerNode.getChildren()
-          context.arrayItems = [children[2], children[4]]
-        } else {
-          context.arrayItems = [innerNode]
-        }
-      } else {
-        context.arrayItems = [errorNode]
-      }
     }
 
     const children = node.getChildren()
@@ -184,11 +254,25 @@ function findAssignmentTargetAndSourceToCompare(errorNode, targetNode: ts.Node, 
   const targetType: ts.Type = checker.getTypeAtLocation(targetNode)
   const targetTypeText = typeToString(targetType)
   let sourceType: ts.Type = checker.getTypeAtLocation(sourceNode)
+  const targetInfo = {
+    nodeText: getText(targetNode),
+    typeText: targetTypeText,
+    typeValue: targetType?.value,
+    fullText: `${getText(targetNode)}: ${targetTypeText}`,
+    nodeLink: getNodeLink(targetNode),
+  }
 
   //======================================================================
-  //===============  TARGET = ()=>return SOURCE ==========================
+  //===============  TARGET = [ { } ] ==========================
   //======================================================================
-  if (isFunctionLikeKind(sourceNode.kind)) {
+  const arrayItems = context.nodeMaps.arrayItemsToTarget[targetNode.getStart()]
+  if (arrayItems) {
+    return findArrayItemTargetAndSourceToCompare(arrayItems, targetType, targetInfo, context)
+
+    //======================================================================
+    //===============  TARGET = ()=>return SOURCE ==========================
+    //======================================================================
+  } else if (isFunctionLikeKind(sourceNode.kind)) {
     // if function, need to make sure each type returned can be assigned to target
     const returns = context.nodeMaps.containerToReturns[sourceNode.getStart()]
     if (returns) {
@@ -204,13 +288,13 @@ function findAssignmentTargetAndSourceToCompare(errorNode, targetNode: ts.Node, 
       //======================================================================
       //===============   TARGET = ()=> literal SOURCE ==========================
       //======================================================================
-      sourceType = checker.getSignaturesOfType(checker.getTypeAtLocation(sourceNode), 0)[0].getReturnType()
-      if (isArrayType(sourceType)) {
-        //======================================================================
-        //===============   TARGET = ()=> literal [SOURCE] ==========================
-        //======================================================================
-        //const d = sourceType.get.typeArguments
-        const asd = 0
+      let children = sourceNode.getChildren()
+      sourceNode = children[children.length - 1]
+      if (sourceNode.kind === ts.SyntaxKind.CallExpression) {
+        children = sourceNode.getChildren()
+        sourceType = checker.getSignaturesOfType(checker.getTypeAtLocation(children[0]), 0)[0].getReturnType()
+      } else {
+        sourceType = checker.getTypeAtLocation(sourceNode)
       }
     }
   }
@@ -224,38 +308,27 @@ function findAssignmentTargetAndSourceToCompare(errorNode, targetNode: ts.Node, 
     fullText: `${getText(sourceNode)}: ${sourceTypeText}`,
     nodeLink: getNodeLink(sourceNode),
   }
-  const targetInfo = {
-    nodeText: getText(targetNode),
-    typeText: targetTypeText,
-    typeValue: targetType?.value,
-    fullText: `${getText(targetNode)}: ${targetTypeText}`,
-    nodeLink: getNodeLink(targetNode),
-  }
 
   // individual array items mismatch the target
-  if (context.arrayItems) {
-    return findArrayItemTargetAndSourceToCompare(sourceType, sourceInfo, context)
-  } else {
-    const pathContext = {
-      ...context,
-      message: min(undefined, `Bad assignment: ${getText(errorNode)}`, MAX_TITLE_LENGTH),
-      sourceLink: getNodeLink(sourceNode),
-      targetLink: getNodeLink(targetNode),
-      hadPayoff: false,
-    }
-    compareTypes(
-      targetType,
-      sourceType,
-      [
-        {
-          sourceInfo,
-          targetInfo,
-        },
-      ],
-      pathContext
-    )
-    return pathContext.hadPayoff
+  const pathContext = {
+    ...context,
+    message: min(undefined, `Bad assignment: ${getText(errorNode)}`, MAX_TITLE_LENGTH),
+    sourceLink: getNodeLink(sourceNode),
+    targetLink: getNodeLink(targetNode),
+    hadPayoff: false,
   }
+  compareTypes(
+    targetType,
+    sourceType,
+    [
+      {
+        sourceInfo,
+        targetInfo,
+      },
+    ],
+    pathContext
+  )
+  return pathContext.hadPayoff
 }
 //======================================================================
 //================= func( ):TARGET => {return SOURCE}   ================
@@ -281,6 +354,9 @@ function findReturnStatementTargetAndSourceToCompare(node: ts.Node, containerTyp
       fullText: `${container.parent.symbol.getName()}: ${targetTypeText}`,
       nodeLink: getNodeLink(container),
     }
+
+    const dsf = 0
+
     const sourceInfo = {
       nodeText: getText(node),
       typeText: sourceTypeText.replace('return ', ''),
@@ -375,6 +451,22 @@ function findFunctionCallTargetAndSourceToCompare(node: ts.Node, errorNode, cont
         fullText: argName === sourceTypeText ? argName : `${argName}: ${sourceTypeText}`,
         nodeLink: getNodeLink(node),
       }
+
+      // if argument is an Array, see if we're passing an array literal and compare each object literal type
+      if (isArrayType(sourceType)) {
+        const arrayNode = ts.findAncestor(args[inx], (node) => {
+          return !!node && node.kind === ts.SyntaxKind.VariableDeclaration
+        })
+        if (arrayNode) {
+          const arrayItems = context.nodeMaps.arrayItemsToTarget[arrayNode.getStart()]
+          if (arrayItems) {
+            findArrayItemTargetAndSourceToCompare(arrayItems, sourceType, sourceInfo, context)
+            hadPayoff = context.hadPayoff
+            return hadPayoff // stops on first conflict just like typescript
+          }
+        }
+      }
+
       const targetInfo = {
         nodeText: paramName,
         typeText: targetTypeText,
@@ -382,50 +474,45 @@ function findFunctionCallTargetAndSourceToCompare(node: ts.Node, errorNode, cont
         fullText: `${paramName}: ${targetTypeText}`,
         nodeLink: paramLink,
       }
-      // individual array items mismatch the target
-      if (context.arrayItems) {
-        findArrayItemTargetAndSourceToCompare(sourceType, sourceInfo, context)
-        hadPayoff = context.hadPayoff
-        return hadPayoff // stops on first conflict just like typescript
-      } else {
-        const comma = args.length > 1 && inx > args.length - 1 ? ',' : ''
-        const message = min(
-          undefined,
-          `Bad call argument #${inx + 1} type: ${functionName}( ${chalk.red(
-            argName
-          )}${comma} ) => ${functionName}( ${chalk.red(`${paramName}: ${targetTypeText}`)}${comma} )`,
-          MAX_TITLE_LENGTH
-        )
 
-        const pathContext = {
-          ...context,
-          callPrototypeMatchUps,
-          errorIndex,
-          callMismatch: true,
-          message,
-          sourceLink: getNodeLink(node),
-          targetLink: paramLink,
-          hadPayoff: false,
-        }
-        if (hadPayoff) {
-          console.log('\n\n')
-        }
-        // calling arguments are the sources
-        // function parameters are the targets
-        compareTypes(
-          targetType,
-          sourceType,
-          [
-            {
-              sourceInfo,
-              targetInfo,
-            },
-          ],
-          pathContext
-        )
-        hadPayoff = pathContext.hadPayoff
-        return hadPayoff // stops on first conflict just like typescript
+      // individual array items mismatch the target
+      const comma = args.length > 1 && inx > args.length - 1 ? ',' : ''
+      const message = min(
+        undefined,
+        `Bad call argument #${inx + 1} type: ${functionName}( ${chalk.red(
+          argName
+        )}${comma} ) => ${functionName}( ${chalk.red(`${paramName}: ${targetTypeText}`)}${comma} )`,
+        MAX_TITLE_LENGTH
+      )
+
+      const pathContext = {
+        ...context,
+        callPrototypeMatchUps,
+        errorIndex,
+        callMismatch: true,
+        message,
+        sourceLink: getNodeLink(node),
+        targetLink: paramLink,
+        hadPayoff: false,
       }
+      if (hadPayoff) {
+        console.log('\n\n')
+      }
+      // calling arguments are the sources
+      // function parameters are the targets
+      compareTypes(
+        targetType,
+        sourceType,
+        [
+          {
+            sourceInfo,
+            targetInfo,
+          },
+        ],
+        pathContext
+      )
+      hadPayoff = pathContext.hadPayoff
+      return hadPayoff // stops on first conflict just like typescript
     }
   )
   return hadPayoff
@@ -434,11 +521,15 @@ function findFunctionCallTargetAndSourceToCompare(node: ts.Node, errorNode, cont
 //======================================================================
 //==================TARGET[] = [SOURCE]  ==============================
 //======================================================================
-function findArrayItemTargetAndSourceToCompare(targetType, targetInfo, context) {
+
+function findArrayItemTargetAndSourceToCompare(arrayItems, targetType, targetInfo, context) {
   // const targetType: ts.Type = checker.getTypeAtLocation(targetNode)
   // const targetTypeText = typeToString(targetType)
   let hadPayoff = false
-  context.arrayItems.some((sourceNode) => {
+
+  // target has GOT to be an array
+  targetType = targetType.typeArguments[0]
+  arrayItems.some((sourceNode) => {
     const sourceType: ts.Type = checker.getTypeAtLocation(sourceNode)
     const sourceTypeText = typeToString(sourceType)
     const pathContext = {
@@ -637,7 +728,13 @@ function compareTypeProperties(firstType, secondType) {
       //======================================================================
       //========= MAKE SURE TARGET AND SOURCE ARE THE SAME TYPE =====================
       //======================================================================
-      if (firstPropTypeText !== secondPropTypeText) {
+      if (
+        firstPropTypeText !== secondPropTypeText &&
+        firstPropTypeText !== 'any' &&
+        secondPropTypeText !== 'any' &&
+        !isFunctionType(firstPropType) &&
+        !isFunctionType(secondPropType)
+      ) {
         // if both are simple types, just show the error
         const isFirstSimple = isSimpleType(firstPropTypeText)
         const isSecondSimple = isSimpleType(secondPropTypeText)
@@ -910,6 +1007,13 @@ function showTypeConflicts(p, problem, context, stack, links, maxs, interfaces, 
     context.targetMap = targetMap
     context.sourceMap = sourceMap
 
+    const typesMatch = (arr1, arr2) => {
+      if (arr1.length > arr2.length) [arr2, arr1] = [arr1, arr2]
+      return arr1.every((type) => {
+        return arr2.includes(type)
+      })
+    }
+
     // COMPARETYPES() ONLY FOUND THE TWO TYPES THAT ARE IN CONFLICT
     // THIS LOOP ITERATES THRU ALL TYPE PROPERTIES TO SEE EVERYHING THAT'S MISSING OR MISMATCHED
     // WHILE WE'RE AT IT, WE DISPLAY THE MATCHING PROPERTIES IN GREEN
@@ -919,13 +1023,13 @@ function showTypeConflicts(p, problem, context, stack, links, maxs, interfaces, 
     Object.keys(sourceMap).forEach((propName) => {
       if (targetMap[propName] && targetMap[propName].fullText) {
         // at this point object types can't be mismatched, only mismatched properties
-        const targetPropTypeText = targetMap[propName].typeText
-        const sourcePropTypeText = sourceMap[propName].typeText
+        const targetPropTypeText = targetMap[propName].typeText.split(' | ')
+        const sourcePropTypeText = sourceMap[propName].typeText.split(' | ')
         if (
-          sourcePropTypeText === targetPropTypeText ||
-          sourcePropTypeText === 'any' ||
-          targetPropTypeText === 'any' ||
-          (!isSimpleType(sourcePropTypeText) && !isSimpleType(targetPropTypeText))
+          typesMatch(sourcePropTypeText, targetPropTypeText) ||
+          sourcePropTypeText.includes('any') ||
+          targetPropTypeText.includes('any') ||
+          (!isSimpleType(sourcePropTypeText[0]) && !isSimpleType(targetPropTypeText[0]))
         ) {
           p.addRow(
             {
@@ -1453,13 +1557,22 @@ function suggestPartialInterfaces(suggestions, _problem, context, _stack) {
 // ===============================================================================
 // ===============================================================================
 // ===============================================================================
+//  _   _      _
+// | | | | ___| |_ __   ___ _ __ ___
+// | |_| |/ _ \ | '_ \ / _ \ '__/ __|
+// |  _  |  __/ | |_) |  __/ |  \__ \
+// |_| |_|\___|_| .__/ \___|_|  |___/
+//              |_|
+// ===============================================================================
+// ===============================================================================
+// ===============================================================================
 
 function getPropertyInfo(prop: ts.Symbol, type?: ts.Type) {
   const declarations = prop?.declarations
   if (Array.isArray(declarations)) {
     const declaration = declarations[0]
     type = type || checker.getTypeAtLocation(declaration)
-    const typeText = typeToString(type)
+    const typeText = (type.types || [type]).map((type) => typeToString(type)).join(' | ')
     const isOpt = prop.flags & ts.SymbolFlags.Optional
     let preface = `${prop.getName()}${isOpt ? '?' : ''}:`
     switch (true) {
@@ -1597,6 +1710,8 @@ function isFunctionType(type) {
 function typeToString(type) {
   if (type.intrinsicName === 'true' || type.intrinsicName === 'false') {
     return 'boolean'
+    // } else if (type.intrinsicName === 'error') {
+    //   return 'error'
   } else if (type.value) {
     return typeof type.value
   }
@@ -1665,9 +1780,10 @@ function isFunctionLikeKind(kind: ts.SyntaxKind) {
       return false
   }
 }
-// ===============================================================================
-// =================== findSupportedErrors ==============================
-// ===============================================================================
+
+/////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////
 
 function findSupportedErrors(semanticDiagnostics: readonly ts.Diagnostic[], fileNames: string[]) {
   let hadPayoff = true // the first one is always free
@@ -1677,7 +1793,7 @@ function findSupportedErrors(semanticDiagnostics: readonly ts.Diagnostic[], file
     if (file && fileNames.includes(file.fileName)) {
       let nodeMaps = fileMap[file.fileName]
       if (!nodeMaps) {
-        nodeMaps = fileMap[file.fileName] = getNodeMaps(file)
+        nodeMaps = fileMap[file.fileName] = cacheNodes(file)
       }
       if (start) {
         const node = nodeMaps.startToNode[start]
@@ -1699,57 +1815,6 @@ function findSupportedErrors(semanticDiagnostics: readonly ts.Diagnostic[], file
   console.log('\n\n--------------------------------------------------------------------------')
 }
 
-function getNodeMaps(sourceFile: ts.SourceFile) {
-  const nodeMaps = {
-    startToNode: {},
-    kindToNodes: {},
-    returnToContainer: {},
-    containerToReturns: {},
-    blocksToDeclarations: {},
-    processedNodes: new Set(),
-  }
-  function mapNodes(node: ts.Node) {
-    nodeMaps.startToNode[node.getStart()] = node
-    let nodes = nodeMaps.kindToNodes[node.kind]
-    if (!nodes) {
-      nodes = nodeMaps.kindToNodes[node.kind] = []
-    }
-
-    // remember where variables are declared
-    if (node.kind === ts.SyntaxKind.VariableDeclaration) {
-      const blockId = getNodeBlockId(node)
-      let declareMap = nodeMaps.blocksToDeclarations[blockId]
-      if (!declareMap) {
-        declareMap = nodeMaps.blocksToDeclarations[blockId] = {}
-      }
-      declareMap[node.getFirstToken()?.getText()] = node
-    }
-
-    nodes.push(node)
-    ts.forEachChild(node, mapNodes)
-  }
-  mapNodes(sourceFile)
-
-  // for each return node map it to its container
-  nodeMaps.kindToNodes[ts.SyntaxKind.ReturnStatement].forEach((returnNode) => {
-    const container = ts.findAncestor(returnNode.parent, (node) => {
-      return !!node && (isFunctionLikeKind(node.kind) || ts.isClassStaticBlockDeclaration(node))
-    })
-    if (container) {
-      nodeMaps.returnToContainer[returnNode.getStart()] = container
-      let returnNodes = nodeMaps.containerToReturns[container.getStart()]
-      if (!returnNodes) {
-        returnNodes = nodeMaps.containerToReturns[container.getStart()] = []
-      }
-      returnNodes.push(returnNode)
-    }
-  })
-  return nodeMaps
-}
-
-/////////////////////////////////////////////////////////////
-/////////////////////////////////////////////////////////////
-/////////////////////////////////////////////////////////////
 const fileNames = process.argv.slice(2).filter((arg) => {
   if (arg.startsWith('-')) {
     if (arg.startsWith('-v') || arg.startsWith('--v')) isVerbose = true
@@ -1764,7 +1829,7 @@ if (tsconfigPath) {
   const tsconfigFile = ts.readConfigFile(tsconfigPath, ts.sys.readFile)
   options = ts.parseJsonConfigFileContent(tsconfigFile.config, ts.sys, path.dirname(tsconfigPath)).options
 }
-//isVerbose = true
+isVerbose = true
 //options.isolatedModules = false
 console.log('starting...')
 const program = ts.createProgram(fileNames, options)
