@@ -266,7 +266,7 @@ function findAssignmentTargetAndSourceToCompare(errorNode, targetNode: ts.Node, 
   //===============  TARGET = [ { } ] ==========================
   //======================================================================
   const arrayItems = context.nodeMaps.arrayItemsToTarget[targetNode.getStart()]
-  if (arrayItems) {
+  if (arrayItems && isArrayType(targetType)) {
     return findArrayItemTargetAndSourceToCompare(arrayItems, targetType, targetInfo, context)
 
     //======================================================================
@@ -1829,7 +1829,7 @@ if (tsconfigPath) {
   const tsconfigFile = ts.readConfigFile(tsconfigPath, ts.sys.readFile)
   options = ts.parseJsonConfigFileContent(tsconfigFile.config, ts.sys, path.dirname(tsconfigPath)).options
 }
-isVerbose = true
+//isVerbose = true
 //options.isolatedModules = false
 console.log('starting...')
 const program = ts.createProgram(fileNames, options)
