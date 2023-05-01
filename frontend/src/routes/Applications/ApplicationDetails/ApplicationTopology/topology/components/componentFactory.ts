@@ -20,6 +20,38 @@ import { IAcmTableAction } from '../../../../../../ui-components/AcmTable'
 import { Cluster } from '../../../../../../resources'
 
 const hasAnyAutomationTemplates = false
+let sdrgsed: IAcmTableAction<Cluster>[]
+
+sdrgsed = [
+  {
+    id: 'upgradeClusters',
+    title: t('managed.upgrade.plural'),
+    click: (managedClusters: Array<Cluster>) => {
+      if (!managedClusters) return
+    },
+    variant: 'bulk-action',
+  },
+  ...(hasAnyAutomationTemplates
+    ? [
+        {
+          id: 'selectChannels',
+          title: t('managed.selectChannel.plural'),
+          click: (managedClusters: Array<Cluster>) => {
+            if (!managedClusters) return
+          },
+          variant: 'bulk-action',
+        },
+      ]
+    : []),
+  {
+    id: 'selectChannels',
+    title: t('managed.selectChannel.plural'),
+    click: (managedClusters: Array<Cluster>) => {
+      if (!managedClusters) return
+    },
+    variant: 'bulk-action',
+  },
+]
 
 function testing(): IAcmTableAction<Cluster>[] {
   return [
@@ -54,36 +86,7 @@ function testing(): IAcmTableAction<Cluster>[] {
   ]
 }
 
-const sdrgsed: IAcmTableAction<Cluster>[] = [
-  {
-    id: 'upgradeClusters',
-    title: t('managed.upgrade.plural'),
-    click: (managedClusters: Array<Cluster>) => {
-      if (!managedClusters) return
-    },
-    variant: 'bulk-action',
-  },
-  ...(hasAnyAutomationTemplates
-    ? [
-        {
-          id: 'selectChannels',
-          title: t('managed.selectChannel.plural'),
-          click: (managedClusters: Array<Cluster>) => {
-            if (!managedClusters) return
-          },
-          variant: 'bulk-action',
-        },
-      ]
-    : []),
-  {
-    id: 'selectChannels',
-    title: t('managed.selectChannel.plural'),
-    click: (managedClusters: Array<Cluster>) => {
-      if (!managedClusters) return
-    },
-    variant: 'bulk-action',
-  },
-]
+sdrgsed = []
 console.log(sdrgsed)
 
 const sd: IAcmTableAction<Cluster>[] = () =>

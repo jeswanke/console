@@ -21,18 +21,18 @@ const handlesTheseTsErrors = [2322, 2559, 2345]
 //======================================================================
 //======================================================================
 //======================================================================
-//   ____           _            _   _           _
-// /  ___|__ _  ___| |__   ___  | \ | | ___   __| | ___  ___
-// | |   / _` |/ __| '_ \ / _ \ |  \| |/ _ \ / _` |/ _ \/ __|
-// | |__| (_| | (__| | | |  __/ | |\  | (_) | (_| |  __/\__ \
-//  \____\__,_|\___|_| |_|\___| |_| \_|\___/ \__,_|\___||___/
-
+//  ____            _      ___
+// |  _ \ __ _ _ __| |_   / _ \ _ __   ___
+// | |_) / _` | '__| __| | | | | '_ \ / _ \
+// |  __/ (_| | |  | |_  | |_| | | | |  __/
+// |_|   \__,_|_|   \__|  \___/|_| |_|\___|
 //======================================================================
 //======================================================================
 //======================================================================
-
+// In case the compiler combines multiple types into one type for comparison
+// We need to keep track of each individual type in order to pinpoint the error
 function cacheNodes(sourceFile: ts.SourceFile) {
-  const nodeMaps = {
+  const cache = {
     startToNode: {},
     kindToNodes: new Map<ts.SyntaxKind, any[]>(),
     returnToContainer: {},
@@ -43,12 +43,12 @@ function cacheNodes(sourceFile: ts.SourceFile) {
   }
   function mapNodes(node: ts.Node) {
     // STORE BY START OF NODE WHICH IS UNIQUE
-    nodeMaps.startToNode[node.getStart()] = node
+    cache.startToNode[node.getStart()] = node
 
     // GROUP BY WHAT KIND THE NODE IS FOR BELOW
-    let nodes = nodeMaps.kindToNodes[node.kind]
+    let nodes = cache.kindToNodes[node.kind]
     if (!nodes) {
-      nodes = nodeMaps.kindToNodes[node.kind] = []
+      nodes = cache.kindToNodes[node.kind] = []
     }
     nodes.push(node)
 
@@ -57,7 +57,7 @@ function cacheNodes(sourceFile: ts.SourceFile) {
   }
   mapNodes(sourceFile)
 
-  Object.entries(nodeMaps.kindToNodes).forEach(([kind, nodes]) => {
+  Object.entries(cache.kindToNodes).forEach(([kind, nodes]) => {
     switch (Number(kind)) {
       // FOR A SIMPLE TARGET = SOURCE,
       // THE ERROR WILL BE ON THIS LINE BUT THE TARGET/SOURCE WILL BE DEFINED ON OTHER LINES
@@ -65,11 +65,11 @@ function cacheNodes(sourceFile: ts.SourceFile) {
       case ts.SyntaxKind.VariableDeclaration:
         nodes.forEach((node) => {
           const blockId = getNodeBlockId(node)
-          let declareMap = nodeMaps.blocksToDeclarations[blockId]
+          let declareMap = cache.blocksToDeclarations[blockId]
           if (!declareMap) {
-            declareMap = nodeMaps.blocksToDeclarations[blockId] = {}
+            declareMap = cache.blocksToDeclarations[blockId] = {}
           }
-          declareMap[node.getFirstToken()?.getText()] = node
+          declareMap[node.getChildren()[0].getText()] = node
         })
         break
 
@@ -80,10 +80,10 @@ function cacheNodes(sourceFile: ts.SourceFile) {
             return !!node && (isFunctionLikeKind(node.kind) || ts.isClassStaticBlockDeclaration(node))
           })
           if (container) {
-            nodeMaps.returnToContainer[returnNode.getStart()] = container
-            let returnNodes = nodeMaps.containerToReturns[container.getStart()]
+            cache.returnToContainer[returnNode.getStart()] = container
+            let returnNodes = cache.containerToReturns[container.getStart()]
             if (!returnNodes) {
-              returnNodes = nodeMaps.containerToReturns[container.getStart()] = []
+              returnNodes = cache.containerToReturns[container.getStart()] = []
             }
             returnNodes.push(returnNode)
           }
@@ -95,7 +95,9 @@ function cacheNodes(sourceFile: ts.SourceFile) {
             ts.findAncestor(node, (node) => {
               return (
                 !!node &&
-                (node.kind === ts.SyntaxKind.VariableDeclaration || node.kind === ts.SyntaxKind.ReturnStatement)
+                (node.kind === ts.SyntaxKind.VariableDeclaration ||
+                  node.kind === ts.SyntaxKind.BinaryExpression ||
+                  node.kind === ts.SyntaxKind.ReturnStatement)
               )
             }) || node
 
@@ -103,65 +105,67 @@ function cacheNodes(sourceFile: ts.SourceFile) {
           let objectLiterals = syntaxList
             .getChildren()
             .filter(({ kind }) => kind === ts.SyntaxKind.ObjectLiteralExpression)
-          let arrayItems = nodeMaps.arrayItemsToTarget[arrayNode.getStart()]
+          let arrayItems = cache.arrayItemsToTarget[arrayNode.getStart()]
           if (!arrayItems) {
-            arrayItems = nodeMaps.arrayItemsToTarget[arrayNode.getStart()] = []
+            arrayItems = cache.arrayItemsToTarget[arrayNode.getStart()] = []
           }
           arrayItems.push(objectLiterals.length > 0 ? objectLiterals : node)
-          nodeMaps.arrayItemsToTarget[arrayNode.getStart()] = arrayItems.flat()
+          cache.arrayItemsToTarget[arrayNode.getStart()] = arrayItems.flat()
         })
 
         break
     }
   })
-  return nodeMaps
+  return cache
 }
 
 //======================================================================
 //======================================================================
 //======================================================================
-//  ____            _      ___
-// |  _ \ __ _ _ __| |_   / _ \ _ __   ___
-// | |_) / _` | '__| __| | | | | '_ \ / _ \
-// |  __/ (_| | |  | |_  | |_| | | | |  __/
-// |_|   \__,_|_|   \__|  \___/|_| |_|\___|
+//  ____            _     _____
+// |  _ \ __ _ _ __| |_  |_   _|_      _____
+// | |_) / _` | '__| __|   | | \ \ /\ / / _ \
+// |  __/ (_| | |  | |_    | |  \ V  V / (_) |
+// |_|   \__,_|_|   \__|   |_|   \_/\_/ \___/
 //======================================================================
 //======================================================================
 //======================================================================
 // FIND THE TARGET AND SOURCE OF AN ASSIGNMENT CONFLICT
-//   a) DETERMINE WHAT THE TARGET AND SOURCE ACTUALLY ARE (the compiler just gets us into the neighborhood)
+//   a) DETERMINE WHAT THE TARGET AND SOURCE ACTUALLY ARE
+//      (the error node is just in the neighborhood)
 //   b) THEN COMPARE THEM TO FIND THE CONFLICT
-function findTargetAndSourceToCompare(code, errorNode: ts.Node, nodeMaps) {
+function findTargetAndSourceToCompare(code, errorNode: ts.Node, cache) {
   const node =
     ts.findAncestor(errorNode, (node) => {
       return (
         !!node &&
         (node.kind === ts.SyntaxKind.ReturnStatement ||
           node.kind === ts.SyntaxKind.VariableDeclaration ||
+          node.kind === ts.SyntaxKind.ExpressionStatement ||
           node.kind === ts.SyntaxKind.CallExpression)
       )
     }) || errorNode
 
   // compiler might throw multiple errors for the same problem
   // only process one of them
-  if (!nodeMaps.processedNodes.has(node.getStart())) {
-    nodeMaps.processedNodes.add(node.getStart())
+  if (!cache.processedNodes.has(node.getStart())) {
+    cache.processedNodes.add(node.getStart())
     const context: {
       code: any
       node: ts.Node
       errorNode?: ts.Node
       arrayItems?: ts.Node[]
-      nodeMaps: any
+      cache: any
       sourceDeclared?: ts.Node
       targetDeclared?: ts.Node
     } = {
       code,
       node,
       errorNode,
-      nodeMaps,
+      cache,
     }
 
-    const children = node.getChildren()
+    let children = node.getChildren()
     switch (node.kind) {
       //======================================================================
       //================= ( ):TARGET => { return SOURCE } ==========================
@@ -177,7 +181,7 @@ function findTargetAndSourceToCompare(code, errorNode: ts.Node, nodeMaps) {
         if (children[0].kind === ts.SyntaxKind.PropertyAccessExpression) {
           const objectName = children[0].getFirstToken()
           if (objectName) {
-            context.targetDeclared = getNodeDeclartion(objectName, nodeMaps)
+            context.targetDeclared = getNodeDeclartion(objectName, cache)
           }
         }
         return findFunctionCallTargetAndSourceToCompare(node, errorNode, context)
@@ -193,29 +197,15 @@ function findTargetAndSourceToCompare(code, errorNode: ts.Node, nodeMaps) {
       //======================================================================
       //================ TARGET = SOURCE  =================================
       //======================================================================
-      case ts.SyntaxKind.Identifier:
+      case ts.SyntaxKind.ExpressionStatement:
         // get the whole expression (left = right)
-        const statement =
-          (ts.findAncestor(errorNode, (node) => {
-            return (
-              !!node &&
-              (function (kind: ts.SyntaxKind) {
-                switch (kind) {
-                  case ts.SyntaxKind.ExpressionStatement:
-                    return true
-                  default:
-                    return false
-                }
-              })(node.kind)
-            )
-          }) as ts.ExpressionStatement) || errorNode
-
-        //TODO getChildren()
-        const target = statement.expression.left
-        const source = statement.expression.right
+        const statement = node as ts.ExpressionStatement
+        children = statement.expression.getChildren()
+        const target = children[0]
+        const source = children[2]
         if (source && target) {
-          context.sourceDeclared = getNodeDeclartion(source, nodeMaps)
-          context.targetDeclared = getNodeDeclartion(target, nodeMaps)
+          context.sourceDeclared = getNodeDeclartion(source, cache)
+          context.targetDeclared = getNodeDeclartion(target, cache)
 
           const path = target.getText().split(/\W+/)
           if (path.length > 1) {
@@ -268,7 +258,7 @@ function findAssignmentTargetAndSourceToCompare(errorNode, targetNode: ts.Node, 
   //======================================================================
   //===============  TARGET = [ { } ] ==========================
   //======================================================================
-  const arrayItems = context.nodeMaps.arrayItemsToTarget[targetNode.getStart()]
+  const arrayItems = context.cache.arrayItemsToTarget[targetNode.getStart()]
   if (arrayItems && isArrayType(targetType)) {
     return findArrayItemTargetAndSourceToCompare(arrayItems, targetType, targetInfo, context)
 
@@ -277,7 +267,7 @@ function findAssignmentTargetAndSourceToCompare(errorNode, targetNode: ts.Node, 
     //======================================================================
   } else if (isFunctionLikeKind(sourceNode.kind)) {
     // if function, need to make sure each type returned can be assigned to target
-    const returns = context.nodeMaps.containerToReturns[sourceNode.getStart()]
+    const returns = context.cache.containerToReturns[sourceNode.getStart()]
     if (returns) {
       let hadPayoff = false
       returns.forEach((rn) => {
@@ -342,7 +332,7 @@ function findReturnStatementTargetAndSourceToCompare(node: ts.Node, containerTyp
   // source is return type
   const sourceType: ts.Type = checker.getTypeAtLocation(children[1])
   // target is container type
-  const container = context.nodeMaps.returnToContainer[node.getStart()]
+  const container = context.cache.returnToContainer[node.getStart()]
   if (container) {
     containerType = containerType || checker.getTypeAtLocation(container)
     const targetType: ts.Type = checker.getSignaturesOfType(containerType, 0)[0].getReturnType()
@@ -360,7 +350,7 @@ function findReturnStatementTargetAndSourceToCompare(node: ts.Node, containerTyp
       nodeLink: getNodeLink(container),
     }
 
-    const arrayItems = context.nodeMaps.arrayItemsToTarget[node.getStart()]
+    const arrayItems = context.cache.arrayItemsToTarget[node.getStart()]
     if (arrayItems) {
       return findArrayItemTargetAndSourceToCompare(arrayItems, targetType, targetInfo, context)
     } else {
@@ -460,7 +450,7 @@ function findFunctionCallTargetAndSourceToCompare(node: ts.Node, errorNode, cont
           return !!node && node.kind === ts.SyntaxKind.VariableDeclaration
         })
         if (arrayNode) {
-          const arrayItems = context.nodeMaps.arrayItemsToTarget[arrayNode.getStart()]
+          const arrayItems = context.cache.arrayItemsToTarget[arrayNode.getStart()]
           if (arrayItems) {
             findArrayItemTargetAndSourceToCompare(arrayItems, sourceType, sourceInfo, context)
             hadPayoff = context.hadPayoff
@@ -567,14 +557,15 @@ function findArrayItemTargetAndSourceToCompare(arrayItems, targetType, targetInf
 //======================================================================
 //======================================================================
 //======================================================================
-//  ____            _     _____
-// |  _ \ __ _ _ __| |_  |_   _|_      _____
-// | |_) / _` | '__| __|   | | \ \ /\ / / _ \
-// |  __/ (_| | |  | |_    | |  \ V  V / (_) |
-// |_|   \__,_|_|   \__|   |_|   \_/\_/ \___/
+//  ____            _     _____ _
+// |  _ \ __ _ _ __| |_  |_   _| |__  _ __ ___  ___
+// | |_) / _` | '__| __|   | | | '_ \| '__/ _ \/ _ \
+// |  __/ (_| | |  | |_    | | | | | | | |  __/  __/
+// |_|   \__,_|_|   \__|   |_| |_| |_|_|  \___|\___|
 //======================================================================
 //======================================================================
 //======================================================================
+
 // COMPARE TARGET TYPE WITH SOURCE TYPE
 //   a) IF THE TYPES HAVE PROPERTIES, COMPARE THOSE PROPERTIES TOO
 //   b) KEEP TRACK OF WHAT INNER TYPE WE'RE LOOKING AT ON A STACK
@@ -792,14 +783,15 @@ function theBigPayoff(problem, context, stack) {
 //======================================================================
 //======================================================================
 //======================================================================
-//  ____            _     _____ _
-// |  _ \ __ _ _ __| |_  |_   _| |__  _ __ ___  ___
-// | |_) / _` | '__| __|   | | | '_ \| '__/ _ \/ _ \
-// |  __/ (_| | |  | |_    | | | | | | | |  __/  __/
-// |_|   \__,_|_|   \__|   |_| |_| |_|_|  \___|\___|
+//  ____            _     _____
+// |  _ \ __ _ _ __| |_  |  ___|__  _   _ _ __
+// | |_) / _` | '__| __| | |_ / _ \| | | | '__|
+// |  __/ (_| | |  | |_  |  _| (_) | |_| | |
+// |_|   \__,_|_|   \__| |_|  \___/ \__,_|_|
 //======================================================================
 //======================================================================
 //======================================================================
+
 // DISPLAY CONFLICTS IN A TABLE
 //   a) TYPE CONFLICTS
 //   b) TYPE PROPERTY CONFICTS IF ANY
@@ -1202,14 +1194,15 @@ function showTypeConflicts(p, problem, context, stack, links, maxs, interfaces, 
 //======================================================================
 //======================================================================
 //======================================================================
-//  ____            _     _____
-// |  _ \ __ _ _ __| |_  |  ___|__  _   _ _ __
-// | |_) / _` | '__| __| | |_ / _ \| | | | '__|
-// |  __/ (_| | |  | |_  |  _| (_) | |_| | |
-// |_|   \__,_|_|   \__| |_|  \___/ \__,_|_|
+// ____            _     _____ _
+// |  _ \ __ _ _ __| |_  |  ___(_)_   _____
+// | |_) / _` | '__| __| | |_  | \ \ / / _ \
+// |  __/ (_| | |  | |_  |  _| | |\ V /  __/
+// |_|   \__,_|_|   \__| |_|   |_| \_/ \___|
 //======================================================================
 //======================================================================
 //======================================================================
+
 // WE'VE SHOWN THE DIFFERENCES, NOW SHOW POSSIBLE SOLUTIONS
 
 function showSuggestions(problem, context, stack) {
@@ -1746,8 +1739,8 @@ function getNodeBlockId(node: ts.Node) {
   return block ? block.getStart() : 0
 }
 
-function getNodeDeclartion(node: ts.Node | ts.Identifier, nodeMaps) {
-  const declarationMap = nodeMaps.blocksToDeclarations[getNodeBlockId(node)]
+function getNodeDeclartion(node: ts.Node | ts.Identifier, cache) {
+  const declarationMap = cache.blocksToDeclarations[getNodeBlockId(node)]
   const varName = node.getText()
   return declarationMap && varName ? declarationMap[varName] : node
 }
@@ -1793,18 +1786,18 @@ function findSupportedErrors(semanticDiagnostics: readonly ts.Diagnostic[], file
   const fileMap = {}
   semanticDiagnostics.forEach(({ code, file, start, messageText }) => {
     if (file && fileNames.includes(file.fileName)) {
-      let nodeMaps = fileMap[file.fileName]
-      if (!nodeMaps) {
-        nodeMaps = fileMap[file.fileName] = cacheNodes(file)
+      let cache = fileMap[file.fileName]
+      if (!cache) {
+        cache = fileMap[file.fileName] = cacheNodes(file)
       }
       if (start) {
-        const node = nodeMaps.startToNode[start]
+        const node = cache.startToNode[start]
         if (node) {
           if (handlesTheseTsErrors.includes(code)) {
             if (hadPayoff) {
               console.log('\n\n')
             }
-            hadPayoff = findTargetAndSourceToCompare(code, node, nodeMaps)
+            hadPayoff = findTargetAndSourceToCompare(code, node, cache)
             anyPayoff = anyPayoff || hadPayoff
           }
         }
