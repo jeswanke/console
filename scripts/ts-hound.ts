@@ -13,10 +13,21 @@ let options: ts.CompilerOptions = {
 
 let isVerbose = false
 const MAX_SHOWN_PROP_MISMATCH = 6
-const MAX_TITLE_LENGTH = 200
 const MAX_COLUMN_WIDTH = 80
 const simpleTypes = ['string', 'number', 'boolean', 'bigint', 'Date', 'any', 'unknown', 'never']
 const handlesTheseTsErrors = [2322, 2559, 2345]
+
+enum ErrorType {
+  none = 0,
+  mismatch = 1,
+  objectToSimple = 3,
+  simpleToObject = 4,
+  arrayToNonArray = 5,
+  nonArrayToArray = 6,
+  propMissing = 7,
+  propMismatch = 8,
+  both = 9,
+}
 
 //======================================================================
 //======================================================================
@@ -241,7 +252,11 @@ function findTargetAndSourceToCompare(code, errorNode: ts.Node, cache) {
 }
 
 //======================================================================
+//======================================================================
+//======================================================================
 //===============  TARGET = SOURCE ====================================
+//======================================================================
+//======================================================================
 //======================================================================
 function findAssignmentTargetAndSourceToCompare(errorNode, targetNode: ts.Node, sourceNode: ts.Node, context) {
   const targetType: ts.Type = checker.getTypeAtLocation(targetNode)
@@ -305,7 +320,7 @@ function findAssignmentTargetAndSourceToCompare(errorNode, targetNode: ts.Node, 
   // individual array items mismatch the target
   const pathContext = {
     ...context,
-    message: min(undefined, `Bad assignment: ${getText(errorNode)}`, MAX_TITLE_LENGTH),
+    prefix: 'One type',
     sourceLink: getNodeLink(sourceNode),
     targetLink: getNodeLink(targetNode),
     hadPayoff: false,
@@ -324,7 +339,12 @@ function findAssignmentTargetAndSourceToCompare(errorNode, targetNode: ts.Node, 
   return pathContext.hadPayoff
 }
 //======================================================================
+//======================================================================
+//======================================================================
+//======================================================================
 //================= func( ):TARGET => {return SOURCE}   ================
+//======================================================================
+//======================================================================
 //======================================================================
 
 function findReturnStatementTargetAndSourceToCompare(node: ts.Node, containerType: ts.Type | undefined, context) {
@@ -363,15 +383,10 @@ function findReturnStatementTargetAndSourceToCompare(node: ts.Node, containerTyp
       }
       const pathContext = {
         ...context,
-        message: min(
-          undefined,
-          `Bad return type: ${container.parent.symbol.getName()}(): ${targetTypeText} => { ${chalk.red(
-            getText(node)
-          )} }`,
-          MAX_TITLE_LENGTH
-        ),
+        prefix: 'The return type',
         sourceLink,
         targetLink,
+        sourceTitle: 'Return',
         hadPayoff: false,
       }
       compareTypes(
@@ -391,8 +406,13 @@ function findReturnStatementTargetAndSourceToCompare(node: ts.Node, containerTyp
   }
   return false
 }
+
+//======================================================================
+//======================================================================
 //======================================================================
 //================= call func(..SOURCE...) => (...TARGET...)  =================
+//======================================================================
+//======================================================================
 //======================================================================
 function findFunctionCallTargetAndSourceToCompare(node: ts.Node, errorNode, context) {
   const children = node.getChildren()
@@ -431,7 +451,6 @@ function findFunctionCallTargetAndSourceToCompare(node: ts.Node, errorNode, cont
   const errorIndex = args.findIndex((node) => node === errorNode)
   // for each arg, compare its type to call parameter type
   let hadPayoff = false
-  const functionName = getText(children[0])
   // calling arguments are the sources
   // function parameters are the targets
   callPrototypeMatchUps.some(
@@ -468,23 +487,16 @@ function findFunctionCallTargetAndSourceToCompare(node: ts.Node, errorNode, cont
       }
 
       // individual array items mismatch the target
-      const comma = args.length > 1 && inx > args.length - 1 ? ',' : ''
-      const message = min(
-        undefined,
-        `Bad call argument #${inx + 1} type: ${functionName}( ${chalk.red(
-          argName
-        )}${comma} ) => ${functionName}( ${chalk.red(`${paramName}: ${targetTypeText}`)}${comma} )`,
-        MAX_TITLE_LENGTH
-      )
-
       const pathContext = {
         ...context,
         callPrototypeMatchUps,
         errorIndex,
         callMismatch: true,
-        message,
+        prefix: 'The calling argument type',
         sourceLink: getNodeLink(node),
         targetLink: paramLink,
+        sourceTitle: 'Caller',
+        targetTitle: 'Callee',
         hadPayoff: false,
       }
       if (hadPayoff) {
@@ -511,7 +523,11 @@ function findFunctionCallTargetAndSourceToCompare(node: ts.Node, errorNode, cont
 }
 
 //======================================================================
+//======================================================================
+//======================================================================
 //==================TARGET[] = [SOURCE]  ==============================
+//======================================================================
+//======================================================================
 //======================================================================
 
 function findArrayItemTargetAndSourceToCompare(arrayItems, targetType, targetInfo, context) {
@@ -526,9 +542,11 @@ function findArrayItemTargetAndSourceToCompare(arrayItems, targetType, targetInf
     const sourceTypeText = typeToString(sourceType)
     const pathContext = {
       ...context,
-      message: min(undefined, `Bad array item: ${getText(context.errorNode)}`, MAX_TITLE_LENGTH),
+      prefix: 'The array item type',
       sourceLink: getNodeLink(sourceNode),
       targetLink: targetInfo.nodeLink,
+      sourceTitle: 'Item',
+      targetTitle: 'Target',
       hadPayoff: false,
     }
     compareTypes(
@@ -776,7 +794,7 @@ function compareTypeProperties(firstType, secondType) {
 
 function theBigPayoff(problem, context, stack) {
   showConflicts(problem, context, stack)
-  showSuggestions(problem, context, stack)
+  //showSuggestions(problem, context, stack)
   context.hadPayoff = true
 }
 
@@ -798,22 +816,22 @@ function theBigPayoff(problem, context, stack) {
 //   c) CALLING ARGUMENT CONFLICTS IF ORIGINAL CONFLICT WAS PART OF A FUNCTION CALL
 
 function showConflicts(problem, context, stack) {
-  //show the error
-  console.log(`TS${context.code}: ${context.message}`)
-
   //======================================================================
   //========= INITIALIZE THE COLUMNS =====================
   //======================================================================
   // FOR TYPE CONFLICTS, TARGET IS ON THE LEFT AND SOURCE IS ON THE RIGHT TO MATCH 'TARGET = SOURCE' CONVENTION
   // FOR FUNCTION CALL CONFLICTS, SOURCE IS ON THE LEFT AND TARGET ON THE RIGHT TO MATCH FUNC(ARG) ==> CONST FUNC(PARAM) CONVENTION
   // CALL TABLES ALSO HAVE AN ARGUMENT/PARAMETER NUMBER COLUMN
+  const { code, callMismatch, sourceTitle = 'Source', targetTitle = 'Target', sourceLink, targetLink } = context
+  let { prefix } = context
+
   const columns: {
     name: string
     minLen?: number
     title: string
     alignment: string
   }[] = []
-  if (context.callMismatch) {
+  if (callMismatch) {
     columns.push({
       name: 'arg',
       title: 'Arg',
@@ -822,7 +840,7 @@ function showConflicts(problem, context, stack) {
     columns.push({
       name: 'source', // on the left
       minLen: 60,
-      title: `Caller: ${context.sourceLink}`,
+      title: `${sourceTitle}: ${sourceLink}`,
       alignment: 'left',
     })
     columns.push({
@@ -833,20 +851,20 @@ function showConflicts(problem, context, stack) {
     columns.push({
       name: 'target', // on the right
       minLen: 60,
-      title: `Method: ${context.targetLink} ${context.sourceLink === context.targetLink ? '(same)' : ''}`,
+      title: `${targetTitle}: ${targetLink} ${sourceLink === targetLink ? '(same)' : ''}`,
       alignment: 'left',
     })
   } else {
     columns.push({
       name: 'target', // on the left
       minLen: 60,
-      title: `Target: ${context.targetLink}`,
+      title: `${targetTitle}: ${targetLink}`,
       alignment: 'left',
     })
     columns.push({
       name: 'source', // on the right
       minLen: 60,
-      title: `Source: ${context.sourceLink} ${context.sourceLink === context.targetLink ? '(same)' : ''}`,
+      title: `${sourceTitle}: ${sourceLink} ${sourceLink === targetLink ? '(same)' : ''}`,
       alignment: 'left',
     })
   }
@@ -861,49 +879,75 @@ function showConflicts(problem, context, stack) {
   const links = []
   const maxs = []
   const interfaces = []
-  if (context.callMismatch) {
-    showCallingArgumentConflicts(p, problem, context, stack, links, maxs, interfaces)
+  let errorType: ErrorType = ErrorType.none
+  if (callMismatch) {
+    errorType = showCallingArgumentConflicts(p, problem, context, stack, links, maxs, interfaces)
   } else {
-    showTypeConflicts(p, problem, context, stack, links, maxs, interfaces)
+    errorType = showTypeConflicts(p, problem, context, stack, links, maxs, interfaces)
   }
+
+  //show the error
+  let specs
+  switch (errorType) {
+    case ErrorType.objectToSimple:
+      specs = `is a function or object ${chalk.red('but should be simple')}`
+      break
+    case ErrorType.simpleToObject:
+      specs = `is simple ${chalk.red('but should be a function or object')}`
+      break
+    case ErrorType.mismatch:
+      prefix = 'The types are'
+      specs = chalk.yellow('mismatched')
+      break
+    case ErrorType.arrayToNonArray:
+      specs = `is an array ${chalk.red('but should be simple')}`
+      break
+    case ErrorType.nonArrayToArray:
+      specs = `is simple ${chalk.red('but should be an array')}`
+      break
+    case ErrorType.propMissing:
+      specs = `is ${chalk.red('missing')} properties`
+      break
+    case ErrorType.propMismatch:
+      specs = `has ${chalk.yellow('mismatched')} properties`
+      break
+    case ErrorType.both:
+      specs = `has ${chalk.yellow('mismatched')} and ${chalk.red('missing')} properties`
+      break
+  }
+  errorType
+  console.log(`TS${code}: ${prefix} ${specs}`)
 
   // print the table
   p.printTable()
 
   // print the table notes:
-
-  // 1) if the content width had to be abbreviated for the column, display the full content here
-  if (maxs.length) {
-    if (isVerbose) {
-      maxs.forEach((max) => console.log(max))
-      console.log('')
-    } else {
-      console.log(`${String.fromCharCode('\u24B6'.charCodeAt(0))}  to see use --v`)
-    }
-  }
-
-  // 2) links to the resources shown in the table
   links.forEach((link) => console.log(link))
 
-  // 3) if the content was too much and had to display the 'and more...', the full content here
-  if (interfaces.length) {
-    if (isVerbose) {
-      interfaces.forEach((max) => console.log(max))
-      console.log('')
-    } else {
-      console.log(`${String.fromCharCode('\u2474'.charCodeAt(0))}  to see use --v`)
-    }
+  if (isVerbose) {
+    maxs.forEach((max) => console.log(max))
+    interfaces.forEach((inter) => console.log(inter))
+    console.log('')
+  } else if (maxs.length || interfaces.length) {
+    console.log(`To see all notes use --v`)
+    if (links.length) console.log('')
   }
-  if (links.length) console.log('')
 }
 
 //======================================================================
 //========= THE CALL ARGUMENT CONFLICT TABLE =====================
 //======================================================================
-function showCallingArgumentConflicts(p, problem, context, stack, links, maxs, interfaces) {
+function showCallingArgumentConflicts(p, problem, context, stack, links, maxs, interfaces): ErrorType {
+  let errorType: ErrorType = ErrorType.none
   context.callPrototypeMatchUps.forEach(({ argName, paramName, sourceTypeText, targetTypeText }, inx) => {
     if (inx !== context.errorIndex) {
-      const conflict = sourceTypeText !== targetTypeText
+      let color = 'green'
+      if (sourceTypeText !== targetTypeText) {
+        if (context.errorIndex === -1 && errorType === ErrorType.none) {
+          errorType = showTypeConflicts(p, problem, context, stack, links, maxs, interfaces, inx + 1)
+        }
+        color = isSimpleMismatch(targetTypeText, sourceTypeText) ? 'yellow' : 'red'
+      }
       p.addRow(
         {
           arg: inx + 1,
@@ -911,25 +955,27 @@ function showCallingArgumentConflicts(p, problem, context, stack, links, maxs, i
           source: `${min(maxs, argName)}`,
           target: `${min(maxs, `${paramName}: ${targetTypeText}`)}`,
         },
-        { color: conflict ? 'red' : 'green' }
+        { color }
       )
     } else {
       // FOR THE ARGUMENT THAT HAD THE ACTUAL COMPILER ERROR, SHOW ITS FULL TYPE CONFLICT
-      showTypeConflicts(p, problem, context, stack, links, maxs, interfaces, inx + 1)
+      errorType = showTypeConflicts(p, problem, context, stack, links, maxs, interfaces, inx + 1)
     }
   })
+  return errorType
 }
 
 //======================================================================
 //========= THE TYPE CONFLICT TABLE =====================
 //======================================================================
 
-function showTypeConflicts(p, problem, context, stack, links, maxs, interfaces, arg?) {
+function showTypeConflicts(p, problem, context, stack, links, maxs, interfaces, arg?): ErrorType {
   // display the path we took to get here
   let spacer = ''
   let lastTargetType
   let lastSourceType
   let showTypeProperties = false
+  let errorType: ErrorType = ErrorType.none
 
   //======================================================================
   //========= FIRST WE DISPLAY THE PARENT TYPES THAT GOT US HERE ================
@@ -940,14 +986,26 @@ function showTypeConflicts(p, problem, context, stack, links, maxs, interfaces, 
     const targetTypeText = targetInfo?.typeText
     const sourceTypeText = sourceInfo?.typeText
 
-    // DETERMINE IF WE SHOULD ADD TYPE PROPERTY CONFLICTS BELOW
-    // if either side is simple or not an array mismatch, reiterate into properties
-    // the last value set into showTypeProperties determines if we show property diffs
+    let color: string = 'green'
     const isArrayMismatch = isArrayType(problem.sourceInfo.type) !== isArrayType(problem.targetInfo.type)
-    showTypeProperties = !isArrayMismatch && !(isSimpleType(targetTypeText) || isSimpleType(sourceTypeText))
+    if (isArrayMismatch) {
+      errorType = isArrayType(problem.sourceInfo.type) ? ErrorType.arrayToNonArray : ErrorType.nonArrayToArray
+      color = 'red'
+      showTypeProperties = false
+    } else if (isSimpleMismatch(targetTypeText, sourceTypeText)) {
+      errorType = ErrorType.mismatch
+      color = 'yellow'
+      showTypeProperties = false
+    } else if (!isSimpleType(targetTypeText) && !isSimpleType(sourceTypeText)) {
+      showTypeProperties = true
+      color = 'green'
+    } else {
+      errorType = isSimpleType(targetTypeText) ? ErrorType.objectToSimple : ErrorType.simpleToObject
+      showTypeProperties = false
+      color = 'red'
+    }
 
-    const simpleConflict = isSimpleConflict(targetTypeText, sourceTypeText) || isArrayMismatch
-    const color = simpleConflict ? 'red' : 'green'
+    const simpleConflict = false
     if (inx === 0) {
       const row: any = {
         target: `${min(maxs, targetInfo?.fullText)}`,
@@ -1070,6 +1128,13 @@ function showTypeConflicts(p, problem, context, stack, links, maxs, interfaces, 
     context.externalLinks = []
     context.mismatchInterfaceMaps = asTypeInterfaces(mismatch, targetMap, sourceMap)
     context.missingInterfaceMaps = asTypeInterfaces(missing, targetMap, sourceMap)
+    if (missing.length && mismatch.length) {
+      errorType = ErrorType.both
+    } else if (missing.length) {
+      errorType = ErrorType.propMissing
+    } else if (mismatch.length) {
+      errorType = ErrorType.propMismatch
+    }
 
     // FORTH PASS: DISPLAY MISMATCHED TYPES IN YELLOW
     displayDifferences(
@@ -1189,6 +1254,7 @@ function showTypeConflicts(p, problem, context, stack, links, maxs, interfaces, 
       })
     }
   }
+  return errorType
 }
 
 //======================================================================
@@ -1269,7 +1335,6 @@ function whenCallArgumentsDontMatch(suggestions, problem, context, stack) {
         )
       })
     ) {
-      suggestions.push('\nCall argument mismatch suggestions:')
       suggestions.push(
         `\nDid you mean to call the arguments in this order ${chalk.greenBright(
           indexes.join(', ')
@@ -1290,31 +1355,24 @@ function otherPossibleSuggestions(suggestions, problem, context, stack) {
       sourceInfo.typeText === 'never' ||
       targetInfo.typeText === 'never[]' ||
       sourceInfo.typeText === 'never[]':
-      suggestions.push('Never mismatch suggestions:')
       return whenNeverTypeDoesntMatch(suggestions, problem, context, stack)
 
     case targetInfo.typeText === 'undefined' || sourceInfo.typeText === 'undefined':
-      suggestions.push('Undefined mismatch suggestions:')
       return whenUndefinedTypeDoesntMatch(suggestions, problem, context, stack)
 
     case targetInfo.typeText === 'unknown' || sourceInfo.typeText === 'unknown':
-      suggestions.push('Unknown mismatch suggestions:')
       return whenUnknownTypeDoesntMatch(suggestions, problem, context, stack)
 
     case isFunctionType(targetInfo.type) || isFunctionType(sourceInfo.type):
-      suggestions.push('Function prototype mismatch suggestions:')
       return whenPrototypesDontMatch(suggestions, problem, context, stack)
 
     case isArrayType(targetInfo.type) || isArrayType(sourceInfo.type):
-      suggestions.push('Array mismatch suggestions:')
       return whenArraysDontMatch(suggestions, problem, context, stack)
 
     case isSimpleType(targetInfo.typeText) && isSimpleType(sourceInfo.typeText):
-      suggestions.push('Simple type mismatch suggestions:')
       return whenSimpleTypesDontMatch(suggestions, problem, context, stack)
 
     default:
-      suggestions.push('Type shape mismatch suggestions:')
       return whenTypeShapesDontMatch(suggestions, problem, context, stack)
   }
 }
@@ -1334,24 +1392,24 @@ function whenSimpleTypesDontMatch(suggestions, _problem, context, stack) {
   switch (targetInfo.typeText) {
     case 'number':
       if (!Number.isNaN(Number(sourceInfo.typeValue))) {
-        suggestions.push(`BEST: Convert ${sourceName} to number here: ${chalk.blueBright(sourceInfo.nodeLink)}`)
+        suggestions.push(`TRY: Convert ${sourceName} to number here: ${chalk.blueBright(sourceInfo.nodeLink)}`)
         suggestions.push(`          ${chalk.greenBright(`${targetInfo.nodeText} = Number(${sourceInfo.nodeText})`)}`)
       }
       break
     case 'string':
       suggestions.push(
-        `BEST: Convert ${sourceName} to string with ${chalk.green(
+        `TRY: Convert ${sourceName} to string with ${chalk.green(
           `String(${sourceInfo.nodeText}).toString()`
         )} here: ${chalk.blueBright(sourceInfo.nodeLink)}`
       )
       break
     case 'boolean':
-      suggestions.push(`BEST: Convert ${sourceName} to boolean here: ${chalk.blueBright(sourceInfo.nodeLink)}`)
+      suggestions.push(`TRY: Convert ${sourceName} to boolean here: ${chalk.blueBright(sourceInfo.nodeLink)}`)
       suggestions.push(`          ${chalk.greenBright(`${targetInfo.nodeText} = !!${sourceInfo.nodeText}`)}`)
       break
   }
   suggestions.push(
-    `GOOD: Union ${targetName} with ${chalk.green(`| ${sourceInfo.typeText}`)} here: ${chalk.blueBright(
+    `TRY: Union ${targetName} with ${chalk.green(`| ${sourceInfo.typeText}`)} here: ${chalk.blueBright(
       context.targetDeclared ? getNodeLink(context.targetDeclared) : targetInfo.nodeLink
     )}`
   )
@@ -1392,13 +1450,13 @@ function whenUndefinedTypeDoesntMatch(suggestions, problem, context, stack) {
   const { targetName } = context
   if (problem.targetInfo.typeText === 'undefined') {
     suggestions.push(
-      `BEST: Change the ${targetName} ${chalk.green(targetInfo.nodeText)} type to ${chalk.green(
+      `TRY: Change the ${targetName} ${chalk.green(targetInfo.nodeText)} type to ${chalk.green(
         sourceInfo.typeText
       )} here: ${chalk.blueBright(targetInfo.nodeLink)}`
     )
   } else {
     suggestions.push(
-      `BEST: Union ${targetName} type with ${chalk.green('| undefined')} here: ${chalk.blueBright(
+      `TRY: Union ${targetName} type with ${chalk.green('| undefined')} here: ${chalk.blueBright(
         context.targetDeclared ? getNodeLink(context.targetDeclared) : targetInfo.nodeLink
       )}`
     )
@@ -1419,16 +1477,16 @@ function whenNeverTypeDoesntMatch(suggestions, problem, context, stack) {
   const { targetName } = context
   if (problem.sourceInfo.typeText === 'never[]' && context.targetDeclared) {
     suggestions.push(
-      `BEST: Declare the following type for ${chalk.green(context.targetDeclared.name.text)} here: ${chalk.blueBright(
+      `TRY: Declare the following type for ${chalk.green(context.targetDeclared.name.text)} here: ${chalk.blueBright(
         getNodeLink(context.targetDeclared)
       )}`
     )
     suggestions.push(`          ${chalk.greenBright(`${context.targetDeclared.name.text}: ${targetInfo.typeText}[]`)}`)
   } else if (problem.targetInfo.typeText.startsWith('never')) {
     suggestions.push(`NOTE: ${targetName}s use the 'never' type to catch code paths that shouldn't be executing`)
-    suggestions.push(`BEST: Determine what code path led to this point and fix it`)
+    suggestions.push(`TRY: Determine what code path led to this point and fix it`)
     suggestions.push(
-      `GOOD: If appropriate, change the ${targetName} ${chalk.green(targetInfo.nodeText)} type to ${chalk.green(
+      `TRY: If appropriate, change the ${targetName} ${chalk.green(targetInfo.nodeText)} type to ${chalk.green(
         sourceInfo.typeText
       )} here: ${chalk.blueBright(context.targetDeclared ? getNodeLink(context.targetDeclared) : targetInfo.nodeLink)}`
     )
@@ -1538,7 +1596,7 @@ function suggestPartialInterfaces(suggestions, _problem, context, _stack) {
     })
   }
   if (partialInterfaces.length) {
-    suggestions.push(`BEST: Make the missing properties optional using the ${chalk.green('Partial<type>')} utility:`)
+    suggestions.push(`TRY: Make the missing properties optional using the ${chalk.green('Partial<type>')} utility:`)
     partialInterfaces.forEach((parentInfo) => {
       suggestions.push(
         `   ${chalk.greenBright(`interface Partial<${parentInfo.typeText}>`)} here: ${chalk.blueBright(
@@ -1745,12 +1803,13 @@ function getNodeDeclartion(node: ts.Node | ts.Identifier, cache) {
   return declarationMap && varName ? declarationMap[varName] : node
 }
 
-function isSimpleConflict(targetTypeText, sourceTypeText) {
+function isSimpleMismatch(targetTypeText, sourceTypeText) {
   return (
     targetTypeText !== sourceTypeText &&
     targetTypeText !== 'any' &&
     sourceTypeText !== 'any' &&
-    (isSimpleType(targetTypeText) || isSimpleType(sourceTypeText))
+    isSimpleType(targetTypeText) &&
+    isSimpleType(sourceTypeText)
   )
 }
 
