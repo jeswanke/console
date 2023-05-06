@@ -1012,8 +1012,8 @@ function showConflicts(problems, context, stack) {
       specs = chalk.yellow('mismatched')
       break
     case ErrorType.misslike:
-      prefix = 'The types have'
-      specs = chalk.magenta('mismatched literals')
+      prefix = 'Simple types do not match'
+      specs = chalk.magenta('enum literal types')
       break
     case ErrorType.arrayToNonArray:
       specs = `is an array ${chalk.red('but should be simple')}`
@@ -1037,11 +1037,6 @@ function showConflicts(problems, context, stack) {
   // print the table
   p.printTable()
 
-  if (problems[0].misslike && problems[0].misslike.length) {
-    console.log(
-      `( ${chalk.magenta(problems[0].misslike.join(', '))} is a literal on one side and is not on the other )`
-    )
-  }
   if (problems[0].unchecked && problems[0].unchecked.length) {
     console.log(`( ${chalk.cyan(problems[0].unchecked.join(', '))} cannot be checked until problems are resolved )`)
   }
@@ -1196,8 +1191,8 @@ function showTypeConflicts(p, problems, context, stack, links, maxs, interfaces,
     problems.forEach((problem) => {
       const { mismatch, misslike, matched, optional, otheropt, unchecked } = problem
       let { missing, reversed } = problem
-      const targetMap = (context.targetMap = getTypeMap(problem.targetInfo.type))
-      const sourceMap = (context.sourceMap = getTypeMap(problem.sourceInfo.type))
+      const targetMap = (context.targetMap = getTypeMap(problem.targetInfo.type, misslike))
+      const sourceMap = (context.sourceMap = getTypeMap(problem.sourceInfo.type, misslike))
       const sourcePropProblems: { missing: any[]; mismatch: any[]; misslike: any[] } | undefined =
         (context.sourcePropProblems = {
           missing: [],
@@ -1227,6 +1222,8 @@ function showTypeConflicts(p, problems, context, stack, links, maxs, interfaces,
           },
           { color }
         )
+      }
+      if (showTypes || misslike.length > 0) {
         // show optionals too
         missing = [...missing, ...optional]
         reversed = [...reversed, ...otheropt]
@@ -1314,14 +1311,14 @@ function showTypeConflicts(p, problems, context, stack, links, maxs, interfaces,
         context.missingInterfaceMaps
       )
 
-      if (missing.length && mismatch.length) {
+      if (misslike.length) {
+        errorType = ErrorType.misslike
+      } else if (missing.length && mismatch.length) {
         errorType = ErrorType.both
       } else if (missing.length || reversed.length) {
         errorType = ErrorType.propMissing
       } else if (mismatch.length) {
         errorType = ErrorType.propMismatch
-      } else if (misslike.length) {
-        errorType = ErrorType.misslike
       }
 
       //======================================================================
@@ -1334,6 +1331,7 @@ function showTypeConflicts(p, problems, context, stack, links, maxs, interfaces,
         conflicts.some(({ target, source }, inx) => {
           let sourceParent
           let targetParent
+          let clr = color
           if (inx < MAX_SHOWN_PROP_MISMATCH) {
             if (target && targetMap[target]) {
               targetPropProblems.push(targetMap[target])
@@ -1359,10 +1357,11 @@ function showTypeConflicts(p, problems, context, stack, links, maxs, interfaces,
                 }`
               }
               const bump = lastTargetParent ? '   ' : ''
+              clr = targetMap[target].isOpt ? 'green' : color
               target = `${spacer + bump}${min(maxs, targetMap[target].fullText)}  ${
                 showTypes
                   ? ''
-                  : addLink(links, spacer + bump, targetMap[target].fullText, targetMap[target].nodeLink, color)
+                  : addLink(links, spacer + bump, targetMap[target].fullText, targetMap[target].nodeLink, clr)
               }`
             } else {
               target = ''
@@ -1391,10 +1390,11 @@ function showTypeConflicts(p, problems, context, stack, links, maxs, interfaces,
                 }`
               }
               const bump = lastSourceParent ? '   ' : ''
+              clr = sourceMap[source].isOpt ? 'green' : color
               source = `${spacer + bump}${min(maxs, sourceMap[source].fullText)}  ${
                 showTypes
                   ? ''
-                  : addLink(links, spacer + bump, sourceMap[source].fullText, sourceMap[source].nodeLink, color)
+                  : addLink(links, spacer + bump, sourceMap[source].fullText, sourceMap[source].nodeLink, clr)
               }`
             } else {
               source = ''
@@ -1414,7 +1414,7 @@ function showTypeConflicts(p, problems, context, stack, links, maxs, interfaces,
                 source,
                 target,
               },
-              { color }
+              { color: clr }
             )
             return false
           } else {
@@ -1423,7 +1423,7 @@ function showTypeConflicts(p, problems, context, stack, links, maxs, interfaces,
                 source: andMore(interfaces, conflicts, interfaceMaps),
                 target: '',
               },
-              { color }
+              { color: clr }
             )
             return true
           }
@@ -1798,17 +1798,18 @@ function suggestPartialInterfaces(suggestions, _problem, context, _stack) {
 // ===============================================================================
 // ===============================================================================
 
-function getPropertyInfo(prop: ts.Symbol, type?: ts.Type, pseudo?: boolean) {
+function getPropertyInfo(prop: ts.Symbol, type?: ts.Type, special?: string[], pseudo?: boolean) {
   const declarations = prop?.declarations
   if (Array.isArray(declarations)) {
     const declaration = declarations[0]
     let typeText
     let fullText
     type = type || checker.getTypeAtLocation(declaration)
+    const propName = prop.getName()
     if (pseudo) {
       let isOpt = !!(prop.flags & ts.SymbolFlags.Optional)
       typeText = typeToString(type)
-      let preface = `${prop.getName()}${isOpt ? '?' : ''}:`
+      let preface = `${propName}${isOpt ? '?' : ''}:`
       switch (true) {
         case !!(prop.flags & ts.SymbolFlags.Interface):
           preface = 'interface'
@@ -1823,24 +1824,24 @@ function getPropertyInfo(prop: ts.Symbol, type?: ts.Type, pseudo?: boolean) {
       fullText = `${preface} ${typeText}`
     } else {
       fullText = getText(declaration)
-      if (type.flags & ts.TypeFlags.Literal) {
-        fullText += ' (literal)'
+      if (special?.includes(propName)) {
+        fullText += ` is a ${ts.TypeFlags[type.flags]} !!`
       }
       typeText = fullText.split(':').pop()?.trim() || typeText
     }
     const nodeLink = getNodeLink(declaration)
-    return { nodeText: prop.getName(), typeText, fullText, typeFlags: type.flags, nodeLink, declaration }
+    return { nodeText: propName, typeText, fullText, typeFlags: type.flags, nodeLink, declaration }
   }
   return { typeText: '', fullText: '', nodeLink: '' }
 }
 
-function getTypeMap(type: ts.Type) {
+function getTypeMap(type: ts.Type, special: string[]) {
   const map = {}
   type.getProperties().forEach((prop) => {
     let info = {}
     prop = prop?.syntheticOrigin || prop
     const propName = prop.escapedName as string
-    const { nodeText, fullText, nodeLink, typeText, typeFlags, declaration } = getPropertyInfo(prop)
+    const { nodeText, fullText, nodeLink, typeText, typeFlags, declaration } = getPropertyInfo(prop, undefined, special)
 
     // see if type symbol was added thru an InterfaceDeclaration
     let parentInfo: { fullText: string; nodeLink?: string } | undefined = undefined
@@ -1852,7 +1853,7 @@ function getTypeMap(type: ts.Type) {
       if (type !== parentType) {
         //} && !(parentType.symbol.flags & ts.SymbolFlags.TypeLiteral)) {
         // ignore '__type'
-        parentInfo = getPropertyInfo(parentType.symbol, undefined, true)
+        parentInfo = getPropertyInfo(parentType.symbol, undefined, special, true)
       }
     }
     info = {
