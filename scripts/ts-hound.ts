@@ -16,6 +16,13 @@ const MAX_SHOWN_PROP_MISMATCH = 6
 const MAX_COLUMN_WIDTH = 80
 const handlesTheseTsErrors = [2322, 2559, 2345]
 
+enum MatchType {
+  match = 0,
+  mismatch = 1,
+  bigley = 2,
+  recurse = 3,
+}
+
 enum ErrorType {
   none = 0,
   mismatch = 1,
@@ -32,11 +39,12 @@ enum ErrorType {
 //======================================================================
 //======================================================================
 //======================================================================
-//  ____                _          ____           _
-// / ___|_ __ ___  __ _| |_ ___   / ___|__ _  ___| |__   ___
-// | |   | '__/ _ \/ _` | __/ _ \ | |   / _` |/ __| '_ \ / _ \
-// | |___| | |  __/ (_| | ||  __/ | |__| (_| | (__| | | |  __/
-// \____|_|  \___|\__,_|\__\___|  \____\__,_|\___|_| |_|\___|
+//   ____           _
+// / ___|__ _  ___| |__   ___
+// | |   / _` |/ __| '_ \ / _ \
+// | |__| (_| | (__| | | |  __/
+// \____\__,_|\___|_| |_|\___|
+
 //======================================================================
 //======================================================================
 //======================================================================
@@ -260,7 +268,14 @@ function findTargetAndSourceToCompare(code, errorNode: ts.Node, cache) {
 
 //======================================================================
 //======================================================================
-//===============  ASSIGNMENT ====================================
+//======================================================================
+//     _            _                                  _
+//    / \   ___ ___(_) __ _ _ __  _ __ ___   ___ _ __ | |_
+//   / _ \ / __/ __| |/ _` | '_ \| '_ ` _ \ / _ \ '_ \| __|
+//  / ___ \\__ \__ \ | (_| | | | | | | | | |  __/ | | | |_
+// /_/   \_\___/___/_|\__, |_| |_|_| |_| |_|\___|_| |_|\__|
+//                    |___/
+//======================================================================
 //======================================================================
 //======================================================================
 
@@ -344,9 +359,16 @@ function findAssignmentTargetAndSourceToCompare(errorNode, targetNode: ts.Node, 
   )
   return pathContext.hadPayoff
 }
+
 //======================================================================
 //======================================================================
-//================= FUNCTION RETURN   ================
+//======================================================================
+//  _____                 _   _               ____      _
+// |  ___|   _ _ __   ___| |_(_) ___  _ __   |  _ \ ___| |_ _   _ _ __ _ __
+// | |_ | | | | '_ \ / __| __| |/ _ \| '_ \  | |_) / _ \ __| | | | '__| '_ \
+// |  _|| |_| | | | | (__| |_| | (_) | | | | |  _ <  __/ |_| |_| | |  | | | |
+// |_|   \__,_|_| |_|\___|\__|_|\___/|_| |_| |_| \_\___|\__|\__,_|_|  |_| |_|
+//======================================================================
 //======================================================================
 //======================================================================
 
@@ -410,12 +432,18 @@ function findReturnStatementTargetAndSourceToCompare(node: ts.Node, containerTyp
   }
   return false
 }
+//======================================================================
+//======================================================================
+//======================================================================
+//  _____                 _   _                ____      _ _
+// |  ___|   _ _ __   ___| |_(_) ___  _ __    / ___|__ _| | |
+// | |_ | | | | '_ \ / __| __| |/ _ \| '_ \  | |   / _` | | |
+// |  _|| |_| | | | | (__| |_| | (_) | | | | | |__| (_| | | |
+// |_|   \__,_|_| |_|\___|\__|_|\___/|_| |_|  \____\__,_|_|_|
+//======================================================================
+//======================================================================
+//======================================================================
 
-//======================================================================
-//======================================================================
-//=============== FUCNTION CALL  =================
-//======================================================================
-//======================================================================
 function findFunctionCallTargetAndSourceToCompare(node: ts.Node, errorNode, context) {
   const children = node.getChildren()
   // signature of function being called
@@ -534,7 +562,14 @@ function findFunctionCallTargetAndSourceToCompare(node: ts.Node, errorNode, cont
 
 //======================================================================
 //======================================================================
-//================== ARRAY ITEMS  =============================
+//======================================================================
+//     _                           ___ _
+//    / \   _ __ _ __ __ _ _   _  |_ _| |_ ___ _ __ ___  ___
+//   / _ \ | '__| '__/ _` | | | |  | || __/ _ \ '_ ` _ \/ __|
+//  / ___ \| |  | | | (_| | |_| |  | || ||  __/ | | | | \__ \
+// /_/   \_\_|  |_|  \__,_|\__, | |___|\__\___|_| |_| |_|___/
+//                         |___/
+//======================================================================
 //======================================================================
 //======================================================================
 
@@ -589,12 +624,12 @@ function findArrayItemTargetAndSourceToCompare(arrayItems, targetType, targetInf
 //======================================================================
 //======================================================================
 //======================================================================
-//  ____
-// / ___|___  _ __ ___  _ __   __ _ _ __ ___
-// | |   / _ \| '_ ` _ \| '_ \ / _` | '__/ _ \
-// | |__| (_) | | | | | | |_) | (_| | | |  __/
-// \____\___/|_| |_| |_| .__/ \__,_|_|  \___|
-//                     |_|
+//   ____                                       _____
+//  / ___|___  _ __ ___  _ __   __ _ _ __ ___  |_   _|   _ _ __   ___  ___
+// | |   / _ \| '_ ` _ \| '_ \ / _` | '__/ _ \   | || | | | '_ \ / _ \/ __|
+// | |__| (_) | | | | | | |_) | (_| | | |  __/   | || |_| | |_) |  __/\__ \
+//  \____\___/|_| |_| |_| .__/ \__,_|_|  \___|   |_| \__, | .__/ \___||___/
+//                      |_|                          |___/|_|
 //======================================================================
 //======================================================================
 //======================================================================
@@ -760,7 +795,16 @@ function compareTypes(targetType, sourceType, stack, context, bothWays?: boolean
 }
 
 //======================================================================
-//========= COMPARE TYPE PROPERTIES ========================
+//======================================================================
+//======================================================================
+//   ____                                       ____                            _   _
+//  / ___|___  _ __ ___  _ __   __ _ _ __ ___  |  _ \ _ __ ___  _ __   ___ _ __| |_(_) ___  ___
+// | |   / _ \| '_ ` _ \| '_ \ / _` | '__/ _ \ | |_) | '__/ _ \| '_ \ / _ \ '__| __| |/ _ \/ __|
+// | |__| (_) | | | | | | |_) | (_| | | |  __/ |  __/| | | (_) | |_) |  __/ |  | |_| |  __/\__ \
+//  \____\___/|_| |_| |_| .__/ \__,_|_|  \___| |_|   |_|  \___/| .__/ \___|_|   \__|_|\___||___/
+//                      |_|                                    |_|
+//======================================================================
+//======================================================================
 //======================================================================
 function compareTypeProperties(firstType, secondType) {
   const matched: string[] = []
@@ -783,27 +827,17 @@ function compareTypeProperties(firstType, secondType) {
     if (secondProp) {
       const firstPropType = checker.getTypeOfSymbol(firstProp)
       const secondPropType = checker.getTypeOfSymbol(secondProp)
-      const firstPropTypeText = typeToString(firstPropType)
-      const secondPropTypeText = typeToString(secondPropType)
-      //======================================================================
-      //========= MAKE SURE TARGET AND SOURCE ARE THE SAME TYPE =====================
-      //======================================================================
-      if (
-        firstPropTypeText !== secondPropTypeText &&
-        firstPropTypeText !== 'any' &&
-        secondPropTypeText !== 'any' &&
-        !isFunctionType(firstPropType) &&
-        !isFunctionType(secondPropType) &&
-        !simpleUnionPropTypeMatch(firstPropType, secondPropType)
-      ) {
-        // if both are simple types, don't recurse into the type
-        if (isPrimativeType(firstPropType) && isPrimativeType(secondPropType)) {
+      switch (simpleTypeComparision(firstPropType, secondPropType)) {
+        default:
+        case MatchType.mismatch:
+        case MatchType.bigley:
           if (getPropText(firstProp) === getPropText(secondProp)) {
             misslike.push(propName)
           } else {
             mismatch.push(propName)
           }
-        } else {
+          break
+        case MatchType.recurse:
           // else recurse the complex types of these properties
           unchecked.push(propName)
           recurses.push({
@@ -814,9 +848,10 @@ function compareTypeProperties(firstType, secondType) {
               targetInfo: getPropertyInfo(secondProp, secondPropType),
             },
           })
-        } // else might be string vs 'opt1|opt2'
-      } else {
-        matched.push(propName)
+          break
+        case MatchType.match:
+          matched.push(propName)
+          break
       }
     } else if (firstProp.flags & ts.SymbolFlags.Optional) {
       optional.push(propName)
@@ -850,16 +885,49 @@ function compareTypeProperties(firstType, secondType) {
 }
 
 //======================================================================
-//========= SIMPLE UNION TYPE MATCH  ========================
 //======================================================================
-// does string match union type with 'number | string | boolean'
+//======================================================================
+//  ____  _                 _         ____
+// / ___|(_)_ __ ___  _ __ | | ___   / ___|___  _ __ ___  _ __   __ _ _ __ ___
+// \___ \| | '_ ` _ \| '_ \| |/ _ \ | |   / _ \| '_ ` _ \| '_ \ / _` | '__/ _ \
+//  ___) | | | | | | | |_) | |  __/ | |__| (_) | | | | | | |_) | (_| | | |  __/
+// |____/|_|_| |_| |_| .__/|_|\___|  \____\___/|_| |_| |_| .__/ \__,_|_|  \___|
+//                   |_|                                 |_|
+//======================================================================
+//======================================================================
+//======================================================================
+
+// a type compare without recursing into shapes
+const simpleTypeComparision = (firstType, secondType) => {
+  const firstPropTypeText = typeToString(firstType)
+  const secondPropTypeText = typeToString(secondType)
+  if (
+    firstPropTypeText !== secondPropTypeText &&
+    firstPropTypeText !== 'any' &&
+    secondPropTypeText !== 'any' &&
+    !isFunctionType(firstType) &&
+    !isFunctionType(secondType) &&
+    !simpleUnionPropTypeMatch(firstType, secondType)
+  ) {
+    if (isSimpleType(firstType) && isSimpleType(secondType)) {
+      return MatchType.mismatch
+    } else if (isSimpleType(firstType) || isSimpleType(secondType)) {
+      return MatchType.bigley
+    } else {
+      return MatchType.recurse
+    }
+  }
+  return MatchType.match
+}
+
+// if one side is 'string' and the other side is 'number | string | boolean' is a match
 const simpleUnionPropTypeMatch = (firstPropType, secondPropType) => {
   if (firstPropType.types || secondPropType.types) {
     let firstPropArr = (firstPropType.types || [firstPropType])
-      .filter((type) => isPrimativeType(type))
+      .filter((type) => isSimpleType(type))
       .map((type) => typeToString(type))
     let secondPropArr = (secondPropType.types || [secondPropType])
-      .filter((type) => isPrimativeType(type))
+      .filter((type) => isSimpleType(type))
       .map((type) => typeToString(type))
     if (firstPropArr.length > secondPropArr.length) [secondPropArr, firstPropArr] = [firstPropArr, secondPropArr]
     return secondPropArr.some((type) => {
@@ -869,13 +937,35 @@ const simpleUnionPropTypeMatch = (firstPropType, secondPropType) => {
   return false
 }
 
+// a type compare without recursing into shapes
+const trivialTypeComparision = (firstTypeText, firstTypeFlags, secondTypeText, secondTypeFlags) => {
+  if (firstTypeText !== secondTypeText && firstTypeText !== 'any' && secondTypeText !== 'any') {
+    if (isSimpleType(firstTypeFlags) && isSimpleType(secondTypeFlags)) {
+      return MatchType.mismatch
+    } else if (isSimpleType(firstTypeFlags) || isSimpleType(secondTypeFlags)) {
+      return MatchType.bigley
+    } else {
+      return MatchType.recurse
+    }
+  }
+  return MatchType.match
+}
+
 //======================================================================
-//========= FIND BEST MATCHING TYPE ========================
 //======================================================================
-// if there's a union type, find the one with the most overlap
+//======================================================================
+//  ____                    __  __
+// |  _ \ __ _ _   _  ___  / _|/ _|
+// | |_) / _` | | | |/ _ \| |_| |_
+// |  __/ (_| | |_| | (_) |  _|  _|
+// |_|   \__,_|\__, |\___/|_| |_|
+//             |___/
+//======================================================================
+//======================================================================
+//======================================================================
 
 function theBigPayoff(typeProblem, shapeProblems, context, stack) {
-  // with union types we want to find the closest matching type
+  // if there's multiple problems, find a union type, find the one with the most overlap
   let problems: any[] = []
   if (shapeProblems.length) {
     problems = shapeProblems
@@ -911,12 +1001,12 @@ function theBigPayoff(typeProblem, shapeProblems, context, stack) {
 //======================================================================
 //======================================================================
 //======================================================================
-//  _____     _     _
-// |_   _|_ _| |__ | | ___
-//   | |/ _` | '_ \| |/ _ \
-//   | | (_| | |_) | |  __/
-//   |_|\__,_|_.__/|_|\___|
-//
+//   ____                _         _____     _     _
+//  / ___|_ __ ___  __ _| |_ ___  |_   _|_ _| |__ | | ___
+// | |   | '__/ _ \/ _` | __/ _ \   | |/ _` | '_ \| |/ _ \
+// | |___| | |  __/ (_| | ||  __/   | | (_| | |_) | |  __/
+//  \____|_|  \___|\__,_|\__\___|   |_|\__,_|_.__/|_|\___|
+
 //======================================================================
 //======================================================================
 //======================================================================
@@ -1005,21 +1095,21 @@ function showConflicts(problems, context, stack) {
       specs = `is a function or object ${chalk.red('but should be simple')}`
       break
     case ErrorType.simpleToObject:
-      specs = `is simple ${chalk.red('but should be a function or object')}`
+      specs = `${chalk.red('should be a function or object')}`
       break
     case ErrorType.mismatch:
       prefix = 'The types are'
       specs = chalk.yellow('mismatched')
       break
     case ErrorType.misslike:
-      prefix = 'Simple types do not match'
-      specs = chalk.magenta('enum literal types')
+      prefix = 'A simple type does not match an'
+      specs = chalk.magenta('enum literal type')
       break
     case ErrorType.arrayToNonArray:
       specs = `is an array ${chalk.red('but should be simple')}`
       break
     case ErrorType.nonArrayToArray:
-      specs = `is simple ${chalk.red('but should be an array')}`
+      specs = `${chalk.red('should be an array')}`
       break
     case ErrorType.propMissing:
       specs = `is ${chalk.red('missing')} properties`
@@ -1037,11 +1127,13 @@ function showConflicts(problems, context, stack) {
   // print the table
   p.printTable()
 
-  if (problems[0].unchecked && problems[0].unchecked.length) {
-    console.log(`( ${chalk.cyan(problems[0].unchecked.join(', '))} cannot be checked until problems are resolved )`)
-  }
-  if (context.remaining) {
-    console.log(`( ${chalk.cyan(context.remaining)} cannot be checked until problems are resolved )`)
+  if (isVerbose) {
+    if (problems[0].unchecked && problems[0].unchecked.length) {
+      console.log(`( ${chalk.cyan(problems[0].unchecked.join(', '))} cannot be checked until problems are resolved )`)
+    }
+    if (context.remaining) {
+      console.log(`( ${chalk.cyan(context.remaining)} cannot be checked until problems are resolved )`)
+    }
   }
 
   // print the table notes:
@@ -1058,7 +1150,15 @@ function showConflicts(problems, context, stack) {
 }
 
 //======================================================================
-//========= THE CALL ARGUMENT CONFLICT TABLE =====================
+//======================================================================
+//======================================================================
+//   ____      _ _   _____     _     _
+//  / ___|__ _| | | |_   _|_ _| |__ | | ___
+// | |   / _` | | |   | |/ _` | '_ \| |/ _ \
+// | |__| (_| | | |   | | (_| | |_) | |  __/
+//  \____\__,_|_|_|   |_|\__,_|_.__/|_|\___|
+//======================================================================
+//======================================================================
 //======================================================================
 function showCallingArgumentConflicts(p, problems, context, stack, links, maxs, interfaces): ErrorType {
   let errorType: ErrorType = ErrorType.none
@@ -1072,22 +1172,28 @@ function showCallingArgumentConflicts(p, problems, context, stack, links, maxs, 
             errorType = showTypeConflicts(p, problems, context, stack, links, maxs, interfaces, inx + 1)
             skipRow = true
           }
-          color =
-            targetTypeText !== sourceTypeText &&
-            targetTypeText !== 'any' &&
-            sourceTypeText !== 'any' &&
-            isPrimativeType(sourceTypeFlags) &&
-            isPrimativeType(targetTypeFlags)
-              ? 'yellow'
-              : 'cyan'
+          switch (trivialTypeComparision(sourceTypeText, sourceTypeFlags, targetTypeText, targetTypeFlags)) {
+            case MatchType.mismatch:
+              color = 'yellow'
+              break
+            case MatchType.bigley:
+              color = 'red'
+              break
+            case MatchType.recurse:
+              color = 'cyan'
+              break
+            default:
+              color = 'green'
+              break
+          }
         }
         if (!skipRow) {
           p.addRow(
             {
               arg: inx + 1,
               parm: inx + 1,
-              source: `${min(maxs, argName)}`,
-              target: `${min(maxs, `${paramName}: ${targetTypeText}`)}`,
+              source: `${min(maxs, getFullName(argName, sourceTypeText))}`,
+              target: `${min(maxs, getFullName(paramName, targetTypeText))}`,
             },
             { color }
           )
@@ -1102,7 +1208,16 @@ function showCallingArgumentConflicts(p, problems, context, stack, links, maxs, 
 }
 
 //======================================================================
-//========= THE TYPE CONFLICT TABLE =====================
+//======================================================================
+//======================================================================
+//  _____                   _____     _     _
+// |_   _|   _ _ __   ___  |_   _|_ _| |__ | | ___
+//   | || | | | '_ \ / _ \   | |/ _` | '_ \| |/ _ \
+//   | || |_| | |_) |  __/   | | (_| | |_) | |  __/
+//   |_| \__, | .__/ \___|   |_|\__,_|_.__/|_|\___|
+//       |___/|_|
+//======================================================================
+//======================================================================
 //======================================================================
 
 function showTypeConflicts(p, problems, context, stack, links, maxs, interfaces, arg?): ErrorType {
@@ -1129,8 +1244,8 @@ function showTypeConflicts(p, problems, context, stack, links, maxs, interfaces,
       errorType = sourceIsArray ? ErrorType.arrayToNonArray : ErrorType.nonArrayToArray
       color = 'red'
     } else if (!showTypeProperties && targetTypeText !== sourceTypeText) {
-      const isSourcePrimative = isPrimativeType(sourceInfo?.typeFlags)
-      const isTargetPrimative = isPrimativeType(targetInfo?.typeFlags)
+      const isSourcePrimative = isSimpleType(sourceInfo?.typeFlags)
+      const isTargetPrimative = isSimpleType(targetInfo?.typeFlags)
       if (isLikeTypes(sourceInfo?.typeFlags, targetInfo?.typeFlags)) {
         errorType = ErrorType.misslike
         color = 'magenta'
@@ -1181,7 +1296,16 @@ function showTypeConflicts(p, problems, context, stack, links, maxs, interfaces,
   })
 
   //======================================================================
-  //========= SHOW TYPE PROPERTY CONFLICTS ================
+  //======================================================================
+  //======================================================================
+  //  ____                            _           _____     _     _
+  // |  _ \ _ __ ___  _ __   ___ _ __| |_ _   _  |_   _|_ _| |__ | | ___
+  // | |_) | '__/ _ \| '_ \ / _ \ '__| __| | | |   | |/ _` | '_ \| |/ _ \
+  // |  __/| | | (_) | |_) |  __/ |  | |_| |_| |   | | (_| | |_) | |  __/
+  // |_|   |_|  \___/| .__/ \___|_|   \__|\__, |   |_|\__,_|_.__/|_|\___|
+  //                 |_|                  |___/
+  //======================================================================
+  //======================================================================
   //======================================================================
   // ONLY SHOWN IF CONFLICT IS AN INNER TYPE PROPERTY
   if (showTypeProperties) {
@@ -1964,9 +2088,14 @@ function addLink(links: string[], spacer, property, link?: string, color?: strin
   return num
 }
 
-function isPrimativeType(type: ts.Type | ts.TypeFlags) {
+function isSimpleType(type: ts.Type | ts.TypeFlags) {
   const flags = type['flags'] ? type['flags'] : type
-  return !(flags & ts.TypeFlags.StructuredType)
+  return !(
+    flags & ts.TypeFlags.StructuredType ||
+    flags & ts.TypeFlags.Undefined ||
+    flags & ts.TypeFlags.Never ||
+    flags & ts.TypeFlags.Null
+  )
 }
 
 function isLikeTypes(source: ts.Type | ts.TypeFlags, target: ts.Type | ts.TypeFlags) {
