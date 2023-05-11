@@ -18,23 +18,48 @@ import StyledNode from './StyledNode'
 import StyledEdge from './StyledEdge'
 import { IAcmTableAction } from '../../../../../../ui-components/AcmTable'
 import { Cluster } from '../../../../../../resources'
+import { number } from 'yup'
+
+let decorations = []
+decorations = decorations.filter(({ options }) => {
+  return (
+    options.className.startsWith('squiggly-') ||
+    (!!options?.glyphMarginClassName && (options?.inlineClassName !== 'protectedDecoration' || !hasErrors))
+  )
+})
+
+interface IResource {
+  ww: number
+  xx: string
+}
+
+const sds: {
+  ww: number
+  ee: IResource
+} = {
+  ww: 0,
+  ee: { ww: 0, xx: 'sdfa' },
+}
+const fkff: IResource = sds
+console.log(sds, fkff)
 
 const hasAnyAutomationTemplates = false
 let sdrgsed: IAcmTableAction<Cluster>[]
 
 sdrgsed = [
   {
-    id: 'upgradeClusters',
+    id: 'dsrgd',
     title: t('managed.upgrade.plural'),
     click: (managedClusters: Array<Cluster>) => {
       if (!managedClusters) return
     },
     variant: 'bulk-action',
   },
+
   ...(hasAnyAutomationTemplates
     ? [
         {
-          id: 'selectChannels',
+          id: 'sdfg',
           title: t('managed.selectChannel.plural'),
           click: (managedClusters: Array<Cluster>) => {
             if (!managedClusters) return
@@ -42,7 +67,16 @@ sdrgsed = [
           variant: 'bulk-action',
         },
       ]
-    : []),
+    : [
+        {
+          id: 'jo',
+          variant: 'bulk-action',
+          title: 'sa',
+          click: (managedClusters: Array<Cluster>) => {
+            if (!managedClusters) return
+          },
+        },
+      ]),
   {
     id: 'selectChannels',
     title: t('managed.selectChannel.plural'),
@@ -74,7 +108,7 @@ function testing(): IAcmTableAction<Cluster>[] {
             variant: 'bulk-action',
           },
         ]
-      : []),
+      : [{}]),
     {
       id: 'selectChannels',
       title: t('managed.selectChannel.plural'),
@@ -215,6 +249,7 @@ const defaultComponentFactory: ComponentFactory = (kind: ModelKind) =>
 
 const que = () => {
   let sdfsd: undefined
+  const sd = 0
   sdfsd = 'rge'
 }
 
@@ -245,6 +280,12 @@ interface Ting {
     wht: number
   }
 }
+
+let fdfg = 'ffdd'
+let fs = 4
+fs = 8
+fdfg = fs
+console.log(fdfg)
 
 export const fu7nc = (ddd: number, ff: Ting, gg: number) => {
   console.log(ddd, ff, gg)
