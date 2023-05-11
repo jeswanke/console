@@ -209,15 +209,15 @@ function findTargetAndSourceToCompare(code, errorNode: ts.Node, cache) {
     let children = node.getChildren()
     switch (node.kind) {
       //======================================================================
-      //================= FUCNTION RETURN  ==========================
+      //================= FUNCTION RETURN  ==========================
       //======================================================================
       case ts.SyntaxKind.ReturnStatement:
         return findReturnStatementTargetAndSourceToCompare(node, undefined, context)
 
       //======================================================================
-      //===========  FUNCTION CALL =======
+      //===============  FUNCTION CALL ======================================
       //======================================================================
-      case ts.SyntaxKind.CallExpression:
+      case ts.SyntaxKind.CallExpression: {
         // if the function is a property of an object, where is that object defined
         if (children[0].kind === ts.SyntaxKind.PropertyAccessExpression) {
           const objectName = children[0].getFirstToken()
@@ -226,19 +226,19 @@ function findTargetAndSourceToCompare(code, errorNode: ts.Node, cache) {
           }
         }
         return findFunctionCallTargetAndSourceToCompare(node, errorNode, context)
-
+      }
       //======================================================================
       //=========== DECLARATION  =================================
       //======================================================================
-      case ts.SyntaxKind.VariableDeclaration:
+      case ts.SyntaxKind.VariableDeclaration: {
         const sourceNode = children[children.length - 1]
         const targetNode = children[0]
         return findAssignmentTargetAndSourceToCompare(node, targetNode, sourceNode, context)
-
+      }
       //======================================================================
       //============== ASSIGNMENT  =================================
       //======================================================================
-      case ts.SyntaxKind.ExpressionStatement:
+      case ts.SyntaxKind.ExpressionStatement: {
         // get the whole expression (left = right)
         const statement = node as ts.ExpressionStatement
         children = statement.expression.getChildren()
@@ -272,7 +272,7 @@ function findTargetAndSourceToCompare(code, errorNode: ts.Node, cache) {
           }
           return findAssignmentTargetAndSourceToCompare(statement, target, source, context)
         }
-
+      }
       default:
         console.log(`For error ${code}, missing support for kind === ${node.kind}`)
         console.log(getNodeLink(node))
@@ -1006,9 +1006,10 @@ function theBigPayoff(typeProblem, shapeProblems, context, stack) {
   } else {
     problems = [typeProblem]
   }
-  showConflicts(problems, context, stack)
-  console.log('')
+
+  showTable(problems, context, stack)
   showSuggestions(problems, context, stack)
+  showNotes(problems, context)
   context.hadPayoff = true
 }
 
@@ -1030,7 +1031,7 @@ function theBigPayoff(typeProblem, shapeProblems, context, stack) {
 //   b) TYPE SHAPE CONFICTS
 //   c) FUNCTION CALL CONFLICTS
 
-function showConflicts(problems, context, stack) {
+function showTable(problems, context, stack) {
   //======================================================================
   //========= INITIALIZE THE COLUMNS =====================
   //======================================================================
@@ -1085,6 +1086,13 @@ function showConflicts(problems, context, stack) {
     })
   }
 
+  // keep table notes
+  context.notes = {
+    links: [],
+    maxs: [],
+    interfaces: [],
+  }
+
   //======================================================================
   //========= CREATE/FILL THE TABLE =====================
   //======================================================================
@@ -1092,18 +1100,16 @@ function showConflicts(problems, context, stack) {
     columns,
   })
 
-  const links = []
-  const maxs = []
-  const interfaces = []
   let errorType: ErrorType = ErrorType.none
   if (callMismatch) {
-    errorType = showCallingArgumentConflicts(p, problems, context, stack, links, maxs, interfaces)
+    // calls showTypeConflicts() from within
+    errorType = showCallingArgumentConflicts(p, problems, context, stack)
   } else {
-    errorType = showTypeConflicts(p, problems, context, stack, links, maxs, interfaces)
+    errorType = showTypeConflicts(p, problems, context, stack)
   }
   context.errorType = errorType
 
-  //show the error
+  //show an error message above the table
   let specs
   switch (errorType) {
     case ErrorType.objectToSimple:
@@ -1145,26 +1151,6 @@ function showConflicts(problems, context, stack) {
 
   // print the table
   p.printTable()
-
-  if (isVerbose) {
-    if (problems[0].unchecked && problems[0].unchecked.length) {
-      console.log(`( ${chalk.cyan(problems[0].unchecked.join(', '))} cannot be checked until problems are resolved )`)
-    }
-    if (context.remaining) {
-      console.log(`( ${chalk.cyan(context.remaining)} cannot be checked until problems are resolved )`)
-    }
-  }
-
-  // print the table notes:
-  links.forEach((link) => console.log(link))
-
-  if (isVerbose) {
-    maxs.forEach((max) => console.log(max))
-    interfaces.forEach((inter) => console.log(inter))
-    console.log('')
-  } else if (maxs.length || interfaces.length) {
-    console.log(`To see all notes use --v`)
-  }
 }
 
 //======================================================================
@@ -1178,7 +1164,7 @@ function showConflicts(problems, context, stack) {
 //======================================================================
 //======================================================================
 //======================================================================
-function showCallingArgumentConflicts(p, problems, context, stack, links, maxs, interfaces): ErrorType {
+function showCallingArgumentConflicts(p, problems, context, stack): ErrorType {
   let errorType: ErrorType = ErrorType.none
   context.callPrototypeMatchUps.forEach(
     ({ argName, paramName, sourceTypeText, targetTypeText, sourceTypeId, targetTypeId }, inx) => {
@@ -1189,7 +1175,7 @@ function showCallingArgumentConflicts(p, problems, context, stack, links, maxs, 
         let color = 'green'
         if (sourceTypeText !== targetTypeText && !isLikeTypes(sourceType, targetType)) {
           if (context.errorIndex === -1 && errorType === ErrorType.none) {
-            errorType = showTypeConflicts(p, problems, context, stack, links, maxs, interfaces, inx + 1)
+            errorType = showTypeConflicts(p, problems, context, stack, inx + 1)
             skipRow = true
           }
           switch (simpleTypeComparision(sourceType, targetType)) {
@@ -1215,15 +1201,15 @@ function showCallingArgumentConflicts(p, problems, context, stack, links, maxs, 
             {
               arg: inx + 1,
               parm: inx + 1,
-              source: `${min(maxs, getFullName(argName, sourceTypeText))}`,
-              target: `${min(maxs, getFullName(paramName, targetTypeText))}`,
+              source: `${min(context.notes.maxs, getFullName(argName, sourceTypeText))}`,
+              target: `${min(context.notes.maxs, getFullName(paramName, targetTypeText))}`,
             },
             { color }
           )
         }
       } else {
         // FOR THE ARGUMENT THAT HAD THE ACTUAL COMPILER ERROR, SHOW ITS FULL TYPE CONFLICT
-        errorType = showTypeConflicts(p, problems, context, stack, links, maxs, interfaces, inx + 1)
+        errorType = showTypeConflicts(p, problems, context, stack, inx + 1)
       }
     }
   )
@@ -1243,11 +1229,12 @@ function showCallingArgumentConflicts(p, problems, context, stack, links, maxs, 
 //======================================================================
 //======================================================================
 
-function showTypeConflicts(p, problems, context, stack, links, maxs, interfaces, arg?): ErrorType {
+function showTypeConflicts(p, problems, context, stack, arg?): ErrorType {
   // display the path we took to get here
   let spacer = ''
   let lastTargetType
   let lastSourceType
+  const { maxs, links, interfaces } = context.notes
   let errorType: ErrorType = ErrorType.none
   const { sourceIsArray, targetIsArray } = problems[0]
   const showTypeProperties =
@@ -1589,6 +1576,414 @@ function showTypeConflicts(p, problems, context, stack, links, maxs, interfaces,
   return errorType
 }
 
+//======================================================================
+//======================================================================
+//======================================================================
+// ____                              _   _
+// / ___| _   _  __ _  __ _  ___  ___| |_(_) ___  _ __  ___
+// \___ \| | | |/ _` |/ _` |/ _ \/ __| __| |/ _ \| '_ \/ __|
+//  ___) | |_| | (_| | (_| |  __/\__ \ |_| | (_) | | | \__ \
+// |____/ \__,_|\__, |\__, |\___||___/\__|_|\___/|_| |_|___/
+//              |___/ |___/
+//======================================================================
+//======================================================================
+//======================================================================
+
+function showSuggestions(problems, context, stack) {
+  // unified suggestion method
+  const suggest = (msg: string, link?: string, code?: string) => {
+    let multiLine = false
+    context.hadSuggestions = true
+    let codeMsg = ''
+    if (code) {
+      multiLine = Array.isArray(code) || code.length > 64
+      if (!multiLine) {
+        codeMsg = `with this ${chalk.greenBright(code)}`
+      }
+    }
+    const linkMsg = link ? chalk.blueBright(link) : ''
+    console.log(chalk.whiteBright(`${msg}${codeMsg ? ` ${codeMsg}` : ''}${linkMsg ? ` here: ${linkMsg}` : ''}`))
+    if (multiLine) {
+      if (Array.isArray(code)) {
+        code.forEach((line) => {
+          console.log(`       ${chalk.greenBright(line)}`)
+        })
+      } else {
+        console.log(chalk.greenBright(codeMsg))
+      }
+    }
+  }
+
+  const whenContext = {
+    problems,
+    context,
+    stack,
+    suggest,
+  }
+  whenCallArgumentsDontMatch(whenContext)
+  whenSimpleTypesDontMatch(whenContext)
+  whenProblemIsInExternalLibrary(whenContext)
+  whenTypeShapesDontMatch(whenContext)
+  // whenArraysDontMatch(whenContext)
+  // whenPrototypesDontMatch(whenContext)
+  // whenNeverType(whenContext)
+}
+
+//======================================================================
+//======================================================================
+//======================================================================
+//   ____  _                 _
+//  / ___|(_)_ __ ___  _ __ | | ___
+//  \___ \| | '_ ` _ \| '_ \| |/ _ \
+//   ___) | | | | | | | |_) | |  __/
+//  |____/|_|_| |_| |_| .__/|_|\___|
+//                    |_|
+//======================================================================
+//======================================================================
+//======================================================================
+
+function whenSimpleTypesDontMatch({ stack, context, suggest }) {
+  if (context.captured) return
+  const layer = stack[stack.length - 1]
+  const { sourceInfo, targetInfo } = layer
+  if (context.errorType === ErrorType.mismatch) {
+    const source = chalk.green(sourceInfo.nodeText)
+    const target = chalk.green(targetInfo.nodeText)
+    switch (true) {
+      case !!(targetInfo.type.flags & ts.TypeFlags.NumberLike):
+        if (sourceInfo.type.flags & ts.TypeFlags.Literal) {
+          if (sourceInfo.type.flags & ts.TypeFlags.StringLiteral) {
+            if (!Number.isNaN(Number(sourceInfo.nodeText.replace(/["']/g, '')))) {
+              suggest(`Remove quotes from ${source}`, sourceInfo.nodeLink)
+            }
+          }
+        } else {
+          suggest(`Convert ${source} to number`, sourceInfo.nodeLink, `Number(${sourceInfo.nodeText})`)
+        }
+        break
+      case !!(targetInfo.type.flags & ts.TypeFlags.StringLike):
+        if (!Number.isNaN(Number(sourceInfo.nodeText))) {
+          suggest(`Add quotes to '${source}'`, sourceInfo.nodeLink)
+        } else {
+          suggest(`Convert ${source} to string`, sourceInfo.nodeLink, `String(${sourceInfo.nodeText}).toString()`)
+        }
+        break
+      case !!(targetInfo.type.flags & ts.TypeFlags.BooleanLike):
+        suggest(
+          `Convert ${source} to boolean`,
+          sourceInfo.nodeLink,
+          `${targetInfo.nodeText} = !!${sourceInfo.nodeText}`
+        )
+        break
+    }
+    const sourceTypeLike = typeToStringLike(sourceInfo.type)
+    const targetLink = context.targetDeclared ? getNodeLink(context.targetDeclared) : targetInfo.nodeLink
+    suggest(
+      `Union ${target} with ${chalk.green(sourceTypeLike)}`,
+      targetLink,
+      `${targetInfo.fullText} | ${sourceTypeLike}`
+    )
+  }
+}
+
+// ===============================================================================
+// ===============================================================================
+// ===============================================================================
+//      _                                         _
+//     / \   _ __ __ _ _   _ _ __ ___   ___ _ __ | |_ ___
+//    / _ \ | '__/ _` | | | | '_ ` _ \ / _ \ '_ \| __/ __|
+//   / ___ \| | | (_| | |_| | | | | | |  __/ | | | |_\__ \
+//  /_/   \_\_|  \__, |\__,_|_| |_| |_|\___|_| |_|\__|___/
+//               |___/
+// ===============================================================================
+// ===============================================================================
+// ===============================================================================
+function whenCallArgumentsDontMatch({ context, suggest }) {
+  if (context.captured) return
+  const { callPrototypeMatchUps } = context
+  if (callPrototypeMatchUps && callPrototypeMatchUps.length > 1) {
+    // see if arg types are mismatched
+    const indexes: number[] = []
+    if (
+      // see if args are called in wrong order
+      callPrototypeMatchUps.every(({ targetTypeText }) => {
+        return (
+          callPrototypeMatchUps.findIndex(({ sourceTypeText }, inx) => {
+            if (targetTypeText === sourceTypeText && !indexes.includes(inx + 1)) {
+              indexes.push(inx + 1)
+              return true
+            }
+            return false
+          }) !== -1
+        )
+      })
+    ) {
+      suggest(
+        `Did you mean to call the arguments in this order ${chalk.greenBright(indexes.join(', '))}`,
+        context.sourceLink
+      )
+      context.captured = true
+    }
+  }
+}
+
+// ===============================================================================
+// ===============================================================================
+// ===============================================================================
+//   _____      _                        _
+//  | ____|_  _| |_ ___ _ __ _ __   __ _| |
+//  |  _| \ \/ / __/ _ \ '__| '_ \ / _` | |
+//  | |___ >  <| ||  __/ |  | | | | (_| | |
+//  |_____/_/\_\\__\___|_|  |_| |_|\__,_|_|
+// ===============================================================================
+// ===============================================================================
+// ===============================================================================
+
+function whenProblemIsInExternalLibrary({ context, suggest }) {
+  if (context.captured) return
+  if (context?.externalLinks?.length) {
+    const libs = new Set()
+    context.externalLinks.forEach((link) => {
+      const linkArr = link.split('node_modules/')[1].split('/')
+      link = linkArr[0]
+      if (link.startsWith('@')) {
+        link += `/${linkArr[1]}`
+      }
+      libs.add(link)
+    })
+    const externalLibs = `'${Array.from(libs).join(', ')}'`
+    suggest(
+      `Problem is in an external library ${chalk.green(externalLibs)}. Ignore the error`,
+      getNodeLink(context.errorNode),
+      [
+        '// eslint-disable-next-line @typescript-eslint/ban-ts-comment',
+        `// @ts-ignore: Fixed required in ${externalLibs}`,
+      ]
+    )
+    context.captured = false // TODO isVerbose
+  }
+}
+
+// ===============================================================================
+// ===============================================================================
+// ===============================================================================
+//   ____  _
+//  / ___|| |__   __ _ _ __   ___
+//  \___ \| '_ \ / _` | '_ \ / _ \
+//   ___) | | | | (_| | |_) |  __/
+//  |____/|_| |_|\__,_| .__/ \___|
+//                    |_|
+// ===============================================================================
+// ===============================================================================
+// ===============================================================================
+
+function whenTypeShapesDontMatch(context) {
+  if (context.captured) return
+  const layer = context.stack[context.stack.length - 1]
+  const { sourceInfo, targetInfo } = layer
+  if (!isStructuredType(sourceInfo.type) && !isStructuredType(targetInfo.type)) return
+
+  // some shape suggestions
+  didYouMeanThisChildProperty(context)
+  suggestPartialInterfaces(context)
+}
+
+// ===============================================================================
+// when you use 'resource', but you should 'resource.resource' instead %-)
+// ===============================================================================
+
+function didYouMeanThisChildProperty({ suggest, context, stack }) {
+  if (context.sourceMap) {
+    const layer = stack[stack.length - 1]
+    const { sourceInfo, targetInfo } = layer
+    const match: any = Object.values(context.sourceMap).find((source: any) => {
+      return !source.isFunc && source.typeText === targetInfo.typeText
+    })
+    if (match) {
+      suggest(
+        `Did you mean to use this ${chalk.magenta(
+          `${sourceInfo.nodeText}.${match.nodeText}`
+        )} instead of this ${chalk.magenta(sourceInfo.nodeText)}`,
+        targetInfo.nodeLink
+      )
+    }
+  }
+}
+// ===============================================================================
+// ===============================================================================
+// ===============================================================================
+
+function suggestPartialInterfaces({ suggest, context }) {
+  const partialInterfaces: any[] = []
+  if (Object.keys(context?.missingInterfaceMaps?.sourceInterfaceMap || {}).length > 0) {
+    Object.values(context.missingInterfaceMaps.sourceInterfaceMap).forEach((inter: any) => {
+      const altParentInfo = inter[0].altParentInfo
+      if (altParentInfo) {
+        partialInterfaces.push(altParentInfo)
+      }
+    })
+  }
+  if (partialInterfaces.length) {
+    // suggestions.push(`TRY: Make the missing properties optional using the ${chalk.green('Partial<type>')} utility:`)
+    // partialInterfaces.forEach((altParentInfo) => {
+    //   suggestions.push(
+    //     `   ${chalk.greenBright(`interface Partial<${altParentInfo.typeText}>`)} here: ${chalk.blueBright(
+    //       altParentInfo.nodeLink
+    //     )}`
+    //   )
+    // })
+  }
+}
+
+// ===============================================================================
+// ===============================================================================
+// ===============================================================================
+function whenUndefinedTypeDoesntMatch({ suggestions, problem, context, stack }) {
+  if (context.captured) return
+  const layer = stack[stack.length - 1]
+  const { sourceInfo, targetInfo } = layer
+  const { targetName } = context
+  if (problem.targetInfo.typeText === 'undefined') {
+    suggestions.push(
+      `TRY: Change the ${targetName} ${chalk.green(targetInfo.nodeText)} type to ${chalk.green(
+        sourceInfo.typeText
+      )} here: ${chalk.blueBright(targetInfo.nodeLink)}`
+    )
+  } else {
+    suggestions.push(
+      `TRY: Union ${targetName} type with ${chalk.green('| undefined')} here: ${chalk.blueBright(
+        context.targetDeclared ? getNodeLink(context.targetDeclared) : targetInfo.nodeLink
+      )}`
+    )
+    suggestions.push(`          ${chalk.greenBright(`${targetInfo.typeText} | undefined`)}`)
+  }
+}
+
+// ===============================================================================
+// ===============================================================================
+// ===============================================================================
+// at this point:
+//  problem-- contains the conflicting types
+//  stack-- contains all of the parent "var: type" that led us here
+//
+function whenNeverType({ suggest, problems, context, stack }) {
+  if (context.captured) return
+  const layer = stack[stack.length - 1]
+  const { sourceInfo, targetInfo } = layer
+  const { targetName } = context
+  // if (problem.sourceInfo.typeText === 'never[]' && context.targetDeclared) {
+  //   suggestions.push(
+  //     `TRY: Declare the following type for ${chalk.green(context.targetDeclared.name.text)} here: ${chalk.blueBright(
+  //       getNodeLink(context.targetDeclared)
+  //     )}`
+  //   )
+  //   suggestions.push(`          ${chalk.greenBright(`${context.targetDeclared.name.text}: ${targetInfo.typeText}[]`)}`)
+  // } else if (problem.targetInfo.typeText.startsWith('never')) {
+  //   suggestions.push(`NOTE: ${targetName}s use the 'never' type to catch code paths that shouldn't be executing`)
+  //   suggestions.push(`TRY: Determine what code path led to this point and fix it`)
+  //   suggestions.push(
+  //     `TRY: If appropriate, change the ${targetName} ${chalk.green(targetInfo.nodeText)} type to ${chalk.green(
+  //       sourceInfo.typeText
+  //     )} here: ${chalk.blueBright(context.targetDeclared ? getNodeLink(context.targetDeclared) : targetInfo.nodeLink)}`
+  //   )
+  // }
+}
+
+// ===============================================================================
+// ===============================================================================
+// ===============================================================================
+//    case isFunctionType(targetInfo.type) || isFunctionType(sourceInfo.type):
+//      return whenPrototypesDontMatch(suggestions, problem, context, stack)
+
+function whenPrototypesDontMatch({ suggest, problems, context, stack }) {
+  if (context.captured) return
+  const layer = stack[stack.length - 1]
+  const { sourceInfo, targetInfo } = layer
+  const { sourceName, targetName } = context
+  // if (isFunctionType(problem.targetInfo.type) && isFunctionType(problem.sourceInfo.type)) {
+  //   suggestions.push(
+  //     `\nThe ${targetName} ${chalk.greenBright('function prototype')} here: ${chalk.blueBright(sourceInfo.nodeLink)}`
+  //   )
+  //   suggestions.push(
+  //     `\nDoes not match the ${sourceName} ${chalk.greenBright('function prototype')} here: ${chalk.blueBright(
+  //       sourceInfo.nodeLink
+  //     )}`
+  //   )
+  // } else if (isFunctionType(problem.targetInfo.type)) {
+  //   suggestions.push(
+  //     `\n${targetName} is expecting a ${chalk.greenBright('function prototype')} here: ${chalk.blueBright(
+  //       targetInfo.nodeLink
+  //     )}`
+  //   )
+  //   suggestions.push(
+  //     ` But ${sourceName} is a ${chalk.greenBright(sourceInfo.typeText)} here: ${chalk.blueBright(sourceInfo.nodeLink)}`
+  //   )
+  // } else {
+  //   suggestions.push(
+  //     ` The ${sourceName} is a ${chalk.greenBright(
+  //       'function prototype'
+  //     )} but the ${targetName} is expecting a ${chalk.greenBright(targetInfo.typeText)} here: ${chalk.blueBright(
+  //       targetInfo.nodeLink
+  //     )}`
+  //   )
+  // }
+}
+
+// ===============================================================================
+// ===============================================================================
+// ===============================================================================
+
+function whenArraysDontMatch({ problems, stack, suggest, context }) {
+  //    case isArrayType(targetInfo.type) || isArrayType(sourceInfo.type):
+  if (context.captured) return
+  const layer = stack[stack.length - 1]
+  const { sourceInfo, targetInfo } = layer
+  // if (isArrayType(problem.sourceInfo.type)) {
+  //   suggestions.push(
+  //     ` Did you mean to assign just one element of the ${chalk.greenBright(
+  //       sourceInfo.nodeText
+  //     )} array here?: ${chalk.blueBright(sourceInfo.nodeLink)}`
+  //   )
+  //   suggestions.push(`          ${chalk.greenBright(`${targetInfo.fullText} = ${sourceInfo.nodeText}[0]`)}`)
+  // }
+}
+
+// ===============================================================================
+// ===============================================================================
+// ===============================================================================
+//   ____  _                                 _
+//  / ___|| |__   _____      __  _ __   ___ | |_ ___  ___
+//  \___ \| '_ \ / _ \ \ /\ / / | '_ \ / _ \| __/ _ \/ __|
+//   ___) | | | | (_) \ V  V /  | | | | (_) | ||  __/\__ \
+//  |____/|_| |_|\___/ \_/\_/   |_| |_|\___/ \__\___||___/
+// ===============================================================================
+// ===============================================================================
+// ===============================================================================
+
+function showNotes(problems, context) {
+  const { hadSuggestions, notes } = context
+  const { maxs, links, interfaces } = notes
+  if (isVerbose) {
+    if (problems[0].unchecked && problems[0].unchecked.length) {
+      console.log(`( ${chalk.cyan(problems[0].unchecked.join(', '))} cannot be checked until problems are resolved )`)
+    }
+    if (context.remaining) {
+      console.log(`( ${chalk.cyan(context.remaining)} cannot be checked until problems are resolved )`)
+    }
+  }
+
+  // print the table notes:
+  if (!hadSuggestions || isVerbose) {
+    links.forEach((link) => console.log(link))
+  }
+
+  if (isVerbose) {
+    maxs.forEach((max) => console.log(max))
+    interfaces.forEach((inter) => console.log(inter))
+    console.log('')
+  }
+}
+
 // ===============================================================================
 // ===============================================================================
 // ===============================================================================
@@ -1815,12 +2210,6 @@ function isLikeTypes(source: ts.Type | ts.TypeFlags, target: ts.Type | ts.TypeFl
   })
 }
 
-// function isLiteralMismatch(firstType: ts.Type | ts.TypeFlags, secondType: ts.Type | ts.TypeFlags) {
-//   const firstLiteral = !!((firstType['flags'] ? firstType['flags'] : firstType) & ts.TypeFlags.Literal)
-//   const secondLiteral = !!((secondType['flags'] ? secondType['flags'] : secondType) & ts.TypeFlags.Literal)
-//   return firstLiteral !== secondLiteral
-// }
-
 function isStructuredType(type: ts.Type | ts.TypeFlags) {
   const flags = type['flags'] ? type['flags'] : type
   return !!(flags & ts.TypeFlags.StructuredType)
@@ -1940,7 +2329,7 @@ function findSupportedErrors(semanticDiagnostics: readonly ts.Diagnostic[], file
     }
   })
   if (!anyPayoff) {
-    console.log(`\n--no squirrels}`)
+    console.log(`\n--no squirrels--`)
   }
   console.log('\n\n--------------------------------------------------------------------------')
 }
@@ -1968,378 +2357,5 @@ const syntactic = program.getSyntacticDiagnostics()
 console.log('looking...')
 findSupportedErrors(program.getSemanticDiagnostics(), fileNames)
 if (!!syntactic.length) {
-  console.log('Warning: there were syntax errors.', syntactic)
-}
-
-//======================================================================
-//======================================================================
-//======================================================================
-// ____                              _   _
-// / ___| _   _  __ _  __ _  ___  ___| |_(_) ___  _ __  ___
-// \___ \| | | |/ _` |/ _` |/ _ \/ __| __| |/ _ \| '_ \/ __|
-//  ___) | |_| | (_| | (_| |  __/\__ \ |_| | (_) | | | \__ \
-// |____/ \__,_|\__, |\__, |\___||___/\__|_|\___/|_| |_|___/
-//              |___/ |___/
-//======================================================================
-//======================================================================
-//======================================================================
-
-function showSuggestions(problems, context, stack) {
-  // unified suggestion method
-  const suggest = (msg: string, link?: string, code?: string) => {
-    let multiLine = false
-    let codeMsg = ''
-    if (code) {
-      multiLine = Array.isArray(code) || code.length > 64
-      if (!multiLine) {
-        codeMsg = `with this ${chalk.greenBright(code)}`
-      }
-    }
-    const linkMsg = link ? chalk.blueBright(link) : ''
-    console.log(chalk.whiteBright(`${msg}${codeMsg ? ` ${codeMsg}` : ''}${linkMsg ? ` here: ${linkMsg}` : ''}`))
-    if (multiLine) {
-      if (Array.isArray(code)) {
-        code.forEach((line) => {
-          console.log(`       ${chalk.greenBright(line)}`)
-        })
-      } else {
-        console.log(chalk.greenBright(codeMsg))
-      }
-    }
-  }
-
-  const whenContext = {
-    problems,
-    context,
-    stack,
-    suggest,
-  }
-  whenCallArgumentsDontMatch(whenContext)
-  whenSimpleTypesDontMatch(whenContext)
-  whenProblemIsInExternalLibrary(whenContext)
-  whenTypeShapesDontMatch(whenContext)
-  // whenArraysDontMatch(whenContext)
-  // whenPrototypesDontMatch(whenContext)
-  // whenNeverType(whenContext)
-}
-
-//======================================================================
-//======================================================================
-//======================================================================
-//   ____  _                 _
-//  / ___|(_)_ __ ___  _ __ | | ___
-//  \___ \| | '_ ` _ \| '_ \| |/ _ \
-//   ___) | | | | | | | |_) | |  __/
-//  |____/|_|_| |_| |_| .__/|_|\___|
-//                    |_|
-//======================================================================
-//======================================================================
-//======================================================================
-
-function whenSimpleTypesDontMatch({ stack, context, suggest }) {
-  if (context.captured) return
-  const layer = stack[stack.length - 1]
-  const { sourceInfo, targetInfo } = layer
-  if (context.errorType === ErrorType.mismatch) {
-    switch (true) {
-      case !!(targetInfo.type.flags & ts.TypeFlags.NumberLike):
-        if (sourceInfo.type.flags & ts.TypeFlags.Literal) {
-          if (sourceInfo.type.flags & ts.TypeFlags.StringLiteral) {
-            if (!Number.isNaN(Number(sourceInfo.nodeText.replace(/["']/g, '')))) {
-              suggest(`Remove quotes from ${sourceInfo.nodeText}`, sourceInfo.nodeLink)
-            }
-          }
-        } else {
-          suggest(`Convert ${sourceInfo.nodeText} to number`, sourceInfo.nodeLink, `Number(${sourceInfo.nodeText})`)
-        }
-        break
-      case !!(targetInfo.type.flags & ts.TypeFlags.StringLike):
-        if (!Number.isNaN(Number(sourceInfo.nodeText))) {
-          suggest(`Add quotes to '${sourceInfo.nodeText}'`, sourceInfo.nodeLink)
-        } else {
-          suggest(
-            `Convert ${sourceInfo.nodeText} to string`,
-            sourceInfo.nodeLink,
-            `String(${sourceInfo.nodeText}).toString()`
-          )
-        }
-        break
-      case !!(targetInfo.type.flags & ts.TypeFlags.BooleanLike):
-        suggest(
-          `Convert ${sourceInfo.nodeText} to boolean`,
-          sourceInfo.nodeLink,
-          `${targetInfo.nodeText} = !!${sourceInfo.nodeText}`
-        )
-        break
-    }
-    if (!(sourceInfo.type.flags & ts.TypeFlags.Literal)) {
-      suggest(
-        `Or union ${sourceInfo.nodeText} with ${sourceInfo.typeText}`,
-        getNodeLink(context.targetDeclared),
-        `${targetInfo.fullText} | ${sourceInfo.typeText}`
-      )
-    }
-  }
-}
-
-// ===============================================================================
-// ===============================================================================
-// ===============================================================================
-//      _                                         _
-//     / \   _ __ __ _ _   _ _ __ ___   ___ _ __ | |_ ___
-//    / _ \ | '__/ _` | | | | '_ ` _ \ / _ \ '_ \| __/ __|
-//   / ___ \| | | (_| | |_| | | | | | |  __/ | | | |_\__ \
-//  /_/   \_\_|  \__, |\__,_|_| |_| |_|\___|_| |_|\__|___/
-//               |___/
-// ===============================================================================
-// ===============================================================================
-// ===============================================================================
-function whenCallArgumentsDontMatch({ context, suggest }) {
-  if (context.captured) return
-  const { callPrototypeMatchUps } = context
-  if (callPrototypeMatchUps && callPrototypeMatchUps.length > 1) {
-    // see if arg types are mismatched
-    const indexes: number[] = []
-    if (
-      // see if args are called in wrong order
-      callPrototypeMatchUps.every(({ targetTypeText }) => {
-        return (
-          callPrototypeMatchUps.findIndex(({ sourceTypeText }, inx) => {
-            if (targetTypeText === sourceTypeText && !indexes.includes(inx + 1)) {
-              indexes.push(inx + 1)
-              return true
-            }
-            return false
-          }) !== -1
-        )
-      })
-    ) {
-      suggest(
-        `Did you mean to call the arguments in this order ${chalk.greenBright(indexes.join(', '))}`,
-        context.sourceLink
-      )
-      context.captured = true
-    }
-  }
-}
-
-// ===============================================================================
-// ===============================================================================
-// ===============================================================================
-//   _____      _                        _
-//  | ____|_  _| |_ ___ _ __ _ __   __ _| |
-//  |  _| \ \/ / __/ _ \ '__| '_ \ / _` | |
-//  | |___ >  <| ||  __/ |  | | | | (_| | |
-//  |_____/_/\_\\__\___|_|  |_| |_|\__,_|_|
-// ===============================================================================
-// ===============================================================================
-// ===============================================================================
-
-function whenProblemIsInExternalLibrary({ context, suggest }) {
-  if (context.captured) return
-  if (context?.externalLinks?.length) {
-    const libs = new Set()
-    context.externalLinks.forEach((link) => {
-      const linkArr = link.split('node_modules/')[1].split('/')
-      link = linkArr[0]
-      if (link.startsWith('@')) {
-        link += `/${linkArr[1]}`
-      }
-      libs.add(link)
-    })
-    const externalLibs = `'${Array.from(libs).join(', ')}'`
-    suggest(
-      `Problem is in an external library ${chalk.green(externalLibs)}. Ignore the error using this`,
-      getNodeLink(context.errorNode),
-      [
-        '// eslint-disable-next-line @typescript-eslint/ban-ts-comment',
-        `// @ts-ignore: Fixed required in ${externalLibs}`,
-      ]
-    )
-    context.captured = false // TODO isVerbose
-  }
-}
-
-// ===============================================================================
-// ===============================================================================
-// ===============================================================================
-//   ____  _
-//  / ___|| |__   __ _ _ __   ___
-//  \___ \| '_ \ / _` | '_ \ / _ \
-//   ___) | | | | (_| | |_) |  __/
-//  |____/|_| |_|\__,_| .__/ \___|
-//                    |_|
-// ===============================================================================
-// ===============================================================================
-// ===============================================================================
-
-function whenTypeShapesDontMatch(context) {
-  if (context.captured) return
-  const layer = context.stack[context.stack.length - 1]
-  const { sourceInfo, targetInfo } = layer
-  if (!isStructuredType(sourceInfo.type) && !isStructuredType(targetInfo.type)) return
-
-  // some shape suggestions
-  didYouMeanThisChildProperty(context)
-  suggestPartialInterfaces(context)
-}
-
-// ===============================================================================
-// when you use 'resource', but you should 'resource.resource' instead %-)
-// ===============================================================================
-
-function didYouMeanThisChildProperty({ suggest, context, stack }) {
-  if (context.sourceMap) {
-    const layer = stack[stack.length - 1]
-    const { sourceInfo, targetInfo } = layer
-    const match: any = Object.values(context.sourceMap).find((source: any) => {
-      return !source.isFunc && source.typeText === targetInfo.typeText
-    })
-    if (match) {
-      suggest(
-        `Did you mean to use this ${chalk.green(
-          `${sourceInfo.nodeText}.${match.nodeText}`
-        )} instead of this ${chalk.green(sourceInfo.nodeText)}`,
-        targetInfo.nodeLink
-      )
-    }
-  }
-}
-// ===============================================================================
-// ===============================================================================
-// ===============================================================================
-
-function suggestPartialInterfaces({ suggest, context }) {
-  const partialInterfaces: any[] = []
-  if (Object.keys(context?.missingInterfaceMaps?.sourceInterfaceMap || {}).length > 0) {
-    Object.values(context.missingInterfaceMaps.sourceInterfaceMap).forEach((inter: any) => {
-      const altParentInfo = inter[0].altParentInfo
-      if (altParentInfo) {
-        partialInterfaces.push(altParentInfo)
-      }
-    })
-  }
-  if (partialInterfaces.length) {
-    // suggestions.push(`TRY: Make the missing properties optional using the ${chalk.green('Partial<type>')} utility:`)
-    // partialInterfaces.forEach((altParentInfo) => {
-    //   suggestions.push(
-    //     `   ${chalk.greenBright(`interface Partial<${altParentInfo.typeText}>`)} here: ${chalk.blueBright(
-    //       altParentInfo.nodeLink
-    //     )}`
-    //   )
-    // })
-  }
-}
-
-// ===============================================================================
-// ===============================================================================
-// ===============================================================================
-function whenUndefinedTypeDoesntMatch({ suggestions, problem, context, stack }) {
-  if (context.captured) return
-  const layer = stack[stack.length - 1]
-  const { sourceInfo, targetInfo } = layer
-  const { targetName } = context
-  if (problem.targetInfo.typeText === 'undefined') {
-    suggestions.push(
-      `TRY: Change the ${targetName} ${chalk.green(targetInfo.nodeText)} type to ${chalk.green(
-        sourceInfo.typeText
-      )} here: ${chalk.blueBright(targetInfo.nodeLink)}`
-    )
-  } else {
-    suggestions.push(
-      `TRY: Union ${targetName} type with ${chalk.green('| undefined')} here: ${chalk.blueBright(
-        context.targetDeclared ? getNodeLink(context.targetDeclared) : targetInfo.nodeLink
-      )}`
-    )
-    suggestions.push(`          ${chalk.greenBright(`${targetInfo.typeText} | undefined`)}`)
-  }
-}
-
-// ===============================================================================
-// ===============================================================================
-// ===============================================================================
-// at this point:
-//  problem-- contains the conflicting types
-//  stack-- contains all of the parent "var: type" that led us here
-//
-function whenNeverType({ suggest, problems, context, stack }) {
-  if (context.captured) return
-  const layer = stack[stack.length - 1]
-  const { sourceInfo, targetInfo } = layer
-  const { targetName } = context
-  // if (problem.sourceInfo.typeText === 'never[]' && context.targetDeclared) {
-  //   suggestions.push(
-  //     `TRY: Declare the following type for ${chalk.green(context.targetDeclared.name.text)} here: ${chalk.blueBright(
-  //       getNodeLink(context.targetDeclared)
-  //     )}`
-  //   )
-  //   suggestions.push(`          ${chalk.greenBright(`${context.targetDeclared.name.text}: ${targetInfo.typeText}[]`)}`)
-  // } else if (problem.targetInfo.typeText.startsWith('never')) {
-  //   suggestions.push(`NOTE: ${targetName}s use the 'never' type to catch code paths that shouldn't be executing`)
-  //   suggestions.push(`TRY: Determine what code path led to this point and fix it`)
-  //   suggestions.push(
-  //     `TRY: If appropriate, change the ${targetName} ${chalk.green(targetInfo.nodeText)} type to ${chalk.green(
-  //       sourceInfo.typeText
-  //     )} here: ${chalk.blueBright(context.targetDeclared ? getNodeLink(context.targetDeclared) : targetInfo.nodeLink)}`
-  //   )
-  // }
-}
-
-// ===============================================================================
-// ===============================================================================
-// ===============================================================================
-//    case isFunctionType(targetInfo.type) || isFunctionType(sourceInfo.type):
-//      return whenPrototypesDontMatch(suggestions, problem, context, stack)
-
-function whenPrototypesDontMatch({ suggest, problems, context, stack }) {
-  if (context.captured) return
-  const layer = stack[stack.length - 1]
-  const { sourceInfo, targetInfo } = layer
-  const { sourceName, targetName } = context
-  // if (isFunctionType(problem.targetInfo.type) && isFunctionType(problem.sourceInfo.type)) {
-  //   suggestions.push(
-  //     `\nThe ${targetName} ${chalk.greenBright('function prototype')} here: ${chalk.blueBright(sourceInfo.nodeLink)}`
-  //   )
-  //   suggestions.push(
-  //     `\nDoes not match the ${sourceName} ${chalk.greenBright('function prototype')} here: ${chalk.blueBright(
-  //       sourceInfo.nodeLink
-  //     )}`
-  //   )
-  // } else if (isFunctionType(problem.targetInfo.type)) {
-  //   suggestions.push(
-  //     `\n${targetName} is expecting a ${chalk.greenBright('function prototype')} here: ${chalk.blueBright(
-  //       targetInfo.nodeLink
-  //     )}`
-  //   )
-  //   suggestions.push(
-  //     ` But ${sourceName} is a ${chalk.greenBright(sourceInfo.typeText)} here: ${chalk.blueBright(sourceInfo.nodeLink)}`
-  //   )
-  // } else {
-  //   suggestions.push(
-  //     ` The ${sourceName} is a ${chalk.greenBright(
-  //       'function prototype'
-  //     )} but the ${targetName} is expecting a ${chalk.greenBright(targetInfo.typeText)} here: ${chalk.blueBright(
-  //       targetInfo.nodeLink
-  //     )}`
-  //   )
-  // }
-}
-
-// ===============================================================================
-// ===============================================================================
-// ===============================================================================
-
-function whenArraysDontMatch({ problems, stack, suggest, context }) {
-  //    case isArrayType(targetInfo.type) || isArrayType(sourceInfo.type):
-  if (context.captured) return
-  const layer = stack[stack.length - 1]
-  const { sourceInfo, targetInfo } = layer
-  // if (isArrayType(problem.sourceInfo.type)) {
-  //   suggestions.push(
-  //     ` Did you mean to assign just one element of the ${chalk.greenBright(
-  //       sourceInfo.nodeText
-  //     )} array here?: ${chalk.blueBright(sourceInfo.nodeLink)}`
-  //   )
-  //   suggestions.push(`          ${chalk.greenBright(`${targetInfo.fullText} = ${sourceInfo.nodeText}[0]`)}`)
-  // }
+  console.log('Warning: there were syntax errors.')
 }
