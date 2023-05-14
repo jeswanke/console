@@ -18,6 +18,10 @@ const MAX_COLUMN_WIDTH = 80
 // type mismatch errors we try tpo solve
 const ignoreTheseErrors = [6133, 2304]
 
+//======================================================================
+//======================================================================
+//======================================================================
+
 enum MatchType {
   match = 0,
   mismatch = 1, // simple !== simple
@@ -37,8 +41,37 @@ enum ErrorType {
   propMissing = 7,
   propMismatch = 8,
   bothMissing = 9,
-  both = 11,
+  both = 10,
+  missingIndex = 11,
   mustDeclare = 12,
+}
+
+interface ITypeProblem {
+  sourceIsArray?: boolean
+  targetIsArray?: boolean
+  sourceInfo?: any
+  targetInfo?: any
+}
+
+interface IShapeProblem {
+  matched: string[]
+  mismatch: string[]
+  missing: string[]
+  misslike: string[]
+  optional: string[]
+  unchecked: string[]
+  compare?: string[]
+  optversed?: string[]
+  misversed?: string[]
+  compversed?: string[]
+  overlap: number
+  total: number
+  sourceInfo: any
+  targetInfo?: any
+  isShapeProblem: true
+}
+function isShapeProblem(object: any): object is IShapeProblem {
+  return 'isShapeProblem' in object
 }
 
 //======================================================================
@@ -163,19 +196,17 @@ function cacheNodes(sourceFile: ts.SourceFile) {
 //======================================================================
 //======================================================================
 //======================================================================
-//  _____ _           _   _   _           _
-// |  ___(_)_ __   __| | | \ | | ___   __| | ___  ___
-// | |_  | | '_ \ / _` | |  \| |/ _ \ / _` |/ _ \/ __|
-// |  _| | | | | | (_| | | |\  | (_) | (_| |  __/\__ \
-// |_|   |_|_| |_|\__,_| |_| \_|\___/ \__,_|\___||___/
+//   _____ _           _    ____             __ _ _      _
+//  |  ___(_)_ __   __| |  / ___|___  _ __  / _| (_) ___| |_
+//  | |_  | | '_ \ / _` | | |   / _ \| '_ \| |_| | |/ __| __|
+//  |  _| | | | | | (_| | | |__| (_) | | | |  _| | | (__| |_
+//  |_|   |_|_| |_|\__,_|  \____\___/|_| |_|_| |_|_|\___|\__|
 //======================================================================
 //======================================================================
 //======================================================================
-// FIND THE TARGET AND SOURCE OF AN ASSIGNMENT CONFLICT
-//   a) DETERMINE WHAT THE TARGET AND SOURCE ACTUALLY ARE
-//      (the error node is just in the neighborhood)
-//   b) THEN COMPARE THEM TO FIND THE CONFLICT
+// ERROR JUST SAYS THERE'S A CONFLICT, BUT NOT WHAT TYPES ARE IN CONFLICT
 function findTargetAndSourceToCompare(code, errorNode: ts.Node, cache) {
+  const errorType = checker.getTypeAtLocation(errorNode)
   const node =
     ts.findAncestor(errorNode, (node) => {
       return (
@@ -183,6 +214,7 @@ function findTargetAndSourceToCompare(code, errorNode: ts.Node, cache) {
         (node.kind === ts.SyntaxKind.ReturnStatement ||
           node.kind === ts.SyntaxKind.VariableDeclaration ||
           node.kind === ts.SyntaxKind.ExpressionStatement ||
+          (node.kind === ts.SyntaxKind.PropertyAccessExpression && !!(errorType.flags & ts.TypeFlags.Any)) ||
           node.kind === ts.SyntaxKind.CallExpression)
       )
     }) || errorNode
@@ -228,12 +260,20 @@ function findTargetAndSourceToCompare(code, errorNode: ts.Node, cache) {
         return findFunctionCallTargetAndSourceToCompare(node, errorNode, context)
       }
       //======================================================================
+      //=========== PROPERTY ACCESS (object.property)  =================================
+      //======================================================================
+      case ts.SyntaxKind.PropertyAccessExpression: {
+        const sourceNode = children[children.length - 1]
+        const targetNode = children[0]
+        return createPropertyAccessTargetAndSourceToCompare(targetNode, sourceNode, context)
+      }
+      //======================================================================
       //=========== DECLARATION  =================================
       //======================================================================
       case ts.SyntaxKind.VariableDeclaration: {
         const sourceNode = children[children.length - 1]
         const targetNode = children[0]
-        return findAssignmentTargetAndSourceToCompare(node, targetNode, sourceNode, context)
+        return findAssignmentTargetAndSourceToCompare(targetNode, sourceNode, context)
       }
       //======================================================================
       //============== ASSIGNMENT  =================================
@@ -270,7 +310,7 @@ function findTargetAndSourceToCompare(code, errorNode: ts.Node, cache) {
             } while (path.length)
             context.targetDeclared = node
           }
-          return findAssignmentTargetAndSourceToCompare(statement, target, source, context)
+          return findAssignmentTargetAndSourceToCompare(target, source, context)
         }
       }
       default:
@@ -279,6 +319,56 @@ function findTargetAndSourceToCompare(code, errorNode: ts.Node, cache) {
         return false
     }
   }
+}
+
+//======================================================================
+//======================================================================
+//======================================================================
+//   ____                            _              _
+//  |  _ \ _ __ ___  _ __   ___ _ __| |_ _   _     / \   ___ ___ ___  ___ ___
+//  | |_) | '__/ _ \| '_ \ / _ \ '__| __| | | |   / _ \ / __/ __/ _ \/ __/ __|
+//  |  __/| | | (_) | |_) |  __/ |  | |_| |_| |  / ___ \ (_| (_|  __/\__ \__ \
+//  |_|   |_|  \___/| .__/ \___|_|   \__|\__, | /_/   \_\___\___\___||___/___/
+//                  |_|                  |___/
+//======================================================================
+//======================================================================
+//======================================================================
+// when a.b.c = 4 but c doesn't exist yet
+function createPropertyAccessTargetAndSourceToCompare(targetNode: ts.Node, sourceNode: ts.Node, context) {
+  const targetType: ts.Type = checker.getTypeAtLocation(targetNode)
+  const targetTypeText = typeToString(targetType)
+  const targetInfo = {
+    nodeText: getText(targetNode),
+    typeText: targetTypeText,
+    typeId: context.cache.saveType(targetType),
+    fullText: getFullName(targetNode, targetTypeText),
+    nodeLink: getNodeLink(targetNode),
+  }
+
+  const nodeText = getText(sourceNode)
+  const typeText = 'unknown'
+  const { sourceInfo, problem } = createComparisonType(nodeText, typeText, sourceNode, context)
+  context = {
+    ...context,
+    prefix: 'The object',
+    sourceLink: sourceInfo.nodeLink,
+    targetLink: targetInfo.nodeLink,
+    targetTitle: 'Object',
+    sourceTitle: 'Property',
+    missingAccess: true,
+    hadPayoff: true,
+  }
+  const stack = [
+    {
+      sourceInfo,
+      targetInfo,
+    },
+  ]
+  const problems = [{ ...problem, targetInfo }]
+
+  // flipping over all the cards--tell them what they won
+  theBigPayoff(problems, context, stack)
+  return true
 }
 
 //======================================================================
@@ -294,10 +384,9 @@ function findTargetAndSourceToCompare(code, errorNode: ts.Node, cache) {
 //======================================================================
 //======================================================================
 
-function findAssignmentTargetAndSourceToCompare(errorNode, targetNode: ts.Node, sourceNode: ts.Node, context) {
+function findAssignmentTargetAndSourceToCompare(targetNode: ts.Node, sourceNode: ts.Node, context) {
   const targetType: ts.Type = checker.getTypeAtLocation(targetNode)
   const targetTypeText = typeToString(targetType)
-  let sourceType: ts.Type = checker.getTypeAtLocation(sourceNode)
   const targetInfo = {
     nodeText: getText(targetNode),
     typeText: targetTypeText,
@@ -305,6 +394,7 @@ function findAssignmentTargetAndSourceToCompare(errorNode, targetNode: ts.Node, 
     fullText: getFullName(targetNode, targetTypeText),
     nodeLink: getNodeLink(targetNode),
   }
+  let sourceType: ts.Type = checker.getTypeAtLocation(sourceNode)
 
   //======================================================================
   //===============  ASSIGN ARRAY ==========================
@@ -341,6 +431,51 @@ function findAssignmentTargetAndSourceToCompare(errorNode, targetNode: ts.Node, 
         sourceType = checker.getTypeAtLocation(sourceNode)
       }
     }
+  } else if (sourceNode.kind === ts.SyntaxKind.ElementAccessExpression) {
+    // when map[key] but compiler can't infer an index
+    const children = sourceNode.getChildren()
+    const mapType = checker.getTypeAtLocation(children[0])
+    const indexTypeText = typeToStringLike(checker.getTypeAtLocation(children[2]))
+    if (
+      !checker.getIndexInfosOfType(mapType).some(({ keyType }) => {
+        return typeToStringLike(keyType) === indexTypeText
+      })
+    ) {
+      // ex: [key: string]: string
+      const nodeText = `[key: ${indexTypeText}]`
+      const typeText = 'any'
+      const { sourceInfo, problem } = createComparisonType(nodeText, typeText, sourceNode, context)
+
+      const targetType: ts.Type = mapType
+      const targetTypeText = typeToString(targetType)
+      const targetInfo = {
+        nodeText: targetTypeText,
+        typeText: targetTypeText,
+        typeId: context.cache.saveType(targetType),
+        fullText: getFullName(targetTypeText, targetTypeText),
+        nodeLink: getTypeLink(targetType),
+      }
+
+      context = {
+        ...context,
+        sourceLink: sourceInfo.nodeLink,
+        targetLink: targetInfo.nodeLink,
+        targetTitle: 'Map',
+        sourceTitle: 'Index',
+        missingIndex: true,
+        hadPayoff: true,
+      }
+
+      const stack = [
+        {
+          sourceInfo,
+          targetInfo,
+        },
+      ]
+      const problems = [{ ...problem, targetInfo }]
+
+      return theBigPayoff(problems, context, stack)
+    }
   }
 
   // const sourceType: ts.Type = checker.getTypeAtLocation(sourceNode)
@@ -356,7 +491,7 @@ function findAssignmentTargetAndSourceToCompare(errorNode, targetNode: ts.Node, 
   // individual array items mismatch the target
   const pathContext = {
     ...context,
-    prefix: 'Right side type',
+    prefix: 'One side',
     sourceLink: getNodeLink(sourceNode),
     targetLink: getNodeLink(targetNode),
     hadPayoff: false,
@@ -372,6 +507,12 @@ function findAssignmentTargetAndSourceToCompare(errorNode, targetNode: ts.Node, 
     ],
     pathContext
   )
+  if (!pathContext.hadPayoff) {
+    console.log(`For error ${context.code}, types shouldn't '${targetTypeText}'!=='${sourceTypeText}'`)
+    console.log(getNodeLink(sourceNode))
+    console.log('\n\n')
+  }
+
   return pathContext.hadPayoff
 }
 
@@ -648,6 +789,60 @@ function findArrayItemTargetAndSourceToCompare(arrayItems, targetType, targetInf
 //======================================================================
 //======================================================================
 //======================================================================
+
+function createComparisonType(nodeText, typeText, sourceNode, context) {
+  const nodeLink = getNodeLink(sourceNode)
+  const fullText = getFullName(nodeText, typeText)
+  const placeholderType = {
+    placeholderInfo: {},
+    flags: ts.TypeFlags.Object,
+    id: sourceNode.getStart() + 100000,
+    objectFlags: 16,
+  }
+  placeholderType.placeholderInfo[nodeText] = {
+    isOpt: false,
+    isFunc: false,
+    nodeText,
+    fullText,
+    typeText,
+    nodeLink,
+  }
+
+  const sourceInfo = {
+    nodeText,
+    typeText,
+    typeId: context.cache.saveType(placeholderType),
+    fullText: getFullName(nodeText, typeText),
+    nodeLink,
+  }
+
+  const problem: IShapeProblem = {
+    matched: [],
+    mismatch: [],
+    missing: [nodeText],
+    misslike: [],
+    optional: [],
+    optversed: [],
+    overlap: 0,
+    misversed: [],
+    unchecked: [],
+    total: 0,
+    sourceInfo,
+    isShapeProblem: true,
+  }
+
+  context.hasPlaceholder = true
+
+  return { sourceInfo, problem }
+}
+
+//======================================================================
+//======================================================================
+//======================================================================
+
+//======================================================================
+//======================================================================
+//======================================================================
 //   ____                                       _____
 //  / ___|___  _ __ ___  _ __   __ _ _ __ ___  |_   _|   _ _ __   ___  ___
 // | |   / _ \| '_ ` _ \| '_ \ / _` | '__/ _ \   | || | | | '_ \ / _ \/ __|
@@ -663,8 +858,8 @@ function findArrayItemTargetAndSourceToCompare(arrayItems, targetType, targetInf
 //   b) KEEP TRACK OF WHAT INNER TYPE WE'RE LOOKING AT ON A STACK
 
 function compareTypes(targetType, sourceType, stack, context, bothWays?: boolean) {
-  let typeProblem: any
-  let shapeProblems: any[] = []
+  let typeProblem: ITypeProblem = {}
+  let shapeProblems: IShapeProblem[] = []
   let recurses: any[] = []
   const propertyTypes: any = []
 
@@ -696,7 +891,7 @@ function compareTypes(targetType, sourceType, stack, context, bothWays?: boolean
       sourceInfo: { type: sourceType, typeText: sourceTypeText },
       targetInfo: { type: targetType, typeText: targetTypeText },
     }
-    theBigPayoff(typeProblem, shapeProblems, context, stack)
+    theBigPayoff([typeProblem], context, stack)
     return false
   } else {
     //======================================================================
@@ -753,15 +948,15 @@ function compareTypes(targetType, sourceType, stack, context, bothWays?: boolean
             } else {
               // consolidate the error--mismatch will be the same,
               // but keep missing separate for each direction
-              const problem = {
+              const problem: IShapeProblem = {
                 matched: s2tProblem?.matched || [],
                 mismatch: s2tProblem?.mismatch || [],
                 misslike: s2tProblem?.misslike || [],
                 unchecked: s2tProblem?.unchecked || [],
                 missing: s2tProblem?.missing || [],
                 optional: s2tProblem?.optional || [],
-                reversed: t2sProblem?.missing || [],
-                otheropt: t2sProblem?.optional || [],
+                misversed: t2sProblem?.missing || [],
+                optversed: t2sProblem?.optional || [],
                 overlap: s2tProblem?.overlap || 0,
                 total: Math.max(s2tProblem?.total || 0, t2sProblem?.total || 0),
                 sourceInfo: {
@@ -772,6 +967,7 @@ function compareTypes(targetType, sourceType, stack, context, bothWays?: boolean
                   type: target,
                   typeText: targetTypeText,
                 },
+                isShapeProblem: true,
               }
               shapeProblems.push(problem)
             }
@@ -793,7 +989,8 @@ function compareTypes(targetType, sourceType, stack, context, bothWays?: boolean
       //========= PROBLEM: NO MATCHING TARGET TYPE ========================
       //======================================================================
       // IF WE GOT HERE, SOURCE COULDN'T FIND ANY MATCHING TARGET TYPE
-      theBigPayoff(typeProblem, shapeProblems, context, stack)
+      const problems = filterProblems(typeProblem, shapeProblems)
+      theBigPayoff(problems, context, stack)
       return false
     }
     //======================================================================
@@ -885,7 +1082,7 @@ function compareTypeProperties(firstType, secondType, context) {
     }
   })
 
-  let problem: any | undefined = undefined
+  let problem: IShapeProblem | undefined = undefined
   if (mismatch.length !== 0 || missing.length !== 0 || misslike.length !== 0) {
     problem = {
       matched,
@@ -904,6 +1101,7 @@ function compareTypeProperties(firstType, secondType, context) {
         type: secondType,
         typeText: targetTypeText,
       },
+      isShapeProblem: true,
     }
   }
   return { problem, recurses }
@@ -977,40 +1175,12 @@ const simpleUnionPropTypeMatch = (firstPropType, secondPropType) => {
 //======================================================================
 //======================================================================
 
-function theBigPayoff(typeProblem, shapeProblems, context, stack) {
-  // if there's multiple problems, find a union type, find the one with the most overlap
-  let problems: any[] = []
-  if (shapeProblems.length) {
-    problems = shapeProblems
-    if (shapeProblems.length > 1) {
-      // if any miss likes, just use those
-      problems = shapeProblems.filter(({ misslike }) => misslike.length > 0)
-      if (problems.length === 0) {
-        // sort problem with the most overlap for the smallest # of props
-        shapeProblems.sort((a, b) => {
-          if (a.overlap !== b.overlap) {
-            return b.overlap - a.overlap
-          }
-          return a.total - b.total
-        })
-        const top = shapeProblems[0]
-        if (
-          top.overlap / (top.total - top.optional.length) > 0.5 ||
-          top.overlap / (top.total - top.otheropt.length) > 0.5
-        ) {
-          problems = [top]
-        }
-      }
-      // if no good overlap, show all the types, let the user decide
-    }
-  } else {
-    problems = [typeProblem]
-  }
-
+function theBigPayoff(problems, context, stack) {
   showTable(problems, context, stack)
   showSuggestions(problems, context, stack)
   showNotes(problems, context)
   context.hadPayoff = true
+  return true
 }
 
 //======================================================================
@@ -1107,9 +1277,38 @@ function showTable(problems, context, stack) {
   } else {
     errorType = showTypeConflicts(p, problems, context, stack)
   }
-  context.errorType = errorType
 
-  //show an error message above the table
+  //======================================================================
+  //======================================================================
+  //======================================================================
+  //   _____     _     _        _____ _ _   _
+  //  |_   _|_ _| |__ | | ___  |_   _(_) |_| | ___
+  //    | |/ _` | '_ \| |/ _ \   | | | | __| |/ _ \
+  //    | | (_| | |_) | |  __/   | | | | |_| |  __/
+  //    |_|\__,_|_.__/|_|\___|   |_| |_|\__|_|\___|
+  //======================================================================
+  //======================================================================
+  //======================================================================
+
+  if (problems[0].mismatch) {
+    const { mismatch, misslike, missing, reversed } = problems[0]
+    if (misslike.length) {
+      errorType = ErrorType.misslike
+    } else if (missing.length && mismatch.length) {
+      errorType = ErrorType.both
+    } else if (missing.length) {
+      if (context.missingIndex) {
+        errorType = ErrorType.missingIndex
+      } else {
+        errorType = ErrorType.propMissing
+      }
+    } else if (missing.length || reversed.length) {
+      errorType = ErrorType.bothMissing
+    } else if (mismatch.length) {
+      errorType = ErrorType.propMismatch
+    }
+  }
+
   let specs
   switch (errorType) {
     case ErrorType.objectToSimple:
@@ -1139,8 +1338,13 @@ function showTable(problems, context, stack) {
       prefix = 'Both sides are'
       specs = `${chalk.red('missing')} properties`
       break
-    case ErrorType.propMismatch:
-      specs = `has ${chalk.yellow('mismatched')} properties`
+    case ErrorType.bothMissing:
+      prefix = 'Both sides are'
+      specs = `${chalk.red('missing')} properties`
+      break
+    case ErrorType.missingIndex:
+      prefix = 'The map is'
+      specs = `${chalk.red('missing')} an index property`
       break
     case ErrorType.both:
       specs = `has ${chalk.yellow('mismatched')} and ${chalk.red('missing')} properties`
@@ -1229,16 +1433,20 @@ function showCallingArgumentConflicts(p, problems, context, stack): ErrorType {
 //======================================================================
 //======================================================================
 
-function showTypeConflicts(p, problems, context, stack, arg?): ErrorType {
+function showTypeConflicts(p, problems: (ITypeProblem | IShapeProblem)[], context, stack, arg?): ErrorType {
   // display the path we took to get here
   let spacer = ''
   let lastTargetType
   let lastSourceType
-  const { maxs, links, interfaces } = context.notes
+  const { notes, hasPlaceholder } = context
+  const { maxs, links, interfaces } = notes
   let errorType: ErrorType = ErrorType.none
-  const { sourceIsArray, targetIsArray } = problems[0]
-  const showTypeProperties =
-    !!problems[0].mismatch && !!problems[0].misslike && !!problems[0].missing && !!problems[0].reversed
+  const showTypeProperties = isShapeProblem(problems[0])
+  let sourceIsArray: boolean | undefined = false
+  let targetIsArray: boolean | undefined = false
+  if (!showTypeProperties) {
+    ;({ sourceIsArray, targetIsArray } = problems[0] as ITypeProblem)
+  }
 
   //======================================================================
   //========= FIRST WE DISPLAY THE PARENT TYPES THAT GOT US HERE ================
@@ -1255,7 +1463,6 @@ function showTypeConflicts(p, problems, context, stack, arg?): ErrorType {
     let color: string = 'green'
     if (isNeverType(sourceType) || isNeverType(targetType)) {
       errorType = ErrorType.mustDeclare
-      color = 'magenta'
     } else if (sourceIsArray !== targetIsArray) {
       errorType = sourceIsArray ? ErrorType.arrayToNonArray : ErrorType.nonArrayToArray
       color = 'red'
@@ -1277,7 +1484,7 @@ function showTypeConflicts(p, problems, context, stack, arg?): ErrorType {
     if (inx === 0) {
       const row: any = {
         target: `${min(maxs, targetInfo?.fullText)}`,
-        source: `${min(maxs, sourceInfo?.fullText)}`,
+        source: `${min(maxs, !hasPlaceholder ? sourceInfo?.fullText : '')}`,
       }
       if (arg) {
         row.arg = `\u25B6 ${arg}`
@@ -1329,8 +1536,8 @@ function showTypeConflicts(p, problems, context, stack, arg?): ErrorType {
     const originalSpace = spacer
     if (showTypes) spacer += '  '
     problems.forEach((problem) => {
-      const { mismatch, misslike, matched, optional, otheropt, unchecked } = problem
-      let { missing, reversed } = problem
+      const { mismatch, misslike, matched, optional, optversed = [], unchecked } = problem as IShapeProblem
+      let { missing, misversed = [] } = problem as IShapeProblem
       const targetMap = (context.targetMap = getTypeMap(problem.targetInfo.type, context, misslike))
       const sourceMap = (context.sourceMap = getTypeMap(problem.sourceInfo.type, context, misslike))
       const sourcePropProblems: { missing: any[]; mismatch: any[]; misslike: any[] } | undefined =
@@ -1366,7 +1573,7 @@ function showTypeConflicts(p, problems, context, stack, arg?): ErrorType {
       if (showTypes || misslike.length > 0) {
         // show optionals too
         missing = [...missing, ...optional]
-        reversed = [...reversed, ...otheropt]
+        misversed = [...misversed, ...optversed]
       }
 
       // matched, unchecked
@@ -1415,7 +1622,7 @@ function showTypeConflicts(p, problems, context, stack, arg?): ErrorType {
       const missingArr: { source?: string; target?: string }[] = missing.map((propName) => {
         return { source: propName }
       })
-      reversed.forEach((propName, inx) => {
+      misversed.forEach((propName, inx) => {
         if (inx < missingArr.length) {
           missingArr[inx].target = propName
         } else {
@@ -1450,18 +1657,6 @@ function showTypeConflicts(p, problems, context, stack, arg?): ErrorType {
         sourcePropProblems.missing,
         context.missingInterfaceMaps
       )
-
-      if (misslike.length) {
-        errorType = ErrorType.misslike
-      } else if (missing.length && mismatch.length) {
-        errorType = ErrorType.both
-      } else if (missing.length) {
-        errorType = ErrorType.propMissing
-      } else if (missing.length || reversed.length) {
-        errorType = ErrorType.bothMissing
-      } else if (mismatch.length) {
-        errorType = ErrorType.propMismatch
-      }
 
       //======================================================================
       //========= DISPLAY TYPE PROPERTY CONFLICTS ================
@@ -1980,7 +2175,6 @@ function showNotes(problems, context) {
   if (isVerbose) {
     maxs.forEach((max) => console.log(max))
     interfaces.forEach((inter) => console.log(inter))
-    console.log('')
   }
 }
 
@@ -2045,6 +2239,7 @@ function getPropertyInfo(prop: ts.Symbol, context, type?: ts.Type, special?: str
 }
 
 function getTypeMap(type: ts.Type, context, special: string[]) {
+  if ((type as any).placeholderInfo) return (type as any).placeholderInfo
   const map = {}
   type.getProperties().forEach((prop) => {
     let info = {}
@@ -2149,30 +2344,23 @@ function andMore(interfaces, conflicts, { sourceInterfaceMap, targetInterfaceMap
 }
 
 function addNote(maxs: string[], note?: string) {
-  const num = String.fromCharCode('\u24B6'.charCodeAt(0) + maxs.length)
-  maxs.push(`${chalk.bold(num)} ${note}`)
-  return num
+  if (isVerbose) {
+    const num = String.fromCharCode('\u24B6'.charCodeAt(0) + maxs.length)
+    maxs.push(`${chalk.bold(num)} ${note}`)
+    return num
+  }
+  return ''
 }
 
 function addLink(links: string[], spacer, property, link?: string, color?: string) {
-  const num = String.fromCharCode('\u2460'.charCodeAt(0) + links.length)
-  let fullNote = `${chalk.bold(num)}${spacer}${property.split(':')[0] + ': '}${link}`
-  switch (color) {
-    case 'red':
-      fullNote = chalk.red(fullNote)
-      break
-    case 'yellow':
-      fullNote = chalk.yellow(fullNote)
-      break
-    case 'magenta':
-      fullNote = chalk.magenta(fullNote)
-      break
-    case 'cyan':
-      fullNote = chalk.cyan(fullNote)
-      break
+  if (isVerbose) {
+    const num = String.fromCharCode('\u2460'.charCodeAt(0) + links.length)
+    let fullNote = `${chalk.bold(num)}${spacer}${property.split(':')[0] + ': '}${link}`
+    if (color) fullNote = chalk[color](fullNote)
+    links.push(fullNote)
+    return num
   }
-  links.push(fullNote)
-  return num
+  return ''
 }
 
 function isSimpleType(type: ts.Type | ts.TypeFlags) {
@@ -2276,6 +2464,38 @@ function getNodeDeclartion(node: ts.Node | ts.Identifier, cache) {
   const declarationMap = cache.blocksToDeclarations[getNodeBlockId(node)]
   const varName = node.getText()
   return declarationMap && varName && declarationMap[varName] ? declarationMap[varName] : node
+}
+
+// if there's multiple problems, find a union type, find the one with the most overlap
+function filterProblems(typeProblem: ITypeProblem, shapeProblems: IShapeProblem[]) {
+  let problems: any[] = []
+  if (shapeProblems.length) {
+    problems = shapeProblems
+    if (shapeProblems.length > 1) {
+      // if any miss likes, just use those
+      problems = shapeProblems.filter(({ misslike }) => misslike.length > 0)
+      if (problems.length === 0) {
+        // sort problem with the most overlap for the smallest # of props
+        shapeProblems.sort((a, b) => {
+          if (a.overlap !== b.overlap) {
+            return b.overlap - a.overlap
+          }
+          return a.total - b.total
+        })
+        const top = shapeProblems[0]
+        if (
+          top.overlap / (top.total - top.optional.length) > 0.5 ||
+          (top.optversed && top.overlap / (top.total - top.optversed.length) > 0.5)
+        ) {
+          problems = [top]
+        }
+      }
+      // if no good overlap, show all the types, let the user decide
+    }
+  } else {
+    problems = [typeProblem]
+  }
+  return problems
 }
 
 function isFunctionLikeKind(kind: ts.SyntaxKind) {
