@@ -15,8 +15,8 @@ let isVerbose = false
 const MAX_SHOWN_PROP_MISMATCH = 6
 const MAX_COLUMN_WIDTH = 80
 
-// type mismatch errors we ignore
-const ignoreTheseErrors = [6133, 2304]
+// errors we ignore
+const ignoreTheseErrors = [6133, 2304, 2448, 2454]
 
 //======================================================================
 //======================================================================
@@ -129,6 +129,32 @@ function cacheNodes(sourceFile: ts.SourceFile) {
       return cache.typeIdToType[id]
     },
   }
+
+  // function createIntrinsicType(kind, intrinsicName, objectFlags) {
+  //   if (objectFlags === void 0) { objectFlags = 0; }
+  //   var type = createType(kind);
+  //   type.intrinsicName = intrinsicName;
+  //   type.objectFlags = objectFlags;
+  //   return type;
+  // }
+  // function Type(checker, flags) {
+  //   this.flags = flags;
+  //   if (ts.Debug.isDebugging || ts.tracing) {
+  //       this.checker = checker;
+  //   }
+  // }
+  // targetType: TypeObject {checker: 1
+
+  //   > checker: {getNodeCount: f, getId
+  //   flags: 8
+  //   id: 14
+
+  //   > immediateBaseConstraint: Type0bji
+  //   intrinsicName: 'number'
+
+  //   objectFlags: 0
+
+  //   typeArguments: a f O fIn
 
   function mapNodes(node: ts.Node) {
     // STORE BY START OF NODE WHICH IS UNIQUE
@@ -2023,7 +2049,7 @@ function whenProblemIsInExternalLibrary({ context, suggest }) {
       getNodeLink(context.errorNode),
       [
         '// eslint-disable-next-line @typescript-eslint/ban-ts-comment',
-        `// @ts-ignore: Fixed required in ${externalLibs}`,
+        `// @ts-expect-error: Fixed required in ${externalLibs}`,
       ]
     )
     context.captured = false // TODO isVerbose
@@ -2681,7 +2707,7 @@ if (tsconfigPath) {
   const tsconfigFile = ts.readConfigFile(tsconfigPath, ts.sys.readFile)
   options = ts.parseJsonConfigFileContent(tsconfigFile.config, ts.sys, path.dirname(tsconfigPath)).options
 }
-isVerbose = true
+// isVerbose = true
 //options.isolatedModules = false
 console.log('starting...')
 const program = ts.createProgram(fileNames, options)
