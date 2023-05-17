@@ -46,11 +46,15 @@ enum ErrorType {
   mustDeclare = 12,
 }
 
-interface IInfo {
+interface IPlaceholder {
   isPlaceholder?: boolean
 }
+interface IPlaceholderInfo extends IPlaceholder {
+  // when comparing with a placeholder (source) what key in target are we comparing
+  placeholderTargetKey?: string
+}
 
-interface ITypeInfo extends IInfo {
+interface ITypeInfo extends IPlaceholderInfo {
   typeText: string
   typeId?: number
 }
@@ -368,11 +372,15 @@ function createPropertyAccessTargetAndSourceToCompare(targetNode: ts.Node, sourc
     nodeLink: getNodeLink(targetNode),
   }
 
+  const nodeText = getText(sourceNode)
+  const typeText = 'unknown'
   const placeholderInfo = {
-    nodeText: getText(sourceNode),
-    typeText: 'unknown',
+    nodeText,
+    typeText,
     nodeLink: getNodeLink(sourceNode),
     node: sourceNode,
+    fullText: getFullName(nodeText, typeText),
+    placeholderTargetKey: nodeText, //will be missing in target but that's the point
   }
 
   context = {
@@ -477,11 +485,15 @@ function findAssignmentTargetAndSourceToCompare(targetNode: ts.Node, sourceNode:
       }
 
       // ex: [key: string]: string
+      const nodeText = `[key: ${indexTypeText}]`
+      const typeText = 'any'
       const placeholderInfo = {
-        nodeText: `[key: ${indexTypeText}]`,
-        typeText: 'any',
+        nodeText,
+        typeText,
         nodeLink: getNodeLink(sourceNode),
         node: sourceNode,
+        fullText: getFullName(nodeText, typeText),
+        placeholderTargetKey: nodeText, //will be missing in target but that's the point
       }
 
       context = {
@@ -1122,25 +1134,9 @@ const simpleUnionPropTypeMatch = (firstPropType, secondPropType) => {
 
 // when the source doesn't exist but we need something to compare target with
 function compareWithPlaceholder(targetInfo, placeholderInfo, context) {
-  const { nodeText, nodeLink, typeText, node } = placeholderInfo
-  const fullText: string = getFullName(nodeText, typeText)
-
-  // will become source prop map
-  const sourceInfo = {
-    nodeText,
-    typeText,
-    fullText,
-    nodeLink,
-  }
-
-  const problem: ITypeProblem = {
-    sourceInfo,
-    targetInfo,
-  }
-
-  let stack
+  let stack: { sourceInfo: any; targetInfo: any }[]
   if (context.targetNode.kind === ts.SyntaxKind.PropertyAccessExpression) {
-    stack = getPlaceholderStack(targetInfo, sourceInfo, context, true)
+    stack = getPlaceholderStack(targetInfo, placeholderInfo, context)
   } else {
     stack = [
       {
@@ -1151,21 +1147,22 @@ function compareWithPlaceholder(targetInfo, placeholderInfo, context) {
       },
     ]
   }
-  context.propertyProblem = {
-    key: nodeText,
-    propertyInfo: sourceInfo,
-  }
-  const problems = [problem]
+  const problems = [
+    {
+      sourceInfo: placeholderInfo,
+      targetInfo,
+    },
+  ]
   return { problems, stack }
 }
 
 // pad the stack so that inner properties line up
-function getPlaceholderStack(targetInfo, sourceInfo, context, comparingWithPlaceholder?: boolean) {
+function getPlaceholderStack(targetInfo, sourceInfo, context) {
   const sourceNode = context.sourceNode
   const targetNode = context.targetNode
   context.sourceDeclared = getNodeDeclartion(sourceNode, context.cache)
   let targetDeclared = getNodeDeclartion(targetNode, context.cache)
-  let stack: { targetInfo: INodeInfo; sourceInfo: INodeInfo | IInfo }[] = []
+  let stack: { targetInfo: INodeInfo; sourceInfo: INodeInfo | IPlaceholderInfo }[] = []
   let nodeText = targetNode.getText()
   let path = nodeText.split(/\W+/)
   if (path.length > 1) {
@@ -1173,11 +1170,12 @@ function getPlaceholderStack(targetInfo, sourceInfo, context, comparingWithPlace
     path = path.reverse()
     let propName = (nodeText = path.shift())
 
-    // when comparing with a real variable, save tne potential problem
-    if (!comparingWithPlaceholder) {
-      context.propertyProblem = {
-        key: nodeText,
-        propertyInfo: sourceInfo,
+    // when comparing with a real variable on sourcw side
+    // remember what target key to compare against
+    if (!sourceInfo.placeholderTargetKey) {
+      context.placeholderInfo = {
+        ...sourceInfo,
+        placeholderTargetKey: nodeText,
       }
     }
 
@@ -1222,7 +1220,6 @@ function getPlaceholderStack(targetInfo, sourceInfo, context, comparingWithPlace
       propName = nodeText
     } while (path.length)
 
-    context.usingPlaceholderStack = true
     stack = stack.reverse()
     return stack
   } else {
@@ -1614,6 +1611,7 @@ function showConflicts(p, problems: (ITypeProblem | IShapeProblem)[], context, s
       unchecked = [],
       contextual = [],
       reversed = { missing: [], contextual: [] },
+      sourceInfo,
     } = problem as IShapeProblem
     let targetType
     let sourceType
@@ -1624,12 +1622,13 @@ function showConflicts(p, problems: (ITypeProblem | IShapeProblem)[], context, s
       targetMap = context.targetMap = getTypeMap(targetType, context, misslike)
       sourceType = context.cache.getType(problem.sourceInfo.typeId)
       sourceMap = context.sourceMap = getTypeMap(sourceType, context, misslike)
-    } else if (context.propertyProblem) {
-      const { key, propertyInfo } = context.propertyProblem
+    } else if (sourceInfo.placeholderTargetKey || context.placeholderInfo) {
+      const placeholderInfo = sourceInfo.placeholderTargetKey ? sourceInfo : context.placeholderInfo
+      const key = placeholderInfo.placeholderTargetKey
       const parentLayer = stack[stack.length - 1]
       targetType = context.cache.getType(parentLayer.targetInfo.typeId)
       targetMap = context.targetMap = getTypeMap(targetType, context, misslike)
-      sourceMap[key] = propertyInfo
+      sourceMap[key] = placeholderInfo
       const targetProp = targetMap[key]
       reversed.contextual = Object.keys(targetMap).filter((k) => k !== key)
       if (targetProp) {
@@ -2049,7 +2048,7 @@ function whenProblemIsInExternalLibrary({ context, suggest }) {
       getNodeLink(context.errorNode),
       [
         '// eslint-disable-next-line @typescript-eslint/ban-ts-comment',
-        `// @ts-expect-error: Fixed required in ${externalLibs}`,
+        `// @ts-expect-error: Fix required in ${externalLibs}`,
       ]
     )
     context.captured = false // TODO isVerbose
