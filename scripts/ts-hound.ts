@@ -44,6 +44,8 @@ enum ErrorType {
   both = 10,
   missingIndex = 11,
   mustDeclare = 12,
+  tooManyArgs = 13,
+  tooFewArgs = 14,
 }
 
 interface IPlaceholder {
@@ -133,32 +135,6 @@ function cacheNodes(sourceFile: ts.SourceFile) {
       return cache.typeIdToType[id]
     },
   }
-
-  // function createIntrinsicType(kind, intrinsicName, objectFlags) {
-  //   if (objectFlags === void 0) { objectFlags = 0; }
-  //   var type = createType(kind);
-  //   type.intrinsicName = intrinsicName;
-  //   type.objectFlags = objectFlags;
-  //   return type;
-  // }
-  // function Type(checker, flags) {
-  //   this.flags = flags;
-  //   if (ts.Debug.isDebugging || ts.tracing) {
-  //       this.checker = checker;
-  //   }
-  // }
-  // targetType: TypeObject {checker: 1
-
-  //   > checker: {getNodeCount: f, getId
-  //   flags: 8
-  //   id: 14
-
-  //   > immediateBaseConstraint: Type0bji
-  //   intrinsicName: 'number'
-
-  //   objectFlags: 0
-
-  //   typeArguments: a f O fIn
 
   function mapNodes(node: ts.Node) {
     // STORE BY START OF NODE WHICH IS UNIQUE
@@ -273,8 +249,8 @@ function findTargetAndSourceToCompare(code, errorNode: ts.Node, cache) {
 
   // compiler might throw multiple errors for the same problem
   // only process one of them
+  let hadPayoff = false
   if (!cache.processedNodes.has(node.getStart())) {
-    cache.processedNodes.add(node.getStart())
     const context: {
       code: any
       node: ts.Node
@@ -296,7 +272,8 @@ function findTargetAndSourceToCompare(code, errorNode: ts.Node, cache) {
       //================= FUNCTION RETURN  ==========================
       //======================================================================
       case ts.SyntaxKind.ReturnStatement:
-        return findReturnStatementTargetAndSourceToCompare(node, undefined, context)
+        hadPayoff = findReturnStatementTargetAndSourceToCompare(node, undefined, context)
+        break
 
       //======================================================================
       //===============  FUNCTION CALL ======================================
@@ -306,10 +283,11 @@ function findTargetAndSourceToCompare(code, errorNode: ts.Node, cache) {
         if (children[0].kind === ts.SyntaxKind.PropertyAccessExpression) {
           const objectName = children[0].getFirstToken()
           if (objectName) {
-            context.targetDeclared = getNodeDeclartion(objectName, cache)
+            context.targetDeclared = getNodeDeclaration(objectName, cache)
           }
         }
-        return findFunctionCallTargetAndSourceToCompare(node, errorNode, context)
+        hadPayoff = findFunctionCallTargetAndSourceToCompare(node, errorNode, context)
+        break
       }
       //======================================================================
       //=========== PROPERTY ACCESS (object.property)  =================================
@@ -317,7 +295,8 @@ function findTargetAndSourceToCompare(code, errorNode: ts.Node, cache) {
       case ts.SyntaxKind.PropertyAccessExpression: {
         const sourceNode = children[children.length - 1]
         const targetNode = children[0]
-        return createPropertyAccessTargetAndSourceToCompare(targetNode, sourceNode, context)
+        hadPayoff = createPropertyAccessTargetAndSourceToCompare(targetNode, sourceNode, context)
+        break
       }
       //======================================================================
       //=========== DECLARATION  =================================
@@ -325,7 +304,8 @@ function findTargetAndSourceToCompare(code, errorNode: ts.Node, cache) {
       case ts.SyntaxKind.VariableDeclaration: {
         const sourceNode = children[children.length - 1]
         const targetNode = children[0]
-        return findAssignmentTargetAndSourceToCompare(targetNode, sourceNode, context)
+        hadPayoff = findAssignmentTargetAndSourceToCompare(targetNode, sourceNode, context)
+        break
       }
       //======================================================================
       //============== ASSIGNMENT  =================================
@@ -337,15 +317,21 @@ function findTargetAndSourceToCompare(code, errorNode: ts.Node, cache) {
         const target = children[0]
         const source = children[2]
         if (source && target) {
-          return findAssignmentTargetAndSourceToCompare(target, source, context)
+          hadPayoff = findAssignmentTargetAndSourceToCompare(target, source, context)
         }
+        break
       }
       default:
         console.log(`For error ${code}, missing support for kind === ${node.kind}`)
         console.log(getNodeLink(node))
-        return false
+        hadPayoff = false
+        break
     }
   }
+  if (hadPayoff) {
+    cache.processedNodes.add(node.getStart())
+  }
+  return hadPayoff
 }
 
 //======================================================================
@@ -372,8 +358,18 @@ function createPropertyAccessTargetAndSourceToCompare(targetNode: ts.Node, sourc
     nodeLink: getNodeLink(targetNode),
   }
 
+  // try to get the type of the accessor using the original expression (a = b)
+  let typeText = 'unknown'
+  const expression = ts.findAncestor(context.errorNode, (node) => {
+    return !!node && node.kind === ts.SyntaxKind.ExpressionStatement
+  })
+  if (expression) {
+    const statement = expression as ts.ExpressionStatement
+    const children = statement.expression.getChildren()
+    typeText = typeToStringLike(checker.getTypeAtLocation(children[2]))
+  }
+
   const nodeText = getText(sourceNode)
-  const typeText = 'unknown'
   const placeholderInfo = {
     nodeText,
     typeText,
@@ -628,129 +624,181 @@ function findReturnStatementTargetAndSourceToCompare(node: ts.Node, containerTyp
 //======================================================================
 //======================================================================
 //======================================================================
+interface ICallSide {
+  name: string
+  type?: ts.Type
+  typeText?: string
+  typeId: number
+  link?: string
+}
+
+interface ICallPair {
+  caller?: ICallSide
+  callee?: ICallSide
+}
 
 function findFunctionCallTargetAndSourceToCompare(node: ts.Node, errorNode, context) {
   const children = node.getChildren()
   // signature of function being called
+  let tooManyArguments = false
   const type = checker.getTypeAtLocation(children[0])
   const signature = checker.getSignaturesOfType(type, 0)[0]
   if (signature) {
-    const parameters = signature.getParameters()
-    // args that are being passed
-    const args = children[2].getChildren().filter((node) => node.kind !== ts.SyntaxKind.CommaToken)
+    // create calling pairs
     // calling arguments are the sources
     // function parameters are the targets
-    const callPrototypeMatchUps = args.map((arg, inx) => {
-      const sourceType = checker.getTypeAtLocation(arg)
-      const prototypeMatchup: {
-        argName: string
-        targetType?: ts.Type
-        targetTypeText?: string
-        targetTypeId: number
-        sourceType: ts.Type
-        sourceTypeText: string
-        sourceTypeId: number
-        paramName?: string
-        paramLink?: string
-      } = {
-        argName: getText(arg),
-        sourceType,
-        sourceTypeText: typeToStringLike(sourceType),
-        sourceTypeId: context.cache.saveType(sourceType),
-        targetTypeId: 0,
+    const args = children[2].getChildren().filter((node) => node.kind !== ts.SyntaxKind.CommaToken)
+    const params = signature.getParameters()
+    const callingPairs = Array.from(Array(Math.max(args.length, params.length)).keys()).map((inx) => {
+      let sourceInfo, targetInfo
+      if (inx < args.length) {
+        const arg = args[inx]
+        const name = getText(arg)
+        const type = checker.getTypeAtLocation(arg)
+        const typeText = typeToStringLike(type)
+        sourceInfo = {
+          name,
+          type,
+          typeText,
+          typeId: context.cache.saveType(type),
+          fullText: getFullName(name, typeText),
+          nodeLink: getNodeLink(node),
+        }
       }
-      if (inx < parameters.length) {
-        const param = parameters[inx]
-        prototypeMatchup.paramLink = getNodeLink(param.valueDeclaration)
-        prototypeMatchup.targetType = checker.getTypeOfSymbolAtLocation(param, node)
-        prototypeMatchup.targetTypeText = typeToStringLike(prototypeMatchup.targetType)
-        prototypeMatchup.targetTypeId = prototypeMatchup.targetType['id']
-        context.cache.typeIdToType[prototypeMatchup.targetTypeId] = context.cache.saveType(prototypeMatchup.targetType)
-        prototypeMatchup.paramName = param.escapedName as string
+      if (inx < params.length) {
+        const param = params[inx]
+        let name = param.escapedName as string
+        let isOpt
+        let type = checker.getTypeOfSymbolAtLocation(param, node)
+        if (type['types']) {
+          const types = type['types'].filter((t) => {
+            if (t.flags & ts.TypeFlags.Undefined) {
+              isOpt = true
+              return false
+            }
+            return true
+          })
+          if (types.length > 1) {
+            type['types'] = types
+          } else {
+            type = types[0]
+          }
+        } else {
+          isOpt = !!(param.valueDeclaration && param.valueDeclaration.flags)
+        }
+        const typeText = typeToStringLike(type)
+        if (isOpt) name = name + '?'
+        targetInfo = {
+          name,
+          type,
+          typeText,
+          typeId: context.cache.saveType(type),
+          fullText: getFullName(name, typeText),
+          nodeLink: getNodeLink(param.valueDeclaration),
+          isOpt,
+        }
       }
-      return prototypeMatchup
+      // too many arguments
+      tooManyArguments = !targetInfo
+      return { sourceInfo, targetInfo }
     })
+
     // individual array items mismatch the target
     const errorIndex = args.findIndex((node) => node === errorNode)
     // for each arg, compare its type to call parameter type
     let hadPayoff = false
     // calling arguments are the sources
     // function parameters are the targets
-    callPrototypeMatchUps.some(
-      ({ targetType, targetTypeText, sourceType, sourceTypeText, argName, paramName, paramLink }, inx) => {
-        const sourceInfo = {
-          nodeText: argName,
-          typeText: sourceTypeText,
-          typeId: context.cache.saveType(sourceType),
-          fullText: getFullName(argName, sourceTypeText),
-          nodeLink: getNodeLink(node),
+    callingPairs.some(({ sourceInfo, targetInfo }, inx) => {
+      // number of arguments mismatch
+      if (!sourceInfo || !targetInfo) {
+        if (!targetInfo || (!sourceInfo && !targetInfo.isOpt)) {
+          const func = getNodeDeclaration(children[0], context.cache)
+          const pathContext = {
+            ...context,
+            callingPairs,
+            errorIndex,
+            callMismatch: true,
+            tooFewArguments: !sourceInfo,
+            tooManyArguments,
+            sourceLink: getNodeLink(node),
+            targetLink: getNodeLink(func),
+            sourceTitle: 'Caller',
+            targetTitle: 'Callee',
+          }
+          theBigPayoff(undefined, pathContext, [
+            {
+              sourceInfo: sourceInfo || {},
+              targetInfo: targetInfo || {},
+            },
+          ])
+          hadPayoff = true
         }
+        return true
+      }
 
-        // if argument is an Array, see if we're passing an array literal and compare each object literal type
-        if (isArrayType(sourceType)) {
-          const arrayNode = ts.findAncestor(args[inx], (node) => {
-            return !!node && node.kind === ts.SyntaxKind.VariableDeclaration
-          })
-          if (arrayNode) {
-            const arrayItems = context.cache.arrayItemsToTarget[arrayNode.getStart()]
-            if (arrayItems) {
-              findArrayItemTargetAndSourceToCompare(arrayItems, sourceType, sourceInfo, context)
-              hadPayoff = context.hadPayoff
-              return hadPayoff // stops on first conflict just like typescript
-            }
+      // if argument is an Array, see if we're passing an array literal and compare each object literal type
+      if (isArrayType(sourceInfo.type)) {
+        const arrayNode = ts.findAncestor(args[inx], (node) => {
+          return !!node && node.kind === ts.SyntaxKind.VariableDeclaration
+        })
+        if (arrayNode) {
+          const arrayItems = context.cache.arrayItemsToTarget[arrayNode.getStart()]
+          if (arrayItems) {
+            findArrayItemTargetAndSourceToCompare(arrayItems, sourceInfo.type, sourceInfo, context)
+            hadPayoff = context.hadPayoff
+            return hadPayoff // stops on first conflict just like typescript
           }
         }
-
-        const targetInfo = {
-          nodeText: paramName,
-          typeText: targetTypeText,
-          typeId: context.cache.saveType(targetType),
-          fullText: getFullName(paramName, targetTypeText),
-          nodeLink: paramLink,
-        }
-
-        // individual array items mismatch the target
-        const pathContext = {
-          ...context,
-          callPrototypeMatchUps,
-          errorIndex,
-          callMismatch: true,
-          prefix: 'The calling argument type',
-          sourceLink: getNodeLink(node),
-          targetLink: paramLink,
-          sourceTitle: 'Caller',
-          targetTitle: 'Callee',
-          hadPayoff: false,
-        }
-        const remaining = callPrototypeMatchUps.length - inx - 1
-        if (remaining) {
-          pathContext.remaining = remaining === 1 ? `one argument` : `${remaining} arguments`
-        }
-        if (hadPayoff) {
-          console.log('\n\n')
-        }
-        // calling arguments are the sources
-        // function parameters are the targets
-        compareTypes(
-          targetType,
-          sourceType,
-          [
-            {
-              sourceInfo,
-              targetInfo,
-            },
-          ],
-          pathContext
-        )
-        hadPayoff = pathContext.hadPayoff
-        return hadPayoff // stops on first conflict just like typescript
       }
-    )
+
+      // individual array items mismatch the target
+      const pathContext = {
+        ...context,
+        callingPairs,
+        errorIndex,
+        callMismatch: true,
+        tooManyArguments,
+        prefix: 'The calling argument type',
+        sourceLink: sourceInfo.nodeLink,
+        targetLink: targetInfo?.nodeLink,
+        sourceTitle: 'Caller',
+        targetTitle: 'Callee',
+        hadPayoff: false,
+      }
+      const remaining = callingPairs.length - inx - 1
+      if (remaining) {
+        pathContext.remaining = remaining === 1 ? `one argument` : `${remaining} arguments`
+      }
+      if (hadPayoff) {
+        console.log('\n\n')
+      }
+      // calling arguments are the sources
+      // function parameters are the targets
+      const targetType = targetInfo.type
+      const sourceType = sourceInfo.type
+      delete targetInfo.type
+      delete sourceInfo.type
+      compareTypes(
+        targetType,
+        sourceType,
+        [
+          {
+            sourceInfo,
+            targetInfo,
+          },
+        ],
+        pathContext
+      )
+      hadPayoff = pathContext.hadPayoff
+      return hadPayoff // stops on first conflict just like typescript
+    })
     return hadPayoff
   } else {
     console.log(`For error ${context.code}, missing signature for ${typeToString(type)}`)
     console.log(getNodeLink(node))
     console.log('\n\n')
+    return false
   }
 }
 
@@ -1160,8 +1208,8 @@ function compareWithPlaceholder(targetInfo, placeholderInfo, context) {
 function getPlaceholderStack(targetInfo, sourceInfo, context) {
   const sourceNode = context.sourceNode
   const targetNode = context.targetNode
-  context.sourceDeclared = getNodeDeclartion(sourceNode, context.cache)
-  let targetDeclared = getNodeDeclartion(targetNode, context.cache)
+  context.sourceDeclared = getNodeDeclaration(sourceNode, context.cache)
+  let targetDeclared = getNodeDeclaration(targetNode, context.cache)
   let stack: { targetInfo: INodeInfo; sourceInfo: INodeInfo | IPlaceholderInfo }[] = []
   let nodeText = targetNode.getText()
   let path = nodeText.split(/\W+/)
@@ -1398,6 +1446,14 @@ function showTable(problems, context, stack) {
       prefix = 'Object'
       specs = `has ${chalk.yellow('mismatched')} and ${chalk.red('missing')} properties`
       break
+    case ErrorType.tooManyArgs:
+      prefix = 'Too'
+      specs = `${chalk.red('many')} calling arguments`
+      break
+    case ErrorType.tooFewArgs:
+      prefix = 'Too'
+      specs = `${chalk.red('few')} calling arguments`
+      break
   }
 
   console.log(`TS${code}: ${prefix} ${specs}`)
@@ -1419,15 +1475,17 @@ function showTable(problems, context, stack) {
 //======================================================================
 function showCallingArgumentConflicts(p, problems, context, stack): ErrorType {
   let errorType: ErrorType = ErrorType.none
-  context.callPrototypeMatchUps.forEach(
-    ({ argName, paramName, sourceTypeText, targetTypeText, sourceTypeId, targetTypeId }, inx) => {
-      const sourceType = context.cache.getType(sourceTypeId)
-      const targetType = context.cache.getType(targetTypeId)
+  context.callingPairs.forEach(({ sourceInfo, targetInfo }, inx) => {
+    if (sourceInfo && targetInfo) {
+      const { typeId: sourceTypeId, typeText: sourceTypeText, fullText: sourceFullText } = sourceInfo
+      const { typeId: targetTypeId, typeText: targetTypeText, fullText: targetFullText } = targetInfo
+      const sourceType = (sourceInfo.type = context.cache.getType(sourceTypeId))
+      const targetType = (targetInfo.type = context.cache.getType(targetTypeId))
       if (inx !== context.errorIndex) {
         let skipRow = false
         let color = 'green'
-        if (sourceTypeText !== targetTypeText && !isLikeTypes(sourceType, targetType)) {
-          if (context.errorIndex === -1 && errorType === ErrorType.none) {
+        if (sourceTypeText !== targetTypeText) {
+          if (context.errorIndex === -1 && errorType === ErrorType.none && problems) {
             errorType = showConflicts(p, problems, context, stack, inx + 1)
             skipRow = true
           }
@@ -1454,8 +1512,8 @@ function showCallingArgumentConflicts(p, problems, context, stack): ErrorType {
             {
               arg: inx + 1,
               parm: inx + 1,
-              source: `${min(context.notes.maxs, getFullName(argName, sourceTypeText))}`,
-              target: `${min(context.notes.maxs, getFullName(paramName, targetTypeText))}`,
+              source: `${min(context.notes.maxs, sourceFullText)}`,
+              target: `${min(context.notes.maxs, targetFullText)}`,
             },
             { color }
           )
@@ -1464,8 +1522,31 @@ function showCallingArgumentConflicts(p, problems, context, stack): ErrorType {
         // FOR THE ARGUMENT THAT HAD THE ACTUAL COMPILER ERROR, SHOW ITS FULL TYPE CONFLICT
         errorType = showConflicts(p, problems, context, stack, inx + 1)
       }
+    } else if (targetInfo) {
+      const isOpt = targetInfo.isOpt
+      if (!isOpt) errorType = ErrorType.tooFewArgs
+      p.addRow(
+        {
+          arg: `${isOpt ? '' : `\u25B6 ${inx + 1}`}`,
+          parm: inx + 1,
+          target: `${min(context.notes.maxs, targetInfo.fullText)}`,
+          source: '',
+        },
+        { color: isOpt ? 'green' : 'red' }
+      )
+    } else {
+      errorType = ErrorType.tooManyArgs
+      p.addRow(
+        {
+          arg: `\u25B6 ${inx + 1}`,
+          parm: '',
+          source: `${min(context.notes.maxs, sourceInfo.fullText)}`,
+          target: '',
+        },
+        { color: 'red' }
+      )
     }
-  )
+  })
   return errorType
 }
 
@@ -1991,22 +2072,30 @@ function whenSimpleTypesDontMatch({ stack, context, suggest }) {
 // ===============================================================================
 function whenCallArgumentsDontMatch({ context, suggest }) {
   if (context.captured) return
-  const { callPrototypeMatchUps } = context
-  if (callPrototypeMatchUps && callPrototypeMatchUps.length > 1) {
+  const { callingPairs } = context
+  if (callingPairs && callingPairs.length > 1) {
     // see if arg types are mismatched
     const indexes: number[] = []
     if (
       // see if args are called in wrong order
-      callPrototypeMatchUps.every(({ targetTypeText }) => {
-        return (
-          callPrototypeMatchUps.findIndex(({ sourceTypeText }, inx) => {
-            if (targetTypeText === sourceTypeText && !indexes.includes(inx + 1)) {
-              indexes.push(inx + 1)
-              return true
-            }
-            return false
-          }) !== -1
-        )
+      callingPairs.every(({ targetInfo }) => {
+        if (targetInfo) {
+          const targetTypeText = targetInfo.typeText
+          return (
+            callingPairs.findIndex(({ sourceInfo }, inx) => {
+              if (sourceInfo) {
+                const sourceTypeText = sourceInfo.typeText
+                if (targetTypeText === sourceTypeText && !indexes.includes(inx + 1)) {
+                  indexes.push(inx + 1)
+                  return true
+                }
+              }
+              return false
+            }) !== -1
+          )
+        } else {
+          return false
+        }
       })
     ) {
       suggest(
@@ -2566,7 +2655,7 @@ function getNodeBlockId(node: ts.Node) {
   return block ? block.getStart() : 0
 }
 
-function getNodeDeclartion(node: ts.Node | ts.Identifier, cache) {
+function getNodeDeclaration(node: ts.Node | ts.Identifier, cache) {
   const declarationMap = cache.blocksToDeclarations[getNodeBlockId(node)]
   const varName = node.getText()
   return declarationMap && varName && declarationMap[varName] ? declarationMap[varName] : node
