@@ -18,30 +18,83 @@ import StyledNode from './StyledNode'
 import StyledEdge from './StyledEdge'
 import { IAcmTableAction } from '../../../../../../ui-components/AcmTable'
 import { Cluster } from '../../../../../../resources'
-import { number } from 'yup'
 
-let decorations = []
-decorations = decorations.filter(({ options }) => {
+let ddd = ['dd']
+const decorations: any[] = []
+ddd = decorations.filter(({ options }) => {
   return (
     options.className.startsWith('squiggly-') ||
     (!!options?.glyphMarginClassName && (options?.inlineClassName !== 'protectedDecoration' || !hasErrors))
   )
 })
+console.log(ddd)
+fu5nc(4, 5, 6, 7)
+
+fu5nc(4, 'sdgfd', 6, 7)
+
+fu5nc(4)
 
 interface IResource {
   ww: number
   xx: string
 }
 
-const sds: {
+const data: {
   ww: number
-  ee: IResource
+  datum: IResource
 } = {
   ww: 0,
-  ee: { ww: 0, xx: 'sdfa' },
+  datum: { ww: 0, xx: 'sdfa' },
 }
-const fkff: IResource = sds
-console.log(sds, fkff)
+const fkff: IResource = data
+console.log(data, fkff)
+
+interface Test {
+  prop?: {
+    ltr: string
+    ese: number
+  }
+}
+interface Ting {
+  prop?: {
+    ltr: number
+    wht: number
+  }
+}
+
+fffb!.prop!.ltr = '345'
+
+interface ISomeObject {
+  firstKey: string
+  secondKey: string
+  thirdKey: string
+  key: string
+  //numbertf: number
+  //[key: number]: ISomeObject
+}
+
+//[key: string]: string;
+const someObject: ISomeObject = {
+  firstKey: 'firstValue',
+  secondKey: 'secondValue',
+  thirdKey: 'thirdValue',
+  key: 'the-key',
+  fourthKey: 2453,
+}
+
+// eslint-disable-next-line @typescript-eslint/no-inferrable-types
+const key: string = 'secondKey'
+
+const secondValue: string = someObject[9]
+
+const qqq = {
+  rr: 0,
+  ff: 34,
+}
+qqq.ff.ww = 5
+qqq.ff.tt.dd = 5
+
+console.log(qqq)
 
 const hasAnyAutomationTemplates = false
 let sdrgsed: IAcmTableAction<Cluster>[]
@@ -108,7 +161,7 @@ function testing(): IAcmTableAction<Cluster>[] {
             variant: 'bulk-action',
           },
         ]
-      : [{}]),
+      : []),
     {
       id: 'selectChannels',
       title: t('managed.selectChannel.plural'),
@@ -206,26 +259,28 @@ const tstFunc = (par: any) => {
 }
 
 const fds = fu5nc(tstFunc, 4, 3)
+const fdjs = fu5nc('sdfgs', 4, 3)
 
-// const defaultComponentFactory: ComponentFactory = (
-//   kind: ModelKind
-// ): ComponentType<{
-//   element: GraphElement // & ElementModel
-//   // sourceDragRef?: ConnectDragSource
-//   // targetDragRef?: ConnectDragSource
-// }> => {
-//   switch (kind) {
-//     case ModelKind.graph:
-//       return withPanZoom()(GraphComponent)
-//     case ModelKind.node:
-//       return withDragNode()(withSelection()(StyledNode))
-//     case ModelKind.edge:
-//       return StyledEdge
-//     default:
-//       return undefined
-//   }
-//   return 33
-// }
+const defaultComponentFactory: ComponentFactory = (
+  kind: ModelKind
+): ComponentType<{
+  element: GraphElement // & ElementModel
+  // sourceDragRef?: ConnectDragSource
+  // targetDragRef?: ConnectDragSource
+}> => {
+  switch (kind) {
+    case ModelKind.graph:
+      return withPanZoom()(GraphComponent)
+    case ModelKind.node:
+      return withDragNode()(withSelection()(StyledNode))
+    case ModelKind.edge:
+      return StyledEdge
+    default:
+      return undefined
+  }
+  return 33
+}
+
 const defaultComponentFactory: ComponentFactory = (kind: ModelKind) =>
   // : ComponentType<{
   //   element: GraphElement // & ElementModel
@@ -253,7 +308,7 @@ const que = () => {
   sdfsd = 'rge'
 }
 
-export const fu5nc = (ddd: number, ff: string, gg: number) => {
+export const fu5nc = (ff: string, ddd: (par: any) => void, gg?: number) => {
   console.log(ddd, ff, gg)
 }
 
@@ -268,18 +323,6 @@ arr.push({
   title: 'Arg',
   alignment: 'right',
 })
-interface Test {
-  prop?: {
-    ltr: string
-    ese: number
-  }
-}
-interface Ting {
-  prop?: {
-    ltr: number
-    wht: number
-  }
-}
 
 let fdfg = 'ffdd'
 let fs = 4
@@ -287,7 +330,7 @@ fs = 8
 fdfg = fs
 console.log(fdfg)
 
-export const fu7nc = (ddd: number, ff: Ting, gg: number) => {
+export const fu7nc = (ddd: number, ff: Ting, gg: any) => {
   console.log(ddd, ff, gg)
 }
 
@@ -298,9 +341,10 @@ let fffw: Test
 fu7nc(44, fffw, 33)
 
 let fffg: Ting
-const fff: Test[] = [fffg]
+let fff: Test[] = [fffg]
 
 const fffd: Test = [fffg]
+fff = 34
 console.log(fff)
 
 let sdfe: number = 4
