@@ -335,7 +335,7 @@ export const fu7nc = (ddd: number, ff: Ting, gg: any) => {
 }
 
 const sdf: Ting = {}
-fu7nc(33, 33, sdf)
+fu7nc('33', 33, sdf)
 
 let fffw: Test
 fu7nc(44, fffw, 33)
