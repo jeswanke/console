@@ -326,9 +326,11 @@ arr.push({
 
 let fdfg = 'ffdd'
 let fs = 4
+const rrr = '44'
 fs = 8
 fdfg = fs
 console.log(fdfg)
+fs = rrr
 
 export const fu7nc = (ddd: number, ff: Ting, gg: any) => {
   console.log(ddd, ff, gg)
