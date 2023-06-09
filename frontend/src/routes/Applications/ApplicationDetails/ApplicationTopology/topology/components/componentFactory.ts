@@ -173,6 +173,11 @@ function testing(): IAcmTableAction<Cluster>[] {
   ]
 }
 
+const fffff = '3453'
+let asfsa = true
+asfsa = fffff
+console.log(asfsa)
+
 sdrgsed = []
 console.log(sdrgsed)
 
