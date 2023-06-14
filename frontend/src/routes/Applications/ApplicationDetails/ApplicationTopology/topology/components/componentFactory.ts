@@ -19,6 +19,11 @@ import StyledEdge from './StyledEdge'
 import { IAcmTableAction } from '../../../../../../ui-components/AcmTable'
 import { Cluster } from '../../../../../../resources'
 
+import { Ting, fu7nc } from './fu7nc'
+
+const sdf: Ting = {}
+fu7nc('33', 33, sdf)
+
 let ddd = ['dd']
 const decorations: any[] = []
 ddd = decorations.filter(({ options }) => {
@@ -53,12 +58,6 @@ interface Test {
   prop?: {
     ltr: string
     ese: number
-  }
-}
-interface Ting {
-  prop?: {
-    ltr: number
-    wht: number
   }
 }
 
@@ -336,13 +335,6 @@ fs = 8
 fdfg = fs
 console.log(fdfg)
 fs = rrr
-
-export const fu7nc = (ddd: number, ff: Ting, gg: any) => {
-  console.log(ddd, ff, gg)
-}
-
-const sdf: Ting = {}
-fu7nc('33', 33, sdf)
 
 let fffw: Test
 fu7nc(44, fffw, 33)
