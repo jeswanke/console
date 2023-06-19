@@ -21,6 +21,10 @@ import { Cluster } from '../../../../../../resources'
 
 import { Ting, fu7nc } from './fu7nc'
 
+let dsfa = true
+const eee = 'what'
+dsfa = eee
+
 const sdf: Ting = {}
 fu7nc('33', 33, sdf)
 
@@ -38,6 +42,23 @@ fu5nc(4, 5, 6, 7)
 fu5nc(4, 'sdgfd', 6, 7)
 
 fu5nc(4)
+interface ISomeObject {
+  firstKey: string
+  secondKey: string
+  thirdKey: string
+  key: string
+  //numbertf: number
+  //[key: number]: ISomeObject
+}
+
+//[key: string]: string;
+const someObject: ISomeObject = {
+  firstKey: 'firstValue',
+  secondKey: 'secondValue',
+  thirdKey: 'thirdValue',
+  key: 'the-key',
+  fourthKey: 2453,
+}
 
 interface IResource {
   ww: number
@@ -62,24 +83,6 @@ interface Test {
 }
 
 fffb!.prop!.ltr = '345'
-
-interface ISomeObject {
-  firstKey: string
-  secondKey: string
-  thirdKey: string
-  key: string
-  //numbertf: number
-  //[key: number]: ISomeObject
-}
-
-//[key: string]: string;
-const someObject: ISomeObject = {
-  firstKey: 'firstValue',
-  secondKey: 'secondValue',
-  thirdKey: 'thirdValue',
-  key: 'the-key',
-  fourthKey: 2453,
-}
 
 // eslint-disable-next-line @typescript-eslint/no-inferrable-types
 const key: string = 'secondKey'
@@ -317,10 +320,6 @@ export const fu5nc = (ff: string, ddd: (par: any) => void, gg?: number) => {
 }
 
 const arr = []
-
-let dsfa = true
-const eee = 'what'
-dsfa = eee
 
 arr.push({
   name: 'arg',
