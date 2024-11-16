@@ -84,15 +84,16 @@
         "--testNamePattern",
         "${jest.testNamePattern}",
         "--runTestsByPath",
-        "${jest.testFile}"
+        "${jest.testFile}",
+        "--testTimeout=6000000"
       ],
       "env": {
         "LAUNCH": "true"
       },
-      "cwd": "${workspaceFolder}/frontend",
+      "cwd": "${workspaceFolder}/backend",
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen",
-      "program": "${workspaceFolder}/frontend/node_modules/.bin/jest"
+      "program": "${workspaceFolder}/backend/node_modules/.bin/jest"
     }
   ]
 }

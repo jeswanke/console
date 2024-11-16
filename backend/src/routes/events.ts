@@ -114,6 +114,11 @@ export interface ResourceCache {
 export function initResourceCache(cache: ResourceCache) {
   resourceCache = cache
 }
+export function initEventsCache(events: IResource[]) {
+  for (const event of events) {
+    cacheResource(event)
+  }
+}
 
 export let resourceCache: ResourceCache = {}
 
@@ -270,6 +275,12 @@ async function listKubernetesObjects(options: IWatchOptions) {
       requests.push(request)
       const body = await request
       items = items.concat(body.items)
+      // const sdfg = body.items.slice(0, 1)[0]
+      // if (sdfg) {
+      //   console.log('-----------------' + options.kind + '----------------------')
+      //   delete sdfg.metadata['managedFields']
+      //   console.log(sdfg)
+      // }
       resourceVersion = body.metadata.resourceVersion
       _continue = body.metadata._continue ?? body.metadata.continue
     } finally {
