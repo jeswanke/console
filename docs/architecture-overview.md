@@ -32,6 +32,7 @@ A more comprehensive example:
 ├── package.json            <-- Scripts call ./start.sh.
 ├── playwright.config.ts    <-- The "Mixer" (Env + Presets + Projects).
 ├── start.sh                <-- Entrypoint: Auto-login, Version Detect, Test Runner.
+├── Jenkinsfile             <-- CI jenkinsfile
 ├── tsconfig.json           <-- Strict Mode & Path Aliases (@utils, @pages, etc).
 │
 ├── .github
