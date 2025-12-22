@@ -122,7 +122,7 @@ A more comprehensive example:
 
 ### 1. `/src/config` (The Control Center)
 
-**Purpose:** Manages how the test suite runs in different environments (Local vs. CI, ci, etc.).
+**Purpose:** Manages how the test suite runs in different environments (Local vs. CI, etc.).
 
 - **`presets.ts`**: Defines default values for different teams or regions.
   - Example: `AWS_US_EAST_1` preset might set `workerCount: 5`.
@@ -168,6 +168,18 @@ A more comprehensive example:
 
 **Rule:** Page Objects should not contain complex assertions. They should expose data or state for the test to assert on.
 
+```typescript
+// Bad - assertion in page object
+async verifyClusterExists(name: string) {
+    await expect(this.getClusterRow(name)).toBeVisible();
+}
+
+// Good - Expose data for test to assert
+getClusterRow(name: string) {
+    return this.page.locator(`tr:has-text("${name}")`);
+}
+```
+
 ### 5. `/src/lib` (Smart Logic)
 
 **Purpose:** Helper classes that contain "Business Logic" for testing, but aren't strictly UI or Backend.
@@ -186,6 +198,19 @@ A more comprehensive example:
 - **`data-helper.ts`**: Regex parsing, Date formatting.
 
 **Rule:** Code in utils should never import Playwright or the Config. It should be standard TypeScript/Node.js code.
+
+```typescript
+  // Bad - Playwright dependency in utils
+  import { Page } from '@playwright/test';
+
+  // Bad - Config dependency in utils
+  import { testConfig } from '../config';
+
+  // Good - Pure function
+  export function generateClusterName(prefix: string): string {
+    return `${prefix}-${Math.random().toString(36).substr(2, 9)}`;
+  }
+```
 
 ### 7. `/src/fixtures` (The Dependency Injection)
 
@@ -208,3 +233,25 @@ A more comprehensive example:
   - **Setup**: "Admin creates a policy."
   - **Action**: "Viewer logs in and views the policy."
   - **Assert**: "Viewer cannot see the delete button."
+
+### 9. Error Handling & Debugging
+
+**Purpose:** Consistent error handling and debugging strategies.
+
+- **Global Error Handlers**: Capture screenshots and logs on failure
+- **Retry Strategies**: Exponential backoff for flaky operations
+- **Debug Information**: Collect context for test failures
+- **Custom Assertions**: Domain-specific assertion messages
+
+**Rule:** Every page interaction should have proper error context.
+
+### 10. Performance & Scalability
+
+**Purpose:** Optimize test execution speed and reliability.
+
+- **Parallel Execution**: Worker configuration and test isolation
+- **Resource Management**: Cleanup and memory optimization
+- **Smart Waiting**: Avoid arbitrary timeouts
+- **API vs UI**: Use hybrid approach for setup/teardown
+
+**Rule:** Setup data via API, test interactions via UI.
