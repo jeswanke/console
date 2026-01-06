@@ -16,12 +16,12 @@ test.describe('Cluster List Page', () => {
   test('should allow searching for a non-existent cluster', async ({ clusterListPage, uniqueName }) => {
     await clusterListPage.goto();
 
-    // Search for a random unique name
+    // Search for a random unique name that won't exist
     await clusterListPage.searchCluster(uniqueName);
 
-    // Verify "No results found" or similar PatternFly message
-    // Note: In a real scenario, we'd add this locator to ClusterListPage
-    await expect(clusterListPage['page'].getByText('No results found')).toBeVisible();
+    // Verify empty state message
+    await clusterListPage.verifyNoResultsFound();
   });
 });
+
 

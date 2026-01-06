@@ -5,6 +5,13 @@ import { defineConfig, devices } from '@playwright/test';
  */
 export default defineConfig({
   testDir: './src/tests',
+  /* Clean up .auth/ before running tests */
+  globalSetup: require.resolve('./src/global-setup'),
+  /* Increase timeout for slow-loading console */
+  timeout: 60000,
+  expect: {
+    timeout: 10000,
+  },
   /* Run tests in files in parallel */
   fullyParallel: true,
   /* Fail the build on CI if you accidentally left test.only in the source code. */
@@ -17,9 +24,6 @@ export default defineConfig({
   reporter: 'html',
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
-    /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL: process.env.ACM_URL || 'https://localhost:3000',
-
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
@@ -27,12 +31,23 @@ export default defineConfig({
     ignoreHTTPSErrors: true,
   },
 
-  /* Configure projects for major browsers */
+  /* Configure projects */
   projects: [
+    // Setup project - authenticates once and saves state
+    { 
+      name: 'setup', 
+      testMatch: /.*\.setup\.ts/,
+    },
+
+    // Main test project - uses authenticated state
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      use: { 
+        ...devices['Desktop Chrome'],
+        // Use the authenticated state saved by setup
+        storageState: '.auth/user.json',
+      },
+      dependencies: ['setup'],
     },
   ],
 });
-

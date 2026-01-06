@@ -21,8 +21,21 @@ export abstract class BasePage {
   }
 
   async goto(path: string) {
+    // If path is relative and we're already on a page, use the current origin
+    // This ensures we navigate within the same domain after login
+    if (path.startsWith('/')) {
+      const currentUrl = this.page.url();
+      if (currentUrl && !currentUrl.startsWith('about:')) {
+        const origin = new URL(currentUrl).origin;
+        await this.page.goto(`${origin}${path}`);
+        await this.waitForLoad();
+        return;
+      }
+    }
+    
     await this.page.goto(path);
     await this.waitForLoad();
   }
 }
+
 
