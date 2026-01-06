@@ -7,10 +7,10 @@ export default defineConfig({
   testDir: './src/tests',
   /* Clean up .auth/ before running tests */
   globalSetup: require.resolve('./src/global-setup'),
-  /* Increase timeout for slow-loading console */
-  timeout: 60000,
+  /* Timeouts for slow-loading ACM console */
+  timeout: 60000,        // Per-test timeout
   expect: {
-    timeout: 10000,
+    timeout: 15000,      // Per-assertion timeout (ACM pages load slowly)
   },
   /* Run tests in files in parallel */
   fullyParallel: true,

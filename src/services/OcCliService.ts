@@ -1,9 +1,13 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
+
 const execPromise = promisify(exec);
 
+/**
+ * Service for executing OpenShift CLI (oc) commands.
+ */
 export class OcCliService {
-  async run(cmd: string) {
+  async run(cmd: string): Promise<string> {
     try {
       const { stdout } = await execPromise(cmd);
       return stdout.trim();
@@ -13,24 +17,18 @@ export class OcCliService {
     }
   }
 
-  async applyYaml(yamlPath: string) {
+  async applyYaml(yamlPath: string): Promise<string> {
     return this.run(`oc apply -f ${yamlPath}`);
   }
 
-  async getToken() {
-    try {
-      return await this.run('oc whoami -t');
-    } catch (error) {
-      throw new Error('Failed to get oc token. Are you logged in via "oc login"?');
-    }
+  async deleteYaml(yamlPath: string): Promise<string> {
+    return this.run(`oc delete -f ${yamlPath} --ignore-not-found`);
   }
 
-  async getConsoleUrl() {
-    return this.run('oc get route console -n openshift-console -o jsonpath="{.spec.host}"').then(host => `https://${host}`);
-  }
-
-  async getOAuthHost() {
-    return this.run('oc get route oauth-openshift -n openshift-authentication -o jsonpath="{.spec.host}"');
+  async getConsoleUrl(): Promise<string> {
+    const host = await this.run(
+      'oc get route console -n openshift-console -o jsonpath="{.spec.host}"'
+    );
+    return `https://${host}`;
   }
 }
-

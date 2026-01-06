@@ -12,6 +12,7 @@
     "baseUrl": ".",
     "paths": {
       "@config/*": ["src/config/*"],
+      "@constants/*": ["src/constants/*"],
       "@services/*": ["src/services/*"],
       "@components/*": ["src/components/*"],
       "@pages/*": ["src/pages/*"],

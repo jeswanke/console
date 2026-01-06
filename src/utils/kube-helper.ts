@@ -1,16 +1,14 @@
-export class KubeHelper {
-  /**
-   * Generates a safe Kubernetes resource name.
-   * @param prefix The prefix for the name (e.g., 'ci', 'test').
-   * @returns A string like 'ci-abc12'.
-   */
-  static generateSafeName(prefix: string): string {
-    const suffix = Math.random().toString(36).substring(2, 7);
-    return `${prefix}-${suffix}`;
-  }
+/**
+ * Helper utilities for Kubernetes resource management.
+ * Pure functions only - no Playwright or external dependencies.
+ */
 
-  static async sleep(ms: number) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-  }
+/**
+ * Generate a safe Kubernetes resource name with random suffix.
+ * @param prefix - Name prefix (e.g., 'ci', 'test')
+ * @returns Name like 'ci-abc12'
+ */
+export function generateSafeName(prefix: string): string {
+  const suffix = Math.random().toString(36).substring(2, 7);
+  return `${prefix}-${suffix}`;
 }
-
