@@ -19,7 +19,7 @@ import {
 } from '../Application.sharedmocks'
 import {
   getAppChildResources,
-  getAppSetRelatedResources,
+  getAppSetPlacementData,
   getArgoClusterList,
   getClusterCount,
   getClusterCountSearchLink,
@@ -297,9 +297,12 @@ describe('getAppChildResources', () => {
   })
 })
 
-describe('getAppSetRelatedResources', () => {
+describe('getAppSetPlacementData', () => {
   it('should get the related placement info', () => {
-    expect(getAppSetRelatedResources(mockApplicationSet0, [mockApplicationSet0])).toEqual(['fengappset2-placement', []])
+    expect(getAppSetPlacementData(mockApplicationSet0, [mockApplicationSet0], [])).toEqual([
+      'fengappset2-placement',
+      [],
+    ])
   })
 })
 

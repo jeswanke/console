@@ -400,31 +400,11 @@ function getArgoDestinationCluster(
   return clusterName
 }
 
-const appSetPlacementStr = [
-  'clusterDecisionResource',
-  'labelSelector',
-  'matchLabels',
-  'cluster.open-cluster-management.io/placement',
-]
-export function getAppSetRelatedResources(appSet: IResource, applicationSets: IApplicationSet[]) {
+export function getAppSetPlacementData(appSet: IApplicationSet, applicationSets: IApplicationSet[]) {
   const appSetsSharingPlacement: string[] = []
-  const currentAppSetGenerators = (appSet as IApplicationSet).spec?.generators
-  /* istanbul ignore next */
-  const currentAppSetPlacement = currentAppSetGenerators
-    ? (get(currentAppSetGenerators[0], appSetPlacementStr, { default: '' }) as string)
-    : undefined
-
-  /* istanbul ignore if */
-  if (!currentAppSetPlacement) {
-    return ['', []]
-  }
-
+  const currentAppSetPlacement = getPlacementNameFromAppSetSpec(appSet.spec as Record<string, unknown>)
   applicationSets.forEach((item) => {
-    const appSetGenerators = item.spec.generators
-    /* istanbul ignore next */
-    const appSetPlacement = appSetGenerators
-      ? (get(appSetGenerators[0], appSetPlacementStr, { default: '' }) as string)
-      : ''
+    const appSetPlacement = getPlacementNameFromAppSetSpec(item.spec as Record<string, unknown>)
     /* istanbul ignore if */
     if (
       item.metadata.name !== appSet.metadata?.name ||
@@ -435,8 +415,40 @@ export function getAppSetRelatedResources(appSet: IResource, applicationSets: IA
       }
     }
   })
-
   return [currentAppSetPlacement, appSetsSharingPlacement]
+}
+
+/**
+ * Get the placement name from an ApplicationSet spec by finding the generator
+ * that has clusterDecisionResource and reading its placement label.
+ */
+
+const appSetPlacementStr = [
+  'clusterDecisionResource',
+  'labelSelector',
+  'matchLabels',
+  'cluster.open-cluster-management.io/placement',
+]
+export function getPlacementNameFromAppSetSpec(spec: Record<string, unknown> | undefined): string {
+  if (!spec || typeof spec !== 'object') return ''
+  const generatorWithCDR = findObjectWithKey(spec, 'clusterDecisionResource')
+  if (!generatorWithCDR) return ''
+  return (get(generatorWithCDR, appSetPlacementStr, { default: '' }) as string) || ''
+}
+
+/**
+ * Recursively search an object for a property with the given key.
+ * Returns the first matching object that contains the key, or undefined.
+ */
+function findObjectWithKey(obj: unknown, key: string): Record<string, unknown> | undefined {
+  if (!obj || typeof obj !== 'object') return undefined
+  const record = obj as Record<string, unknown>
+  if (key in record) return record
+  for (const value of Object.values(record)) {
+    const found = findObjectWithKey(value, key)
+    if (found) return found
+  }
+  return undefined
 }
 
 export function createArgoStatusMap(searchResult: SearchResult, clusters: Cluster[]) {

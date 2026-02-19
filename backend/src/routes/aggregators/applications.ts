@@ -14,7 +14,7 @@ import { getSearchResults, ISearchResult, pingSearchAPI } from '../../lib/search
 import {
   addArgoQueryInputs,
   cacheArgoApplications,
-  getAppSetRelatedResources,
+  getAppSetPlacementData,
   polledArgoApplicationAggregation,
   getPushedAppSetMap,
 } from './applicationsArgo'
@@ -126,7 +126,7 @@ export interface ICompressedResource {
 export interface IUIData {
   clusterList: string[]
   appClusterStatuses?: ApplicationStatusMap[]
-  appSetRelatedResources: unknown
+  appSetPlacementData: [string, string[]]
   appSetApps: IResource[]
   appStatusByNameMap: Record<string, { health: { status: string }; sync: { status: string } }>
 }
@@ -343,9 +343,9 @@ export async function addUIData(items: ITransformedResource[]) {
       uidata: {
         clusterList: item?.transform?.[AppColumns.clusters] || [],
         appClusterStatuses: item?.transform?.[TransformColumns.statuses] || [],
-        appSetRelatedResources:
+        appSetPlacementData:
           item.kind === ApplicationSetKind
-            ? getAppSetRelatedResources(item, argoAppSets as IApplicationSet[])
+            ? getAppSetPlacementData(item as IApplicationSet, argoAppSets as IApplicationSet[])
             : ['', []],
         appSetApps:
           item.kind === ApplicationSetKind
