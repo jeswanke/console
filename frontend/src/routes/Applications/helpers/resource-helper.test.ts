@@ -297,15 +297,6 @@ describe('getAppChildResources', () => {
   })
 })
 
-describe('getAppSetPlacementData', () => {
-  it('should get the related placement info', () => {
-    expect(getAppSetPlacementData(mockApplicationSet0, [mockApplicationSet0], [])).toEqual([
-      'fengappset2-placement',
-      [],
-    ])
-  })
-})
-
 describe('getClusterCountSearchLink', () => {
   const resource = {
     apiVersion: 'apps/v1',

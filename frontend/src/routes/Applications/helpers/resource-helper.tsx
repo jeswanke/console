@@ -302,33 +302,6 @@ export const getEditLink = (params: {
   })}`
 }
 
-export const getAppSetRelatedResources = (appSet: IResource, applicationSets: ApplicationSet[]) => {
-  const appSetsSharingPlacement: string[] = []
-  const currentAppSetGenerators = (appSet as ApplicationSet).spec.generators
-  const currentAppSetPlacement = currentAppSetGenerators
-    ? _.get(currentAppSetGenerators[0], appSetPlacementStr, '')
-    : undefined
-
-  if (!currentAppSetPlacement) {
-    return ['', []]
-  }
-
-  applicationSets.forEach((item) => {
-    const appSetGenerators = item.spec.generators
-    const appSetPlacement = appSetGenerators ? _.get(appSetGenerators[0], appSetPlacementStr, '') : ''
-    if (
-      item.metadata.name !== appSet.metadata?.name ||
-      (item.metadata.name === appSet.metadata?.name && item.metadata.namespace !== appSet.metadata?.namespace)
-    ) {
-      if (appSetPlacement && appSetPlacement === currentAppSetPlacement && item.metadata.name) {
-        appSetsSharingPlacement.push(item.metadata.name)
-      }
-    }
-  })
-
-  return [currentAppSetPlacement, appSetsSharingPlacement]
-}
-
 export const getAppChildResources = (
   app: IResource,
   applications: Application[],
