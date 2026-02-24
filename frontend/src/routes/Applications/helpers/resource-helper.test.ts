@@ -10,16 +10,9 @@ import {
   ArgoApplicationKind,
 } from '../../../resources'
 import { mockPlacementRules } from '../../Governance/governance.sharedMocks'
-import {
-  mockApplication0,
-  mockApplications,
-  mockApplicationSet0,
-  mockChannels,
-  mockSubscriptions,
-} from '../Application.sharedmocks'
+import { mockApplication0, mockApplications, mockChannels, mockSubscriptions } from '../Application.sharedmocks'
 import {
   getAppChildResources,
-  getAppSetPlacementData,
   getArgoClusterList,
   getClusterCount,
   getClusterCountSearchLink,

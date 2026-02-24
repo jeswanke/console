@@ -1,26 +1,22 @@
 /* Copyright Contributors to the Open Cluster Management project */
 import { getKubeResources } from '../events'
 import { addOCPQueryInputs, addSystemQueryInputs, cacheOCPApplications } from './applicationsOCP'
-import { ApplicationSetKind, IApplicationSet, IResource, SearchResult } from '../../resources/resource'
+import { Cluster, IApplicationSet, IResource, SearchResult } from '../../resources/resource'
 import { FilterSelections, ISortBy } from '../../lib/pagination'
 import { logger } from '../../lib/logger'
 import {
   discoverSystemAppNamespacePrefixes,
   getApplicationsHelper,
+  getClusters,
   logApplicationCountChanges,
   transform,
 } from './utils'
 import { getSearchResults, ISearchResult, pingSearchAPI } from '../../lib/search'
-import {
-  addArgoQueryInputs,
-  cacheArgoApplications,
-  getAppSetPlacementData,
-  polledArgoApplicationAggregation,
-  getPushedAppSetMap,
-} from './applicationsArgo'
+import { addArgoQueryInputs, cacheArgoApplications, polledArgoApplicationAggregation } from './applicationsArgo'
 import { getGiganticApps } from '../../lib/gigantic'
 import { createDictionary, inflateApps } from '../../lib/compression'
 import { IWatchOptions } from '../../resources/watch-options'
+import { getUIData } from './uidata'
 
 export enum AppColumns {
   'name' = 0,
@@ -122,13 +118,6 @@ export interface ICompressedResource {
   compressed: Buffer
   transform?: Transform
   remoteClusters?: string[]
-}
-export interface IUIData {
-  clusterList: string[]
-  appClusterStatuses?: ApplicationStatusMap[]
-  appSetPlacementData: [string, string[]]
-  appSetApps: IResource[]
-  appStatusByNameMap: Record<string, { health: { status: string }; sync: { status: string } }>
 }
 
 export type ApplicationCache = {
@@ -334,27 +323,26 @@ export function sortApplications(sortBy: ISortBy, items: ICompressedResource[]) 
 
 // add data to the apps that can be used by the ui but
 // w/o downloading all the appsets, apps, etc
-export async function addUIData(items: ITransformedResource[]) {
+export async function addUIData(token: string, items: ITransformedResource[]): Promise<ITransformedResource[]> {
   const argoAppSets = await inflateApps(getApplicationsHelper(applicationCache, ['appset']))
-  const pushedAppSetMap = getPushedAppSetMap()
-  items = items.map((item) => {
-    return {
-      ...item,
-      uidata: {
-        clusterList: item?.transform?.[AppColumns.clusters] || [],
-        appClusterStatuses: item?.transform?.[TransformColumns.statuses] || [],
-        appSetPlacementData:
-          item.kind === ApplicationSetKind
-            ? getAppSetPlacementData(item as IApplicationSet, argoAppSets as IApplicationSet[])
-            : ['', []],
-        appSetApps:
-          item.kind === ApplicationSetKind
-            ? pushedAppSetMap[item.metadata.name]?.map((app) => app.metadata.name) || []
-            : [],
-      },
-    }
-  })
-  return items
+  const clusters: Cluster[] = await getClusters()
+  return Promise.all(
+    items.map(async (item) => {
+      const clusterList = (item?.transform?.[AppColumns.clusters] as string[]) || []
+      const appClusterStatuses = (item?.transform?.[TransformColumns.statuses] as ApplicationStatusMap[]) || []
+      return {
+        ...item,
+        uidata: await getUIData(
+          token,
+          item,
+          argoAppSets as IApplicationSet[],
+          clusters,
+          clusterList,
+          appClusterStatuses
+        ),
+      }
+    })
+  )
 }
 
 export async function searchLoop() {

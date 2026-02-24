@@ -35,8 +35,6 @@ import { getSubscriptionAnnotations, isLocalSubscription } from './subscriptions
 import AcmTimestamp from '../../../lib/AcmTimestamp'
 
 export const CHANNEL_TYPES = ['git', 'helmrepo', 'namespace', 'objectbucket']
-const appSetPlacementStr =
-  'clusterDecisionResource.labelSelector.matchLabels["cluster.open-cluster-management.io/placement"]'
 export const hostingSubAnnotationStr = 'apps.open-cluster-management.io/hosting-subscription'
 const hostingDeployableAnnotationStr = 'apps.open-cluster-management.io/hosting-deployable'
 

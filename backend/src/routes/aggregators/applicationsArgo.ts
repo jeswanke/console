@@ -6,7 +6,6 @@ import {
   ArgoApplicationApiVersion,
   ArgoApplicationKind,
   Cluster,
-  IApplicationSet,
   IResource,
   ISearchResource,
   SearchResult,
@@ -80,13 +79,13 @@ let placementDecisions: IResource[]
 // for PUSH APPSETS, APPS ARE ON HUB (kube) but pushed to anywhere (hub/cluster)
 // for PULL APPSETS, APPS ARE ONLY REMOTE (SEARCH api), but can be pulled into local
 
-// MAINTAINING A MAP OF PUSHED APPSETS AND THEIR APPS (from kube)
+// MAINTAINING A MAP OF APPSETS AND THEIR APPS (from kube)
 // we create this map by looping through all local argo apps, getting its owner reference appset name,
 // and adding it to the map with the appset name as the key and the app as a value array
-let pushedAppSetMap: Record<string, IArgoApplication[]> = {}
-let tempPushedAppSetMap: Record<string, IArgoApplication[]> = {}
-export function getPushedAppSetMap() {
-  return pushedAppSetMap || {}
+let appSetAppsMap: Record<string, IArgoApplication[]> = {}
+let tempAppSetAppsMap: Record<string, IArgoApplication[]> = {}
+export function getAppSetAppsMap() {
+  return appSetAppsMap || {}
 }
 
 // MAINTAINING A MAP OF PULLED APPSETS AND THEIR APPS (from search)
@@ -107,8 +106,8 @@ export function getAppStatusByNameMap() {
 
 /** Reset all Argo application module-level state. Used for test isolation. */
 export function resetArgoApplicationState() {
-  pushedAppSetMap = {}
-  tempPushedAppSetMap = {}
+  appSetAppsMap = {}
+  tempAppSetAppsMap = {}
   pulledAppSetMap = {}
   tempPulledAppSetMap = {}
   for (const key in appStatusByNameMap) {
@@ -229,7 +228,7 @@ export async function polledArgoApplicationAggregation(
 
   // filter out apps that belong to an appset
   if (kind === ApplicationKind) {
-    items = filterArgoApps(items, clusters, ocpArgoAppFilter, tempPushedAppSetMap)
+    items = filterArgoApps(items, clusters, ocpArgoAppFilter, tempAppSetAppsMap)
   }
 
   // add uidata transforms
@@ -259,8 +258,8 @@ export async function polledArgoApplicationAggregation(
     // the real one will be used while a new temp map is being created
     // this fixes the problem where the argo app moves to a new appset of the same name in a new cluster
     if (kind === ApplicationKind) {
-      pushedAppSetMap = tempPushedAppSetMap
-      tempPushedAppSetMap = {}
+      appSetAppsMap = tempAppSetAppsMap
+      tempAppSetAppsMap = {}
     }
   }
 }
@@ -269,7 +268,7 @@ function filterArgoApps(
   items: IResource[],
   clusters: Cluster[],
   ocpAppSetFilter: Set<string>,
-  pushedAppSetMap: Record<string, IResource[]>
+  appSetAppsMap: Record<string, IResource[]>
 ) {
   return items.filter((app) => {
     const argoApp = app as IArgoAppLocalResource
@@ -288,9 +287,9 @@ function filterArgoApps(
       return true
     }
     const appSetName = get(argoApp, ['metadata', 'ownerReferences', '0', 'name']) as string
-    let apps = pushedAppSetMap[appSetName]
+    let apps = appSetAppsMap[appSetName]
     if (!apps) {
-      apps = pushedAppSetMap[appSetName] = []
+      apps = appSetAppsMap[appSetName] = []
     }
     const inx = apps.findIndex((itm) => itm.metadata.uid === app.metadata.uid)
     if (inx !== -1) {
@@ -398,57 +397,6 @@ function getArgoDestinationCluster(
     }
   }
   return clusterName
-}
-
-export function getAppSetPlacementData(appSet: IApplicationSet, applicationSets: IApplicationSet[]) {
-  const appSetsSharingPlacement: string[] = []
-  const currentAppSetPlacement = getPlacementNameFromAppSetSpec(appSet.spec as Record<string, unknown>)
-  applicationSets.forEach((item) => {
-    const appSetPlacement = getPlacementNameFromAppSetSpec(item.spec as Record<string, unknown>)
-    /* istanbul ignore if */
-    if (
-      item.metadata.name !== appSet.metadata?.name ||
-      (item.metadata.name === appSet.metadata?.name && item.metadata.namespace !== appSet.metadata?.namespace)
-    ) {
-      if (appSetPlacement && appSetPlacement === currentAppSetPlacement && item.metadata.name) {
-        appSetsSharingPlacement.push(item.metadata.name)
-      }
-    }
-  })
-  return [currentAppSetPlacement, appSetsSharingPlacement]
-}
-
-/**
- * Get the placement name from an ApplicationSet spec by finding the generator
- * that has clusterDecisionResource and reading its placement label.
- */
-
-const appSetPlacementStr = [
-  'clusterDecisionResource',
-  'labelSelector',
-  'matchLabels',
-  'cluster.open-cluster-management.io/placement',
-]
-export function getPlacementNameFromAppSetSpec(spec: Record<string, unknown> | undefined): string {
-  if (!spec || typeof spec !== 'object') return ''
-  const generatorWithCDR = findObjectWithKey(spec, 'clusterDecisionResource')
-  if (!generatorWithCDR) return ''
-  return (get(generatorWithCDR, appSetPlacementStr, { default: '' }) as string) || ''
-}
-
-/**
- * Recursively search an object for a property with the given key.
- * Returns the first matching object that contains the key, or undefined.
- */
-function findObjectWithKey(obj: unknown, key: string): Record<string, unknown> | undefined {
-  if (!obj || typeof obj !== 'object') return undefined
-  const record = obj as Record<string, unknown>
-  if (key in record) return record
-  for (const value of Object.values(record)) {
-    const found = findObjectWithKey(value, key)
-    if (found) return found
-  }
-  return undefined
 }
 
 export function createArgoStatusMap(searchResult: SearchResult, clusters: Cluster[]) {
