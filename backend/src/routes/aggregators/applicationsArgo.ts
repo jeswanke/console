@@ -6,6 +6,7 @@ import {
   ArgoApplicationApiVersion,
   ArgoApplicationKind,
   Cluster,
+  IApplicationSet,
   IResource,
   ISearchResource,
   SearchResult,
@@ -399,6 +400,45 @@ function getArgoDestinationCluster(
   return clusterName
 }
 
+const appSetPlacementStr = [
+  'clusterDecisionResource',
+  'labelSelector',
+  'matchLabels',
+  'cluster.open-cluster-management.io/placement',
+]
+export function getAppSetPlacementData(appSet: IResource, applicationSets: IApplicationSet[]) {
+  const appSetsSharingPlacement: string[] = []
+  const currentAppSetGenerators = (appSet as IApplicationSet).spec?.generators
+  /* istanbul ignore next */
+  const currentAppSetPlacement = currentAppSetGenerators
+    ? (get(currentAppSetGenerators[0], appSetPlacementStr, { default: '' }) as string)
+    : undefined
+
+  /* istanbul ignore if */
+  if (!currentAppSetPlacement) {
+    return ['', []]
+  }
+
+  applicationSets.forEach((item) => {
+    const appSetGenerators = item.spec.generators
+    /* istanbul ignore next */
+    const appSetPlacement = appSetGenerators
+      ? (get(appSetGenerators[0], appSetPlacementStr, { default: '' }) as string)
+      : ''
+    /* istanbul ignore if */
+    if (
+      item.metadata.name !== appSet.metadata?.name ||
+      (item.metadata.name === appSet.metadata?.name && item.metadata.namespace !== appSet.metadata?.namespace)
+    ) {
+      if (appSetPlacement && appSetPlacement === currentAppSetPlacement && item.metadata.name) {
+        appSetsSharingPlacement.push(item.metadata.name)
+      }
+    }
+  })
+
+  return [currentAppSetPlacement, appSetsSharingPlacement]
+}
+
 export function createArgoStatusMap(searchResult: SearchResult, clusters: Cluster[]) {
   const argoClusterStatusMap: ApplicationClusterStatusMap = {}
   const statuses2IDMap = new WeakMap<ApplicationStatuses, { appName: string; uids: string[] }>()
@@ -472,3 +512,16 @@ export function createArgoStatusMap(searchResult: SearchResult, clusters: Cluste
 
   return argoClusterStatusMap
 }
+
+// export function getPlacementDecisionClusters(resource: IApplicationSet, placementDecisions: IResource[]) {
+//   const placementName = getPlacementNameFromAppSetSpec(resource.spec)
+//   if (!placementName) {
+//     return []
+//   }
+//   const clusterSet = new Set<string>()
+//   // const placement = placementDecisions?.find((placementDecision: IResource) => {
+//   //   const labels = placementDecision.metadata.labels
+//   //   return labels?.['cluster.open-cluster-management.io/placement'] === placementName
+//   // })
+//   return Array.from(clusterSet)
+// }

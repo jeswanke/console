@@ -13,7 +13,7 @@ import {
   addUIData,
 } from './aggregators/applications'
 import { requestAggregatedStatuses } from './aggregators/statuses'
-import { requestAggregatedUIData } from './aggregators/uidata'
+import { requestAggregatedUIData } from './aggregators/appSetData'
 import { IResource } from '../resources/resource'
 import { IWatchOptions } from '../resources/watch-options'
 

@@ -391,7 +391,8 @@ export default function ApplicationDetailsPage() {
             recoilStates,
             cluster,
             apiVersion,
-            clusters
+            clusters,
+            localHubName
           )
           if (!application) {
             setApplicationNotFound(true)

@@ -51,7 +51,7 @@ export interface IResultStatuses {
 export enum SupportedAggregate {
   applications = 'applications',
   statuses = 'statuses',
-  uidata = 'uidata',
+  appSetData = 'uidata',
 }
 
 const defaultListResponse: IResultListView = {
@@ -207,7 +207,7 @@ export async function fetchAggregate(
       switch (aggregate) {
         case SupportedAggregate.applications:
           return res.data as IResultListView
-        case SupportedAggregate.uidata:
+        case SupportedAggregate.appSetData:
           return res.data as IUIData
       }
     })

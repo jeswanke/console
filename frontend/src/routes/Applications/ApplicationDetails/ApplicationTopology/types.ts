@@ -128,7 +128,7 @@ export interface ApplicationModel {
   isAppSet: boolean
   isOCPApp: boolean
   isFluxApp: boolean
-  isAppSetPullModel: boolean
+  isAppSetPullModel?: boolean
   relatedPlacement?: Placement
   clusterList?: string[]
   appSetApps?: AppSetApplication[]

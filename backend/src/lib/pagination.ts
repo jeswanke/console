@@ -57,7 +57,7 @@ export function paginate(
   getItems: () => Promise<ICompressedResource[]>,
   filterItems: (filters: FilterSelections, items: ICompressedResource[]) => ICompressedResource[],
   sortItems: (sort: ISortBy, items: ICompressedResource[]) => ICompressedResource[],
-  addUIData: (token: string, items: ITransformedResource[]) => Promise<ITransformedResource[]>
+  addUIData: (items: ITransformedResource[]) => Promise<ITransformedResource[]>
 ): void {
   const chucks: string[] = []
   req.on('data', (chuck: string) => {
@@ -139,7 +139,7 @@ export function paginate(
     )) as unknown as ITransformedResource[]
 
     // add data required by ui
-    authorizedItems = await addUIData(token, authorizedItems)
+    authorizedItems = await addUIData(authorizedItems)
 
     // remove the transform work attribute
     authorizedItems = authorizedItems.map(({ transform, remoteClusters, ...keepAttrs }) => keepAttrs)

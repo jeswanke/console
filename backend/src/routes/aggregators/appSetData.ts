@@ -45,6 +45,42 @@ export function requestAggregatedUIData(req: Http2ServerRequest, res: Http2Serve
       res.end(JSON.stringify({ error: 'Invalid request body' }))
       return
     }
+
+    // if (app) {
+    //   // Recursively find any object with clusterDecisionResource within app.spec
+    //   const generatorWithCDR = findObjectWithKey(safeGet(app, 'spec', {}), 'clusterDecisionResource')
+    //   placementName = safeGet(
+    //     generatorWithCDR,
+    //     'clusterDecisionResource.labelSelector.matchLabels["cluster.open-cluster-management.io/placement"]',
+    //     ''
+    //   )
+
+    //   placement = recoilStates.placementDecisions?.find((placementDecision: PlacementDecision) => {
+    //     const labels = placementDecision.metadata.labels as Record<string, string>
+    //     return labels?.['cluster.open-cluster-management.io/placement'] === placementName
+    //   })
+
+    //   const decisionOwnerReference = safeGet(placement, 'metadata.ownerReferences', undefined) as
+    //     | Array<{ kind?: string; name?: string; namespace?: string }>
+    //     | undefined
+
+    //   if (decisionOwnerReference && decisionOwnerReference[0]) {
+    //     const owner0 = decisionOwnerReference[0]
+    //     relatedPlacement = recoilStates.placements.find(
+    //       (resource: any) =>
+    //         resource.kind === owner0.kind &&
+    //         resource.metadata.name === owner0.name &&
+    //         resource.metadata.namespace === namespace
+    //     )
+    //   }
+
+    //   if (
+    //     safeGet(app, 'spec.template.metadata.annotations["apps.open-cluster-management.io/ocm-managed-cluster"]')
+    //   ) {
+    //     isAppSetPullModel = true
+    //   }
+    // }
+
     const argoAppSets = await inflateApps(getApplicationsHelper(applicationCache, ['appset']))
     const clusters: Cluster[] = await getClusters()
     const result: IUIData = await getUIData(token, resource, argoAppSets, clusters)
