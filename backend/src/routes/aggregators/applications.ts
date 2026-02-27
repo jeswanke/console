@@ -123,13 +123,6 @@ export interface ICompressedResource {
   transform?: Transform
   remoteClusters?: string[]
 }
-export interface IUIData {
-  clusterList: string[]
-  appClusterStatuses?: ApplicationStatusMap[]
-  appSetRelatedResources: unknown
-  appSetApps: IResource[]
-  appStatusByNameMap: Record<string, { health: { status: string }; sync: { status: string } }>
-}
 
 export type ApplicationCache = {
   resources?: ICompressedResource[]

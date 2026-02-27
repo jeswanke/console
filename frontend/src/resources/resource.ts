@@ -48,6 +48,12 @@ export interface IUIData {
 export interface IUIResource extends IResource {
   uidata: IUIData
 }
+export interface IAppSetData extends IUIData {
+  appStatusByNameMap: Record<string, { health: { status: string }; sync: { status: string } }>
+  isAppSetPullModel: boolean
+  isDeploying: boolean
+}
+
 export interface ResourceList<Resource extends IResource> {
   kind: string
   items?: Resource[]

@@ -8,16 +8,15 @@ import {
   ArgoApplicationApiVersion,
   ArgoApplicationKind,
   IResource,
-  Placement,
   PlacementDecision,
   Subscription,
 } from '../../../../../resources'
 import { getResource } from '../../../../../resources/utils'
 import { fleetResourceRequest } from '../../../../../resources/utils/fleet-resource-request'
 import type { ApplicationModel, ManagedCluster, RecoilStates } from '../types'
-import { safeGet, safeSet } from '../utils'
+import { safeSet } from '../utils'
 import { getSubscriptionAnnotations, isLocalSubscription } from '../../../helpers/subscriptions'
-import { getSubscriptionApplication } from './applicationSubscription'
+import { addSubscriptionChannels } from './applicationSubscription'
 import { getArgoDestinationCluster } from './topologyArgo'
 import { Service } from '../../../../../resources'
 
@@ -37,30 +36,47 @@ export const getApplication = async (
   clusters?: ManagedCluster[],
   hubClusterName: string = 'local-cluster'
 ): Promise<ApplicationModel | undefined> => {
-  let app: Application | undefined
-  let model: ApplicationModel | undefined
-  let placement: PlacementDecision | undefined
-  let relatedPlacement: Placement | undefined
-
   // get application
   const apiVersion = apiversion || 'application.app.k8s.io' // defaults to ACM app
   const isAppSet = apiVersion === 'applicationset.argoproj.io'
+  const isArgoApp = apiVersion.indexOf('argoproj.io') > -1 && !isAppSet
   const isOCPApp = apiVersion === 'ocp'
   const isFluxApp = apiVersion === 'flux'
   const { applications } = recoilStates
+  let app: Application | undefined
+
+  let model: ApplicationModel = {
+    name,
+    namespace,
+    app,
+    isArgoApp,
+    isAppSet,
+    isOCPApp,
+    isFluxApp,
+  }
 
   ///////////////////////////////////////////
   //////// SUBSCRIPTION /////////////////////
   ///////////////////////////////////////////
+  // application is in recoil
   if (apiVersion === 'application.app.k8s.io') {
     app = applications.find((a: Application) => {
       return a?.metadata?.name === name && a?.metadata?.namespace === namespace
     })
+    if (app) {
+      ;(model as any).clusterList = getSubscriptionClusters(
+        app,
+        recoilStates.subscriptions ?? [],
+        recoilStates.placementDecisions ?? []
+      )
+      model = await addSubscriptionChannels(model as any, app, selectedChannel, recoilStates)
+    }
   }
 
   ///////////////////////////////////////////
   //////// ARGO APP SET /////////////////////
   ///////////////////////////////////////////
+  // appset data is in backend to prevent downloading lots of stuff
   // get argo app set
   if (!app && isAppSet) {
     // appset is not part of recoil
@@ -72,21 +88,40 @@ export const getApplication = async (
         namespace,
       },
     } as unknown as Application
+    // this stuff is from backend using polling (appsets too big)
+    const appSetData: any = await fetchAggregate(SupportedAggregate.appSetData, backendUrl, app)
+    const appSetClusters = (appSetData?.clusterList ?? []).flatMap((clusterName: string) => {
+      const c = (clusters ?? []).find((c) => c.name === clusterName)
+      return c
+        ? [
+            {
+              name: c.name,
+              namespace: c.namespace,
+              url: c.kubeApiServer,
+              status: c.status,
+              creationTimestamp: c.creationTimestamp,
+            },
+          ]
+        : []
+    })
+    Object.assign(model as any, {
+      ...appSetData,
+      appSetClusters,
+    })
   }
 
   ///////////////////////////////////////////
-  //////// ARGO APP /////////////////////////
+  //////// ARGO APP (SINGLE) /////////////////////////
   ///////////////////////////////////////////
-  // get argo
   if (!app && apiVersion === 'application.argoproj.io') {
     if (cluster) {
-      // get argo app definition from managed cluster
+      // need to get resource using ManagedClusterView
       app = await getRemoteArgoApp(cluster, 'application', ArgoApplicationApiVersion, name, namespace)
       if (app) {
         safeSet(app as object, 'status.cluster', cluster)
       }
     } else {
-      // argo app is not part of recoil
+      // get resource from local hub using kube
       app = (await getResource({
         apiVersion: ArgoApplicationApiVersion,
         kind: ArgoApplicationKind,
@@ -96,13 +131,14 @@ export const getApplication = async (
         },
       }).promise) as Application
     }
+    ;(model as any).clusterList = [getArgoCluster(app as any, clusters ?? [], hubClusterName)]
   }
 
   ///////////////////////////////////////////
   //////// OCP APP ///////////////////////////
   ///////////////////////////////////////////
-  // generate ocp app boiler plate
   if (!app && isOCPApp) {
+    // accessed only by search api--just add enough details here to create a query
     const clusterInfo = findCluster(clusters ?? [], cluster, false)
     app = {
       apiVersion: 'ocp',
@@ -114,12 +150,11 @@ export const getApplication = async (
       cluster: clusterInfo,
     } as unknown as Application
   }
-
   ///////////////////////////////////////////
   //////// FLUX APP //////////////////////////
   ///////////////////////////////////////////
-  // generate flux app boiler plate
   if (!app && isFluxApp) {
+    // accessed only by search api--just add enough details here to create a query
     const clusterInfo = findCluster(clusters ?? [], cluster, false)
     app = {
       apiVersion: 'flux',
@@ -132,57 +167,8 @@ export const getApplication = async (
     } as unknown as Application
   }
 
-  ///////////////////////////////////////////
-  //////// COLLECT APP RESOURCES ////////////
-  ///////////////////////////////////////////
-  // collect app resources
-  if (app) {
-    const type = getApplicationType(app as IResource)
-    model = {
-      name,
-      namespace,
-      app,
-      metadata: (app as any).metadata,
-      placement,
-      isArgoApp: safeGet(app, 'apiVersion', '').indexOf('argoproj.io') > -1 && !isAppSet,
-      isAppSet: isAppSet,
-      isOCPApp,
-      isFluxApp,
-      relatedPlacement,
-    }
-
-    if (type !== 'appset') {
-      ;(model as any).clusterList = getApplicationClusters(
-        app as IResource,
-        type,
-        recoilStates.subscriptions ?? [],
-        recoilStates.placementDecisions ?? [],
-        hubClusterName,
-        clusters ?? []
-      )
-      if (type === 'subscription') {
-        return await getSubscriptionApplication(model as any, app, selectedChannel, recoilStates)
-      }
-    } else {
-      const uidata: any = await fetchAggregate(SupportedAggregate.appSetData, backendUrl, app)
-      ;(model as any).clusterList = uidata?.clusterList
-      ;(model as any).appSetApps = uidata.appSetApps
-      ;(model as any).appStatusByNameMap = uidata.appStatusByNameMap
-      ;(model as any).appSetClusters = uidata.clusterList.reduce((list: any[], clusterName: string) => {
-        const _cluster = (clusters ?? []).find((c) => c.name === clusterName)
-        if (_cluster) {
-          list.push({
-            name: _cluster.name,
-            namespace: _cluster.namespace,
-            url: _cluster.kubeApiServer,
-            status: _cluster.status,
-            creationTimestamp: _cluster.creationTimestamp,
-          })
-        }
-        return list
-      }, [])
-    }
-  }
+  ;(model as any).app = app
+  ;(model as any).metadata = (app as any).metadata
   return model
 }
 
@@ -238,23 +224,8 @@ const getRemoteArgoApp = async (
   }
 }
 
-/**
- * Recursively search an object for a property with the given key.
- * Returns the first matching object that contains the key, or undefined.
- */
-export const findObjectWithKey = (obj: unknown, key: string): Record<string, unknown> | undefined => {
-  if (!obj || typeof obj !== 'object') return undefined
-  const record = obj as Record<string, unknown>
-  if (key in record) return record
-  for (const value of Object.values(record)) {
-    const found = findObjectWithKey(value, key)
-    if (found) return found
-  }
-  return undefined
-}
-
-function getSubscriptionCluster(
-  resource: IResource,
+function getSubscriptionClusters(
+  resource: Application,
   subscriptions: IResource[],
   placementDecisions: IResource[]
 ): string[] {
@@ -310,81 +281,5 @@ function getArgoCluster(
     hubClusterName,
     [] as Service[]
   )
-}
-export function getApplicationClusters(
-  resource: IResource,
-  type: string,
-  subscriptions: IResource[],
-  placementDecisions: IResource[],
-  hubClusterName: string,
-  clusters: ManagedCluster[] = []
-): string[] {
-  switch (type) {
-    case 'flux':
-    case 'openshift':
-    case 'openshift-default':
-      if (
-        typeof resource === 'object' &&
-        resource !== null &&
-        'status' in resource &&
-        resource.status &&
-        typeof resource.status === 'object' &&
-        'cluster' in resource.status
-      ) {
-        return [(resource.status as { cluster?: string }).cluster].filter(Boolean) as string[]
-      }
-      break
-    case 'argo':
-      if ('spec' in resource) {
-        return [getArgoCluster(resource as any, clusters, hubClusterName)]
-      }
-      break
-    case 'subscription':
-      return getSubscriptionCluster(resource, subscriptions, placementDecisions)
-  }
-  return [hubClusterName]
-}
-
-const fluxAnnotations = {
-  helm: ['helm.toolkit.fluxcd.io/name', 'helm.toolkit.fluxcd.io/namespace'],
-  git: ['kustomize.toolkit.fluxcd.io/name', 'kustomize.toolkit.fluxcd.io/namespace'],
-}
-
-export function getApplicationType(resource: IResource) {
-  if (resource.apiVersion === 'app.k8s.io/v1beta1') {
-    if (resource.kind === 'Application') {
-      return 'subscription'
-    }
-  } else if (resource.apiVersion === 'argoproj.io/v1alpha1') {
-    if (resource.kind === 'Application') {
-      return 'argo'
-    } else if (resource.kind === 'ApplicationSet') {
-      return 'appset'
-    }
-  } else if ('label' in resource) {
-    const isFlux = isFluxApplication(resource?.label as string)
-    if (isFlux) {
-      return 'flux'
-    } else if (isSystemApp(resource.metadata?.namespace)) {
-      return 'openshift-default'
-    }
-    return 'openshift'
-  }
-  return '-'
-}
-
-function isFluxApplication(label: string) {
-  let isFlux = false
-  Object.entries(fluxAnnotations).forEach(([, values]) => {
-    const [nameAnnotation, namespaceAnnotation] = values
-    if (label.includes(nameAnnotation) && label.includes(namespaceAnnotation)) {
-      isFlux = true
-    }
-  })
-  return isFlux
-}
-
-function isSystemApp(namespace?: string) {
-  return namespace?.startsWith('openshift-')
 }
 export default getApplication
