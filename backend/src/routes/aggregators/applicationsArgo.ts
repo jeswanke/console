@@ -512,16 +512,3 @@ export function createArgoStatusMap(searchResult: SearchResult, clusters: Cluste
 
   return argoClusterStatusMap
 }
-
-// export function getPlacementDecisionClusters(resource: IApplicationSet, placementDecisions: IResource[]) {
-//   const placementName = getPlacementNameFromAppSetSpec(resource.spec)
-//   if (!placementName) {
-//     return []
-//   }
-//   const clusterSet = new Set<string>()
-//   // const placement = placementDecisions?.find((placementDecision: IResource) => {
-//   //   const labels = placementDecision.metadata.labels
-//   //   return labels?.['cluster.open-cluster-management.io/placement'] === placementName
-//   // })
-//   return Array.from(clusterSet)
-// }

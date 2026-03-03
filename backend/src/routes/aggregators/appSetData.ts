@@ -9,18 +9,20 @@ import get from 'get-value'
 import { getHubClusterName, getKubeResources } from '../events'
 import { getApplicationClusters, getClusters } from './utils'
 interface IAppSetData {
+  // appset resource
+  appset: IResource
   // list of clusters this app is on
   clusterList: string[]
-  placement?: IPlacementDecision
-  relatedPlacement?: IResource
+  // placement decision for this appset
+  placementDecision?: IPlacementDecision
+  // placement for this appset
+  placement?: IResource
   // all apps that belong to this appset
   appSetApps: IResource[]
   // used in topology--for appsets -- shows status for each app in this appset
   appStatusByNameMap: Record<string, { health: { status: string }; sync: { status: string } }>
   // is this appset a pull model appset?
   isAppSetPullModel: boolean
-  // cached resource is out of date -- using fetched resource -- in topology, if set, speed up refresh
-  isDeploying: boolean
 }
 
 export function requestAggregatedAppSetData(req: Http2ServerRequest, res: Http2ServerResponse): void {
@@ -33,7 +35,6 @@ export function requestAggregatedAppSetData(req: Http2ServerRequest, res: Http2S
     if (!token) return unauthorized(req, res)
     const body = chucks.join()
     let appset: IApplicationSet
-    let isDeploying = false
     let isAppSetPullModel = false
     try {
       appset = JSON.parse(body) as IApplicationSet
@@ -62,8 +63,9 @@ export function requestAggregatedAppSetData(req: Http2ServerRequest, res: Http2S
     const clusters: Cluster[] = await getClusters()
     const localCluster = clusters.find((cls) => cls.name === hubClusterName)
     const clusterList: string[] = await getApplicationClusters(appset, 'appset', [], [], localCluster, clusters)
-    let placement: IPlacementDecision | undefined
-    let relatedPlacement: IResource | undefined
+    const isClusterListEmpty = clusterList.length === 0
+    let placement: IResource | undefined
+    let placementDecision: IPlacementDecision | undefined
     const placementName = getPlacementNameFromAppSetSpec(appset.spec as Record<string, unknown>)
     if (placementName) {
       const placements = await getKubeResources('Placement', 'cluster.open-cluster-management.io/v1beta1')
@@ -71,25 +73,32 @@ export function requestAggregatedAppSetData(req: Http2ServerRequest, res: Http2S
         'PlacementDecision',
         'cluster.open-cluster-management.io/v1beta1'
       )
-      placement = placementDecisions?.find((placementDecision: IPlacementDecision) => {
-        const labels = placementDecision.metadata.labels
+      placementDecision = placementDecisions?.find((p: IPlacementDecision) => {
+        const labels = p.metadata.labels
         return labels?.['cluster.open-cluster-management.io/placement'] === placementName
       })
+      if (isClusterListEmpty && placementDecision?.status?.decisions) {
+        for (const decision of placementDecision.status.decisions) {
+          const clusterName = decision.clusterName
+          if (clusterName && !clusterList.includes(clusterName)) {
+            clusterList.push(clusterName)
+          }
+        }
+      }
 
-      const decisionOwnerReference = get(placement, ['metadata', 'ownerReferences'], undefined) as
+      const decisionOwnerReference = get(placementDecision, ['metadata', 'ownerReferences'], undefined) as
         | Array<{ kind?: string; name?: string; namespace?: string }>
         | undefined
 
       if (decisionOwnerReference && decisionOwnerReference[0]) {
         const owner0 = decisionOwnerReference[0]
-        relatedPlacement = placements.find(
+        placement = placements.find(
           (resource: IResource) =>
             resource.kind === owner0.kind &&
             resource.metadata.name === owner0.name &&
             resource.metadata.namespace === appset.metadata.namespace
         )
       }
-      isDeploying = !!relatedPlacement
     }
     isAppSetPullModel = !!get(
       appset,
@@ -97,81 +106,18 @@ export function requestAggregatedAppSetData(req: Http2ServerRequest, res: Http2S
       { default: false }
     )
     const result: IAppSetData = {
+      appset,
       clusterList,
       placement,
-      relatedPlacement,
+      placementDecision,
       appSetApps,
       appStatusByNameMap,
       isAppSetPullModel,
-      isDeploying,
     }
     res.setHeader('Content-Type', 'application/json')
     res.end(JSON.stringify(result))
   })
 }
-
-// export async function getUIData(
-//   token: string,
-//   resource: IResource,
-//   argoAppSets: IResource[],
-//   clusters: Cluster[],
-//   clusterList?: string[],
-//   appClusterStatuses?: ApplicationStatusMap[]
-// ): Promise<IAppSetData> {
-//   const isAppList = appClusterStatuses !== undefined
-//   const type = getApplicationType(resource)
-
-//   // appsets have lots more data
-//   if (type === 'appset') {
-//     // for appList -- if clusterList is empty try to create list from a fetched version of resource
-//     // for topology -- always fetch the resource and create a fresh clusterList
-//     //    if (clusterList) {
-//     const resourcePath = resourceUrl(resource)
-//     try {
-//       resource = await jsonRequest(resourcePath, token)
-//       const placementDecisions = await getKubeResources(
-//         'PlacementDecision',
-//         'cluster.open-cluster-management.io/v1beta1'
-//       )
-//       const hubClusterName = getHubClusterName()
-//       const localCluster = clusters.find((cls) => cls.name === hubClusterName)
-//       const subscriptions = await getKubeResources('Subscription', 'apps.open-cluster-management.io/v1')
-//       clusterList = await getApplicationClusters(
-//         resource,
-//         type,
-//         subscriptions,
-//         placementDecisions,
-//         localCluster,
-//         clusters
-//       )
-//     } catch (error) {
-//       /* empty */
-//     }
-//     //   }
-//     const appSetApps = getAppSetAppsMap()[resource.metadata.name] || []
-//     const appSetPlacementData = getAppSetPlacementData(resource as IApplicationSet, argoAppSets as IApplicationSet[])
-//     if (isAppList) {
-//       // for app list -- use the cached appClusterStatuses
-//       return {
-//         clusterList: clusterList || [],
-//         appSetApps: appSetApps,
-//         appSetPlacementData: appSetPlacementData,
-//         appClusterStatuses: appClusterStatuses || [],
-//       }
-//     } else {
-//       // for topology -- use the fetched appStatusByNameMap
-//       return {
-//         clusterList: clusterList || [],
-//         appSetApps: appSetApps,
-//         appSetPlacementData: appSetPlacementData,
-//         appStatusByNameMap: getAppStatusByNameMap()[`${resource.metadata.namespace}/${resource.metadata.name}`] || {},
-//       }
-//     }
-//   }
-//   return {
-//     clusterList: clusterList || [],
-//   }
-// }
 
 const appSetPlacementStr = [
   'clusterDecisionResource',

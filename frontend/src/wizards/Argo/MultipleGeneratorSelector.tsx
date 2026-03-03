@@ -600,7 +600,7 @@ export function findGeneratorPathWithGenType(item: unknown, genType: string): st
  * Recursively search an object for a property with the given key.
  * Returns the first matching object that contains the key, or undefined.
  */
-export const findObjectWithKey = (obj: unknown, key: string): Record<string, unknown> | undefined => {
+const findObjectWithKey = (obj: unknown, key: string): Record<string, unknown> | undefined => {
   if (!obj || typeof obj !== 'object') return undefined
   const record = obj as Record<string, unknown>
   if (key in record) return record

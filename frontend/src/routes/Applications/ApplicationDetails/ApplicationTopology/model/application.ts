@@ -7,6 +7,7 @@ import {
   ApplicationSetKind,
   ArgoApplicationApiVersion,
   ArgoApplicationKind,
+  IAppSetData,
   IResource,
   PlacementDecision,
   Subscription,
@@ -89,7 +90,7 @@ export const getApplication = async (
       },
     } as unknown as Application
     // this stuff is from backend using polling (appsets too big)
-    const appSetData: any = await fetchAggregate(SupportedAggregate.appSetData, backendUrl, app)
+    const appSetData: IAppSetData = await fetchAggregate(SupportedAggregate.appSetData, backendUrl, app)
     const appSetClusters = (appSetData?.clusterList ?? []).flatMap((clusterName: string) => {
       const c = (clusters ?? []).find((c) => c.name === clusterName)
       return c
@@ -108,6 +109,7 @@ export const getApplication = async (
       ...appSetData,
       appSetClusters,
     })
+    app = appSetData.appset as Application
   }
 
   ///////////////////////////////////////////
