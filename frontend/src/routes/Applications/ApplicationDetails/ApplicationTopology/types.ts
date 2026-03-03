@@ -1155,6 +1155,8 @@ export interface ArgoAppSpec {
     cluster?: string
     /** Server URL for the target cluster */
     server?: string
+    /** Cluster name for the target cluster */
+    name?: string
   }
   /** Source configuration for the Argo application */
   source?: {

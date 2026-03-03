@@ -219,7 +219,7 @@ function RenderSearchBar(props: Readonly<SearchbarProps>) {
           t
         )
       : formatSearchbarSuggestions(
-          _.get(searchCompleteData || [], 'searchComplete') ?? [],
+          (_.get(searchCompleteData || [], 'searchComplete') ?? []).filter((s) => s !== null),
           'value',
           currentSearch, // pass current search query in order to de-dupe already selected values
           searchAutocompleteLimit,
@@ -468,18 +468,12 @@ export default function SearchPage() {
   }
 
   return (
-    <AcmPage
-      header={
-        <div>
-          <HeaderWithNotification messages={queryMessages} />
-          <RenderDropDownAndNewTab
-            selectedSearch={selectedSearch}
-            setSelectedSearch={setSelectedSearch}
-            savedSearchQueries={userSavedSearches}
-          />
-        </div>
-      }
-    >
+    <AcmPage header={<HeaderWithNotification messages={queryMessages} />}>
+      <RenderDropDownAndNewTab
+        selectedSearch={selectedSearch}
+        setSelectedSearch={setSelectedSearch}
+        savedSearchQueries={userSavedSearches}
+      />
       <PageSection hasBodyWrapper={false} style={{ paddingTop: 0, paddingBottom: 0 }}>
         <SearchAlertGroup />
       </PageSection>
