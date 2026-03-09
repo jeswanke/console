@@ -42,8 +42,9 @@ export default defineConfig({
     // Main test project - uses authenticated state
     {
       name: 'chromium',
-      use: { 
+      use: {
         ...devices['Desktop Chrome'],
+        viewport: { width: 1920, height: 1080 },
         // Use the authenticated state saved by setup
         storageState: '.auth/user.json',
       },

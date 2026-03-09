@@ -1,0 +1,123 @@
+import { Page, Locator } from '@playwright/test';
+import { BasePage } from '@pages/BasePage';
+import { ApplicationsTable } from '@components/app/ApplicationsTable';
+import { OcCliService } from '@services/OcCliService';
+import { SELECTORS } from '@constants/selectors';
+import {
+  APP_ROUTES,
+  APP_PAGE,
+  APP_ADVANCED_CONFIG,
+  APP_ADVANCED_OC_RESOURCES,
+} from '@constants/app';
+
+/**
+ * Applications list page (Application Lifecycle).
+ *
+ * Route: /multicloud/applications
+ * Contains: page title, Overview / Advanced configuration tabs, toolbar, applications table.
+ */
+export class ApplicationListPage extends BasePage {
+  readonly applicationsTable: ApplicationsTable;
+
+  constructor(
+    page: Page,
+    private readonly oc: OcCliService
+  ) {
+    super(page);
+    this.applicationsTable = new ApplicationsTable(page);
+  }
+
+  /** Navigate to the Applications list */
+  async goto(): Promise<void> {
+    const consoleUrl = await this.oc.getConsoleUrl();
+    await this.page.goto(`${consoleUrl}${APP_ROUTES.list}`);
+    await this.waitForLoad();
+  }
+
+  /** Open the Overview tab */
+  async openOverviewTab(): Promise<void> {
+    await this.page.getByRole('tab', { name: APP_PAGE.tabs.overview }).click();
+    await this.waitForLoad();
+  }
+
+  /** Open the Advanced configuration tab */
+  async openAdvancedConfigTab(): Promise<void> {
+    await this.page.getByRole('tab', { name: APP_PAGE.tabs.advancedConfig }).click();
+    await this.waitForLoad();
+  }
+
+  /** Locator for Overview tab content (applications table; no tabpanel in DOM) */
+  getOverviewContent(): Locator {
+    return this.page.locator(SELECTORS.application.table);
+  }
+
+  /** Locator for the Advanced configuration tab (use selected state; no tabpanel in DOM) */
+  getAdvancedConfigTab(): Locator {
+    return this.page.getByRole('tab', { name: APP_PAGE.tabs.advancedConfig });
+  }
+
+  /** Locator for Advanced configuration tab content: terminology card (unique to Advanced tab) */
+  getAdvancedConfigContent(): Locator {
+    return this.page.locator(SELECTORS.application.terminologyCard);
+  }
+
+  /** Terminology card title (e.g. "Learn more about the terminology") */
+  getAdvancedTerminologyCardTitle(): Locator {
+    return this.getAdvancedConfigContent().getByText(
+      APP_ADVANCED_CONFIG.terminologyCard.title,
+      { exact: true }
+    );
+  }
+
+  /** "View documentation" link inside the terminology card */
+  getAdvancedViewDocumentationLink(): Locator {
+    return this.getAdvancedConfigContent().getByRole('link', {
+      name: APP_ADVANCED_CONFIG.terminologyCard.viewDocsLinkText,
+    });
+  }
+
+  /** Resource type toggle button (Subscriptions, Channels, Placements, Placement rules) */
+  getAdvancedResourceToggleButton(
+    key: keyof typeof SELECTORS.application.resourceToggle
+  ): Locator {
+    return this.page.locator(SELECTORS.application.resourceToggle[key]);
+  }
+
+  /** Table on Advanced tab (same as Overview; columns differ by resource type) */
+  getAdvancedTable(): Locator {
+    return this.page.locator(SELECTORS.application.table);
+  }
+
+  /** Whether the cluster has any resources for the given Advanced config view (uses oc get -A). */
+  async advancedConfigViewHasResources(
+    view: keyof typeof APP_ADVANCED_OC_RESOURCES
+  ): Promise<boolean> {
+    return this.oc.hasResourcesInCluster(APP_ADVANCED_OC_RESOURCES[view]);
+  }
+
+  /** Empty state on Advanced tab (when table has no rows). Use view key to get title from constants. */
+  getAdvancedEmptyState(
+    view: keyof typeof APP_ADVANCED_CONFIG.emptyState.titles
+  ): Locator {
+    const titleText = APP_ADVANCED_CONFIG.emptyState.titles[view];
+    return this.page
+      .locator('.pf-v6-c-empty-state')
+      .filter({ has: this.page.getByRole('heading', { name: titleText, level: 4 }) });
+  }
+
+  /** Search input (toolbar; visible on both Overview and Advanced configuration tabs) */
+  getSearchInput(): Locator {
+    return this.page.locator(SELECTORS.common.searchInput);
+  }
+
+  /** Get the page heading (Applications) */
+  getPageTitle(): Locator {
+    return this.page.getByRole('heading', { name: APP_PAGE.title, level: 1 });
+  }
+
+  /** Click Create application (opens dropdown/modal) */
+  async openCreateApplication(): Promise<void> {
+    await this.applicationsTable.clickCreateApplication();
+    await this.waitForLoad();
+  }
+}

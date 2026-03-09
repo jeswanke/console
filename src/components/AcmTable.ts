@@ -8,7 +8,7 @@ import { SELECTORS } from '@constants/selectors';
 export class AcmTable {
   private readonly searchInput: Locator;
 
-  constructor(private readonly page: Page) {
+  constructor(protected readonly page: Page) {
     this.searchInput = page.locator(SELECTORS.common.searchInput);
   }
 
