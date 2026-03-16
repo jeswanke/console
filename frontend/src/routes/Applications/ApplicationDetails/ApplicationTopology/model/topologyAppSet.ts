@@ -107,7 +107,7 @@ export async function getAppSetTopology(
     }
   }
 
-  // Create placement node if placement exists
+  // Create placement node irf placement exists
   let isPlacementFound = false
   let isArgoCDPullModelTargetLocalCluster = false
   const placement = application.placementDecision as PlacementDecision
