@@ -11,6 +11,7 @@
     "forceConsistentCasingInFileNames": true,
     "baseUrl": ".",
     "paths": {
+      "@config": ["src/config/index.ts"],
       "@config/*": ["src/config/*"],
       "@constants/*": ["src/constants/*"],
       "@services/*": ["src/services/*"],
@@ -18,6 +19,7 @@
       "@pages/*": ["src/pages/*"],
       "@utils/*": ["src/utils/*"],
       "@fixtures/*": ["src/fixtures/*"],
+      "@lib/*": ["src/lib/*"],
       "@tests/*": ["src/tests/*"]
     }
   },

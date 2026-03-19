@@ -15,52 +15,80 @@ npx playwright install chromium
 
 ## Environment Variables
 
+**Recommended:** keep **universal** values in a repo-root **`.env`** (copy from **`.env.example`**). It is gitignored. **`./start.sh`** loads `.env` before `oc login`, and Playwright loads it via `src/config/index.ts`. Use **`HUB_PASSWORD`** for both `oc login` and the console UI step in **`auth.setup.ts`** (no separate console password).
+
+**ALC integrations** (object store, Ansible) stay in **`env/alc.local.env`** — see **`env/alc.env.example`**.
+
+---
+
+**Cluster API + console UI password:** `HUB_URL`, **`HUB_PASSWORD`** (or `HUB_TOKEN` for API login only — token-only flows still need a password in `.env` for `auth.setup` if you run UI login).
+
+**OpenShift web console** (optional overrides for `auth.setup.ts` — same password is always **`HUB_PASSWORD`**):
+
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `OPTIONS_HUB_USER` | No | `kubeadmin` | Username for console login |
-| `OPTIONS_HUB_PASSWORD` | **Yes** | - | Password for console login |
-| `OPTIONS_HUB_IDP` | No | `kube:admin` | Identity provider name (as shown on login page) |
+| `HUB_PASSWORD` | **Yes** | - | Used for `oc login` and console UI login |
+| `CONSOLE_USERNAME` | No | `kubeadmin` | Username on the console login form |
+| `CONSOLE_IDP` | No | `kube:admin` | Identity provider link text on the login page |
 
-> **For kubeadmin clusters**: You only need to set `OPTIONS_HUB_PASSWORD`. The defaults handle the rest.
+> **Typical kubeadmin:** `.env` with `HUB_URL` + `HUB_PASSWORD` only.
 
 ### Example Setup
 
 ```bash
-# Login to your cluster first
-oc login https://api.your-cluster.example.com:6443 -u kubeadmin -p <password>
+export HUB_URL='https://api...:6443'
+export HUB_PASSWORD='your-password-here'
 
-# Minimal setup (kubeadmin with defaults)
-export OPTIONS_HUB_PASSWORD='your-password-here'
-
-# Run tests
 npx playwright test
 ```
 
 ### Non-kubeadmin Users
 
-If using a different user/IDP:
-
 ```bash
-export OPTIONS_HUB_USER=testuser
-export OPTIONS_HUB_PASSWORD='your-password-here'
-export OPTIONS_HUB_IDP='my-ldap-provider'
+export HUB_URL='https://api...:6443'
+export HUB_PASSWORD='your-password-here'
+export CONSOLE_USERNAME=testuser
+export CONSOLE_IDP='my-ldap-provider'
 ```
 
 ### Using a .env file (optional)
 
-Create a `.env` file in the project root:
+See `.env.example`. `playwright.config` loads `.env` via `src/config/index.ts`.
 
 ```env
-OPTIONS_HUB_USER=kubeadmin
-OPTIONS_HUB_PASSWORD=your-password-here
-OPTIONS_HUB_IDP=kube:admin
+HUB_URL=https://api.example.com:6443
+HUB_PASSWORD=your-password-here
+CONSOLE_USERNAME=kubeadmin
+CONSOLE_IDP=kube:admin
 ```
 
-Then install dotenv and load it:
+## Running Tests (start.sh)
+
+From the repo root, log in to the hub API and run a **component** suite (shared setup, then component-specific Playwright defaults):
 
 ```bash
-npm install dotenv
+export HUB_URL='https://api.<cluster>:6443'
+export HUB_PASSWORD='<kubeadmin-password>'
+# or: export HUB_TOKEN='<token>'
+
+./start.sh alc                          # ALC: default --grep @alc, --project chromium
+./start.sh alc --grep @app --headed     # override defaults via CLI
 ```
+
+### ALC environment (no `CYPRESS_*` prefix)
+
+**Universal environment** (any component): root **`./start.sh`** exports these **after** hub API login (`scripts/lib/common.sh`):
+
+| Variable | How it is set |
+|----------|----------------|
+| `CONSOLE_USERNAME` / `CONSOLE_IDP` | Optional; set before login (password is always `HUB_PASSWORD`) |
+| `BASE_URL` | From `oc whoami --show-console` if unset |
+| `OC_CLUSTER_URL` / `OC_CLUSTER_USER` / `OC_CLUSTER_PASS` | Default from `HUB_URL`, `kubeadmin`, `HUB_PASSWORD` (override via env if needed) |
+| `PLAYWRIGHT_TEST_MODE` | Default `e2e`, or from `TEST_MODE` / explicit `PLAYWRIGHT_TEST_MODE` |
+
+**ALC-only file:** `./start.sh alc` also loads **`env/alc.local.env`** (gitignored) for integrations — **`OBJECTSTORE_*`**, **`ANSIBLE_*`** only (see `env/alc.env.example`).
+
+Add more components later by extending the `case` in `start.sh` and adding e.g. `src/tests/<area>/start.sh`. Shared logic lives in `scripts/lib/common.sh`.
 
 ## Running Tests
 
@@ -83,18 +111,32 @@ npx playwright show-report
 
 ## Project Structure
 
+See **`docs/architecture-overview.md`** for the full ACM automation model. This repo maps to it as follows:
+
 ```
 console-e2e/
+├── start.sh                 # Dispatcher → e.g. src/tests/app/start.sh (ALC)
+├── env/                     # ALC env template (alc.env.example); alc.local.env gitignored
+├── scripts/lib/             # Shared shell (common.sh, alc-env.sh)
 ├── src/
-│   ├── components/      # Reusable UI components
-│   ├── fixtures/        # Playwright fixtures (dependency injection)
-│   ├── pages/           # Page Objects
-│   ├── services/        # Backend services (OcCliService, AuthService)
-│   ├── tests/           # Test specs organized by domain
-│   │   ├── auth.setup.ts    # Authentication setup (runs first)
-│   │   └── cluster/         # Cluster-related tests
-│   └── utils/           # Helpers (KubeHelper, etc.)
-├── .auth/               # Auth state (auto-generated, gitignored)
+│   ├── config/              # .env loader, getHubAuth() / getTestConfig()
+│   ├── constants/           # Selectors, strings
+│   ├── components/
+│   │   ├── patternfly/      # e.g. AcmTable
+│   │   └── app/             # Domain widgets (ApplicationsTable)
+│   ├── fixtures/            # app-test, acm-test
+│   ├── lib/                 # Shared assertions / factories (expand)
+│   ├── pages/
+│   │   ├── BasePage.ts
+│   │   ├── app/             # ApplicationListPage
+│   │   └── cluster/         # ClusterListPage, ClusterSetsPage
+│   ├── services/            # OcCliService
+│   ├── tests/
+│   │   ├── auth.setup.ts
+│   │   ├── app/
+│   │   └── cluster/
+│   └── utils/
+├── .auth/                   # Auth state (gitignored)
 ├── playwright.config.ts
 └── tsconfig.json
 ```

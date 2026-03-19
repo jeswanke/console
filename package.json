@@ -4,7 +4,8 @@
   "description": "ACM Console E2E Test Automation Framework",
   "main": "index.js",
   "scripts": {
-    "test": "playwright test"
+    "test": "playwright test",
+    "test:alc": "bash ./start.sh alc"
   },
   "devDependencies": {
     "@faker-js/faker": "^9.9.0",

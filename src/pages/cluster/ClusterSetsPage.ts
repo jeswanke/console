@@ -1,10 +1,10 @@
 import { Page, Locator } from '@playwright/test';
-import { BasePage } from './BasePage';
-import { AcmTable } from '@components/AcmTable';
+import { BasePage } from '../BasePage';
+import { AcmTable } from '@components/patternfly/AcmTable';
 import { OcCliService } from '@services/OcCliService';
 
 /**
- * Cluster Sets page - demonstrates AcmTable reuse.
+ * Cluster Sets page — reuses {@link AcmTable}.
  */
 export class ClusterSetsPage extends BasePage {
   readonly table: AcmTable;
@@ -29,4 +29,3 @@ export class ClusterSetsPage extends BasePage {
     await this.createButton.click();
   }
 }
-

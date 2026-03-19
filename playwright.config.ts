@@ -1,3 +1,5 @@
+// Load `.env` via config layer (see src/config/index.ts)
+import './src/config/index';
 import { defineConfig, devices } from '@playwright/test';
 
 /**

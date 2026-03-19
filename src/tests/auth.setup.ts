@@ -1,5 +1,6 @@
 import { test as setup, expect } from '@playwright/test';
 import path from 'path';
+import { getHubAuth } from '@config';
 import { OcCliService } from '@services/OcCliService';
 import { PF_MASTHEAD } from '@constants/selectors';
 
@@ -8,14 +9,7 @@ const authFile = path.join(__dirname, '../../.auth/user.json');
 setup('authenticate', async ({ page }) => {
   const oc = new OcCliService();
   const consoleUrl = await oc.getConsoleUrl();
-
-  const username = process.env.OPTIONS_HUB_USER || 'kubeadmin';
-  const password = process.env.OPTIONS_HUB_PASSWORD;
-  const idp = process.env.OPTIONS_HUB_IDP || 'kube:admin';
-
-  if (!password) {
-    throw new Error('OPTIONS_HUB_PASSWORD is required');
-  }
+  const { hubUser: username, hubPassword: password, hubIdp: idp } = getHubAuth();
 
   // Navigate to console (redirects to OAuth)
   await page.goto(consoleUrl);

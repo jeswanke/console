@@ -1,6 +1,6 @@
 import { Page, Locator } from '@playwright/test';
-import { BasePage } from './BasePage';
-import { AcmTable } from '@components/AcmTable';
+import { BasePage } from '../BasePage';
+import { AcmTable } from '@components/patternfly/AcmTable';
 import { OcCliService } from '@services/OcCliService';
 import { SELECTORS } from '@constants/selectors';
 

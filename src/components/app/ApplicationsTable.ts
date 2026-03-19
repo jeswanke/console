@@ -1,5 +1,5 @@
 import { Page, Locator } from '@playwright/test';
-import { AcmTable } from '@components/AcmTable';
+import { AcmTable } from '@components/patternfly/AcmTable';
 import { SELECTORS } from '@constants/selectors';
 import {
   APP_TABLE,
