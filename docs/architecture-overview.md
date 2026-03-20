@@ -32,7 +32,6 @@ A more comprehensive example:
 ├── package.json            <-- Scripts call ./start.sh.
 ├── playwright.config.ts    <-- The "Mixer" (Env + Presets + Projects).
 ├── start.sh                <-- Entrypoint: Auto-login, Version Detect, Test Runner.
-├── Jenkinsfile             <-- CI jenkinsfile
 ├── tsconfig.json           <-- Strict Mode & Path Aliases (@utils, @pages, etc).
 │
 ├── .github
@@ -269,7 +268,6 @@ console-e2e/
 ├── .env / .env.example         # Universal vars (HUB_* for API+UI password, optional CONSOLE_USERNAME/CONSOLE_IDP, TEST_MODE); start.sh sources .env before oc login
 ├── playwright.config.ts        # Imports ./src/config/index (loads .env), projects, reporters
 ├── package.json                # `npm run test`, `npm run test:alc` → ./start.sh alc
-├── Jenkinsfile
 ├── env/
 │   └── alc.env.example         # ALC template → copy to env/alc.local.env (gitignored)
 ├── scripts/

@@ -6,7 +6,7 @@
 # Invoked by the repo root ./start.sh alc [playwright args...]
 #
 # Defaults (when not overridden by env or CLI): --grep @alc, --project chromium
-# (matches Jenkinsfile ALC job.)
+# (matches external ALC CI job defaults, e.g. acmqe-autotest Jenkinsfile_console_alc.)
 
 set -e
 
