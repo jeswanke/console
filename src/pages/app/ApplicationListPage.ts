@@ -95,14 +95,16 @@ export class ApplicationListPage extends BasePage {
     return this.oc.hasResourcesInCluster(APP_ADVANCED_OC_RESOURCES[view]);
   }
 
-  /** Empty state on Advanced tab (when table has no rows). Use view key to get title from constants. */
+  /** Empty state on Advanced tab (when table has no rows). Heading text varies (e.g. "...yet"). */
   getAdvancedEmptyState(
-    view: keyof typeof APP_ADVANCED_CONFIG.emptyState.titles
+    view: keyof typeof APP_ADVANCED_CONFIG.emptyState.titlePatterns
   ): Locator {
-    const titleText = APP_ADVANCED_CONFIG.emptyState.titles[view];
+    const pattern = APP_ADVANCED_CONFIG.emptyState.titlePatterns[view];
+    // PF nests empty-state__content/__header/__title under the root; all match [class*="empty-state"].
     return this.page
-      .locator('.pf-v6-c-empty-state')
-      .filter({ has: this.page.getByRole('heading', { name: titleText, level: 4 }) });
+      .locator('[class*="empty-state"]')
+      .filter({ has: this.page.getByRole('heading', { name: pattern, level: 4 }) })
+      .first();
   }
 
   /** Search input (toolbar; visible on both Overview and Advanced configuration tabs) */

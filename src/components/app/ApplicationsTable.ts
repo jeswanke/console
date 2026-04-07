@@ -13,6 +13,10 @@ import {
 } from '@constants/app';
 import type { AppTableColumnHelpKey } from '@constants/app';
 
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 /**
  * Applications table component (Applications list page).
  *
@@ -46,7 +50,7 @@ export class ApplicationsTable extends AcmTable {
     await this.createButton.click();
   }
 
-  /** Open Create application dropdown (PF6 MenuToggle). Use after clickCreateApplication() to get the menu. */
+  /** Open Create application dropdown. Use after clickCreateApplication() to get the menu. */
   getCreateApplicationMenu(): Locator {
     return this.page.getByRole(APP_CREATE_MENU.menuRole);
   }
@@ -61,11 +65,16 @@ export class ApplicationsTable extends AcmTable {
     return this.getCreateApplicationMenu().locator(`button#${optionId}`);
   }
 
-  /** Description element for a Create application menu option (by option button id). */
+  /** Description text under a Create menu option (sibling/parent layout; class substring avoids design-system version coupling). */
   getCreateMenuItemDescription(optionId: string): Locator {
-    return this.getCreateMenuItemById(optionId).locator(
-      '.pf-v6-c-menu__item-description'
-    );
+    const btn = this.getCreateMenuItemById(optionId);
+    const inMenuItemRow = this.getCreateApplicationMenu()
+      .getByRole('menuitem')
+      .filter({ has: btn })
+      .locator('[class*="item-description"]')
+      .first();
+    const nextToButton = btn.locator('..').locator('[class*="item-description"]').first();
+    return inMenuItemRow.or(nextToButton);
   }
 
   getFilterButton(): Locator {
@@ -75,33 +84,54 @@ export class ApplicationsTable extends AcmTable {
   /** Open the Filter dropdown (click the Filter toolbar button) */
   async openFilter(): Promise<void> {
     await this.filterButton.click();
+    const listbox = this.getFilterListbox();
+    await listbox.waitFor({ state: 'visible', timeout: 10000 });
+    await listbox.getByRole('checkbox').first().waitFor({ state: 'visible', timeout: 10000 });
   }
 
-  /** Get the open filter menu (PF6 Select). Use after openFilter(). */
+  /** Root of the filter control (toggle + label). The open listbox may be portaled and NOT under this node. */
   getFilterMenu(): Locator {
     return this.page.locator(`[aria-label="${APP_FILTER.menuAriaLabel}"]`);
   }
 
-  /** Get a filter option by its visible label (e.g. "System", "OpenShift", "local-cluster") */
+  /**
+   * Applications filter listbox: panel may be portaled — avoid chaining from getFilterMenu().
+   * Anchor by the in-panel "Type" heading.
+   */
+  getFilterListbox(): Locator {
+    return this.page
+      .getByRole('listbox')
+      .filter({
+        has: this.page.getByRole('heading', {
+          name: APP_FILTER.groupTitles.type,
+          level: 1,
+        }),
+      })
+      .first();
+  }
+
+  /**
+   * Filter row by option label (accessible name is like "System 89").
+   * Use checkbox role — the panel listbox is often not wired as menuitem in Chromium.
+   */
   getFilterOption(optionLabel: string): Locator {
-    return this.getFilterMenu().getByRole('menuitem').filter({ hasText: optionLabel });
+    const name = new RegExp(escapeRegExp(optionLabel));
+    return this.getFilterListbox().getByRole('checkbox', { name });
   }
 
   /** Select (check) a filter option by label. Opens filter if needed. */
   async selectFilterOption(optionLabel: string): Promise<void> {
-    const menu = this.getFilterMenu();
-    const isVisible = await menu.isVisible().catch(() => false);
-    if (!isVisible) {
+    const listbox = this.getFilterListbox();
+    const isOpen = await listbox.getByRole('checkbox').first().isVisible().catch(() => false);
+    if (!isOpen) {
       await this.openFilter();
-      await menu.waitFor({ state: 'visible', timeout: 5000 });
     }
-    const option = this.getFilterOption(optionLabel);
-    await option.locator('input[type="checkbox"]').check();
+    await this.getFilterOption(optionLabel).check();
   }
 
   /** Deselect (uncheck) a filter option by label. Filter menu must be open. */
   async deselectFilterOption(optionLabel: string): Promise<void> {
-    await this.getFilterOption(optionLabel).locator('input[type="checkbox"]').uncheck();
+    await this.getFilterOption(optionLabel).uncheck();
   }
 
   getExportButton(): Locator {
@@ -117,23 +147,17 @@ export class ApplicationsTable extends AcmTable {
     await this.getCompareApplicationTypesButton().click();
   }
 
-  /** Compare application types popover (role="dialog" with title heading). Use after clickCompareApplicationTypes(). */
+  /** Compare types panel (typically role=dialog with title heading). */
   getCompareApplicationTypesPopover(): Locator {
     return this.page
       .getByRole('dialog')
-      .filter({
-        has: this.page.getByRole('heading', {
-          name: APP_COMPARE_POPOVER.title,
-          level: 6,
-        }),
-      });
+      .filter({ has: this.page.getByRole('heading', { name: APP_COMPARE_POPOVER.title }) })
+      .first();
   }
 
-  /** Body content of the Compare application types popover (for asserting type descriptions). */
+  /** Compare copy lives on the dialog root in current console builds. */
   getComparePopoverBody(): Locator {
-    return this.getCompareApplicationTypesPopover().locator(
-      '.pf-v6-c-popover__body'
-    );
+    return this.getCompareApplicationTypesPopover();
   }
 
   // ---------------------------------------------------------------------------
@@ -145,18 +169,54 @@ export class ApplicationsTable extends AcmTable {
     return this.table;
   }
 
-  /** Click the help icon next to a column header (Overview table). Opens PF6 Popover. */
-  async openColumnHelp(columnLabel: AppTableColumnHelpKey): Promise<void> {
-    await this.table
-      .locator(`th[data-label="${columnLabel}"]`)
-      .locator('.pf-v6-c-table__column-help-action button')
-      .click();
+  private headerCellForColumn(columnLabel: AppTableColumnHelpKey): Locator {
+    return this.table.locator(`th[data-label="${columnLabel}"]`);
   }
 
-  /** Get the column help popover (role=dialog) by column. Use after openColumnHelp(columnLabel). */
+  /**
+   * Help trigger in a column header.
+   * ACM Th uses PF info popover: some builds expose "More info", others put the full tooltip
+   * string on the button's accessible name (see Overview.tsx tooltips).
+   */
+  private columnHelpTrigger(th: Locator, columnLabel: AppTableColumnHelpKey): Locator {
+    const byAccessibleName = th
+      .getByRole('button', {
+        name: /more info|more information|column help/i,
+      })
+      .or(th.locator('button[aria-label*="More"]'))
+      .or(th.locator('button[aria-label*="more"]'))
+      .or(th.locator('button[aria-label*="Help"]'))
+      .or(th.locator('button[aria-label*="help"]'));
+
+    const bodyText = APP_TABLE_COLUMN_HELP.columns[columnLabel];
+    const prefix = bodyText.slice(0, Math.min(64, bodyText.length));
+    const byTooltipPrefix = th.getByRole('button', {
+      name: new RegExp(escapeRegExp(prefix)),
+    });
+
+    return byAccessibleName.or(byTooltipPrefix);
+  }
+
+  /** True when Overview table shows this column with an info/help control (Repository/Pod vary by build). */
+  async hasColumnHelp(columnLabel: AppTableColumnHelpKey): Promise<boolean> {
+    const th = this.headerCellForColumn(columnLabel);
+    if ((await th.count()) === 0) return false;
+    return (await this.columnHelpTrigger(th, columnLabel).count()) > 0;
+  }
+
+  /** Click the help control next to a column header (Overview table). */
+  async openColumnHelp(columnLabel: AppTableColumnHelpKey): Promise<void> {
+    const th = this.headerCellForColumn(columnLabel);
+    await this.columnHelpTrigger(th, columnLabel).first().click();
+  }
+
+  /** Column help floating content: dialog or tooltip role, matched by expected body copy. */
   getColumnHelpPopover(columnLabel: AppTableColumnHelpKey): Locator {
     const bodyText = APP_TABLE_COLUMN_HELP.columns[columnLabel];
-    return this.page.getByRole('dialog').filter({ hasText: bodyText });
+    return this.page
+      .locator('[role="dialog"], [role="tooltip"]')
+      .filter({ hasText: bodyText })
+      .first();
   }
 
   // ---------------------------------------------------------------------------
@@ -192,6 +252,11 @@ export class ApplicationsTable extends AcmTable {
 
   async openRowActions(row: Locator): Promise<void> {
     await this.getRowActionsButton(row).click();
+  }
+
+  /** First data row (tbody); use when the table has at least one application. */
+  getFirstDataRow(): Locator {
+    return this.table.locator('tbody tr').first();
   }
 
   // ---------------------------------------------------------------------------

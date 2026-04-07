@@ -3,7 +3,7 @@
  *
  * Routes, toolbar IDs, table column labels, and UI strings for the
  * Applications list and related pages. Sourced from the Applications
- * main page DOM (PF6, multicloud/applications).
+ * main page DOM (multicloud/applications).
  */
 
 // =============================================================================
@@ -24,10 +24,14 @@ export const APP_ROUTES = {
 // =============================================================================
 
 export const APP_DOCS = {
-  /** Applications – managing applications (Type column help popover, Advanced config terminology card) */
+  /** Example URL; shipped console uses the docs minor matching the ACM version (2.16, 2.17, …). */
   applicationsManaging:
     'https://docs.redhat.com/en/documentation/red_hat_advanced_cluster_management_for_kubernetes/2.16/html-single/applications/index#managing-applications',
 } as const;
+
+/** Use in assertions: href must be managing-applications docs with any 2.x product version. */
+export const APP_DOCS_MANAGING_APPLICATIONS_HREF_RE =
+  /^https:\/\/docs\.redhat\.com\/en\/documentation\/red_hat_advanced_cluster_management_for_kubernetes\/2\.\d+\/html-single\/applications\/index#managing-applications$/;
 
 // =============================================================================
 // Page structure
@@ -64,7 +68,7 @@ export const APP_TOOLBAR = {
   compareTypesLabel: 'Compare application types',
 } as const;
 
-/** Create application dropdown (PF6 Menu). Click opens a menu (role="menu", .pf-v6-c-menu). */
+/** Create application dropdown. Open panel uses role="menu". */
 export const APP_CREATE_MENU = {
   /** Button id and label; when open, aria-expanded="true" */
   buttonId: APP_TOOLBAR.createButtonId,
@@ -88,7 +92,7 @@ export const APP_CREATE_MENU = {
     argoPushModel: 'create-argo',
     subscription: 'create-subscription',
   },
-  /** Description text under each menu option (pf-v6-c-menu__item-description). */
+  /** Description text under each menu option (secondary line under the action). */
   optionDescriptions: {
     argoPullModel:
       'Considered the better choice for security although you cannot deploy to hub cluster. Managed clusters pull application resources directly from Git repositories.',
@@ -96,11 +100,11 @@ export const APP_CREATE_MENU = {
       'Hub cluster pushes application resources to managed clusters requiring credentials for each cluster.',
     subscription: '',
   },
-  /** Label shown next to Subscription option (pf-v6-c-label). */
+  /** Label shown next to Subscription option (e.g. deprecated badge). */
   subscriptionDeprecatedLabel: 'Deprecated',
 } as const;
 
-/** Compare application types popover (PF6 Popover, role="dialog"). Opened by Compare application types button. */
+/** Compare application types panel (typically role="dialog"). Opened by Compare application types button. */
 export const APP_COMPARE_POPOVER = {
   /** Popover title (h6 in header). */
   title: 'Compare application types',
@@ -143,25 +147,30 @@ export const APP_TABLE_COLUMNS = {
   created: 'Created',
 } as const;
 
-/** Row action kebab */
+/** Row action kebab (Overview table); menu items vary by application kind (see Overview rowActionResolver). */
 export const APP_TABLE_ROW_ACTIONS = {
   actionsAriaLabel: 'Actions',
+  /** At least one of these menuitem labels is expected when the row actions menu opens. */
+  menuItemLabels: ['View application', 'Search application'] as const,
 } as const;
 
-/** Overview table column help popovers (PF6 Popover; click help icon next to column header). */
+/** Overview table column help popovers (click help control next to column header). */
 export const APP_TABLE_COLUMN_HELP = {
   viewDocsLinkText: 'View documentation',
   viewDocsHref: APP_DOCS.applicationsManaging,
   closeButtonLabel: 'Close',
-  /** Column data-label -> popover body description (all have View documentation link). */
+  /** Column data-label -> popover body description (matches Overview.tsx tooltips; Type may include View documentation link). */
   columns: {
     Type: 'Displays the type of the application.',
     Namespace:
       'Displays the namespace of the application resource, which by default is where the application deploys other resources. For Argo applications, this is the destination namespace.',
     Clusters:
       'For Subscription applications, displays the number of remote and local clusters where resources for the application are deployed. For Argo applications, this is the name of the destination cluster. For OpenShift applications, this is the cluster where the application is deployed.',
+    /** Present on some hubs; column-help test skips if header missing. */
+    Repository: 'Provides links to each of the resource repositories used by the application.',
     'Health Status': 'Health status for ArgoCD applications.',
     'Sync Status': 'Sync status for ArgoCD applications.',
+    /** Extension column on many hubs (Playwriter: th[data-label="Pod Status"]). */
     'Pod Status': 'Status of pods deployed by the application.',
   },
 } as const;
@@ -172,7 +181,7 @@ export type AppTableColumnHelpKey = keyof typeof APP_TABLE_COLUMN_HELP.columns;
 // Filter dropdown (opened by Filter toolbar button)
 // =============================================================================
 
-/** Filter menu (PF6 Select) opened when clicking the Filter button */
+/** Filter menu opened when clicking the Filter button */
 export const APP_FILTER = {
   /** aria-label on the open menu container */
   menuAriaLabel: 'acm-table-filter-select-key',
@@ -216,12 +225,12 @@ export const APP_ADVANCED_CONFIG = {
       placements: 'Placements',
       placementRules: 'Placement rules',
     },
-    /** Deprecated label shown next to some terms (pf-v6-c-label) */
+    /** Deprecated label shown next to some terms */
     deprecatedLabel: 'Deprecated',
     viewDocsLinkText: 'View documentation',
     viewDocsHref: APP_DOCS.applicationsManaging,
   },
-  /** Toggle group (PF6): resource type filter. Button ids from DOM. */
+  /** Resource type filter toggle group. Button ids from DOM. */
   resourceToggle: {
     ids: {
       subscriptions: 'subscriptions',
@@ -239,16 +248,17 @@ export const APP_ADVANCED_CONFIG = {
   /** Same toolbar search/export/pagination ids as Overview; table uses APP_TABLE. */
   /** Empty state (when no resources). Verify title, body, and actions. */
   emptyState: {
-    /** Description text in empty state body (same for all views). */
+    /** Common Advanced subscriptions empty body (Playwriter on live hub). */
     body: 'To get started, create an application.',
-    /** Primary action button/link in empty state footer. */
+    /** Some locales / builds use i18n subtitle instead. */
+    bodyAltPattern: /Click\s+Create application.*create your resource/i,
     createApplicationLabel: 'Create application',
-    /** Title (h4) per view. Match is substring so "yet" is optional. */
-    titles: {
-      subscriptions: "You don't have any subscriptions",
-      channels: "You don't have any channels",
-      placements: "You don't have any placements",
-      placementRules: "You don't have any placement rules",
+    /** h4 titles vary (e.g. "...subscriptions" vs "...subscriptions yet"). */
+    titlePatterns: {
+      subscriptions: /don't have any subscriptions/i,
+      channels: /don't have any channels/i,
+      placements: /don't have any placements/i,
+      placementRules: /don't have any placement rules/i,
     },
   },
 } as const;
