@@ -200,18 +200,7 @@ export const APP_FILTER = {
 // =============================================================================
 // Advanced Configuration tab (Subscriptions, Channels, Placements, Placement rules)
 // =============================================================================
-//
-// Snapshot (DOM): Route /multicloud/applications/advanced. Same masthead/sidebar
-// as Overview. Secondary tabs: Overview | Advanced configuration (selected).
-// Content: (1) Expandable "Learn more about the terminology" card (id above),
-//   sub-cards Subscriptions/Channels/Placements/Placement rules (some Deprecated);
-//   "View documentation" link. (2) Toggle group: Subscriptions|Channels|Placements|
-//   Placement rules (button ids subscriptions, channels, placements, placementrules).
-// (3) Toolbar: search (custom-advanced-search), export (export-search-result),
-//   pagination (options-menu-top-pagination). (4) Table: role=grid, aria-label
-//   "Simple Table"; columns Name, Namespace, Channel, Applications, Clusters,
-//   Time window, Created; rows data-ouia-component-id; Actions kebab.
-//
+
 /** Terminology card and resource-type toggle (Advanced configuration tab only). */
 export const APP_ADVANCED_CONFIG = {
   /** Expandable card id and title */
