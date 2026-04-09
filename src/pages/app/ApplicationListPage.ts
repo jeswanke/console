@@ -9,6 +9,7 @@ import {
   APP_ADVANCED_CONFIG,
   APP_ADVANCED_OC_RESOURCES,
 } from '@constants/app';
+import { acmToolbarSearchLocator } from '@utils/acm-locators';
 
 /**
  * Applications list page (Application Lifecycle).
@@ -61,6 +62,21 @@ export class ApplicationListPage extends BasePage {
     return this.page.locator(SELECTORS.application.terminologyCard);
   }
 
+  /** Deprecation alert (Placements → Infrastructure); scoped by banner copy. */
+  getAdvancedDeprecationAlert(): Locator {
+    return this.page
+      .locator('[class*="c-alert"]')
+      .filter({ hasText: APP_ADVANCED_CONFIG.deprecationBanner.bodyPattern })
+      .first();
+  }
+
+  /** "Learn more" inside {@link getAdvancedDeprecationAlert}. */
+  getAdvancedDeprecationLearnMoreLink(): Locator {
+    return this.getAdvancedDeprecationAlert().getByRole('link', {
+      name: APP_ADVANCED_CONFIG.deprecationBanner.learnMoreLinkName,
+    });
+  }
+
   /** Terminology card title (e.g. "Learn more about the terminology") */
   getAdvancedTerminologyCardTitle(): Locator {
     return this.getAdvancedConfigContent().getByText(
@@ -76,7 +92,7 @@ export class ApplicationListPage extends BasePage {
     });
   }
 
-  /** Resource type toggle button (Subscriptions, Channels, Placements, Placement rules) */
+  /** Resource type toggle button (Subscriptions, Channels, Placement rules) */
   getAdvancedResourceToggleButton(
     key: keyof typeof SELECTORS.application.resourceToggle
   ): Locator {
@@ -109,7 +125,7 @@ export class ApplicationListPage extends BasePage {
 
   /** Search input (toolbar; visible on both Overview and Advanced configuration tabs) */
   getSearchInput(): Locator {
-    return this.page.locator(SELECTORS.common.searchInput);
+    return acmToolbarSearchLocator(this.page);
   }
 
   /** Get the page heading (Applications) */

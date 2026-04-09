@@ -1,5 +1,6 @@
 import { Page, Locator, expect } from '@playwright/test';
 import { SELECTORS } from '@constants/selectors';
+import { acmToolbarSearchLocator } from '@utils/acm-locators';
 
 /**
  * PatternFly-oriented table primitive for ACM list pages (search, rows by OUIA id).
@@ -9,16 +10,16 @@ export class AcmTable {
   private readonly searchInput: Locator;
 
   constructor(protected readonly page: Page) {
-    this.searchInput = page.locator(SELECTORS.common.searchInput);
+    this.searchInput = acmToolbarSearchLocator(page);
   }
 
   async search(text: string): Promise<void> {
-    await this.searchInput.clear();
+    // `fill` replaces value; PF SearchInput can be flaky with `clear()` alone.
     await this.searchInput.fill(text);
   }
 
   async clearSearch(): Promise<void> {
-    await this.searchInput.clear();
+    await this.searchInput.fill('');
   }
 
   /** Get row by OUIA component ID */
@@ -31,11 +32,15 @@ export class AcmTable {
   }
 
   async verifyRowNotVisible(ouiaId: string): Promise<void> {
-    await expect(this.getRow(ouiaId)).not.toBeVisible();
+    await expect(this.getRow(ouiaId)).toBeHidden();
   }
 
   async verifyEmpty(): Promise<void> {
-    await expect(this.page.getByText('No results found')).toBeVisible();
+    // AcmTable renders `AcmEmptyState` with title in an h4 (PF EmptyStateHeader).
+    await expect(this.page.getByRole('heading', { name: /no results found/i })).toBeVisible();
+    await expect(
+      this.page.getByText(/no results match the filter criteria/i)
+    ).toBeVisible();
   }
 
   async clickRow(ouiaId: string): Promise<void> {

@@ -33,6 +33,13 @@ export const APP_DOCS = {
 export const APP_DOCS_MANAGING_APPLICATIONS_HREF_RE =
   /^https:\/\/docs\.redhat\.com\/en\/documentation\/red_hat_advanced_cluster_management_for_kubernetes\/2\.\d+\/html-single\/applications\/index#managing-applications$/;
 
+/**
+ * "Learn more" on the Advanced configuration **page deprecation** banner (Placements moving to Infrastructure).
+ * Differs from {@link APP_DOCS_MANAGING_APPLICATIONS_HREF_RE} (managing-applications path + anchor).
+ */
+export const APP_DOCS_ADVANCED_DEPRECATION_HREF_RE =
+  /^https:\/\/docs\.redhat\.com\/en\/documentation\/red_hat_advanced_cluster_management_for_kubernetes\/2\.\d+\/html-single\/applications\/managing-applications#application-advanced-configuration$/;
+
 // =============================================================================
 // Page structure
 // =============================================================================
@@ -198,11 +205,21 @@ export const APP_FILTER = {
 } as const;
 
 // =============================================================================
-// Advanced Configuration tab (Subscriptions, Channels, Placements, Placement rules)
+// Advanced Configuration tab (Subscriptions, Channels, Placement rules).
+// Placements moved to Infrastructure → Clusters → Placements (see console deprecation notice).
 // =============================================================================
 
 /** Terminology card and resource-type toggle (Advanced configuration tab only). */
 export const APP_ADVANCED_CONFIG = {
+  /**
+   * Inline alert above Advanced content: page removal / Placements relocation (Playwriter: `.pf-v6-c-alert`).
+   * Omit on consoles that have not shipped this banner yet.
+   */
+  deprecationBanner: {
+    bodyPattern:
+      /Placements will move to a central location under Infrastructure > Clusters > Placements/i,
+    learnMoreLinkName: 'Learn more',
+  },
   /** Expandable card id and title */
   terminologyCard: {
     id: 'ApplicationDeploymentHighlightsTerminology',
@@ -211,7 +228,6 @@ export const APP_ADVANCED_CONFIG = {
     termTitles: {
       subscriptions: 'Subscriptions',
       channels: 'Channels',
-      placements: 'Placements',
       placementRules: 'Placement rules',
     },
     /** Deprecated label shown next to some terms */
@@ -224,13 +240,11 @@ export const APP_ADVANCED_CONFIG = {
     ids: {
       subscriptions: 'subscriptions',
       channels: 'channels',
-      placements: 'placements',
       placementRules: 'placementrules',
     },
     labels: {
       subscriptions: 'Subscriptions',
       channels: 'Channels',
-      placements: 'Placements',
       placementRules: 'Placement rules',
     },
   },
@@ -246,7 +260,6 @@ export const APP_ADVANCED_CONFIG = {
     titlePatterns: {
       subscriptions: /don't have any subscriptions/i,
       channels: /don't have any channels/i,
-      placements: /don't have any placements/i,
       placementRules: /don't have any placement rules/i,
     },
   },
@@ -259,7 +272,6 @@ export const APP_ADVANCED_OC_RESOURCES: Record<
 > = {
   subscriptions: 'subscriptions.apps.open-cluster-management.io',
   channels: 'channels.apps.open-cluster-management.io',
-  placements: 'placements.cluster.open-cluster-management.io',
   placementRules: 'placementrules.apps.open-cluster-management.io',
 };
 
@@ -280,14 +292,6 @@ export const APP_ADVANCED_TABLE_COLUMNS_CHANNELS = {
   namespace: 'Namespace',
   type: 'Type',
   subscriptions: 'Subscriptions',
-  clusters: 'Clusters',
-  created: 'Created',
-} as const;
-
-/** Advanced config table columns – Placements view (Name, Namespace, Clusters, Created). */
-export const APP_ADVANCED_TABLE_COLUMNS_PLACEMENTS = {
-  name: 'Name',
-  namespace: 'Namespace',
   clusters: 'Clusters',
   created: 'Created',
 } as const;
