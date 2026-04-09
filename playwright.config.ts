@@ -1,3 +1,5 @@
+// Load `.env` via config layer (see src/config/index.ts)
+import './src/config/index';
 import { defineConfig, devices } from '@playwright/test';
 
 /**
@@ -42,8 +44,9 @@ export default defineConfig({
     // Main test project - uses authenticated state
     {
       name: 'chromium',
-      use: { 
+      use: {
         ...devices['Desktop Chrome'],
+        viewport: { width: 1920, height: 1080 },
         // Use the authenticated state saved by setup
         storageState: '.auth/user.json',
       },

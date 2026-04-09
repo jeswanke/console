@@ -2,13 +2,13 @@ import { Page, Locator, expect } from '@playwright/test';
 import { SELECTORS } from '@constants/selectors';
 
 /**
- * Reusable ACM Table component with search functionality.
- * Used across Clusters, Cluster Sets, Applications, Policies, etc.
+ * PatternFly-oriented table primitive for ACM list pages (search, rows by OUIA id).
+ * Domain-specific tables extend this (e.g. ApplicationsTable).
  */
 export class AcmTable {
   private readonly searchInput: Locator;
 
-  constructor(private readonly page: Page) {
+  constructor(protected readonly page: Page) {
     this.searchInput = page.locator(SELECTORS.common.searchInput);
   }
 
@@ -42,4 +42,3 @@ export class AcmTable {
     await this.getRow(ouiaId).click();
   }
 }
-

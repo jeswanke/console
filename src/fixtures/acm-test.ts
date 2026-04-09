@@ -1,6 +1,6 @@
 import { test as base, expect } from '@playwright/test';
 import { OcCliService } from '@services/OcCliService';
-import { ClusterListPage } from '@pages/ClusterListPage';
+import { ClusterListPage } from '@pages/cluster/ClusterListPage';
 import { generateSafeName } from '@utils/kube-helper';
 
 type AcmFixtures = {

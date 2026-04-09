@@ -43,9 +43,21 @@ export const SELECTORS = {
     row: (name: string) => `tr[data-ouia-component-id="${name}"]`,
   },
 
-  /** Application domain */
+  /** Application Lifecycle domain (Applications list, details, Advanced configuration tab) */
   application: {
-    // Add as needed
+    createButton: '#application-create',
+    table: '[aria-label="Simple Table"]',
+    rowByOuiaId: (ouiaId: string) => `tr[data-ouia-component-id="${ouiaId}"]`,
+    exportButton: '#export-search-result',
+    filterButton: '#acm-table-filter-select-undefined',
+    /** Advanced configuration tab: terminology card and resource-type toggle buttons */
+    terminologyCard: '#ApplicationDeploymentHighlightsTerminology',
+    resourceToggle: {
+      subscriptions: '#subscriptions',
+      channels: '#channels',
+      placements: '#placements',
+      placementRules: '#placementrules',
+    },
   },
 
   /** Governance/Policy domain */

@@ -1,6 +1,6 @@
 # 🏗 ACM Automation Architecture Reference
 
-![architecture-overview](./images/architecture-overview.png)
+_(Diagram: add `docs/images/architecture-overview.png` if you have the asset.)_
 
 This project follows a **Domain-Driven, Hybrid Testing Architecture**. We separate **"Test Intent"** (what we want to verify) from **"Implementation Details"** (how we click buttons or run CLI commands).
 
@@ -32,7 +32,6 @@ A more comprehensive example:
 ├── package.json            <-- Scripts call ./start.sh.
 ├── playwright.config.ts    <-- The "Mixer" (Env + Presets + Projects).
 ├── start.sh                <-- Entrypoint: Auto-login, Version Detect, Test Runner.
-├── Jenkinsfile             <-- CI jenkinsfile
 ├── tsconfig.json           <-- Strict Mode & Path Aliases (@utils, @pages, etc).
 │
 ├── .github
@@ -256,3 +255,65 @@ getClusterRow(name: string) {
 - **API vs UI**: Use hybrid approach for setup/teardown
 
 **Rule:** Setup data via API, test interactions via UI.
+
+---
+
+## `console-e2e` — layout in *this* repository
+
+The tree below is what **this** repo implements today (aligned with the layers above). Bash entrypoints live **outside** `/src` (`start.sh`, `scripts/lib/`). Env templates live in **`env/`** at the repo root.
+
+```text
+console-e2e/
+├── start.sh                    # Main dispatcher → component scripts
+├── .env / .env.example         # Universal vars (HUB_* for API+UI password, optional CONSOLE_USERNAME/CONSOLE_IDP, TEST_MODE); start.sh sources .env before oc login
+├── playwright.config.ts        # Imports ./src/config/index (loads .env), projects, reporters
+├── package.json                # `npm run test`, `npm run test:alc` → ./start.sh alc
+├── env/
+│   └── alc.env.example         # ALC template → copy to env/alc.local.env (gitignored)
+├── scripts/
+│   ├── lib/common.sh           # Login, npm; exports CONSOLE_USERNAME/CONSOLE_IDP before login; after login universal env (BASE_URL, OC_CLUSTER_*, PLAYWRIGHT_TEST_MODE)
+│   └── lib/alc-env.sh          # Sources env/alc.local.env (ALC integrations only)
+└── src/
+    ├── config/                 # §1 — loader + types
+    │   ├── schema.ts
+    │   ├── presets.ts
+    │   └── index.ts            # dotenv + getHubAuth() / getTestConfig()
+    ├── constants/              # §2 — selectors, app copy
+    │   ├── selectors.ts
+    │   └── app.ts
+    ├── services/               # §2 — OcCliService (AuthService / domains: add as needed)
+    │   └── OcCliService.ts
+    ├── utils/                  # §6
+    │   └── kube-helper.ts
+    ├── components/             # §3
+    │   ├── patternfly/         # Low-level / shared table widgets
+    │   │   └── AcmTable.ts
+    │   └── app/                # Domain widget (Applications table)
+    │       └── ApplicationsTable.ts
+    ├── pages/                  # §4
+    │   ├── BasePage.ts
+    │   ├── app/
+    │   │   └── ApplicationListPage.ts
+    │   └── cluster/
+    │       ├── ClusterListPage.ts
+    │       └── ClusterSetsPage.ts
+    ├── lib/                    # §5 — assertions, factories (expand here)
+    │   └── index.ts
+    ├── fixtures/               # §7
+    │   ├── acm-test.ts
+    │   └── app-test.ts
+    ├── global-setup.ts         # Playwright global setup (not in diagram; standard hook)
+    └── tests/                  # §8
+        ├── auth.setup.ts       # Uses getHubAuth() from @config (not raw process.env)
+        ├── app/
+        │   └── applications-list.spec.ts
+        └── cluster/
+            └── cluster-list.spec.ts
+```
+
+**Conventions**
+
+- Prefer **`getHubAuth()` / `getTestConfig()`** from `@config` over **`process.env` in specs and setup** (see `auth.setup.ts`).
+- **Cluster** page objects live under **`pages/cluster/`**; **app** pages under **`pages/app/`**.
+- **`AcmTable`** lives under **`components/patternfly/`** as the shared PF-oriented table primitive.
+- Optional **`templates/`**, **`services/domains/`**, and **`constants/routes.ts`** can be added when needed without changing the overall model.

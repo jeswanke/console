@@ -31,4 +31,17 @@ export class OcCliService {
     );
     return `https://${host}`;
   }
+
+  /**
+   * Returns true if at least one instance of the resource exists in any namespace.
+   * @param resource - e.g. "subscriptions.apps.open-cluster-management.io"
+   */
+  async hasResourcesInCluster(resource: string): Promise<boolean> {
+    try {
+      const out = await this.run(`oc get ${resource} -A --no-headers 2>/dev/null || true`);
+      return out.length > 0;
+    } catch {
+      return false;
+    }
+  }
 }

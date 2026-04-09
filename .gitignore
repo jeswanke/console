@@ -30,4 +30,5 @@ npm-debug.log*
 .env
 .env.local
 .env.*.local
+env/alc.local.env
 
