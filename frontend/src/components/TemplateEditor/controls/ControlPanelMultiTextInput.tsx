@@ -14,41 +14,38 @@ import {
   TextInput,
   ContentVariants,
 } from '@patternfly/react-core'
-import { TFunction } from 'react-i18next'
 import { PlusCircleIcon, TrashIcon } from '@patternfly/react-icons'
 import ControlPanelFormGroup from './ControlPanelFormGroup'
+import { ControlPanelBaseProps, MultitextActiveState, TemplateControl } from '../utils/types'
 
-const ControlPanelMultiTextInput = (props: {
-  control: any
-  controlData: any
-  controlId: string
-  handleChange: (value: object) => void
-  i18n: TFunction
-  addButtonText: string
-}) => {
+const ControlPanelMultiTextInput = (
+  props: ControlPanelBaseProps & { handleChange: (value: TemplateControl) => void; addButtonText: string }
+) => {
   const { controlId, i18n, control, controlData, handleChange, addButtonText } = props
+  const childControls = control.controlData ?? []
+  const multitextActive = control.active as MultitextActiveState
 
   const onKeyChange = (index: number, newKey: string) => {
-    control.controlData[index].active = newKey
-    control.active.multitextEntries[index] = newKey
+    childControls[index].active = newKey
+    multitextActive.multitextEntries[index] = newKey
     handleChange(control)
   }
 
   const onNewKey = () => {
-    const newMultitextMember = {
+    const newMultitextMember: TemplateControl = {
       id: controlId,
       type: 'multitextMember',
       active: '',
       validation: control.validation,
     }
-    control.controlData.push(newMultitextMember)
-    control.active.multitextEntries.push('')
+    childControls.push(newMultitextMember)
+    multitextActive.multitextEntries.push('')
     handleChange(control)
   }
 
   const onDeleteKey = (index: number) => {
-    control.controlData.splice(index, 1)
-    control.active.multitextEntries.splice(index, 1)
+    childControls.splice(index, 1)
+    multitextActive.multitextEntries.splice(index, 1)
     handleChange(control)
   }
 
@@ -56,15 +53,16 @@ const ControlPanelMultiTextInput = (props: {
     <div className="creation-view-controls-textbox">
       <div>
         <Stack hasGutter>
-          {control.controlData.map((multitextObject: any, index: number) => {
+          {childControls.map((multitextObject: TemplateControl, index: number) => {
             const { validation, placeholder, name, tooltip } = control
             multitextObject.name = name
             multitextObject.tooltip = tooltip
             multitextObject.validation = validation
             let exception: any = undefined
             const innerControlId = `${controlId}-${index}`
-            if (multitextObject?.active && validation?.contextTester) {
-              exception = validation.contextTester(multitextObject?.active, controlData, undefined, i18n)
+            const cellVal = String(multitextObject?.active ?? '')
+            if (cellVal && validation?.contextTester) {
+              exception = validation.contextTester(cellVal, controlData, undefined, i18n)
             }
             const validated = exception ? 'error' : undefined
             return (
@@ -82,7 +80,7 @@ const ControlPanelMultiTextInput = (props: {
                         <SplitItem style={{ width: index > 0 ? '96%' : '100%' }}>
                           <TextInput
                             id={`text-${innerControlId}`}
-                            value={multitextObject.active || ''}
+                            value={String(multitextObject.active ?? '')}
                             onChange={(_event, value) => onKeyChange(index, value)}
                             required
                             validated={validated}

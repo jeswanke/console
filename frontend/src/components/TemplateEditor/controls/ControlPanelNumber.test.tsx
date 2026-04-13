@@ -4,6 +4,7 @@
 import { cleanup, render } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import ControlPanelNumber from './ControlPanelNumber'
+import { TemplateControl } from '../utils/types'
 
 import i18n from 'i18next'
 
@@ -13,29 +14,20 @@ const fn = jest.fn()
 describe('ControlPanelNumber component', () => {
   afterEach(cleanup)
   it('renders as expected', () => {
-    const control: {
-      name: string
-      tooltip: string
-      controlData: unknown[]
-      id: string
-      type: string
-      initial: string
-      active?: string
-      exception?: string
-    } = {
+    const control = {
       name: 'creation.app.name',
       tooltip: 'tooltip.creation.app.name',
-      controlData: [],
+      controlData: [] as TemplateControl[],
       id: 'name',
       type: 'number',
       initial: '3',
-    }
+    } as TemplateControl
     const Component = () => {
       return (
         <ControlPanelNumber
           key={'key'}
           control={control}
-          controlData={control.controlData}
+          controlData={control.controlData ?? []}
           controlId={'controlId'}
           handleChange={fn}
           i18n={t}
@@ -57,30 +49,21 @@ describe('ControlPanelNumber component', () => {
     expect(control.active).toBe('0')
   })
   it('renders as expected with min int value', () => {
-    const control: {
-      name: string
-      tooltip: string
-      controlData: unknown[]
-      id: string
-      type: string
-      initial: string
-      min: number
-      active?: string
-    } = {
+    const control = {
       name: 'creation.app.name',
       tooltip: 'tooltip.creation.app.name',
-      controlData: [],
+      controlData: [] as TemplateControl[],
       id: 'name-min',
       type: 'number',
       initial: '3',
       min: 1,
-    }
+    } as TemplateControl
     const Component = () => {
       return (
         <ControlPanelNumber
           key={'key'}
           control={control}
-          controlData={control.controlData}
+          controlData={control.controlData ?? []}
           controlId={'controlId-min'}
           handleChange={fn}
           i18n={t}

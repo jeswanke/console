@@ -3,16 +3,10 @@
 
 import { RefCallback, useCallback } from 'react'
 import ControlPanelFormGroup from './ControlPanelFormGroup'
-import { TFunction } from 'react-i18next'
 import { ButtonProps, NumberInput } from '@patternfly/react-core'
+import { ControlPanelBaseProps } from '../utils/types'
 
-const ControlPanelNumber = (props: {
-  control: any
-  controlData: any
-  controlId: string
-  handleChange: () => void
-  i18n: TFunction
-}) => {
+const ControlPanelNumber = (props: ControlPanelBaseProps & { handleChange: () => void }) => {
   const { controlId, control, controlData, handleChange, i18n } = props
   const { exception, min } = control
 
@@ -36,7 +30,7 @@ const ControlPanelNumber = (props: {
 
   const onChange = useCallback(
     (inc: number) => {
-      const value = Number.parseInt(control.active, 10) + inc
+      const value = Number.parseInt(String(control.active ?? ''), 10) + inc
       if ((min && value >= min) || (!min && value >= 0)) {
         control.active = value.toString()
         handleChange()
@@ -61,7 +55,11 @@ const ControlPanelNumber = (props: {
           }}
           onMinus={() => onChange(-1)}
           onPlus={() => onChange(1)}
-          value={control.active || ''}
+          value={
+            control.active === '' || control.active === undefined
+              ? ''
+              : Number.parseInt(String(control.active), 10) || 0
+          }
           minusBtnAriaLabel={i18n('Minus')}
           minusBtnProps={{ id: `down-${controlId}`, 'data-testid': `down-${controlId}` } as ButtonProps}
           plusBtnAriaLabel={i18n('Plus')}

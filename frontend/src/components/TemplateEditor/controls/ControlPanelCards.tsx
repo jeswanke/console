@@ -1,55 +1,69 @@
 /* Copyright Contributors to the Open Cluster Management project */
 'use strict'
 
-import React from 'react'
-import PropTypes from 'prop-types'
+import React, { Component } from 'react'
 import groupBy from 'lodash/groupBy'
 import { Title, TitleSizes, Gallery, Stack } from '@patternfly/react-core'
 import { Tile } from '@patternfly/react-core/deprecated'
 import Tooltip from '../components/Tooltip'
 import isEmpty from 'lodash/isEmpty'
+import { ControlPanelCardsProps, TemplateControl } from '../utils/types'
 
-class ControlPanelCards extends React.Component {
-  static propTypes = {
-    control: PropTypes.object,
-    fetchData: PropTypes.object,
-    handleChange: PropTypes.func,
-    i18n: PropTypes.func,
-    showEditor: PropTypes.bool,
-  }
+type CardChoice = {
+  id: string
+  hidden?: boolean
+  title: string
+  tooltip?: React.ReactNode
+  text?: React.ReactNode
+  logo?: React.ReactNode
+  section?: string
+}
 
-  static getDerivedStateFromProps(props, state) {
+type State = {
+  collapsed: boolean
+  initialized?: boolean
+}
+
+export default class ControlPanelCards extends Component<ControlPanelCardsProps, State> {
+  static getDerivedStateFromProps(props: ControlPanelCardsProps, state: State): Partial<State> | null {
     const { initialized } = state
     if (!initialized) {
       const { control } = props
-      const { active, collapseCardsControlOnSelect } = control
+      const { active, collapseCardsControlOnSelect } = control as {
+        active?: unknown
+        collapseCardsControlOnSelect?: boolean
+      }
       return {
-        collapsed: collapseCardsControlOnSelect && !isEmpty(active),
+        collapsed: !!(collapseCardsControlOnSelect && !isEmpty(active)),
         initialized: true,
       }
     }
     return null
   }
 
-  constructor(props) {
+  multiSelect: HTMLDivElement | null = null
+
+  constructor(props: ControlPanelCardsProps) {
     super(props)
     const { control } = props
-    const { active, collapsed, collapseCardsControlOnSelect } = control
+    const { active, collapsed, collapseCardsControlOnSelect } = control as {
+      active?: unknown
+      collapsed?: boolean
+      collapseCardsControlOnSelect?: boolean
+    }
 
-    // if active was preset by loading an existing resource
-    // collapse cards on that selection
     this.state = {
-      collapsed: collapsed || (collapseCardsControlOnSelect && !!active),
+      collapsed: !!(collapsed || (collapseCardsControlOnSelect && !!active)),
     }
   }
 
-  setControlRef = (control, ref) => {
+  setControlRef = (control: TemplateControl, ref: HTMLDivElement | null) => {
     this.multiSelect = control.ref = ref
   }
 
-  componentDidMount() {
+  override componentDidMount() {
     const { control, fetchData, handleChange } = this.props
-    const { active } = control
+    const { active } = control as { active?: string | ((c: TemplateControl, fd?: Record<string, unknown>) => string) }
     if (typeof active === 'function') {
       const activeID = active(control, fetchData)
       if (activeID) {
@@ -58,20 +72,24 @@ class ControlPanelCards extends React.Component {
     }
   }
 
-  render() {
+  override render() {
     const { i18n, control } = this.props
-    const { available = [], availableMap } = control
+    const { available = [], availableMap } = control as {
+      available?: string[]
+      availableMap?: Record<string, CardChoice>
+    }
     const { collapsed } = this.state
-    let { active } = control
+    let { active } = control as { active?: string[] }
     active = active || []
 
-    const availableCards = Object.keys(availableMap).reduce((acc, curr) => {
+    const availableCards = Object.keys(availableMap || {}).reduce<CardChoice[]>((acc, curr) => {
       if (available.includes(curr)) {
-        acc.push(availableMap[curr])
+        acc.push(availableMap![curr])
       }
       return acc
     }, [])
     const cardGroups = groupBy(availableCards, (c) => c.section)
+    const sectionTooltips = (control as { sectionTooltips?: Record<string, React.ReactNode> }).sectionTooltips
     return (
       <React.Fragment>
         <div className="creation-view-controls-card-container" ref={this.setControlRef.bind(this, control)}>
@@ -79,7 +97,7 @@ class ControlPanelCards extends React.Component {
             <div className={'tf--grid'}>
               <Stack hasGutter>
                 {Object.keys(cardGroups).map((group) => {
-                  const groupTooltip = group && control.sectionTooltips?.[group]
+                  const groupTooltip = group && sectionTooltips?.[group]
                   return (
                     <React.Fragment key={group}>
                       <Stack hasGutter>
@@ -141,10 +159,10 @@ class ControlPanelCards extends React.Component {
     )
   }
 
-  handleChange(id) {
+  handleChange(id: string) {
     const { collapsed } = this.state
     const { control } = this.props
-    const { collapseCardsControlOnSelect } = control
+    const { collapseCardsControlOnSelect } = control as { collapseCardsControlOnSelect?: boolean }
     if (collapseCardsControlOnSelect) {
       this.setState((prevState) => {
         return { collapsed: !prevState.collapsed }
@@ -153,5 +171,3 @@ class ControlPanelCards extends React.Component {
     this.props.handleChange(collapsed ? null : id)
   }
 }
-
-export default ControlPanelCards

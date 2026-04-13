@@ -4,8 +4,8 @@
 import { Alert, Button } from '@patternfly/react-core'
 import { PlusCircleIcon, TrashIcon } from '@patternfly/react-icons'
 import classNames from 'classnames'
-import PropTypes from 'prop-types'
-import React from 'react'
+import React, { Component } from 'react'
+import { ControlPanelProps, TemplateControl, WizardStepStructure } from '../utils/types'
 import '../css/control-panel.css'
 import ControlPanelAccordion from './ControlPanelAccordion'
 import ControlPanelBoolean from './ControlPanelBoolean'
@@ -25,33 +25,21 @@ import ControlPanelTreeSelect from './ControlPanelTreeSelect'
 import ControlPanelValues from './ControlPanelValues'
 import ControlPanelWizard from './ControlPanelWizard'
 
-class ControlPanel extends React.Component {
-  static propTypes = {
-    controlData: PropTypes.array,
-    controlProps: PropTypes.object,
-    creationStatus: PropTypes.string,
-    fetchData: PropTypes.object,
-    handleCancelCreate: PropTypes.func,
-    handleControlChange: PropTypes.func,
-    handleCreateResource: PropTypes.func,
-    handleGroupChange: PropTypes.func,
-    handleNewEditorMode: PropTypes.func,
-    i18n: PropTypes.func,
-    isCustomName: PropTypes.bool,
-    isEditing: PropTypes.bool,
-    isLoaded: PropTypes.bool,
-    notifications: PropTypes.array,
-    onChange: PropTypes.func,
-    originalControlData: PropTypes.array,
-    resetStatus: PropTypes.func,
-    setEditorReadOnly: PropTypes.func,
-    showEditor: PropTypes.bool,
-    showPortals: PropTypes.object,
-    templateYAML: PropTypes.any,
-    backButtonOverride: PropTypes.func,
-  }
+type SectionTitle = TemplateControl | { id: string; type: string; subgroup?: boolean; content?: TemplateControl[] }
 
-  constructor(props) {
+type PanelSection = {
+  title: SectionTitle
+  content: TemplateControl[]
+}
+
+type PanelStep = { title: SectionTitle; sections: PanelSection[] }
+
+export default class ControlPanel extends Component<ControlPanelProps> {
+  creationView?: HTMLDivElement | null
+  creationViewBottomBlurrRef?: HTMLDivElement | null
+  wizardRef?: unknown
+
+  constructor(props: ControlPanelProps) {
     super(props)
   }
 
@@ -59,16 +47,16 @@ class ControlPanel extends React.Component {
     this.refreshFading()
   }
 
-  setCreationViewRef = (ref) => {
+  setCreationViewRef = (ref: HTMLDivElement | null) => {
     this.creationView = ref
   }
 
-  setCreationViewBottomBlurrRef = (ref) => {
+  setCreationViewBottomBlurrRef = (ref: HTMLDivElement | null) => {
     this.creationViewBottomBlurrRef = ref
   }
 
   refreshFading = () => {
-    if (this.creationViewBottomBlurrRef) {
+    if (this.creationViewBottomBlurrRef && this.creationView) {
       const hasScrollbar = this.creationView.scrollHeight > this.creationView.clientHeight
       const towardsBottom =
         this.creationView.scrollTop + this.creationView.clientHeight > this.creationView.scrollHeight - 20
@@ -76,11 +64,11 @@ class ControlPanel extends React.Component {
     }
   }
 
-  setWizardRef = (ref) => {
+  setWizardRef = (ref: unknown) => {
     this.wizardRef = ref
   }
 
-  setControlSectionRef = (title, ref) => {
+  setControlSectionRef = (title: TemplateControl, ref: HTMLDivElement | null) => {
     title.sectionRef = ref
   }
 
@@ -98,14 +86,14 @@ class ControlPanel extends React.Component {
     )
   }
 
-  renderControlFormOrWizard(controlData, controlClasses) {
-    let step
-    let section
-    let content = []
-    const steps = []
-    let sections = []
-    let activeStep
-    let activeSection
+  renderControlFormOrWizard(controlData: TemplateControl[], controlClasses: string): React.ReactNode {
+    let step: PanelStep | undefined
+    let section: PanelSection | undefined
+    let content: TemplateControl[] = []
+    const steps: PanelStep[] = []
+    let sections: PanelSection[] = []
+    let activeStep: PanelStep | undefined
+    let activeSection: PanelSection | undefined
     let stopRendering = false
     let stopRenderingOnNextControl = false
     controlData.forEach((control, inx) => {
@@ -134,7 +122,7 @@ class ControlPanel extends React.Component {
             }
             sections = []
             content = []
-            activeSection = null
+            activeSection = undefined
             activeStep = { title: control, sections }
             if (!isHidden) {
               steps.push(activeStep)
@@ -176,7 +164,7 @@ class ControlPanel extends React.Component {
     }
   }
 
-  renderControlForm(sections, controlClasses) {
+  renderControlForm(sections: PanelSection[], controlClasses: string): React.ReactNode {
     return (
       <React.Fragment>
         <div className={controlClasses} ref={this.setCreationViewRef} onScroll={this.refreshFading.bind(this)}>
@@ -189,7 +177,7 @@ class ControlPanel extends React.Component {
     )
   }
 
-  renderControlWizard(steps, controlClasses, controlData) {
+  renderControlWizard(steps: PanelStep[], controlClasses: string, controlData: TemplateControl[]): React.ReactNode {
     const {
       handleCreateResource,
       handleCancelCreate,
@@ -203,7 +191,7 @@ class ControlPanel extends React.Component {
     return (
       <ControlPanelWizard
         i18n={i18n}
-        steps={steps}
+        steps={steps as WizardStepStructure[]}
         controlData={controlData}
         controlClasses={controlClasses}
         setWizardRef={this.setWizardRef.bind(this)}
@@ -220,9 +208,17 @@ class ControlPanel extends React.Component {
     )
   }
 
-  renderControlSections(controlSections, grpId = '') {
+  renderControlSections(controlSections: PanelSection[], grpId = ''): React.ReactNode {
     return controlSections.map(({ title, content: _content }) => {
-      const { id, collapsed = false, shadowed } = title
+      const {
+        id: sectionId,
+        collapsed = false,
+        shadowed,
+      } = title as SectionTitle & {
+        collapsed?: boolean
+        shadowed?: boolean
+      }
+      const id = sectionId ?? 'section'
       const sectionClasses = classNames({
         'creation-view-controls-section': true,
         shadowed,
@@ -231,12 +227,12 @@ class ControlPanel extends React.Component {
       const sectionContainerClasses = classNames({
         'creation-view-group-subcontainer': title.subgroup,
       })
-      title.content = _content
+      ;(title as SectionTitle & { content?: TemplateControl[] }).content = _content
       return (
         <React.Fragment key={id}>
           <div className={sectionContainerClasses}>
-            {this.renderControl(id, 'section', title, grpId)}
-            <div className={sectionClasses} ref={this.setControlSectionRef.bind(this, title)}>
+            {this.renderControl(id, 'section', title as TemplateControl, grpId)}
+            <div className={sectionClasses} ref={this.setControlSectionRef.bind(this, title as TemplateControl)}>
               {this.renderControls(_content, grpId)}
             </div>
           </div>
@@ -245,30 +241,41 @@ class ControlPanel extends React.Component {
     })
   }
 
-  renderControls(controlData, grpId) {
+  renderControls(controlData: TemplateControl[], grpId?: string): React.ReactNode {
     return (
       <React.Fragment>
         {controlData.map((control, i) => {
-          const { id = `${control.type}-${i}`, type } = control
+          const { type } = control
+          const id = control.id ?? `${String(type)}-${i}`
           switch (type) {
             case 'group':
               return this.renderGroup(control, grpId)
             default:
-              return this.renderControlWithFetch(id, type, control, grpId)
+              return this.renderControlWithFetch(id, String(type), control, grpId)
           }
         })}
       </React.Fragment>
     )
   }
 
-  renderGroup(control, grpId = '') {
-    const { id, active = [], hidden, prompts, startWithNone } = control
-    active.forEach((controlData) => {
-      controlData.forEach((ctrl) => {
+  renderGroup(control: TemplateControl, grpId = ''): React.ReactNode {
+    const {
+      id,
+      active = [],
+      hidden,
+      prompts,
+      startWithNone,
+    } = control as TemplateControl & {
+      active?: TemplateControl[][]
+      prompts?: TemplateControl['prompts']
+      startWithNone?: boolean
+    }
+    active.forEach((controlData: TemplateControl[]) => {
+      controlData.forEach((ctrl: TemplateControl) => {
         ctrl.group = control
       })
     })
-    const isHidden = typeof hidden === 'function' ? hidden() : hidden
+    const isHidden = typeof hidden === 'function' ? (hidden as () => boolean)() : hidden
     // shows add button only when no mappings and startWithNone is true
     if (startWithNone && active.length === 0) {
       return (
@@ -307,13 +314,13 @@ class ControlPanel extends React.Component {
     )
   }
 
-  renderGroupControlSections(controlData, grpNum, grpId = '') {
+  renderGroupControlSections(controlData: TemplateControl[], grpNum: number, grpId = ''): React.ReactNode {
     // create collapsable control sections
-    let section
-    let content = []
+    let section: PanelSection | undefined
+    let content: TemplateControl[] = []
     let stopRendering = false
     let stopRenderingOnNextControl = false
-    const controlSections = []
+    const controlSections: PanelSection[] = []
     controlData.forEach((control) => {
       const { type, pauseControlCreationHereUntilSelected } = control
       stopRendering = stopRenderingOnNextControl
@@ -335,7 +342,7 @@ class ControlPanel extends React.Component {
   }
 
   // if data for 'available' is fetched from server, use apollo component
-  renderControlWithFetch(id, type, control, grpId) {
+  renderControlWithFetch(id: string, type: string, control: TemplateControl, grpId?: string): React.ReactNode {
     const { fetchAvailable } = control
     if (fetchAvailable) {
       const { query, setAvailable } = fetchAvailable
@@ -343,20 +350,20 @@ class ControlPanel extends React.Component {
       if (typeof variables === 'function') {
         variables = variables(control, this.props.controlData)
       }
-      const refetch = (func) => {
+      const refetch = (func: () => Promise<unknown>) => {
         delete control.isLoaded
         control.isRefetching = true
-        control.forceUpdate()
+        control.forceUpdate?.()
         func()
-          .then((data) => {
+          .then((data: unknown) => {
             control.isRefetching = false
             setAvailable(control, { data })
-            control.forceUpdate()
+            control.forceUpdate?.()
           })
-          .catch((err) => {
+          .catch((err: unknown) => {
             control.isRefetching = false
             setAvailable(control, { error: err })
-            control.forceUpdate()
+            control.forceUpdate?.()
           })
       }
 
@@ -364,13 +371,13 @@ class ControlPanel extends React.Component {
         if (!control.isLoading) {
           setAvailable(control, { loading: true })
           query()
-            .then((data) => {
+            .then((data: unknown) => {
               setAvailable(control, { loading: false, data, i18n: this.props.i18n })
-              control.forceUpdate()
+              control.forceUpdate?.()
             })
-            .catch((err) => {
+            .catch((err: unknown) => {
               setAvailable(control, { loading: false, error: err })
-              control.forceUpdate()
+              control.forceUpdate?.()
             })
         }
       }
@@ -380,7 +387,7 @@ class ControlPanel extends React.Component {
   }
 
   // if data for 'available' is fetched from server, use apollo component
-  renderControlWithPrompt(id, type, control, grpId) {
+  renderControlWithPrompt(id: string, type: string, control: TemplateControl, grpId?: string): React.ReactNode {
     const { prompts } = control
     if (prompts) {
       const { positionAboveControl } = prompts
@@ -403,7 +410,7 @@ class ControlPanel extends React.Component {
     return this.renderControl(id, type, control, grpId)
   }
 
-  renderControlPrompt(control) {
+  renderControlPrompt(control: TemplateControl): React.ReactNode {
     const { i18n } = this.props
     return (
       <ControlPanelPrompt
@@ -414,12 +421,12 @@ class ControlPanel extends React.Component {
     )
   }
 
-  handleAddActive = (control, items) => {
+  handleAddActive = (control: TemplateControl, items: unknown) => {
     control.active = items
     this.props.handleControlChange(control, this.props.controlData, this.creationView, this.props.isCustomName)
   }
 
-  renderControl(id, type, control, grpId) {
+  renderControl(id: string, type: string, control: TemplateControl, grpId?: string): React.ReactNode {
     const { controlData, showEditor, isLoaded, i18n, templateYAML, handleCreateResource, controlProps } = this.props
     if (this.isHidden(control, controlData)) {
       return null
@@ -438,7 +445,6 @@ class ControlPanel extends React.Component {
             controlId={controlId}
             control={control}
             controlData={controlData}
-            handleChange={this.handleChange.bind(this, control)}
             i18n={i18n}
           />
         )
@@ -463,7 +469,7 @@ class ControlPanel extends React.Component {
             controlData={controlData}
             handleChange={this.handleControlChange.bind(this, control)}
             i18n={i18n}
-            addButtonText={control.addButtonText}
+            addButtonText={control.addButtonText as string}
           />
         )
       case 'textarea':
@@ -600,13 +606,19 @@ class ControlPanel extends React.Component {
     return null
   }
 
-  setControlRef = (control, ref) => {
+  setControlRef = (control: TemplateControl, ref: HTMLDivElement | null) => {
     control.ref = ref
   }
 
-  renderCustom(control, controlId, templateYAML, handleCreateResource, controlProps) {
+  renderCustom(
+    control: TemplateControl,
+    controlId: string,
+    templateYAML: unknown,
+    handleCreateResource: () => void,
+    controlProps: Record<string, unknown> | undefined
+  ): React.ReactNode {
     const { i18n } = this.props
-    const { component } = control
+    const { component } = control as TemplateControl & { component: React.ReactElement }
     const custom = React.cloneElement(component, {
       control,
       i18n,
@@ -625,7 +637,7 @@ class ControlPanel extends React.Component {
     )
   }
 
-  handleChange(control) {
+  handleChange(control: TemplateControl, _evt?: unknown) {
     let updateName = false
     let { isCustomName } = this.props
     const { controlData, originalControlData, onChange } = this.props
@@ -643,19 +655,21 @@ class ControlPanel extends React.Component {
       case 'multiselect':
         // if user was able to select something that automatically
         // generates the name, blow away the user name
-        updateName = !isCustomName && control.updateNamePrefix
+        updateName = Boolean(!isCustomName && control.updateNamePrefix)
         break
     }
 
     // update name if spec changed
     if (updateName) {
-      let cname
+      let cname: string
       const nname = controlData.find(({ id }) => id === 'name')
+      const activeArr = control.active as string[]
+      const map = control.availableMap as Record<string, { name: string }> | undefined
       if (nname) {
-        if (control.active.length > 0) {
-          cname = control.updateNamePrefix + control.availableMap[control.active[0]].name.replaceAll(/\W/g, '-')
+        if (activeArr?.length > 0 && map && control.updateNamePrefix) {
+          cname = control.updateNamePrefix + map[activeArr[0]].name.replaceAll(/\W/g, '-')
         } else {
-          cname = originalControlData.find(({ id }) => id === 'name').active
+          cname = String(originalControlData.find(({ id }) => id === 'name')?.active ?? '')
         }
         nname.active = cname.toLowerCase()
       }
@@ -665,34 +679,39 @@ class ControlPanel extends React.Component {
     if (syncWith && control.groupControlData) {
       // whatever is typed into this control, also put in other control
       const syncControl = control.groupControlData.find(({ id }) => id === syncWith)
-      syncControl.active = `${control.active}${syncControl.syncedSuffix || ''}`
+      if (syncControl) {
+        syncControl.active = `${control.active as string}${(syncControl.syncedSuffix as string) || ''}`
+      }
     }
     if (syncedWith && control.groupControlData) {
       // if another control is synced with this control and
       // user is typing a value here directly, remove sync
       const syncedControl = control.groupControlData.find(({ id }) => id === syncedWith)
       delete control.syncedWith
-      delete syncedControl.syncWith
+      if (syncedControl) {
+        delete syncedControl.syncWith
+      }
     }
     this.props.handleControlChange(control, controlData, isCustomName)
     return field
   }
 
-  handleCardChange(control, selection) {
+  handleCardChange(control: TemplateControl, selection: string | null) {
     const { controlData, isCustomName } = this.props
     const { multiselect, newEditorMode } = control
     if (!newEditorMode) {
       if (!multiselect) {
         control.active = selection
       } else {
-        if (!control.active) {
-          control.active = [selection]
+        const ac = control.active as string[] | undefined
+        if (!ac) {
+          control.active = [selection as string]
         } else {
-          const inx = control.active.indexOf(selection)
+          const inx = ac.indexOf(selection as string)
           if (inx === -1) {
-            control.active.push(selection)
+            ac.push(selection as string)
           } else {
-            control.active.splice(inx, 1)
+            ac.splice(inx, 1)
           }
         }
       }
@@ -700,13 +719,13 @@ class ControlPanel extends React.Component {
     } else {
       control.active = []
       if (selection) {
-        control.active.push(selection)
+        ;(control.active as string[]).push(selection)
       }
       this.props.handleNewEditorMode(control, controlData, this.creationView, this.wizardRef)
     }
   }
 
-  handleControlChange(control) {
+  handleControlChange(control: TemplateControl) {
     const { controlData, onChange } = this.props
     if (onChange) {
       control.refresh = () => this.props.handleControlChange(control, controlData)
@@ -715,7 +734,7 @@ class ControlPanel extends React.Component {
     this.props.handleControlChange(control, controlData)
   }
 
-  renderPortals() {
+  renderPortals(): React.ReactNode {
     const { showPortals } = this.props
     if (showPortals) {
       return (
@@ -729,7 +748,7 @@ class ControlPanel extends React.Component {
     return null
   }
 
-  renderNotifications(isForm) {
+  renderNotifications(isForm?: boolean): React.ReactNode {
     const { notifications = [] } = this.props
     const margin = isForm ? '20px' : '20px 0'
     if (notifications.length > 0) {
@@ -747,11 +766,11 @@ class ControlPanel extends React.Component {
     return null
   }
 
-  renderDeleteGroupButton(control, inx) {
+  renderDeleteGroupButton(control: TemplateControl, inx: number): React.ReactNode {
     const { controlData } = this.props
     const {
       prompts: { deletePrompt },
-    } = control
+    } = control as TemplateControl & { prompts: { deletePrompt: string } }
     const handleGroupChange = () => {
       this.props.handleGroupChange(control, controlData, this.creationView, inx)
     }
@@ -760,7 +779,7 @@ class ControlPanel extends React.Component {
         icon={<TrashIcon />}
         variant="plain"
         className="creation-view-controls-delete-button"
-        tabIndex="0"
+        tabIndex={0}
         title={deletePrompt}
         aria-label={deletePrompt}
         onClick={handleGroupChange}
@@ -769,11 +788,11 @@ class ControlPanel extends React.Component {
     )
   }
 
-  renderAddGroupButton(control) {
+  renderAddGroupButton(control: TemplateControl): React.ReactNode {
     const { controlData } = this.props
     const {
       prompts: { addPrompt },
-    } = control
+    } = control as TemplateControl & { prompts: { addPrompt: string } }
     const handleGroupChange = () => {
       this.props.handleGroupChange(control, controlData, this.creationView)
     }
@@ -785,10 +804,8 @@ class ControlPanel extends React.Component {
     )
   }
 
-  isHidden(control, controlData) {
+  isHidden(control: TemplateControl, controlData: TemplateControl[]) {
     const { hidden } = control
     return hidden === true || hidden === 'true' || (typeof hidden === 'function' && hidden(control, controlData))
   }
 }
-
-export default ControlPanel

@@ -4,19 +4,13 @@
 import React, { RefCallback, useCallback } from 'react'
 import { TextInput } from '@patternfly/react-core'
 import ControlPanelFormGroup from './ControlPanelFormGroup'
-import { TFunction } from 'react-i18next'
 import { useDynamicPropertyValues } from '../helpers/dynamicProperties'
+import { ControlPanelBaseProps } from '../utils/types'
 
-const ControlPanelTextInput = (props: {
-  control: any
-  controlData: any
-  controlId: string
-  handleChange: (value: string) => void
-  i18n: TFunction
-}) => {
+const ControlPanelTextInput = (props: ControlPanelBaseProps & { handleChange: (value: string) => void }) => {
   const { controlId, i18n, control, controlData, handleChange } = props
   const { name, type, active: value, exception } = control
-  const { disabled } = useDynamicPropertyValues(control, controlData, i18n, ['disabled'])
+  const { disabled } = useDynamicPropertyValues(control as Record<string, unknown>, controlData, i18n, ['disabled'])
 
   const setControlRef = useCallback<RefCallback<HTMLDivElement>>(
     (ref) => {
@@ -47,11 +41,11 @@ const ControlPanelTextInput = (props: {
           <TextInput
             id={controlId}
             isDisabled={disabled as boolean}
-            type={type}
+            type={(type as 'text' | 'password' | undefined) ?? 'text'}
             spellCheck="false"
-            placeholder={placeholder}
+            placeholder={String(placeholder ?? '')}
             validated={validated}
-            value={value || ''}
+            value={String(value ?? '')}
             onChange={(_event, value) => onChange(value)}
             data-testid={`text-${controlId}`}
           />

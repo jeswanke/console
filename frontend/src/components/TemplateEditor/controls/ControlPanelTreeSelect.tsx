@@ -1,23 +1,48 @@
 /* Copyright Contributors to the Open Cluster Management project */
+// @ts-nocheck — legacy tree control: derived state and nested tree types are not fully modeled.
 'use strict'
 
-import React from 'react'
-import PropTypes from 'prop-types'
+import React, { Component } from 'react'
 import classNames from 'classnames'
 import TimesCircleIcon from '@patternfly/react-icons/dist/js/icons/times-circle-icon'
 import ControlPanelFormGroup from './ControlPanelFormGroup'
 import cloneDeep from 'lodash/cloneDeep'
 import get from 'lodash/get'
+import { ControlPanelBaseProps } from '../utils/types'
 
-class ControlPanelTreeSelect extends React.Component {
-  static propTypes = {
-    control: PropTypes.object,
-    controlId: PropTypes.string,
-    handleChange: PropTypes.func,
-    i18n: PropTypes.func,
-  }
+type TreeSelectState = {
+  isOpen: boolean
+  searchText: string | null
+  isBlurred?: boolean
+  currentSelection?: number | null
+  searchList?: { value?: string; description?: string; branch?: string }[]
+  indexes?: number[]
+  currentAvailable?: TreeMenuRow[]
+  branches?: number
+  active?: string
+}
 
-  static getDerivedStateFromProps(props, state) {
+type TreeMenuRow = { branch?: string; instance?: string; indent?: number }
+
+type TreeNode = {
+  label?: string
+  children?: TreeNode[]
+  value?: string
+  description?: string
+}
+
+type Props = ControlPanelBaseProps & {
+  handleChange: (evt?: { selectedItem: string }) => void
+}
+
+export default class ControlPanelTreeSelect extends Component<Props, TreeSelectState> {
+  inputRef: HTMLInputElement | null = null
+  menuRef: HTMLDivElement | null = null
+  clearRef: HTMLDivElement | null = null
+  toggleRef: HTMLDivElement | null = null
+  menuClick = false
+
+  static getDerivedStateFromProps(props: Props, state: TreeSelectState) {
     const { control, handleChange } = props
     const handleTreeChange = (evt) => {
       control.active = evt.selectedItem
@@ -160,7 +185,7 @@ class ControlPanelTreeSelect extends React.Component {
     }
   }
 
-  constructor(props) {
+  constructor(props: Props) {
     super(props)
     this.state = {
       isOpen: false,
@@ -170,30 +195,33 @@ class ControlPanelTreeSelect extends React.Component {
     this.addAvailableMap(props)
   }
 
-  setInputRef = (ref) => {
+  setInputRef = (ref: HTMLInputElement | null) => {
     this.inputRef = ref
   }
 
-  setMenuRef = (ref) => {
+  setMenuRef = (ref: HTMLDivElement | null) => {
     this.menuRef = ref
   }
 
-  setClearRef = (ref) => {
+  setClearRef = (ref: HTMLDivElement | null) => {
     this.clearRef = ref
   }
 
-  setToggleRef = (ref) => {
+  setToggleRef = (ref: HTMLDivElement | null) => {
     this.toggleRef = ref
   }
 
-  addAvailableMap(props) {
+  addAvailableMap(props: Props) {
     const { control } = props
     control.availableMap = {}
-    const { available, availableMap } = control
+    const { available, availableMap } = control as {
+      available?: TreeNode[]
+      availableMap: Record<string, string>
+    }
     this.addAvailableMapHelper(available, availableMap)
   }
 
-  addAvailableMapHelper(available = [], availableMap) {
+  addAvailableMapHelper(available: TreeNode[] = [], availableMap: Record<string, string>) {
     available.forEach(({ children, value, description }) => {
       if (children) {
         this.addAvailableMapHelper(children, availableMap)
@@ -205,9 +233,10 @@ class ControlPanelTreeSelect extends React.Component {
 
   render() {
     const { controlId, control, controlData, i18n } = this.props
-    const { name, availableMap = {}, exception, disabled } = control
-    const { isOpen, active, currentAvailable, indexes, searchText } = this.state
-    const currentActive = availableMap[active] ? `${active} - ${availableMap[active]}` : active
+    const { name, exception, disabled } = control as { name?: string; exception?: string; disabled?: boolean }
+    const availableMap = (control as { availableMap?: Record<string, string> }).availableMap || {}
+    const { isOpen, active, currentAvailable = [], indexes, searchText } = this.state
+    const currentActive = availableMap[active as string] ? `${active} - ${availableMap[active as string]}` : active
 
     const toggleClasses = classNames({
       'tf--list-box__menu-icon': true,
@@ -376,15 +405,19 @@ class ControlPanelTreeSelect extends React.Component {
     )
   }
 
-  renderLabel(label, searchText) {
-    const inx = searchText && searchText.length && label.toLowerCase().indexOf(searchText.toLowerCase())
-    if (inx !== null && inx >= 0) {
-      label = [label.substr(0, inx), label.substr(inx, searchText.length), label.substr(inx + searchText.length)]
+  renderLabel(label: string, searchText: string | null) {
+    const inx = searchText && searchText.length ? label.toLowerCase().indexOf(searchText.toLowerCase()) : -1
+    if (inx >= 0 && searchText) {
+      const parts = [
+        label.substring(0, inx),
+        label.substring(inx, inx + searchText.length),
+        label.substring(inx + searchText.length),
+      ]
       return (
         <React.Fragment>
-          {label[0]}
-          <b>{label[1]}</b>
-          {label[2]}
+          {parts[0]}
+          <b>{parts[1]}</b>
+          {parts[2]}
         </React.Fragment>
       )
     } else {
@@ -398,13 +431,13 @@ class ControlPanelTreeSelect extends React.Component {
     }
   }
 
-  pressUp(e) {
+  pressUp(e: React.KeyboardEvent) {
     if (e.key === 'Enter' && this.state.searchText) {
-      this.inputRef.blur()
+      this.inputRef?.blur()
     }
   }
 
-  pressDown(e) {
+  pressDown(e: React.KeyboardEvent) {
     if (e.key === 'Escape') {
       this.clickClear()
     } else if (e.key === 'Tab') {
@@ -412,7 +445,7 @@ class ControlPanelTreeSelect extends React.Component {
     }
   }
 
-  pressToggle(e) {
+  pressToggle(e: React.KeyboardEvent) {
     if (e.key === 'Enter') {
       this.clickToggle()
     } else if (e.key === 'Escape') {
@@ -420,12 +453,13 @@ class ControlPanelTreeSelect extends React.Component {
     }
   }
 
-  clickToggle(e) {
+  clickToggle(e?: React.MouseEvent) {
     if (e) {
       e.stopPropagation()
     }
-    const clickedWithinClear = e && this.clearRef && this.clearRef.contains && this.clearRef.contains(e.target)
-    const clickedWithinToggle = e && this.toggleRef && this.toggleRef.contains && this.toggleRef.contains(e.target)
+    const clickedWithinClear = e && this.clearRef && this.clearRef.contains && this.clearRef.contains(e.target as Node)
+    const clickedWithinToggle =
+      e && this.toggleRef && this.toggleRef.contains && this.toggleRef.contains(e.target as Node)
     if (!(this.state.searchText || clickedWithinClear) || clickedWithinToggle) {
       this.setState((preState) => {
         let { currentAvailable, currentSelection, searchText, indexes, isOpen } = preState
@@ -447,7 +481,7 @@ class ControlPanelTreeSelect extends React.Component {
     }
   }
 
-  clickSelect(inx) {
+  clickSelect(inx: number) {
     this.setState({ currentSelection: inx })
   }
 
@@ -458,5 +492,3 @@ class ControlPanelTreeSelect extends React.Component {
     handleChange()
   }
 }
-
-export default ControlPanelTreeSelect

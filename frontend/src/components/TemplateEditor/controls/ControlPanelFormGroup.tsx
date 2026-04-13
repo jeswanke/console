@@ -7,11 +7,12 @@ import HelpIcon from '@patternfly/react-icons/dist/js/icons/help-icon'
 import { useDynamicPropertyValues } from '../helpers/dynamicProperties'
 import { TFunction } from 'react-i18next'
 import { AcmHelperText } from '../../../ui-components/AcmHelperText/AcmHelperText'
+import { TemplateControl } from '../utils/types'
 
 const ControlPanelFormGroup = (props: {
   children: ReactNode
-  control: any
-  controlData: any
+  control: TemplateControl
+  controlData: TemplateControl[]
   controlId: string
   showTip?: boolean
   i18n: TFunction
@@ -19,7 +20,7 @@ const ControlPanelFormGroup = (props: {
 }) => {
   const { controlId, control, controlData, showTip, children, i18n, hideLabel } = props
   const { name, exception, opaque, tooltip, tip, validation = {}, icon } = control
-  const { info } = useDynamicPropertyValues(control, controlData, i18n, ['info'])
+  const { info } = useDynamicPropertyValues(control as Record<string, unknown>, controlData, i18n, ['info'])
   return (
     <React.Fragment>
       <div style={opaque ? { pointerEvents: 'none', opacity: 0.7 } : {}}>

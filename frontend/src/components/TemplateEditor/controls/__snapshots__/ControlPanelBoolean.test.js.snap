@@ -81,6 +81,7 @@ exports[`ControlPanelBoolean component renders as expected 1`] = `
                   data-ouia-safe="true"
                   data-testid="radio-controlId"
                   id="controlId-true"
+                  name="controlId"
                   style="margin-right: 0px;"
                   type="radio"
                 />
@@ -105,6 +106,7 @@ exports[`ControlPanelBoolean component renders as expected 1`] = `
                   data-ouia-safe="true"
                   data-testid="radio-controlId"
                   id="controlId-false"
+                  name="controlId"
                   style="margin-right: 0px;"
                   type="radio"
                 />

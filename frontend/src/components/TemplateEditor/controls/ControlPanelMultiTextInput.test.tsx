@@ -2,6 +2,7 @@
 'use strict'
 
 import ControlPanelMultiTextInput from './ControlPanelMultiTextInput'
+import { TemplateControl } from '../utils/types'
 import { render } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
@@ -34,8 +35,9 @@ export const control = {
     subnet: { controlID: 'machineCIDR', groupID: 'networks' },
     differentFrom: ['apiVIP'],
   }),
-}
+} as unknown as TemplateControl
 const fn = jest.fn()
+const emptyControlData: TemplateControl[] = []
 
 describe('ControlPanelTextInput component', () => {
   it('renders as expected', () => {
@@ -47,7 +49,7 @@ describe('ControlPanelTextInput component', () => {
           controlId={'controlId'}
           handleChange={fn}
           i18n={t}
-          controlData={undefined}
+          controlData={emptyControlData}
           addButtonText={'Add additional ingressVIP'}
         />
       )
@@ -68,7 +70,7 @@ describe('ControlPanelTextInput component', () => {
           controlId={'controlId'}
           handleChange={fn}
           i18n={t}
-          controlData={undefined}
+          controlData={emptyControlData}
           addButtonText={'Add additional ingressVIP'}
         />
       )
@@ -90,7 +92,7 @@ describe('ControlPanelTextInput component', () => {
           controlId={'controlId'}
           handleChange={fn}
           i18n={t}
-          controlData={undefined}
+          controlData={emptyControlData}
           addButtonText={'Add additional ingressVIP'}
         />
       )

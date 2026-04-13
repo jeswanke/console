@@ -6,18 +6,12 @@ import { Spinner, SelectOption } from '@patternfly/react-core'
 import { AcmSelectBase, SelectVariant, SelectOptionObject } from '../../AcmSelectBase'
 import ControlPanelFormGroup from './ControlPanelFormGroup'
 import get from 'lodash/get'
-import { TFunction } from 'react-i18next'
 import { useDynamicPropertyValues } from '../helpers/dynamicProperties'
+import { ControlPanelBaseProps } from '../utils/types'
 
-const ControlPanelSingleSelect = (props: {
-  control: any
-  controlData: any
-  controlId: string
-  handleChange: () => void
-  i18n: TFunction
-}) => {
+const ControlPanelSingleSelect = (props: ControlPanelBaseProps & { handleChange: () => void }) => {
   const { controlId, i18n, control, controlData, handleChange } = props
-  const { footer } = useDynamicPropertyValues(control, controlData, i18n, ['footer'])
+  const { footer } = useDynamicPropertyValues(control as Record<string, unknown>, controlData, i18n, ['footer'])
 
   const setControlRef = useCallback(
     (ref: HTMLDivElement | null) => {
@@ -52,9 +46,9 @@ const ControlPanelSingleSelect = (props: {
   )
 
   const {
-    name,
-    active = '',
-    available = [],
+    name: nameRaw,
+    active: activeRaw,
+    available: availableRaw,
     exception,
     disabled,
     fetchAvailable,
@@ -62,14 +56,17 @@ const ControlPanelSingleSelect = (props: {
     isLoading,
     isFailed,
   } = control
-  let { placeholder = '' } = control
+  const name = String(nameRaw ?? '')
+  const active = (activeRaw ?? '') as string | SelectOptionObject
+  const available = (availableRaw ?? []) as string[]
+  let { placeholder = '' } = control as { placeholder?: string }
   if (!placeholder) {
     if (isLoading) {
-      placeholder = get(control, 'fetchAvailable.loadingDesc', i18n('resource.loading'))
+      placeholder = String(get(control, 'fetchAvailable.loadingDesc', i18n('resource.loading')))
     } else if (isFailed) {
       placeholder = i18n('resource.error')
     } else if (available.length === 0) {
-      placeholder = get(control, 'fetchAvailable.emptyDesc', i18n('resource.none'))
+      placeholder = String(get(control, 'fetchAvailable.emptyDesc', i18n('resource.none')))
     }
   }
 
@@ -82,7 +79,7 @@ const ControlPanelSingleSelect = (props: {
           {isLoading || isRefetching ? (
             <div className="creation-view-controls-singleselect-loading  pf-v6-c-form-control">
               <Spinner size="md" />
-              <div>{active}</div>
+              <div>{active as React.ReactNode}</div>
             </div>
           ) : (
             <div style={{ position: 'relative' }}>

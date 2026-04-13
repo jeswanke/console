@@ -1,35 +1,46 @@
 /* Copyright Contributors to the Open Cluster Management project */
 'use strict'
 
-import React from 'react'
+import React, { Component } from 'react'
 import classNames from 'classnames'
-import PropTypes from 'prop-types'
 import { Badge, Popover } from '@patternfly/react-core'
 import HelpIcon from '@patternfly/react-icons/dist/js/icons/help-icon'
 import get from 'lodash/get'
 import { AngleRightIcon } from '@patternfly/react-icons'
+import { ControlPanelBaseProps, TemplateControl } from '../utils/types'
+import { TFunction } from 'react-i18next'
 
-class ControlPanelAccordion extends React.Component {
-  static propTypes = {
-    control: PropTypes.object,
-    controlData: PropTypes.array,
-    controlId: PropTypes.string,
-    i18n: PropTypes.func,
-  }
+type Props = ControlPanelBaseProps
 
-  constructor(props) {
-    super(props)
-    this.state = {}
-  }
-
-  setControlSectionTitleRef = (title, ref) => {
+export default class ControlPanelAccordion extends Component<Props> {
+  setControlSectionTitleRef = (title: TemplateControl, ref: HTMLDivElement | null) => {
     title.sectionTitleRef = ref
   }
 
-  render() {
+  override render() {
     const { controlId, i18n, control, controlData } = this.props
-    const { tooltip, note, overline, collapsable, collapsed = false, content = [], techPreview } = control
-    let { title, subtitle, info } = control
+    const {
+      tooltip,
+      note,
+      overline,
+      collapsable,
+      collapsed = false,
+      content = [],
+      techPreview,
+    } = control as {
+      tooltip?: React.ReactNode
+      note?: React.ReactNode
+      overline?: boolean
+      collapsable?: boolean
+      collapsed?: boolean
+      content?: TemplateControl[]
+      techPreview?: boolean
+    }
+    let { title, subtitle, info } = control as {
+      title?: React.ReactNode | ((c: TemplateControl, cd: TemplateControl[], tf: TFunction) => React.ReactNode)
+      subtitle?: React.ReactNode | ((c: TemplateControl, cd: TemplateControl[], tf: TFunction) => React.ReactNode)
+      info?: React.ReactNode | ((c: TemplateControl, cd: TemplateControl[], tf: TFunction) => React.ReactNode)
+    }
     if (typeof title === 'function') {
       title = title(control, controlData, i18n)
     }
@@ -43,15 +54,14 @@ class ControlPanelAccordion extends React.Component {
       if (control.sectionRef && collapsable) {
         const isCollapsed = control.sectionRef.classList.contains('collapsed')
         control.sectionRef.classList.toggle('collapsed', !isCollapsed)
-        control.sectionTitleRef.classList.toggle('collapsed', !isCollapsed)
+        control.sectionTitleRef?.classList.toggle('collapsed', !isCollapsed)
         if (isCollapsed) {
-          // if expanding make sure at least 1st control is visible
-          const { content: _content } = control
+          const { content: _content } = control as { content?: TemplateControl[] }
           const ref = get(_content, '[2].ref') || get(_content, '[1].ref') || get(_content, '[0].ref')
-          if (ref) {
-            const rect = ref.getBoundingClientRect()
+          if (ref && typeof (ref as HTMLElement).getBoundingClientRect === 'function') {
+            const rect = (ref as HTMLElement).getBoundingClientRect()
             if (rect.top < 0 || rect.bottom > window.innerHeight) {
-              ref.scrollIntoView({
+              ;(ref as HTMLElement).scrollIntoView({
                 behavior: 'smooth',
                 block: 'end',
                 inline: 'nearest',
@@ -61,7 +71,7 @@ class ControlPanelAccordion extends React.Component {
         }
       }
     }
-    const handleCollapseKey = (e) => {
+    const handleCollapseKey = (e: React.KeyboardEvent) => {
       if (e.type === 'click' || e.key === 'Enter') {
         handleCollapse()
       }
@@ -76,9 +86,9 @@ class ControlPanelAccordion extends React.Component {
       subtitle: !!subtitle,
       overline,
     })
-    let summary = []
+    const summary: string[] = []
     this.getSummary(content, summary)
-    summary = summary.filter((s) => !!s)
+    const summaryFiltered = summary.filter((s) => !!s)
     const label = title || subtitle
     let id = `${controlId}-${label || ''}`
     id = id.replaceAll(/\s+/g, '-').toLowerCase()
@@ -88,7 +98,7 @@ class ControlPanelAccordion extends React.Component {
           <div
             id={id}
             className={titleClasses}
-            tabIndex="0"
+            tabIndex={0}
             role={'button'}
             title={text}
             aria-label={text}
@@ -117,19 +127,15 @@ class ControlPanelAccordion extends React.Component {
                         }}
                         className="pf-v6-c-form__group-label-help"
                       >
-                        <HelpIcon noVerticalAlign />
+                        <HelpIcon />
                       </button>
                     </Popover>
                   )}
-                  {techPreview && (
-                    <div variant="primary" className="techPreviewTag">
-                      {i18n('creation.app.section.techPreview')}
-                    </div>
-                  )}
+                  {techPreview && <div className="techPreviewTag">{i18n('creation.app.section.techPreview')}</div>}
                   <span className="creation-view-controls-title-main-summary">
-                    {summary.map((tag, inx) => {
+                    {summaryFiltered.map((tag, inx) => {
                       return (
-                        <Badge key={`${id}-${tag}-${inx}`} className="tag" type="custom">
+                        <Badge key={`${id}-${tag}-${inx}`} className="tag">
                           {tag}
                         </Badge>
                       )
@@ -149,12 +155,22 @@ class ControlPanelAccordion extends React.Component {
     )
   }
 
-  getSummary(content, summary, ignoreEmpty) {
+  getSummary(content: TemplateControl[], summary: string[], ignoreEmpty?: boolean) {
     if (!Array.isArray(content)) {
       content = []
     }
     content.forEach(
-      ({ id, type, hasValueDescription, summaryKey: key, summarize, active, initial, available, availableMap }) => {
+      ({
+        id,
+        type,
+        hasValueDescription,
+        summaryKey: key,
+        summarize,
+        active,
+        initial,
+        available,
+        availableMap,
+      }: TemplateControl) => {
         if (!summarize) {
           switch (type) {
             case 'title':
@@ -163,21 +179,21 @@ class ControlPanelAccordion extends React.Component {
               break
             case 'checkbox':
             case 'radio':
-              summary.push(available ? available[!active ? 0 : 1] : active.toString())
+              summary.push(available ? (available as string[])[!active ? 0 : 1] : String(active))
               break
             case 'number':
-              summary.push(active || initial)
+              summary.push(String(active ?? initial ?? ''))
               break
             case 'table':
               if (Array.isArray(active)) {
-                active.forEach((a) => {
-                  summary.push(a[key])
+                ;(active as { [k: string]: string }[]).forEach((a) => {
+                  summary.push(a[key as string])
                 })
               }
               break
             case 'labels':
               if (active) {
-                active.forEach(({ key: k, value }) => {
+                ;(active as { key: string; value: string }[]).forEach(({ key: k, value }) => {
                   summary.push(`${k}=${value}`)
                 })
               }
@@ -185,9 +201,9 @@ class ControlPanelAccordion extends React.Component {
             case 'values':
               if (active) {
                 if (!Array.isArray(active)) {
-                  summary.push(active)
+                  summary.push(String(active))
                 } else {
-                  active.forEach((value) => {
+                  ;(active as string[]).forEach((value) => {
                     summary.push(value)
                   })
                 }
@@ -195,30 +211,33 @@ class ControlPanelAccordion extends React.Component {
               break
             default:
               if (hasValueDescription && availableMap) {
-                summary.push(availableMap[active] || active)
+                summary.push(String((availableMap as Record<string, string>)[active as string] || active))
               } else if (Array.isArray(active)) {
                 if (availableMap && active.length === 1) {
-                  const { title = '' } = availableMap[active[0]] || {}
-                  summary.push(title)
+                  const { title: t = '' } =
+                    (availableMap as Record<string, { title?: string }>)[active[0] as string] || {}
+                  summary.push(t)
                 } else if (typeof active[0] === 'string') {
-                  summary.push(...active)
+                  summary.push(...(active as string[]))
                 } else {
-                  this.getSummary(active[0], summary, true)
+                  this.getSummary((active as TemplateControl[][])[0], summary, true)
                 }
               } else {
                 switch (typeof active) {
-                  case 'string':
-                    if (active.length > 24) {
-                      if (id.indexOf('ssh') !== -1) {
-                        active = 'ssh'
-                      } else if (id.indexOf('secret') !== -1) {
-                        active = 'secret'
+                  case 'string': {
+                    let s = active
+                    if (s.length > 24) {
+                      if (id?.indexOf('ssh') !== -1) {
+                        s = 'ssh'
+                      } else if (id?.indexOf('secret') !== -1) {
+                        s = 'secret'
                       } else {
-                        active = `${active.substr(0, 12)}...${active.substr(-12)}`
+                        s = `${s.substring(0, 12)}...${s.substring(s.length - 12)}`
                       }
                     }
-                    summary.push(active)
+                    summary.push(s)
                     break
+                  }
                   default:
                     if (!ignoreEmpty) {
                       summary.push('')
@@ -229,11 +248,9 @@ class ControlPanelAccordion extends React.Component {
               break
           }
         } else {
-          summarize(summary, this.props.i18n)
+          ;(summarize as (s: string[], tf: TFunction) => void)(summary, this.props.i18n)
         }
       }
     )
   }
 }
-
-export default ControlPanelAccordion

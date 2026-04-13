@@ -1,8 +1,7 @@
 /* Copyright Contributors to the Open Cluster Management project */
 'use strict'
 
-import React from 'react'
-import PropTypes from 'prop-types'
+import React, { Component } from 'react'
 import capitalize from 'lodash/capitalize'
 import {
   Alert,
@@ -11,17 +10,11 @@ import {
   DescriptionListGroup,
   DescriptionListTerm,
 } from '@patternfly/react-core'
+import { ControlPanelFinishProps, FinishSummaryRow, TemplateControl, WizardStepSection } from '../utils/types'
+import { TFunction } from 'react-i18next'
 
-class ControlPanelFinish extends React.Component {
-  static propTypes = {
-    comment: PropTypes.string,
-    details: PropTypes.array,
-    renderNotifications: PropTypes.func,
-    startStep: PropTypes.number,
-    i18n: PropTypes.func,
-  }
-
-  constructor(props) {
+export default class ControlPanelFinish extends Component<ControlPanelFinishProps> {
+  constructor(props: ControlPanelFinishProps) {
     super(props)
   }
 
@@ -39,17 +32,27 @@ class ControlPanelFinish extends React.Component {
     )
   }
 
-  renderDetails(details, i18n) {
+  renderDetails(details: ControlPanelFinishProps['details'], i18n: TFunction) {
     let step = this.props.startStep + 1
     return (
       <div className="tf--finish-details">
         {details.map(({ title, sections }) => {
           if (title.type !== 'review') {
+            const tc = title as TemplateControl
+            const rawTitle = tc.title
+            const heading =
+              typeof rawTitle === 'function'
+                ? rawTitle(
+                    tc,
+                    details.flatMap((d) => d.sections.flatMap((s) => s.content)),
+                    i18n
+                  )
+                : rawTitle
             return (
               <div key={step} className="tf--finish-step">
                 <div className="tf--finish-step-title">
                   <div className="tf--finish-step-circle">{step++}</div>
-                  <div>{title.title}</div>
+                  <div>{heading as React.ReactNode}</div>
                 </div>
                 {this.renderSections(sections, i18n)}
               </div>
@@ -63,9 +66,9 @@ class ControlPanelFinish extends React.Component {
     )
   }
 
-  renderSections(sections, i18n) {
-    const tables = []
-    let id
+  renderSections(sections: WizardStepSection[], i18n: TFunction) {
+    const tables: TemplateControl[] = []
+    let id: string | undefined
     sections.forEach((section) => {
       section.content = section.content.filter((control) => {
         if (control.type === 'table') {
@@ -92,7 +95,7 @@ class ControlPanelFinish extends React.Component {
     )
   }
 
-  renderContent(controlData, divider, i18n) {
+  renderContent(controlData: TemplateControl[], divider: boolean, i18n: TFunction) {
     const key = controlData.map((elem) => elem.id).join(',')
     return (
       <React.Fragment key={key}>
@@ -112,48 +115,28 @@ class ControlPanelFinish extends React.Component {
     )
   }
 
-  renderGroup(control, i18n) {
-    const { active = [] } = control
+  renderGroup(control: TemplateControl, i18n: TFunction) {
+    const active = (control.active as TemplateControl[][] | undefined) ?? []
     return (
       <React.Fragment key={control.id}>
-        {active.map((controlData) => {
-          return this.renderContent(controlData, active.length > 1, i18n)
+        {active.map((groupRow) => {
+          return this.renderContent(groupRow, active.length > 1, i18n)
         })}
       </React.Fragment>
     )
   }
 
-  renderGroupControlSections(controlData, grpNum, grpId = '') {
-    // create collapsable control sections
-    let section
-    let content = []
-    let stopRendering = false
-    let stopRenderingOnNextControl = false
-    const controlSections = []
-    controlData.forEach((control) => {
-      const { type, pauseControlCreationHereUntilSelected } = control
-      stopRendering = stopRenderingOnNextControl
-      if (pauseControlCreationHereUntilSelected) {
-        stopRenderingOnNextControl = !control.active
-      }
-      if (!stopRendering) {
-        if (type === 'section') {
-          content = []
-          section = { title: control, content }
-          controlSections.push(section)
-        } else {
-          content.push(control)
-        }
-      }
-    })
-    return this.renderControlSections(controlSections, grpId)
+  renderTable(control: TemplateControl) {
+    return this.renderTables([control])
   }
 
-  renderTables(tables) {
+  renderTables(tables: TemplateControl[]) {
     return (
-      <div key={tables.id}>
+      <div key="finish-tables">
         {tables.map((table) => {
-          const { active = [], controlData } = table
+          const { active = [], controlData = [] } = table as TemplateControl & {
+            controlData?: TemplateControl[]
+          }
           const columns = controlData.filter(({ mode }) => !mode)
           return (
             <div key={table.id} className="tf--finish-step-table">
@@ -164,10 +147,10 @@ class ControlPanelFinish extends React.Component {
                   </div>
                 )
               })}
-              {active.map((row) =>
-                columns.map(({ id }, inx) => (
-                  <div key={id} style={{ gridColumn: inx + 1 }}>
-                    {row[id]}
+              {(active as Record<string, string>[]).map((row) =>
+                columns.map(({ id: colId }, inx) => (
+                  <div key={colId} style={{ gridColumn: inx + 1 }}>
+                    {row[colId as string]}
                   </div>
                 ))
               )}
@@ -178,11 +161,22 @@ class ControlPanelFinish extends React.Component {
     )
   }
 
-  renderControl(control, i18n) {
-    const { id, type, active, availableMap, name, exception, validation, summary, hidden, controlData } = control
-    let term
-    let desc
-    let summaries
+  renderControl(control: TemplateControl, i18n: TFunction) {
+    const {
+      id,
+      type,
+      active,
+      availableMap,
+      name,
+      exception,
+      validation,
+      summary,
+      hidden,
+      controlData = [],
+    } = control as TemplateControl & { controlData?: TemplateControl[] }
+    let term: React.ReactNode
+    let desc: React.ReactNode
+    let summaries: FinishSummaryRow[] | undefined
     switch (type) {
       case 'reviewinfo':
       case 'text':
@@ -190,7 +184,7 @@ class ControlPanelFinish extends React.Component {
       case 'combobox':
       case 'treeselect':
         term = name
-        desc = active
+        desc = active as React.ReactNode
         break
       case 'multitext':
         term = name
@@ -201,11 +195,11 @@ class ControlPanelFinish extends React.Component {
         break
       case 'multiselect':
         term = name
-        desc = (active || []).join(', ')
+        desc = ((active as string[]) || []).join(', ')
         break
       case 'number':
         term = name
-        desc = active
+        desc = active as React.ReactNode
         break
       case 'checkbox':
       case 'radio':
@@ -213,15 +207,18 @@ class ControlPanelFinish extends React.Component {
         desc = active ? active.toString() : 'false'
         break
       case 'cards':
-        term = capitalize(id)
-        desc = typeof active === 'function' ? active() : active
+        term = capitalize(String(id))
+        desc =
+          typeof active === 'function'
+            ? (active as (this: unknown) => string).call(control)
+            : (active as React.ReactNode)
         if (desc && availableMap) {
-          desc = availableMap[desc].title
+          desc = (availableMap as Record<string, { title?: string }>)[desc as string]?.title
         }
         break
       case 'labels':
         term = name
-        desc = active
+        desc = ((active as { key: string; value: string }[]) || [])
           .map(({ key: k, value }) => {
             return `${k}=${value}`
           })
@@ -229,7 +226,7 @@ class ControlPanelFinish extends React.Component {
         break
       case 'values':
         term = name
-        desc = (active || []).join(', ')
+        desc = ((active as string[]) || []).join(', ')
         break
       case 'custom':
         if (typeof summary === 'function') {
@@ -238,7 +235,7 @@ class ControlPanelFinish extends React.Component {
         break
     }
 
-    const isHidden = (!term && !summaries) || (typeof hidden === 'function' ? hidden() : hidden)
+    const isHidden = (!term && !summaries) || (typeof hidden === 'function' ? (hidden as () => boolean)() : hidden)
     if (!isHidden) {
       if (!summaries) {
         summaries = [
@@ -279,5 +276,3 @@ class ControlPanelFinish extends React.Component {
     }
   }
 }
-
-export default ControlPanelFinish

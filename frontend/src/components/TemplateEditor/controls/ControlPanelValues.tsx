@@ -1,38 +1,42 @@
 /* Copyright Contributors to the Open Cluster Management project */
 'use strict'
 
-import React from 'react'
-import PropTypes from 'prop-types'
+import React, { Component } from 'react'
 import { TextInput, Label } from '@patternfly/react-core'
 import ControlPanelFormGroup from './ControlPanelFormGroup'
-import keyBy from 'lodash/keyBy'
+import { ControlPanelBaseProps, TemplateControl } from '../utils/types'
 
-export const DNS_LABEL = '[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?'
-export const PREFIX = `${DNS_LABEL}(?:\\.${DNS_LABEL})*/`
-export const NAME_OR_VALUE = '[a-z0-9A-Z](?:[a-z0-9A-Z_.-]{0,61}[a-z0-9A-Z])?'
-export const regex = new RegExp(`^((?:${PREFIX})?${NAME_OR_VALUE})=(${NAME_OR_VALUE})?$`)
-export const KEY_CAPTURE_GROUP_INDEX = 1
-export const VALUE_CAPTURE_GROUP_INDEX = 2
+type Props = ControlPanelBaseProps & {
+  handleChange: (control: TemplateControl) => void
+}
 
-class ControlPanelLabels extends React.Component {
-  static propTypes = {
-    control: PropTypes.object,
-    controlId: PropTypes.string,
-    handleChange: PropTypes.func,
-    i18n: PropTypes.func,
-  }
+type State = {
+  value: string
+  invalid?: boolean
+}
 
-  constructor(props) {
+export default class ControlPanelValues extends Component<Props, State> {
+  constructor(props: Props) {
     super(props)
     this.state = {
       value: '',
     }
   }
 
-  render() {
-    const { controlId, i18n, control, controlData } = this.props
-    const { active = [], exception } = control
-    const formatted = active.map(({ key, value: v }) => `${key}=${v}`)
+  override render() {
+    const { controlId, control, controlData, i18n } = this.props
+    const {
+      active = [],
+      exception,
+      placeholder,
+      disabled,
+    } = control as {
+      active?: string[]
+      exception?: string
+      placeholder?: string
+      disabled?: boolean
+    }
+    const formatted = active.filter((v) => v.length > 0)
     const { value } = this.state
     const validated = exception ? 'error' : undefined
     return (
@@ -54,13 +58,14 @@ class ControlPanelLabels extends React.Component {
               <div className="creation-view-controls-labels-edit-container">
                 <TextInput
                   id={controlId}
-                  placeholder={i18n('enter.add.label')}
+                  placeholder={placeholder || i18n('Enter value')}
                   validated={validated}
                   value={value}
+                  isDisabled={disabled}
                   onBlur={this.handleBlur.bind(this)}
                   onKeyDown={this.handleKeyDown.bind(this)}
-                  onChange={this.handleChange.bind(this)}
-                  data-testid={`label-${controlId}`}
+                  onChange={this.onTextChange.bind(this)}
+                  data-testid={`value-${controlId}`}
                 />
               </div>
             </div>
@@ -70,61 +75,57 @@ class ControlPanelLabels extends React.Component {
     )
   }
 
-  handleDelete(inx) {
+  handleDelete(inx: number) {
     const { control, handleChange } = this.props
-    const { active = [] } = control
+    const { active = [] } = control as { active?: string[] }
     active.splice(inx, 1)
     handleChange(control)
   }
 
-  handleChange(_event, value = '') {
-    const { control, i18n } = this.props
-    const { active = [] } = control
+  onTextChange(_event: unknown, value = '') {
+    const { control } = this.props
+    const { validation } = control as { validation?: { tester: RegExp; notification: string } }
     if (value.endsWith(',')) {
-      this.createLabel()
+      this.createValue()
     } else {
-      let invalid = !regex.test(value)
-      let invalidText = ''
-      if (invalid) {
-        invalidText = i18n('enter.add.label')
-      } else {
-        const match = regex.exec(value)
-        const map = keyBy(active, 'key')
-        if (map[match[KEY_CAPTURE_GROUP_INDEX]]) {
-          invalid = true
-          invalidText = i18n('enter.duplicate.key', [match[KEY_CAPTURE_GROUP_INDEX]])
+      let invalid = false
+      if (validation) {
+        invalid = !validation.tester.test(value)
+        let invalidText = ''
+        if (invalid) {
+          invalidText = validation.notification
         }
+        control.exception = invalidText
       }
-      control.exception = invalidText
       this.setState({ value, invalid })
     }
   }
 
-  handleKeyDown(event) {
+  handleKeyDown(event: React.KeyboardEvent) {
     switch (event.key) {
       case 'Enter':
-        this.createLabel()
+        this.createValue()
         break
 
       case 'Backspace':
-        this.deleteLastLabel()
+        this.deleteLastValue()
         break
 
       case 'Escape':
-        this.cancelLabel()
+        this.cancelValue()
         break
     }
   }
 
   handleBlur() {
-    this.createLabel()
+    this.createValue()
   }
 
-  deleteLastLabel() {
+  deleteLastValue() {
     const { value } = this.state
     if (!value) {
       const { control, handleChange } = this.props
-      const { active = [] } = control
+      const { active = [] } = control as { active?: string[] }
       const inx = active.length - 1
       if (inx >= 0) {
         active.splice(inx, 1)
@@ -133,27 +134,22 @@ class ControlPanelLabels extends React.Component {
     }
   }
 
-  createLabel() {
+  createValue() {
     const { control, handleChange } = this.props
-    const { active = [] } = control
     const { value, invalid } = this.state
     if (value && !invalid) {
-      const match = regex.exec(value)
-      active.push({
-        key: match[KEY_CAPTURE_GROUP_INDEX],
-        value: match[VALUE_CAPTURE_GROUP_INDEX] || '',
-      })
-      control.active = active
+      if (!Array.isArray(control.active)) {
+        control.active = []
+      }
+      ;(control.active as string[]).push(value)
       handleChange(control)
     }
-    this.cancelLabel()
+    this.cancelValue()
   }
 
-  cancelLabel() {
+  cancelValue() {
     const { control } = this.props
     control.exception = ''
     this.setState({ value: '', invalid: false })
   }
 }
-
-export default ControlPanelLabels
