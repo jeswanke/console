@@ -1,6 +1,5 @@
 /* Copyright Contributors to the Open Cluster Management project */
-// @ts-nocheck — legacy validation: control shapes from YAML templates are not fully modeled in TypeScript.
-'use strict'
+// @ts-nocheck — validation walks dynamic control definitions and Monaco-backed editors
 
 import { ControlMode, parseYAML, reverseTemplate } from './source-utils'
 import get from 'lodash/get'

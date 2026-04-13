@@ -1,5 +1,5 @@
 /* Copyright Contributors to the Open Cluster Management project */
-'use strict'
+// @ts-nocheck — debug logging only
 
 import jsYaml from 'js-yaml'
 import { generateTemplateData } from './refresh-source-from-templates'
@@ -7,29 +7,15 @@ import { generateTemplateData } from './refresh-source-from-templates'
 import get from 'lodash/get'
 import set from 'lodash/set'
 
-type YamlExceptionEntry = { row: number; text: string; tabInx: number; controlId?: string }
-type YamlTabException = { exceptions: YamlExceptionEntry[] }
-type OtherYamlTab = { id: string; templateYAML: string }
-type RowError = { text: string; controlId?: string }
-/** Per-tab: sparse array keyed by 1-based row → error lines for that row */
-type RowErrorsByRow = (RowError[] | undefined)[]
-
-export const logSourceErrors = (
-  logging: boolean,
-  templateYAML: string,
-  controlData: unknown,
-  otherYAMLTabs: OtherYamlTab[],
-  templateExceptionMap: Record<string, YamlTabException>
-) => {
+export const logSourceErrors = (logging, templateYAML, controlData, otherYAMLTabs, templateExceptionMap) => {
   if (logging) {
     //////////////////////////////// SOURCE ERRORS //////////////////////////////////////
-    // Built with lodash get/set on a sparse nested structure (tab index → row index → messages)
-    const errors: RowErrorsByRow[] = []
+    const errors = []
     const tabIds = ['Main YAML']
     Object.values(templateExceptionMap).forEach(({ exceptions }) => {
       exceptions.forEach(({ row, text, tabInx, controlId }) => {
-        const tabErrors = get(errors, `${tabInx}`, []) as RowErrorsByRow
-        const rowErrors = get(tabErrors, `${row}`, []) as RowError[]
+        const tabErrors = get(errors, `${tabInx}`, [])
+        const rowErrors = get(tabErrors, `${row}`, [])
         rowErrors.push({ text, controlId })
         set(tabErrors, `${row}`, rowErrors)
         set(errors, `${tabInx}`, tabErrors)
@@ -46,8 +32,8 @@ export const logSourceErrors = (
 
       // errors at top
       errors.forEach((tabErrors, tabInx) => {
-        tabErrors?.forEach((rowErrors, rowInx) => {
-          rowErrors?.forEach(({ text }) => {
+        tabErrors.forEach((rowErrors, rowInx) => {
+          rowErrors.forEach(({ text }) => {
             console.info(`${tabIds[tabInx]} ${rowInx + 1}: ${text}`)
           })
         })
@@ -60,7 +46,7 @@ export const logSourceErrors = (
     // log YAML with errors
     yamls.forEach((yaml, tabInx) => {
       console.info(`\n//////////////////////// ${tabIds[tabInx]} ///////////////`)
-      const output: string[] = []
+      const output = []
       const tabErrors = errors[tabInx] || []
       const lines = yaml.split('\n')
       lines.forEach((line, row) => {
@@ -76,8 +62,8 @@ export const logSourceErrors = (
 
     //////////////////////////////// INPUT //////////////////////////////////////
     console.groupCollapsed('==================TEMPLATE INPUT======================')
-    const replacements: unknown[] = []
-    const controlMap: Record<string, unknown> = {}
+    const replacements = []
+    const controlMap = {}
     const templateData = generateTemplateData(controlData, replacements, controlMap)
     try {
       const input = jsYaml.dump(templateData, {
@@ -92,10 +78,7 @@ export const logSourceErrors = (
   }
 }
 
-type CreationMessage = { message: string }
-type ResourceJsonLog = { createResources: unknown }
-
-export const logCreateErrors = (logging: boolean, creationMsg: CreationMessage[], resourceJSON: ResourceJsonLog) => {
+export const logCreateErrors = (logging, creationMsg, resourceJSON) => {
   if (logging) {
     console.group('!!!!!!!!!!!!!!!!!! CREATE ERRORS !!!!!!!!!!!!!!!!!!!!!!')
 

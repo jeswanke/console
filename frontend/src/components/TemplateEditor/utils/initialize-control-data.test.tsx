@@ -1,4 +1,5 @@
 /* Copyright Contributors to the Open Cluster Management project */
+// @ts-nocheck — test fixtures omit full control graph props
 import { initializeControlData as initializeControlDataFn } from './initialize-control-data'
 import { removeCircular } from '../../../lib/test-shots'
 

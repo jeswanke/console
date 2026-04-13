@@ -73,7 +73,7 @@ export default class ControlPanelCards extends Component<ControlPanelCardsProps,
   }
 
   override render() {
-    const { i18n, control } = this.props
+    const { control } = this.props
     const { available = [], availableMap } = control as {
       available?: string[]
       availableMap?: Record<string, CardChoice>
@@ -110,7 +110,6 @@ export default class ControlPanelCards extends Component<ControlPanelCardsProps,
                                   controlId: `group-${group}`,
                                   tooltip: groupTooltip,
                                 }}
-                                i18n={i18n}
                                 className="control-panel-cards__group-tooltip"
                               />
                             )}

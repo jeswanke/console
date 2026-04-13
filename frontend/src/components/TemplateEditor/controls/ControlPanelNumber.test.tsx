@@ -1,4 +1,5 @@
 /* Copyright Contributors to the Open Cluster Management project */
+// @ts-nocheck — test fixtures omit full control graph props
 'use strict'
 
 import { cleanup, render } from '@testing-library/react'
