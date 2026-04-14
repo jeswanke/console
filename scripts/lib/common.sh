@@ -138,7 +138,7 @@ function console_e2e_oc_whoami_version {
 function console_e2e_ensure_npm_deps {
   if [ ! -d "${CONSOLE_E2E_ROOT}/node_modules" ]; then
     echo "=== Installing dependencies ==="
-    (cd "${CONSOLE_E2E_ROOT}" && (npm ci 2>/dev/null || npm install))
+    (cd "${CONSOLE_E2E_ROOT}" && npm ci)
   fi
 }
 
