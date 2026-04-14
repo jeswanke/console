@@ -211,7 +211,7 @@ test.describe('Applications list', { tag: ['@app', '@alc'] }, () => {
         popover.getByRole('button', { name: APP_TABLE_COLUMN_HELP.closeButtonLabel })
       ).toBeVisible();
       await popover.getByRole('button', { name: APP_TABLE_COLUMN_HELP.closeButtonLabel }).click();
-      await expect(popover).not.toBeVisible();
+      await expect(popover).toBeHidden();
     }
   });
 

@@ -38,7 +38,7 @@ A more comprehensive example:
 │   └── workflows           <-- CI/CD
 │       └── lint-and-test.yml <-- Runs ESLint & Typecheck on PRs.
 │
-├── .vscode               
+├── .vscode
 │   ├── extensions.json     <-- Recommends ESLint, Prettier.
 │   └── settings.json       <-- Auto-format on save settings.
 │
@@ -200,16 +200,16 @@ getClusterRow(name: string) {
 **Rule:** Code in utils should never import Playwright or the Config. It should be standard TypeScript/Node.js code.
 
 ```typescript
-  // Bad - Playwright dependency in utils
-  import { Page } from '@playwright/test';
+// Bad - Playwright dependency in utils
+import { Page } from '@playwright/test';
 
-  // Bad - Config dependency in utils
-  import { testConfig } from '../config';
+// Bad - Config dependency in utils
+import { testConfig } from '../config';
 
-  // Good - Pure function
-  export function generateClusterName(prefix: string): string {
-    return `${prefix}-${Math.random().toString(36).substr(2, 9)}`;
-  }
+// Good - Pure function
+export function generateClusterName(prefix: string): string {
+  return `${prefix}-${Math.random().toString(36).substr(2, 9)}`;
+}
 ```
 
 ### 7. `/src/fixtures` (The Dependency Injection)
@@ -258,7 +258,7 @@ getClusterRow(name: string) {
 
 ---
 
-## `console-e2e` — layout in *this* repository
+## `console-e2e` — layout in _this_ repository
 
 The tree below is what **this** repo implements today (aligned with the layers above). Bash entrypoints live **outside** `/src` (`start.sh`, `scripts/lib/`). Env templates live in **`env/`** at the repo root.
 

@@ -18,6 +18,10 @@ playwright/.cache/
 *.swp
 *.swo
 
+# Python
+__pycache__/
+*.py[cod]
+
 # OS
 .DS_Store
 Thumbs.db
@@ -30,5 +34,4 @@ npm-debug.log*
 .env
 .env.local
 .env.*.local
-env/alc.local.env
-
+*.local.env

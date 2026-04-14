@@ -31,7 +31,7 @@ export class AcmTable {
   }
 
   async verifyRowNotVisible(ouiaId: string): Promise<void> {
-    await expect(this.getRow(ouiaId)).not.toBeVisible();
+    await expect(this.getRow(ouiaId)).toBeHidden();
   }
 
   async verifyEmpty(): Promise<void> {
