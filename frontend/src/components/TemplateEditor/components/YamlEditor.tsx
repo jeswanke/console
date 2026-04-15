@@ -2,140 +2,103 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment -- Monaco wiring; types deferred */
 // @ts-nocheck — Monaco editor instance wiring; types deferred
 
-import React from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import debounce from 'lodash/debounce'
 import { DecorationType } from '../utils/source-utils'
 import { getTheme, defineThemes, mountTheme, dismountTheme } from '../../theme'
 
-class YamlEditor extends React.Component {
-  constructor(props) {
-    super(props)
+function YamlEditor(props) {
+  const propsRef = useRef(props)
+  propsRef.current = props
 
-    const { id, editor, onYamlChange } = this.props
-    this.classObserver = null
-    this.state = {
-      editor:
-        editor &&
-        React.cloneElement(editor, {
-          language: 'yaml',
-          height: '100%',
-          width: '100%',
-          theme: getTheme(),
-          options: {
-            wordWrap: 'wordWrapColumn',
-            wordWrapColumn: 132,
-            wordWrapMinified: false,
-            scrollBeyondLastLine: true,
-            smoothScrolling: true,
-            glyphMargin: true,
-            tabSize: 2,
-            minimap: {
-              enabled: false,
-            },
-            scrollbar: {
-              verticalScrollbarSize: 17,
-              horizontalScrollbarSize: 17,
-            },
-          },
-          editorDidMount: this.editorDidMount.bind(this, id),
-          editorWillMount: this.editorWillMount.bind(this),
-          editorWillUnmount: this.editorWillUnmount.bind(this),
-          onChange: onYamlChange,
-        }),
-      editorHasFocus: false,
-    }
+  const { id, editor, onYamlChange, yaml, readOnly, hide = false, showCondensed } = props
+
+  const [editorHasFocus, setEditorHasFocus] = useState(false)
+
+  const frozenRef = useRef({ yaml, hide, readOnly, showCondensed })
+  if (!editorHasFocus) {
+    frozenRef.current = { yaml, hide, readOnly, showCondensed }
   }
-  editorWillUnmount() {
-    // hide TemplateEditor version of monaco-colors
+  const { yaml: effYaml, hide: effHide, readOnly: effReadOnly, showCondensed: effShowCondensed } = frozenRef.current
+
+  const classObserverRef = useRef(null)
+
+  const editorWillUnmount = useCallback(() => {
     dismountTheme('te')
-  }
+  }, [])
 
-  editorWillMount() {
-    // Monaco uses <span> to measure character sizes
-    // therefore make sure <span> has the right font
+  const editorWillMount = useCallback(() => {
     let stylesheet = document.querySelector('link[href*=main]')
     if (stylesheet) {
       stylesheet = stylesheet.sheet
       stylesheet.insertRule('span { font-family: monospace }', stylesheet.cssRules.length)
     }
-  }
+  }, [])
 
-  editorDidMount(id, editor, monaco) {
-    const { addEditor } = this.props
-    // make sure this instance of monaco editor has the ocp console themes
-    defineThemes(monaco?.editor)
+  const editorDidMount = useCallback(
+    (mountedEditor, monaco) => {
+      const { addEditor } = propsRef.current
+      defineThemes(monaco?.editor)
 
-    // if we don't reset the themes to vs
-    // and console-light or console-dark were set, monaco wouldn't
-    // update the 'monoco-colors' style with the right colors
-    monaco?.editor?.setTheme('vs')
-    monaco?.editor?.setTheme(getTheme())
-    // use TemplateEditor version of monaco-colors
-    mountTheme('te')
+      monaco?.editor?.setTheme('vs')
+      monaco?.editor?.setTheme(getTheme())
+      mountTheme('te')
 
-    // observe documentElement class changes (theme toggles)
-    if (typeof MutationObserver !== 'undefined') {
-      this.classObserver = new MutationObserver(() => {
-        monaco?.editor?.setTheme(getTheme())
-        window.monaco?.editor?.setTheme(getTheme())
+      if (typeof MutationObserver !== 'undefined') {
+        classObserverRef.current = new MutationObserver(() => {
+          monaco?.editor?.setTheme(getTheme())
+          window.monaco?.editor?.setTheme(getTheme())
+        })
+        classObserverRef.current.observe(document.documentElement, {
+          attributes: true,
+          attributeFilter: ['class'],
+        })
+      }
+
+      mountedEditor.layout()
+      mountedEditor.focus()
+      mountedEditor.monaco = monaco
+      mountedEditor.decorations = []
+      if (addEditor) {
+        addEditor(id, mountedEditor)
+      }
+
+      let stylesheet = document.querySelector('link[href*=main]')
+      if (stylesheet) {
+        stylesheet = stylesheet.sheet
+        stylesheet.deleteRule(stylesheet.cssRules.length - 1)
+      }
+
+      monaco.editor.setModelLanguage(mountedEditor.getModel(), 'yaml')
+
+      mountedEditor.changeViewZones((changeAccessor) => {
+        const domNode = document.createElement('div')
+        changeAccessor.addZone({
+          afterLineNumber: 0,
+          heightInPx: 10,
+          domNode: domNode,
+        })
       })
-      this.classObserver.observe(document.documentElement, {
-        attributes: true,
-        attributeFilter: ['class'],
-      })
-    }
 
-    editor.layout()
-    editor.focus()
-    editor.monaco = monaco
-    editor.decorations = []
-    if (addEditor) {
-      addEditor(id, editor)
-    }
-    this.editor = editor
-
-    // remove the rule setting <span> font
-    let stylesheet = document.querySelector('link[href*=main]')
-    if (stylesheet) {
-      stylesheet = stylesheet.sheet
-      stylesheet.deleteRule(stylesheet.cssRules.length - 1)
-    }
-
-    monaco.editor.setModelLanguage(editor.getModel(), 'yaml')
-
-    editor.changeViewZones((changeAccessor) => {
-      const domNode = document.createElement('div')
-      changeAccessor.addZone({
-        afterLineNumber: 0,
-        heightInPx: 10,
-        domNode: domNode,
-      })
-    })
-
-    editor.onKeyDown(
-      ((e) => {
-        // determine readonly ranges
+      mountedEditor.onKeyDown((e) => {
         const prohibited = []
-        const { decorationRows = [] } = this.props
+        const { decorationRows = [] } = propsRef.current
         decorationRows.forEach((obj) => {
           if (obj.decorationType === DecorationType.IMMUTABLE) {
-            prohibited.push(new this.editor.monaco.Range(obj.$r + 1, 0, obj.$r + 1, 132))
+            prohibited.push(new mountedEditor.monaco.Range(obj.$r + 1, 0, obj.$r + 1, 132))
           }
         })
 
-        // if user presses enter, add new key: below this line
         let endOfLineEnter = false
         if (e.code === 'Enter') {
-          const model = this.editor.getModel()
-          const pos = this.editor.getPosition()
+          const model = mountedEditor.getModel()
+          const pos = mountedEditor.getPosition()
           const thisLine = model.getLineContent(pos.lineNumber)
           endOfLineEnter = thisLine.length < pos.column
         }
 
-        // prevent typing on readonly ranges
-        const selections = this.editor.getSelections()
+        const selections = mountedEditor.getSelections()
         if (
-          // if user clicks on readonly area, ignore
           !(e.code === 'KeyC' && (e.ctrlKey || e.metaKey)) &&
           e.code !== 'ArrowDown' &&
           e.code !== 'ArrowUp' &&
@@ -149,79 +112,92 @@ class YamlEditor extends React.Component {
           e.stopPropagation()
           e.preventDefault()
         }
-      }).bind(this)
-    )
+      })
 
-    editor.onMouseDown(
-      debounce(() => {
-        const editorHasFocus = !!document.querySelector('.monaco-editor.focused')
-        this.setState({ editorHasFocus })
-      }, 0)
-    )
+      mountedEditor.onMouseDown(
+        debounce(() => {
+          const nextFocus = !!document.querySelector('.monaco-editor.focused')
+          setEditorHasFocus(nextFocus)
+        }, 0)
+      )
 
-    editor.onDidBlurEditorWidget(() => {
-      const editorHasFocus = !!document.querySelector('.monaco-editor.focused')
-      const activeId = document.activeElement?.id
-      if (!editorHasFocus && ['undo-button', 'redo-button'].indexOf(activeId) === -1) {
-        this.setState({ editorHasFocus })
+      mountedEditor.onDidBlurEditorWidget(() => {
+        const nextFocus = !!document.querySelector('.monaco-editor.focused')
+        const activeId = document.activeElement?.id
+        if (!nextFocus && ['undo-button', 'redo-button'].indexOf(activeId) === -1) {
+          setEditorHasFocus(nextFocus)
+        }
+      })
+    },
+    [id]
+  )
+
+  useEffect(() => {
+    return () => {
+      if (classObserverRef.current) {
+        classObserverRef.current.disconnect()
+        classObserverRef.current = null
       }
+    }
+  }, [])
+
+  const clonedEditor = useMemo(() => {
+    if (!editor) {
+      return null
+    }
+    return React.cloneElement(editor, {
+      language: 'yaml',
+      height: '100%',
+      width: '100%',
+      theme: getTheme(),
+      options: {
+        wordWrap: 'wordWrapColumn',
+        wordWrapColumn: 132,
+        wordWrapMinified: false,
+        scrollBeyondLastLine: true,
+        smoothScrolling: true,
+        glyphMargin: true,
+        tabSize: 2,
+        minimap: {
+          enabled: false,
+        },
+        scrollbar: {
+          verticalScrollbarSize: 17,
+          horizontalScrollbarSize: 17,
+        },
+      },
+      editorDidMount: (e, m) => editorDidMount(e, m),
+      editorWillMount: editorWillMount,
+      editorWillUnmount: editorWillUnmount,
+      onChange: onYamlChange,
     })
+  }, [editor, onYamlChange, editorDidMount, editorWillMount, editorWillUnmount])
+
+  const style = {
+    display: effHide ? 'none' : 'block',
+    minHeight: '100px',
+  }
+  if (effReadOnly) {
+    style.borderLeft = '1px solid #c8c8c8'
   }
 
-  componentWillUnmount() {
-    if (this.classObserver) {
-      this.classObserver.disconnect()
-      this.classObserver = null
-    }
-  }
-
-  shouldComponentUpdate(nextProps) {
-    // if editor has focus, ignore form changes, since editor is doing all the changes
-    return (
-      !this.state.editorHasFocus &&
-      (this.props.yaml !== nextProps.yaml ||
-        this.props.hide !== nextProps.hide ||
-        this.props.readOnly !== nextProps.readOnly ||
-        this.props.showCondensed !== nextProps.showCondensed)
-    )
-  }
-
-  // componentDidUpdate() {
-  //   // stop flickering
-  //   if (this.editor && this.editor.getModel()) {
-  //     const model = this.editor.getModel()
-  //     model.forceTokenization(model.getLineCount())
-  //   }
-  // }
-
-  render() {
-    const { yaml, readOnly, hide = false, showCondensed } = this.props
-    const { editor } = this.state
-    const style = {
-      display: hide ? 'none' : 'block',
-      minHeight: '100px',
-    }
-    if (readOnly) {
-      style.borderLeft = '1px solid #c8c8c8'
-    }
-    return (
-      <div className="yamlEditorContainer" style={style}>
-        {editor &&
-          React.cloneElement(editor, {
-            value: yaml,
-            theme: getTheme(),
-            options: {
-              ...this.state.editor.props.options,
-              wordWrapColumn: showCondensed ? 512 : 256,
-              readOnly,
-              minimap: {
-                enabled: false,
-              },
+  return (
+    <div className="yamlEditorContainer" style={style}>
+      {clonedEditor &&
+        React.cloneElement(clonedEditor, {
+          value: effYaml,
+          theme: getTheme(),
+          options: {
+            ...clonedEditor.props.options,
+            wordWrapColumn: effShowCondensed ? 512 : 256,
+            readOnly: effReadOnly,
+            minimap: {
+              enabled: false,
             },
-          })}
-      </div>
-    )
-  }
+          },
+        })}
+    </div>
+  )
 }
 
 export default YamlEditor
