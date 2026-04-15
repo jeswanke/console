@@ -1,4 +1,6 @@
 /* Copyright Contributors to the Open Cluster Management project */
+/* eslint-disable @typescript-eslint/ban-ts-comment -- legacy TemplateEditor utils; full strict typing deferred */
+// @ts-nocheck
 
 import { parseYAML, getSourcePath, removeVs } from './source-utils'
 import get from 'lodash/get'

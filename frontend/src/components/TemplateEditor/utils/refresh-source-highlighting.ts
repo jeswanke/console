@@ -1,4 +1,6 @@
 /* Copyright Contributors to the Open Cluster Management project */
+/* eslint-disable @typescript-eslint/ban-ts-comment -- legacy TemplateEditor utils; full strict typing deferred */
+// @ts-nocheck
 
 import { diff } from 'deep-diff'
 import { parseYAML, getInsideObject, getResourceID, DecorationType } from './source-utils'

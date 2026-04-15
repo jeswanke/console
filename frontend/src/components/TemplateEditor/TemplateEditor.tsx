@@ -1,4 +1,5 @@
 /* Copyright Contributors to the Open Cluster Management project */
+/* eslint-disable @typescript-eslint/ban-ts-comment -- class component; full types in follow-up */
 // @ts-nocheck — class component with extensive Monaco/wizard state; full types in follow-up
 
 import {

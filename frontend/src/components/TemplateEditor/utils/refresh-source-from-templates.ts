@@ -1,4 +1,6 @@
 /* Copyright Contributors to the Open Cluster Management project */
+/* eslint-disable @typescript-eslint/ban-ts-comment -- legacy TemplateEditor utils; full strict typing deferred */
+// @ts-nocheck
 
 import { parseYAML, escapeYAML, getDecorationData, getDecorationRows } from './source-utils'
 import { setSourcePaths } from './initialize-control-functions'

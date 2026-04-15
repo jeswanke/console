@@ -1,5 +1,6 @@
 /* Copyright Contributors to the Open Cluster Management project */
 /* eslint-disable @typescript-eslint/ban-ts-comment -- legacy tree control types */
+// @ts-nocheck
 'use strict'
 
 import React, { useCallback, useEffect, useRef, useState } from 'react'

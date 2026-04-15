@@ -204,7 +204,8 @@ export interface ControlPanelSkeletonProps {
   i18n?: TFunction
 }
 
-export type WizardSectionTitle = TemplateControl | { id: string; type: string }
+/** Wizard step header object (same shape as template controls in practice). */
+export type WizardSectionTitle = TemplateControl
 
 export interface WizardStepSection {
   title: WizardSectionTitle

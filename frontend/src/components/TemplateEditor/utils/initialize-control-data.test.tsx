@@ -4,7 +4,11 @@ import { removeCircular } from '~/lib/test-shots'
 
 describe('initialize-control-data tests', () => {
   test('happy path', async () => {
-    expect(removeCircular(initializeControlDataFn(...initializeControlData.args))).toEqual(initializeControlData.ret)
+    expect(
+      removeCircular(
+        initializeControlDataFn(...(initializeControlData.args as Parameters<typeof initializeControlDataFn>))
+      )
+    ).toEqual(initializeControlData.ret)
   })
 })
 

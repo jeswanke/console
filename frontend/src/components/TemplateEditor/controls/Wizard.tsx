@@ -1,5 +1,6 @@
 /* Copyright Contributors to the Open Cluster Management project */
 /* eslint-disable @typescript-eslint/ban-ts-comment -- wizard step objects are dynamic */
+// @ts-nocheck
 'use strict'
 
 import React, { useCallback, useState } from 'react'

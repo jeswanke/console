@@ -86,7 +86,7 @@ class EditorHeader extends React.Component<EditorHeaderProps> {
           aria-label="show-secrets"
           id="show-secrets"
           isChecked={!!showSecrets}
-          onChange={(_e, _checked) => handleShowSecretChange?.()}
+          onChange={() => handleShowSecretChange?.()}
         />
         <div>{i18n('editor.show.secrets')}</div>
       </div>

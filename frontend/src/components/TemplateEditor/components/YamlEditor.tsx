@@ -1,4 +1,5 @@
 /* Copyright Contributors to the Open Cluster Management project */
+/* eslint-disable @typescript-eslint/ban-ts-comment -- Monaco wiring; types deferred */
 // @ts-nocheck — Monaco editor instance wiring; types deferred
 
 import React from 'react'

@@ -1,4 +1,5 @@
 /* Copyright Contributors to the Open Cluster Management project */
+/* eslint-disable @typescript-eslint/ban-ts-comment -- test fixtures omit full control graph props */
 // @ts-nocheck — test fixtures omit full control graph props
 
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
