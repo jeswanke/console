@@ -1,5 +1,4 @@
 /* Copyright Contributors to the Open Cluster Management project */
-// @ts-nocheck — debug logging only
 
 import jsYaml from 'js-yaml'
 import { generateTemplateData } from './refresh-source-from-templates'

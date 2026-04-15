@@ -1,5 +1,4 @@
 /* Copyright Contributors to the Open Cluster Management project */
-// @ts-nocheck — validation walks dynamic control definitions and Monaco-backed editors
 
 import { ControlMode, parseYAML, reverseTemplate } from './source-utils'
 import get from 'lodash/get'

@@ -1,9 +1,17 @@
 /* Copyright Contributors to the Open Cluster Management project */
-// @ts-nocheck — Handlebars + dynamic control map to YAML
 
 import { parseYAML, escapeYAML, getDecorationData, getDecorationRows } from './source-utils'
 import { setSourcePaths } from './initialize-control-functions'
-import { caseFn, defaultFn, if_eqFn, if_gtFn, if_neFn, if_orFn, if_truthyFn, switchFn } from '../helpers'
+import {
+  caseFn,
+  defaultFn,
+  if_eqFn,
+  if_gtFn,
+  if_neFn,
+  if_orFn,
+  if_truthyFn,
+  switchFn,
+} from '~/components/TemplateEditor/helpers'
 import get from 'lodash/get'
 import capitalize from 'lodash/capitalize'
 

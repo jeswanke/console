@@ -25,7 +25,7 @@ import { LostChangesContext, LostChangesPrompt } from '../LostChanges'
 import EditorBar from './components/EditorBar'
 import EditorHeader from './components/EditorHeader'
 import YamlEditor from './components/YamlEditor'
-import ControlPanel from './controls/ControlPanel'
+import Form from './controls/Form'
 import './css/template-editor.css'
 import { logCreateErrors, logSourceErrors } from './utils/logger'
 import { updateEditStack } from './utils/refresh-source-from-stack'
@@ -38,8 +38,8 @@ import {
   getDecorationRows,
   initializeControls,
   parseYAML,
-} from './utils/source-utils'
-import { validateControls } from './utils/validate-controls'
+} from '~/components/TemplateEditor/utils/source-utils'
+import { validateControls } from '~/components/TemplateEditor/utils/validate-controls'
 
 const TEMPLATE_EDITOR_OPEN_COOKIE = 'yaml'
 const TEMPLATE_EDITOR_SHOW_SECRETS_COOKIE = 'template-editor-show-secrets-cookie'
@@ -346,7 +346,7 @@ export default class TemplateEditor extends React.Component<any, any> {
     const { controlData: originalControlData, fetchControl } = this.props
     const { fetchData } = fetchControl || {}
     return (
-      <ControlPanel
+      <Form
         wizardClassName={this.props.wizardClassName}
         handleControlChange={this.handleControlChange}
         handleNewEditorMode={this.handleNewEditorMode}

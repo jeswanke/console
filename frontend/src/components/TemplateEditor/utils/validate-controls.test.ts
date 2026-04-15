@@ -2,7 +2,7 @@
 'use strict'
 
 import i18n from 'i18next'
-import { getIPValidator } from '../utils/validation-types'
+import { getIPValidator } from '~/components/TemplateEditor/utils/validation-types'
 import { validateMultiTextControl } from './validate-controls'
 const t = i18n.t.bind(i18n)
 

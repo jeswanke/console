@@ -1,5 +1,4 @@
 /* Copyright Contributors to the Open Cluster Management project */
-// @ts-nocheck — dynamic control/template graph; gradual typing tracked in ACM-23379
 
 import jsYaml from 'js-yaml'
 import YamlParser from './YamlParser'

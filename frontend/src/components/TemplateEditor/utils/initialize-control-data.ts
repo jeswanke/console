@@ -1,5 +1,4 @@
 /* Copyright Contributors to the Open Cluster Management project */
-// @ts-nocheck — wizard control definitions are intentionally loose
 
 import { cloneDeep } from 'lodash'
 import get from 'lodash/get'

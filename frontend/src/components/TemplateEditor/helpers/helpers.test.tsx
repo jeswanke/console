@@ -1,5 +1,4 @@
 /* Copyright Contributors to the Open Cluster Management project */
-// @ts-nocheck — test fixtures omit full control graph props
 import { if_eqFn } from './if_eq'
 import { if_gtFn } from './if_gt'
 import { if_neFn } from './if_ne'

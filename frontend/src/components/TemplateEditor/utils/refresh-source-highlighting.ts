@@ -1,5 +1,4 @@
 /* Copyright Contributors to the Open Cluster Management project */
-// @ts-nocheck — Monaco decoration integration
 
 import { diff } from 'deep-diff'
 import { parseYAML, getInsideObject, getResourceID, DecorationType } from './source-utils'

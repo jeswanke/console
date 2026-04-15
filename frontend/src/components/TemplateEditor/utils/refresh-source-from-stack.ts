@@ -1,5 +1,4 @@
 /* Copyright Contributors to the Open Cluster Management project */
-// @ts-nocheck — merges K8s resource stacks with deep diffs
 
 import { diff } from 'deep-diff'
 import jsYaml from 'js-yaml'
@@ -13,7 +12,7 @@ import {
   parseYAML,
 } from './source-utils'
 import { generateSourceFromTemplate } from './refresh-source-from-templates'
-import { mapResources } from '../../SyncEditor/reconcile'
+import { mapResources } from '~/components/SyncEditor/reconcile'
 import YamlParser from './YamlParser'
 import cloneDeep from 'lodash/cloneDeep'
 import merge from 'lodash/merge'

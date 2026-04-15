@@ -1,5 +1,4 @@
 /* Copyright Contributors to the Open Cluster Management project */
-// @ts-nocheck — binds dynamic control callbacks to editor proxy
 
 import { parseYAML, getSourcePath, removeVs } from './source-utils'
 import get from 'lodash/get'

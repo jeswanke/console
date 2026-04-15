@@ -1,5 +1,4 @@
 /* Copyright Contributors to the Open Cluster Management project */
-// @ts-nocheck — calls YamlParser.subStrCount with optional args; implementation uses runtime defaults.
 
 import YamlParser from './YamlParser'
 

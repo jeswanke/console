@@ -1,7 +1,7 @@
 /* Copyright Contributors to the Open Cluster Management project */
 
 import * as sourceUtilsAPI from './source-utils'
-import { cleanResults } from '../../../lib/test-shots'
+import { cleanResults } from '~/lib/test-shots'
 
 describe('source-utils tests', () => {
   beforeEach(() => {
