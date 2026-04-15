@@ -7,7 +7,7 @@ import isEmpty from 'lodash/isEmpty'
 import { Title, TitleSizes, Gallery, Stack } from '@patternfly/react-core'
 import { Tile } from '@patternfly/react-core/deprecated'
 import Tooltip from '~/components/TemplateEditor/components/Tooltip'
-import { ControlPanelCardsProps, TemplateControl } from '~/components/TemplateEditor/utils/types'
+import { ControlPanelCardsProps, TemplateControl } from '../types'
 
 type CardChoice = {
   id: string

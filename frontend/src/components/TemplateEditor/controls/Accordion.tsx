@@ -7,7 +7,7 @@ import { Badge, Popover } from '@patternfly/react-core'
 import HelpIcon from '@patternfly/react-icons/dist/js/icons/help-icon'
 import get from 'lodash/get'
 import { AngleRightIcon } from '@patternfly/react-icons'
-import { ControlPanelBaseProps, TemplateControl } from '~/components/TemplateEditor/utils/types'
+import { ControlPanelBaseProps, TemplateControl } from '../types'
 import { TFunction } from 'react-i18next'
 
 type Props = ControlPanelBaseProps

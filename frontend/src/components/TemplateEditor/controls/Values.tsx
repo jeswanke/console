@@ -4,7 +4,7 @@
 import React, { useState } from 'react'
 import { TextInput, Label } from '@patternfly/react-core'
 import ControlPanelFormGroup from './FormGroup'
-import { ControlPanelBaseProps, TemplateControl } from '~/components/TemplateEditor/utils/types'
+import { ControlPanelBaseProps, TemplateControl } from '../types'
 
 type Props = ControlPanelBaseProps & {
   handleChange: (control: TemplateControl) => void

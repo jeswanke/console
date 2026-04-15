@@ -7,7 +7,7 @@ import { AcmSelectBase, SelectVariant, SelectOptionObject } from '~/components/A
 import ControlPanelFormGroup from './FormGroup'
 import get from 'lodash/get'
 import { useDynamicPropertyValues } from '~/components/TemplateEditor/helpers/dynamicProperties'
-import { ControlPanelBaseProps } from '~/components/TemplateEditor/utils/types'
+import { ControlPanelBaseProps } from '../types'
 
 const ControlPanelSingleSelect = (props: ControlPanelBaseProps & { handleChange: () => void }) => {
   const { controlId, i18n, control, controlData, handleChange } = props

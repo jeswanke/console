@@ -9,7 +9,7 @@ import TimesCircleIcon from '@patternfly/react-icons/dist/js/icons/times-circle-
 import ControlPanelFormGroup from './FormGroup'
 import cloneDeep from 'lodash/cloneDeep'
 import get from 'lodash/get'
-import { ControlPanelBaseProps } from '~/components/TemplateEditor/utils/types'
+import { ControlPanelBaseProps } from '../types'
 
 type TreeSelectState = {
   isOpen: boolean

@@ -5,7 +5,7 @@ import React, { RefCallback, useCallback } from 'react'
 import { TextInput } from '@patternfly/react-core'
 import ControlPanelFormGroup from './FormGroup'
 import { useDynamicPropertyValues } from '~/components/TemplateEditor/helpers/dynamicProperties'
-import { ControlPanelBaseProps } from '~/components/TemplateEditor/utils/types'
+import { ControlPanelBaseProps } from '../types'
 
 const ControlPanelTextInput = (props: ControlPanelBaseProps & { handleChange: (value: string) => void }) => {
   const { controlId, i18n, control, controlData, handleChange } = props

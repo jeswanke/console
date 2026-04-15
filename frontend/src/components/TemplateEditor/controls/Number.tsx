@@ -4,7 +4,7 @@
 import { RefCallback, useCallback } from 'react'
 import ControlPanelFormGroup from './FormGroup'
 import { ButtonProps, NumberInput } from '@patternfly/react-core'
-import { ControlPanelBaseProps } from '~/components/TemplateEditor/utils/types'
+import { ControlPanelBaseProps } from '../types'
 
 const ControlPanelNumber = (props: ControlPanelBaseProps & { handleChange: () => void }) => {
   const { controlId, control, controlData, handleChange, i18n } = props

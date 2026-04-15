@@ -4,7 +4,7 @@
 import React from 'react'
 import { Checkbox, Radio } from '@patternfly/react-core'
 import ControlPanelFormGroup from './FormGroup'
-import { ControlPanelBaseProps } from '~/components/TemplateEditor/utils/types'
+import { ControlPanelBaseProps } from '../types'
 
 type Props = ControlPanelBaseProps & {
   handleChange: () => void

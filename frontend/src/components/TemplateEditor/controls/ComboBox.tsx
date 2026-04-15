@@ -12,7 +12,7 @@ import get from 'lodash/get'
 import uniq from 'lodash/uniq'
 import invert from 'lodash/invert'
 import noop from 'lodash/noop'
-import { ControlPanelComboBoxProps, TemplateControl } from '~/components/TemplateEditor/utils/types'
+import { ControlPanelComboBoxProps, TemplateControl } from '../types'
 
 type ComboBoxState = {
   isOpen: boolean

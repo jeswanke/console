@@ -7,7 +7,7 @@ import { AcmSelectBase, SelectVariant } from '~/components/AcmSelectBase'
 import type { ComponentType } from 'react'
 import ControlPanelFormGroup from './FormGroup'
 import get from 'lodash/get'
-import { ControlPanelBaseProps, TemplateControl } from '~/components/TemplateEditor/utils/types'
+import { ControlPanelBaseProps, TemplateControl } from '../types'
 
 const AcmSelectBaseAny = AcmSelectBase as ComponentType<Record<string, unknown>>
 

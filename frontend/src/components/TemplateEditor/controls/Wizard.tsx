@@ -20,7 +20,7 @@ import {
 import { ExclamationCircleIcon } from '@patternfly/react-icons'
 import Review from './Review'
 import get from 'lodash/get'
-import { ControlPanelWizardProps, WizardStepStructure } from '~/components/TemplateEditor/utils/types'
+import { ControlPanelWizardProps, WizardStepStructure } from '../types'
 
 type WizardNavStep = {
   id?: string

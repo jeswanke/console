@@ -3,7 +3,7 @@
 import { memo } from 'react'
 import { Popover } from '@patternfly/react-core'
 import HelpIcon from '@patternfly/react-icons/dist/js/icons/help-icon'
-import type { TemplateControl } from '../utils/types'
+import type { TemplateControl } from '../types'
 
 export interface TooltipProps {
   control: TemplateControl

@@ -3,7 +3,7 @@
 
 import React from 'react'
 import { Skeleton } from '@patternfly/react-core'
-import { ControlPanelSkeletonProps } from '~/components/TemplateEditor/utils/types'
+import { ControlPanelSkeletonProps } from '../types'
 
 const ControlPanelSkeleton = (props: ControlPanelSkeletonProps) => {
   const { controlId, control } = props

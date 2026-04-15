@@ -15,7 +15,7 @@ import {
   FinishSummaryRow,
   TemplateControl,
   WizardStepSection,
-} from '~/components/TemplateEditor/utils/types'
+} from '../types'
 import { TFunction } from 'react-i18next'
 
 function renderTables(tables: TemplateControl[]) {

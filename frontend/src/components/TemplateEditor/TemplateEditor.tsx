@@ -287,7 +287,7 @@ export default class TemplateEditor extends React.Component<any, any> {
       this.editors = []
     }
     const viewClasses = classNames({
-      temptifly: true,
+      'template-editor': true,
       showEditor,
       showWizard,
     })
@@ -309,9 +309,9 @@ export default class TemplateEditor extends React.Component<any, any> {
       showEditor,
     })
     let maxSize = '600px'
-    const temptifly = document.getElementsByClassName('temptifly')[0]
-    if (temptifly) {
-      maxSize = `${(temptifly.getBoundingClientRect().width * 8) / 10}px`
+    const templateEditor = document.getElementsByClassName('template-editor')[0]
+    if (templateEditor) {
+      maxSize = `${(templateEditor.getBoundingClientRect().width * 8) / 10}px`
     }
     return (
       <div className={editorClasses}>

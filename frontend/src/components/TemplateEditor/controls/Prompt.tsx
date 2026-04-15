@@ -3,7 +3,7 @@
 
 import React from 'react'
 import { Button } from '@patternfly/react-core'
-import { ControlPanelPromptProps, TemplateControl } from '~/components/TemplateEditor/utils/types'
+import { ControlPanelPromptProps, TemplateControl } from '../types'
 
 const ControlPanelPrompt = (props: ControlPanelPromptProps) => {
   const { control } = props

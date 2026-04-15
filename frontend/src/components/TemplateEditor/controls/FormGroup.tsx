@@ -7,7 +7,7 @@ import HelpIcon from '@patternfly/react-icons/dist/js/icons/help-icon'
 import { useDynamicPropertyValues } from '~/components/TemplateEditor/helpers/dynamicProperties'
 import { TFunction } from 'react-i18next'
 import { AcmHelperText } from '~/ui-components/AcmHelperText/AcmHelperText'
-import { TemplateControl } from '~/components/TemplateEditor/utils/types'
+import { TemplateControl } from '../types'
 
 const ControlPanelFormGroup = (props: {
   children: ReactNode

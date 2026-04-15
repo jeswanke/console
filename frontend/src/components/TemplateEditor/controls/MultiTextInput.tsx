@@ -16,7 +16,7 @@ import {
 } from '@patternfly/react-core'
 import { PlusCircleIcon, TrashIcon } from '@patternfly/react-icons'
 import ControlPanelFormGroup from './FormGroup'
-import { ControlPanelBaseProps, MultitextActiveState, TemplateControl } from '~/components/TemplateEditor/utils/types'
+import { ControlPanelBaseProps, MultitextActiveState, TemplateControl } from '../types'
 
 const ControlPanelMultiTextInput = (
   props: ControlPanelBaseProps & { handleChange: (value: TemplateControl) => void; addButtonText: string }

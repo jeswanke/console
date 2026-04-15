@@ -4,7 +4,7 @@
 import React, { useCallback } from 'react'
 import { TextArea } from '@patternfly/react-core'
 import ControlPanelFormGroup from './FormGroup'
-import { ControlPanelBaseProps } from '~/components/TemplateEditor/utils/types'
+import { ControlPanelBaseProps } from '../types'
 
 type Props = ControlPanelBaseProps & {
   handleChange: (value: string[]) => void

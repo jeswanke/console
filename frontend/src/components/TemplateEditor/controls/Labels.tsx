@@ -5,7 +5,7 @@ import React, { useState } from 'react'
 import { TextInput, Label } from '@patternfly/react-core'
 import ControlPanelFormGroup from './FormGroup'
 import keyBy from 'lodash/keyBy'
-import { ControlPanelBaseProps, TemplateControl } from '~/components/TemplateEditor/utils/types'
+import { ControlPanelBaseProps, TemplateControl } from '../types'
 
 export const DNS_LABEL = '[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?'
 export const PREFIX = `${DNS_LABEL}(?:\\.${DNS_LABEL})*/`
