@@ -2,6 +2,8 @@
 
 _(Diagram: add `docs/images/architecture-overview.png` if you have the asset.)_
 
+**Subscription create wizard (UI map):** `APP_SUBSCRIPTION_CREATE_WIZARD` in `src/constants/app.ts` and locators on **`SubscriptionApplicationCreateWizardPage`** (`src/pages/app/SubscriptionApplicationCreateWizardPage.ts`) — same pattern as **ApplicationListPage** / Advanced configuration getters. Entry: Applications → **Create application** → **Subscription** → `/multicloud/applications/create/subscription`. Optional PNG under `docs/images/` if you keep a visual reference.
+
 This project follows a **Domain-Driven, Hybrid Testing Architecture**. We separate **"Test Intent"** (what we want to verify) from **"Implementation Details"** (how we click buttons or run CLI commands).
 
 ## 📂 Directory Structure Overview
@@ -280,7 +282,7 @@ console-e2e/
     │   └── index.ts            # dotenv + getHubAuth() / getTestConfig()
     ├── constants/              # §2 — selectors, app copy
     │   ├── selectors.ts
-    │   └── app.ts
+    │   └── app.ts              # APP_ROUTES, APP_CREATE_MENU, APP_SUBSCRIPTION_CREATE_WIZARD, …
     ├── services/               # §2 — OcCliService (AuthService / domains: add as needed)
     │   └── OcCliService.ts
     ├── utils/                  # §6
@@ -293,7 +295,8 @@ console-e2e/
     ├── pages/                  # §4
     │   ├── BasePage.ts
     │   ├── app/
-    │   │   └── ApplicationListPage.ts
+    │   │   ├── ApplicationListPage.ts
+    │   │   └── SubscriptionApplicationCreateWizardPage.ts  # Create application → Subscription wizard locators
     │   └── cluster/
     │       ├── ClusterListPage.ts
     │       └── ClusterSetsPage.ts

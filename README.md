@@ -111,10 +111,13 @@ npx playwright show-report
 
 ## Project Structure
 
-See **`docs/architecture-overview.md`** for the full ACM automation model. This repo maps to it as follows:
+See **`docs/architecture-overview.md`** for the full ACM automation model. The subscription **Create application → Subscription** wizard is mapped in **`APP_SUBSCRIPTION_CREATE_WIZARD`** + **`SubscriptionApplicationCreateWizardPage`** (same locator style as **`ApplicationListPage`**). Optional screenshots under **`docs/images/`**.
+
+This repo maps to it as follows:
 
 ```
 console-e2e/
+├── docs/                    # architecture-overview.md; optional images in docs/images/
 ├── start.sh                 # Dispatcher → e.g. src/tests/app/start.sh (ALC)
 ├── env/                     # ALC env template (alc.env.example); alc.local.env gitignored
 ├── scripts/lib/             # Shared shell (common.sh, alc-env.sh)
@@ -128,7 +131,7 @@ console-e2e/
 │   ├── lib/                 # Shared assertions / factories (expand)
 │   ├── pages/
 │   │   ├── BasePage.ts
-│   │   ├── app/             # ApplicationListPage
+│   │   ├── app/             # ApplicationListPage, SubscriptionApplicationCreateWizardPage
 │   │   └── cluster/         # ClusterListPage, ClusterSetsPage
 │   ├── services/            # OcCliService
 │   ├── tests/

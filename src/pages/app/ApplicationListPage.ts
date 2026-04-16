@@ -10,12 +10,15 @@ import {
   APP_ADVANCED_OC_RESOURCES,
 } from '@constants/app';
 import { acmToolbarSearchLocator } from '@utils/acm-locators';
+import type { SubscriptionApplicationCreateWizardPage } from '@pages/app/SubscriptionApplicationCreateWizardPage';
 
 /**
  * Applications list page (Application Lifecycle).
  *
  * Route: /multicloud/applications
  * Contains: page title, Overview / Advanced configuration tabs, toolbar, applications table.
+ *
+ * For **Create application → Subscription** wizard locators, see {@link SubscriptionApplicationCreateWizardPage}.
  */
 export class ApplicationListPage extends BasePage {
   readonly applicationsTable: ApplicationsTable;
