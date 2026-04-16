@@ -25,11 +25,11 @@ npx playwright install chromium
 
 **OpenShift web console** (optional overrides for `auth.setup.ts` — same password is always **`HUB_PASSWORD`**):
 
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `HUB_PASSWORD` | **Yes** | - | Used for `oc login` and console UI login |
-| `CONSOLE_USERNAME` | No | `kubeadmin` | Username on the console login form |
-| `CONSOLE_IDP` | No | `kube:admin` | Identity provider link text on the login page |
+| Variable           | Required | Default      | Description                                   |
+| ------------------ | -------- | ------------ | --------------------------------------------- |
+| `HUB_PASSWORD`     | **Yes**  | -            | Used for `oc login` and console UI login      |
+| `CONSOLE_USERNAME` | No       | `kubeadmin`  | Username on the console login form            |
+| `CONSOLE_IDP`      | No       | `kube:admin` | Identity provider link text on the login page |
 
 > **Typical kubeadmin:** `.env` with `HUB_URL` + `HUB_PASSWORD` only.
 
@@ -79,12 +79,12 @@ export HUB_PASSWORD='<kubeadmin-password>'
 
 **Universal environment** (any component): root **`./start.sh`** exports these **after** hub API login (`scripts/lib/common.sh`):
 
-| Variable | How it is set |
-|----------|----------------|
-| `CONSOLE_USERNAME` / `CONSOLE_IDP` | Optional; set before login (password is always `HUB_PASSWORD`) |
-| `BASE_URL` | From `oc whoami --show-console` if unset |
+| Variable                                                 | How it is set                                                                    |
+| -------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `CONSOLE_USERNAME` / `CONSOLE_IDP`                       | Optional; set before login (password is always `HUB_PASSWORD`)                   |
+| `BASE_URL`                                               | From `oc whoami --show-console` if unset                                         |
 | `OC_CLUSTER_URL` / `OC_CLUSTER_USER` / `OC_CLUSTER_PASS` | Default from `HUB_URL`, `kubeadmin`, `HUB_PASSWORD` (override via env if needed) |
-| `PLAYWRIGHT_TEST_MODE` | Default `e2e`, or from `TEST_MODE` / explicit `PLAYWRIGHT_TEST_MODE` |
+| `PLAYWRIGHT_TEST_MODE`                                   | Default `e2e`, or from `TEST_MODE` / explicit `PLAYWRIGHT_TEST_MODE`             |
 
 **ALC-only file:** `./start.sh alc` also loads **`env/alc.local.env`** (gitignored) for integrations — **`OBJECTSTORE_*`**, **`ANSIBLE_*`** only (see `env/alc.env.example`).
 

@@ -1,20 +1,31 @@
 {
   "name": "console-e2e",
   "version": "1.0.0",
+  "private": true,
   "description": "ACM Console E2E Test Automation Framework",
-  "main": "index.js",
   "scripts": {
     "test": "playwright test",
+    "lint:check": "prettier --check \"**/*.{md,json,yml,yaml}\" --ignore-path .prettierignore && eslint . && npm run typecheck",
+    "lint:fix": "prettier --write \"**/*.{md,json,yml,yaml}\" --ignore-path .prettierignore && eslint . --fix",
+    "typecheck": "tsc --noEmit",
     "test:alc": "bash ./start.sh alc"
   },
   "devDependencies": {
+    "@eslint/js": "^9.30.0",
     "@faker-js/faker": "^9.9.0",
     "@playwright/test": "^1.58.2",
     "@types/node": "^20.19.27",
     "dotenv": "^17.2.3",
+    "eslint": "^9.30.0",
+    "eslint-config-prettier": "^10.1.5",
     "eslint-plugin-playwright": "^2.4.0",
     "fs-extra": "^11.3.3",
+    "prettier": "^3.6.2",
     "ts-node": "^10.9.2",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.35.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
   }
 }

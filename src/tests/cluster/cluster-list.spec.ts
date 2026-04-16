@@ -1,4 +1,4 @@
-import { test, expect } from '@fixtures/acm-test';
+import { test } from '@fixtures/acm-test';
 
 test.describe('Cluster List Page', () => {
   test('should display the local-cluster in the list', async ({ clusterListPage }) => {

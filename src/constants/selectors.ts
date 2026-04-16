@@ -58,6 +58,7 @@ export const SELECTORS = {
     resourceToggle: {
       subscriptions: '#subscriptions',
       channels: '#channels',
+      placements: '#placements',
       placementRules: '#placementrules',
     },
   },

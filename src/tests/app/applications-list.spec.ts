@@ -16,6 +16,7 @@ import {
   APP_ADVANCED_CONFIG,
   APP_ADVANCED_TABLE_COLUMNS,
   APP_ADVANCED_TABLE_COLUMNS_CHANNELS,
+  APP_ADVANCED_TABLE_COLUMNS_PLACEMENTS,
   APP_ADVANCED_TABLE_COLUMNS_PLACEMENT_RULES,
   APP_DOCS_ADVANCED_DEPRECATION_HREF_RE,
 } from '@constants/app';
@@ -211,7 +212,7 @@ test.describe('Applications list', { tag: ['@app', '@alc'] }, () => {
         popover.getByRole('button', { name: APP_TABLE_COLUMN_HELP.closeButtonLabel })
       ).toBeVisible();
       await popover.getByRole('button', { name: APP_TABLE_COLUMN_HELP.closeButtonLabel }).click();
-      await expect(popover).not.toBeVisible();
+      await expect(popover).toBeHidden();
     }
   });
 
@@ -263,7 +264,7 @@ test.describe('Applications list', { tag: ['@app', '@alc'] }, () => {
     );
   });
 
-  test('Advanced configuration toggles include Subscriptions, Channels, Placement rules; Subscriptions selected', async ({
+  test('Advanced configuration resource toggle shows all four options with Subscriptions selected', async ({
     applicationListPage,
   }) => {
     await applicationListPage.goto();
@@ -287,10 +288,11 @@ test.describe('Applications list', { tag: ['@app', '@alc'] }, () => {
       applicationListPage.getAdvancedResourceToggleButton('channels')
     ).toBeVisible();
     await expect(
+      applicationListPage.getAdvancedResourceToggleButton('placements')
+    ).toBeVisible();
+    await expect(
       applicationListPage.getAdvancedResourceToggleButton('placementRules')
     ).toBeVisible();
-    // Placements list UI moved under Infrastructure → Clusters → Placements; we no longer assert a Placements *table* here.
-    // Some ACM builds still show a legacy #placements toggle—do not require its absence.
   });
 
   test('Advanced configuration table has Subscriptions columns (Name, Namespace, Channel)', async ({
@@ -409,6 +411,69 @@ test.describe('Applications list', { tag: ['@app', '@alc'] }, () => {
     await expect(
       table.getByRole('columnheader', {
         name: /^Subscriptions\b/,
+      })
+    ).toBeVisible();
+  });
+
+  test('Advanced configuration table has Placements columns (Name, Namespace, Clusters, Created)', async ({
+    applicationListPage,
+  }) => {
+    await applicationListPage.goto();
+    await applicationListPage.openAdvancedConfigTab();
+    await applicationListPage.getAdvancedResourceToggleButton('placements').click();
+    await applicationListPage.waitForLoad();
+
+    const hasResources = await applicationListPage.advancedConfigViewHasResources('placements');
+    if (!hasResources) {
+      const emptyState = applicationListPage.getAdvancedEmptyState('placements');
+      await expect(emptyState).toBeVisible();
+      const hasBodyPl =
+        (await emptyState.getByText(APP_ADVANCED_CONFIG.emptyState.body).isVisible().catch(() => false)) ||
+        (await emptyState
+          .getByText(APP_ADVANCED_CONFIG.emptyState.bodyAltPattern)
+          .isVisible()
+          .catch(() => false));
+      if (hasBodyPl) {
+        await expect(emptyState).toContainText('Create application');
+        await expect(
+          emptyState.getByRole('link', {
+            name: APP_ADVANCED_CONFIG.emptyState.createApplicationLabel,
+          })
+        ).toBeVisible();
+      }
+      const viewDocsLink = emptyState.getByRole('link', {
+        name: APP_ADVANCED_CONFIG.terminologyCard.viewDocsLinkText,
+      });
+      await expect(viewDocsLink).toBeVisible();
+      await expect(viewDocsLink).toHaveAttribute(
+        'href',
+        APP_DOCS_MANAGING_APPLICATIONS_HREF_RE
+      );
+      return;
+    }
+    const table = applicationListPage.getAdvancedTable();
+    await expect(table).toBeVisible();
+    await expect(
+      table.getByRole('columnheader', {
+        name: APP_ADVANCED_TABLE_COLUMNS_PLACEMENTS.name,
+        exact: true,
+      })
+    ).toBeVisible();
+    await expect(
+      table.getByRole('columnheader', {
+        name: APP_ADVANCED_TABLE_COLUMNS_PLACEMENTS.namespace,
+        exact: true,
+      })
+    ).toBeVisible();
+    await expect(
+      table.getByRole('columnheader', {
+        name: /^Clusters\b/,
+      })
+    ).toBeVisible();
+    await expect(
+      table.getByRole('columnheader', {
+        name: APP_ADVANCED_TABLE_COLUMNS_PLACEMENTS.created,
+        exact: true,
       })
     ).toBeVisible();
   });

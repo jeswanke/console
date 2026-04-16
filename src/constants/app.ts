@@ -205,7 +205,7 @@ export const APP_FILTER = {
 } as const;
 
 // =============================================================================
-// Advanced Configuration tab (Subscriptions, Channels, Placement rules).
+// Advanced Configuration tab (Subscriptions, Channels, Placements, Placement rules).
 // Placements moved to Infrastructure → Clusters → Placements (see console deprecation notice).
 // =============================================================================
 
@@ -228,6 +228,7 @@ export const APP_ADVANCED_CONFIG = {
     termTitles: {
       subscriptions: 'Subscriptions',
       channels: 'Channels',
+      placements: 'Placements',
       placementRules: 'Placement rules',
     },
     /** Deprecated label shown next to some terms */
@@ -240,11 +241,13 @@ export const APP_ADVANCED_CONFIG = {
     ids: {
       subscriptions: 'subscriptions',
       channels: 'channels',
+      placements: 'placements',
       placementRules: 'placementrules',
     },
     labels: {
       subscriptions: 'Subscriptions',
       channels: 'Channels',
+      placements: 'Placements',
       placementRules: 'Placement rules',
     },
   },
@@ -260,6 +263,7 @@ export const APP_ADVANCED_CONFIG = {
     titlePatterns: {
       subscriptions: /don't have any subscriptions/i,
       channels: /don't have any channels/i,
+      placements: /don't have any placements/i,
       placementRules: /don't have any placement rules/i,
     },
   },
@@ -272,6 +276,7 @@ export const APP_ADVANCED_OC_RESOURCES: Record<
 > = {
   subscriptions: 'subscriptions.apps.open-cluster-management.io',
   channels: 'channels.apps.open-cluster-management.io',
+  placements: 'placements.cluster.open-cluster-management.io',
   placementRules: 'placementrules.apps.open-cluster-management.io',
 };
 
@@ -292,6 +297,14 @@ export const APP_ADVANCED_TABLE_COLUMNS_CHANNELS = {
   namespace: 'Namespace',
   type: 'Type',
   subscriptions: 'Subscriptions',
+  clusters: 'Clusters',
+  created: 'Created',
+} as const;
+
+/** Advanced config table columns – Placements view (Name, Namespace, Clusters, Created). */
+export const APP_ADVANCED_TABLE_COLUMNS_PLACEMENTS = {
+  name: 'Name',
+  namespace: 'Namespace',
   clusters: 'Clusters',
   created: 'Created',
 } as const;

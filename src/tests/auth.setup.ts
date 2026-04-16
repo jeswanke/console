@@ -1,4 +1,4 @@
-import { test as setup, expect } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 import path from 'path';
 import { getHubAuth } from '@config';
 import { OcCliService } from '@services/OcCliService';
@@ -11,7 +11,7 @@ function leftOauthBroker(url: URL): boolean {
   return !url.hostname.includes('oauth-openshift');
 }
 
-setup('authenticate', async ({ page }) => {
+test('authenticate', async ({ page }) => {
   const oc = new OcCliService();
   const consoleUrl = await oc.getConsoleUrl();
   const { hubUser: username, hubPassword: password, hubIdp: idp } = getHubAuth();
