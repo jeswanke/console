@@ -33,7 +33,7 @@ test('authenticate', async ({ page }) => {
   }
   await usernameInput.fill(username);
   await passwordInput.fill(password);
-  // Broker keeps Log in disabled until both fields are non-empty (Playwriter: disabled=true when empty).
+  // Broker keeps Log in disabled until both fields are non-empty.
   await expect(submitButton).toBeEnabled({ timeout: 10000 });
 
   await submitButton.click();

@@ -177,7 +177,7 @@ export const APP_TABLE_COLUMN_HELP = {
     Repository: 'Provides links to each of the resource repositories used by the application.',
     'Health Status': 'Health status for ArgoCD applications.',
     'Sync Status': 'Sync status for ArgoCD applications.',
-    /** Extension column on many hubs (Playwriter: th[data-label="Pod Status"]). */
+    /** Extension column on many hubs (`th[data-label="Pod Status"]`). */
     'Pod Status': 'Status of pods deployed by the application.',
   },
 } as const;
@@ -212,7 +212,7 @@ export const APP_FILTER = {
 /** Terminology card and resource-type toggle (Advanced configuration tab only). */
 export const APP_ADVANCED_CONFIG = {
   /**
-   * Inline alert above Advanced content: page removal / Placements relocation (Playwriter: `.pf-v6-c-alert`).
+   * Inline alert above Advanced content: page removal / Placements relocation (PatternFly alert).
    * Omit on consoles that have not shipped this banner yet.
    */
   deprecationBanner: {
@@ -254,7 +254,7 @@ export const APP_ADVANCED_CONFIG = {
   /** Same toolbar search/export/pagination ids as Overview; table uses APP_TABLE. */
   /** Empty state (when no resources). Verify title, body, and actions. */
   emptyState: {
-    /** Common Advanced subscriptions empty body (Playwriter on live hub). */
+    /** Common Advanced subscriptions empty body. */
     body: 'To get started, create an application.',
     /** Some locales / builds use i18n subtitle instead. */
     bodyAltPattern: /Click\s+Create application.*create your resource/i,

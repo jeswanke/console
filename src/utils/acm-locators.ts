@@ -5,7 +5,7 @@ export const ACM_TABLE_SEARCH_ROOT = '#custom-advanced-search';
 
 /**
  * Fuzzy search field on ACM list toolbars.
- * Live hub (Playwriter): input uses `aria-label="Search input"` with implicit role `textbox`, not `searchbox`.
+ * Prefer `getByLabel(/search input/i)` — the input uses `aria-label="Search input"` with implicit role `textbox`, not `searchbox`.
  * Fall back to `#custom-advanced-search input` if PF changes wrapper markup.
  */
 export function acmToolbarSearchLocator(page: Page): Locator {
