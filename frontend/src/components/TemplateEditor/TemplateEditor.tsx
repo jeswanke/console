@@ -1,6 +1,6 @@
 /* Copyright Contributors to the Open Cluster Management project */
-/* eslint-disable @typescript-eslint/ban-ts-comment -- class component; full types in follow-up */
-// @ts-nocheck — class component with extensive Monaco/wizard state; full types in follow-up
+/* eslint-disable @typescript-eslint/ban-ts-comment -- legacy TemplateEditor; full types in follow-up */
+// @ts-nocheck — extensive Monaco/wizard state; full strict typing deferred
 
 import {
   Button,
@@ -20,7 +20,17 @@ import isEmpty from 'lodash/isEmpty'
 import keyBy from 'lodash/keyBy'
 import merge from 'lodash/merge'
 import set from 'lodash/set'
-import React from 'react'
+import isEqual from 'lodash/isEqual'
+import React, {
+  forwardRef,
+  useContext,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+} from 'react'
 import ReactDOM from 'react-dom'
 import { LostChangesContext, LostChangesPrompt } from '../LostChanges'
 import EditorBar from './components/EditorBar'
@@ -51,129 +61,160 @@ const Portals = Object.freeze({
   createBtn: 'create-button-portal-id',
 })
 
-export default class TemplateEditor extends React.Component<any, any> {
-  static getDerivedStateFromProps(props, state) {
-    const { monacoEditor, createControl = {}, type, initialOpen, editorReadOnly } = props
-    const { i18n, resourceJSON } = state
+function getDerivedStateFromProps(props, state) {
+  const { monacoEditor, createControl = {}, type, initialOpen, editorReadOnly } = props
+  const { i18n, resourceJSON } = state
 
-    // update notifications
-    let { notifications } = state
-    const { hasFormExceptions, isEditing } = state
-    const { creationStatus, creationMsg, resetStatus } = createControl
-    if (creationStatus && !hasFormExceptions) {
-      switch (creationStatus) {
-        case 'IN_PROGRESS':
-          notifications = [
-            {
-              id: 'creating',
-              variant: 'info',
-              exception:
-                Array.isArray(creationMsg) && creationMsg.length
-                  ? creationMsg[0]
-                  : isEditing
-                    ? i18n('success.create.updating', [type])
-                    : i18n('success.create.creating', [type]),
-            },
-          ]
-          break
+  // update notifications
+  let { notifications } = state
+  const { hasFormExceptions, isEditing } = state
+  const { creationStatus, creationMsg, resetStatus } = createControl
+  if (creationStatus && !hasFormExceptions) {
+    switch (creationStatus) {
+      case 'IN_PROGRESS':
+        notifications = [
+          {
+            id: 'creating',
+            variant: 'info',
+            exception:
+              Array.isArray(creationMsg) && creationMsg.length
+                ? creationMsg[0]
+                : isEditing
+                  ? i18n('success.create.updating', [type])
+                  : i18n('success.create.creating', [type]),
+          },
+        ]
+        break
 
-        case 'DONE':
-          notifications = [
-            {
-              id: 'success',
-              variant: 'success',
-              exception:
-                Array.isArray(creationMsg) && creationMsg.length
-                  ? creationMsg[0]
-                  : isEditing
-                    ? i18n('success.create.updated', [type])
-                    : i18n('success.create.created', [type]),
-            },
-          ]
-          break
+      case 'DONE':
+        notifications = [
+          {
+            id: 'success',
+            variant: 'success',
+            exception:
+              Array.isArray(creationMsg) && creationMsg.length
+                ? creationMsg[0]
+                : isEditing
+                  ? i18n('success.create.updated', [type])
+                  : i18n('success.create.created', [type]),
+          },
+        ]
+        break
 
-        case 'ERROR':
-          logCreateErrors(props.logging, creationMsg, resourceJSON)
-          notifications = creationMsg.map((message) => {
-            return {
-              id: 'create',
-              variant: 'danger',
-              exception: message.message || message,
-            }
-          })
-          break
-      }
-      return { notifications }
+      case 'ERROR':
+        logCreateErrors(props.logging, creationMsg, resourceJSON)
+        notifications = creationMsg.map((message) => {
+          return {
+            id: 'create',
+            variant: 'danger',
+            exception: message.message || message,
+          }
+        })
+        break
     }
-
-    // is a resource loaded in editor?
-    const { fetchControl } = props
-    const { isLoaded, isFailed } = fetchControl || { isLoaded: true }
-    /* istanbul ignore next */
-    const showEditor = (monacoEditor || initialOpen) && isLoaded && !!localStorage.getItem(TEMPLATE_EDITOR_OPEN_COOKIE)
-    let newState = { isLoaded, isFailed, showEditor }
-
-    // has control data been initialized?
-    const { controlData: initialControlData, onControlInitialize } = props
-    let { controlData, templateYAML, editStack } = state
-    const { editor, template, showSecrets, otherYAMLTabs } = state
-    if (!controlData) {
-      // initialize control data
-      const cd = cloneControlData(initialControlData)
-      controlData = initializeControls(cd, editor, onControlInitialize, i18n)
-      newState = { ...newState, controlData }
-
-      const showControl = controlData.find(({ id: idCtrl }) => idCtrl === 'showSecrets')
-      /* istanbul ignore else */
-      if (showControl) {
-        showControl.active = showSecrets || !showEditor
-      }
-
-      const localHubNameControl = controlData.find(({ id: idCtrl }) => idCtrl === 'localHubName')
-      /* istanbul ignore else */
-      if (localHubNameControl) {
-        localHubNameControl.active = props.localHubName
-      }
-    }
-
-    // has source been initialized?
-    if (isLoaded && !templateYAML) {
-      // editing an existing set of resources??
-      const customResources = get(fetchControl, 'resources')
-      if (customResources) {
-        editStack = { customResources: cloneDeep(customResources), editor, i18n }
-        editStack.onControlInitialize = onControlInitialize
-      }
-
-      // generate source from template or stack of resources
-      let templateObject, templateResources, decorationRows
-      ;({ templateYAML, templateObject, templateResources, decorationRows } = generateSource(
-        template,
-        editStack,
-        controlData,
-        otherYAMLTabs
-      ))
-
-      newState = {
-        ...newState,
-        templateYAML,
-        firstTemplateYAML: templateYAML,
-        templateObject,
-        templateResources,
-        editStack,
-        resetStatus: typeof resetStatus === 'function' ? resetStatus : () => {},
-        isEditing: !!customResources,
-        editorReadOnly: state.editorReadOnly || editorReadOnly,
-        decorationRows,
-      }
-    }
-
-    return newState
+    return { notifications }
   }
 
-  constructor(props) {
-    super(props)
-    this.state = {
+  // is a resource loaded in editor?
+  const { fetchControl } = props
+  const { isLoaded, isFailed } = fetchControl || { isLoaded: true }
+  /* istanbul ignore next */
+  const showEditor = (monacoEditor || initialOpen) && isLoaded && !!localStorage.getItem(TEMPLATE_EDITOR_OPEN_COOKIE)
+  let newState = { isLoaded, isFailed, showEditor }
+
+  // has control data been initialized?
+  const { controlData: initialControlData, onControlInitialize } = props
+  let { controlData, templateYAML, editStack } = state
+  const { editor, template, showSecrets, otherYAMLTabs } = state
+  if (!controlData) {
+    // initialize control data
+    const cd = cloneControlData(initialControlData)
+    controlData = initializeControls(cd, editor, onControlInitialize, i18n)
+    newState = { ...newState, controlData }
+
+    const showControl = controlData.find(({ id: idCtrl }) => idCtrl === 'showSecrets')
+    /* istanbul ignore else */
+    if (showControl) {
+      showControl.active = showSecrets || !showEditor
+    }
+
+    const localHubNameControl = controlData.find(({ id: idCtrl }) => idCtrl === 'localHubName')
+    /* istanbul ignore else */
+    if (localHubNameControl) {
+      localHubNameControl.active = props.localHubName
+    }
+  }
+
+  // has source been initialized?
+  if (isLoaded && !templateYAML) {
+    // editing an existing set of resources??
+    const customResources = get(fetchControl, 'resources')
+    if (customResources) {
+      editStack = { customResources: cloneDeep(customResources), editor, i18n }
+      editStack.onControlInitialize = onControlInitialize
+    }
+
+    // generate source from template or stack of resources
+    let templateObject, templateResources, decorationRows
+    ;({ templateYAML, templateObject, templateResources, decorationRows } = generateSource(
+      template,
+      editStack,
+      controlData,
+      otherYAMLTabs
+    ))
+
+    newState = {
+      ...newState,
+      templateYAML,
+      firstTemplateYAML: templateYAML,
+      templateObject,
+      templateResources,
+      editStack,
+      resetStatus: typeof resetStatus === 'function' ? resetStatus : () => {},
+      isEditing: !!customResources,
+      editorReadOnly: state.editorReadOnly || editorReadOnly,
+      decorationRows,
+    }
+  }
+
+  return newState
+}
+
+const TemplateEditor = forwardRef<any, any>(function TemplateEditor(props, ref) {
+  const lostChangesContext = useContext(LostChangesContext)
+
+  const containerRef = useRef(null)
+  const editorPanelRef = useRef(null)
+  const renderedPortalsRef = useRef(false)
+  const selectedTabRef = useRef(0)
+  const isDirtyRef = useRef(false)
+  const firstGoToLinePerformedRef = useRef(false)
+  const editorsRef = useRef([])
+  const selectionsRef = useRef(null)
+  const selectionIndexRef = useRef(-1)
+  const nameSearchRef = useRef(null)
+  const nameSearchModeRef = useRef(false)
+
+  const bumpRef = useRef(() => {})
+  const forceGenerateRef = useRef(() => {})
+  const stateRef = useRef(null)
+  const editorApi = useRef({
+    forceUpdate: () => {
+      bumpRef.current()
+      forceGenerateRef.current()
+    },
+    currentData: () => stateRef.current?.controlData,
+  })
+
+  const [, bump] = useReducer((n) => n + 1, 0)
+  bumpRef.current = () => bump()
+
+  const [state, setState] = useState(() => {
+    if (props.initialOpen) {
+      localStorage.setItem(TEMPLATE_EDITOR_OPEN_COOKIE, 'true')
+    }
+    const hasStep = !!props.controlData.find(({ type }) => type === 'step')
+    const base = {
       isCustomName: false,
       showEditor: !!localStorage.getItem(TEMPLATE_EDITOR_OPEN_COOKIE),
       showSecrets: !!localStorage.getItem(TEMPLATE_EDITOR_SHOW_SECRETS_COOKIE),
@@ -184,78 +225,73 @@ export default class TemplateEditor extends React.Component<any, any> {
       previouslySelectedCards: [],
       notifications: [],
       otherYAMLTabs: [],
-
       hasFormExceptions: false,
       isFinalValidate: false,
       hasUndo: false,
       hasRedo: false,
       resetInx: 0,
       showCondensed: false,
-      editor: {
-        forceUpdate: (() => {
-          this.forceUpdate()
-          this.forceGenerate()
-        }).bind(this),
-        currentData: (() => {
-          return this.state.controlData
-        }).bind(this),
-      },
+      editor: editorApi.current,
+      showWizard: hasStep,
     }
+    const merged = { ...base, ...getDerivedStateFromProps(props, base) }
+    stateRef.current = merged
+    return merged
+  })
 
-    const hasStep = props.controlData.find(({ type }) => type === 'step')
-    this.state.showWizard = !!hasStep
+  stateRef.current = state
 
-    this.selectedTab = 0
-    this.isDirty = false
-    this.firstGoToLinePerformed = false
-    this.editors = []
-    this.parseDebounced = debounce((yaml) => {
-      this.handleParse(yaml)
-    }, 500)
-    this.handleEditorCommand = this.handleEditorCommand.bind(this)
-    this.handleSearchChange = this.handleSearchChange.bind(this)
-    this.handleNewEditorMode = this.handleNewEditorMode.bind(this)
-    this.handleControlChange = this.handleControlChange.bind(this)
-    this.handleGroupChange = this.handleGroupChange.bind(this)
+  // Class getDerivedStateFromProps ran on every render; sync when props change.
+  // Avoid depending on `state` here — that caused update loops with nested setState (e.g. Popper).
+  useEffect(() => {
+    setState((s) => {
+      const patch = getDerivedStateFromProps(props, s)
+      const next = { ...s, ...patch }
+      return isEqual(s, next) ? s : next
+    })
+  }, [props])
+
+  useEffect(() => {
     if (props.initialOpen) {
       localStorage.setItem(TEMPLATE_EDITOR_OPEN_COOKIE, 'true')
     }
-  }
+  }, [props.initialOpen])
 
-  componentDidMount() {
-    /* istanbul ignore else */
-    if (!this.renderedPortals) {
-      setTimeout(() => {
-        this.forceUpdate()
-      }, 0)
+  useEffect(() => {
+    if (!renderedPortalsRef.current) {
+      const id = window.setTimeout(() => bump(), 0)
+      return () => window.clearTimeout(id)
     }
+    return undefined
+  }, [])
+
+  const handleParseRef = useRef(() => {})
+  const parseDebounced = useMemo(() => debounce((yaml) => handleParseRef.current(yaml), 500), [])
+  useEffect(() => () => parseDebounced.cancel(), [parseDebounced])
+
+  const setContainerRef = (container) => {
+    containerRef.current = container
   }
 
-  setContainerRef = (container) => {
-    this.containerRef = container
-  }
-
-  setYamlViewRef = () => {
-    this.editorPanel = document.getElementById('editor-drawer-panel')
-    if (window.ResizeObserver && this.editorPanel) {
+  const setYamlViewRef = () => {
+    editorPanelRef.current = document.getElementById('editor-drawer-panel')
+    if (window.ResizeObserver && editorPanelRef.current) {
       let timeout
-      const resizeObserver = new ResizeObserver(
-        (() => {
-          clearTimeout(timeout)
-          timeout = setTimeout(() => {
-            this.layoutEditors()
-          }, 100)
-        }).bind(this)
-      )
-      resizeObserver.observe(this.editorPanel)
+      const resizeObserver = new ResizeObserver(() => {
+        clearTimeout(timeout)
+        timeout = setTimeout(() => {
+          layoutEditors()
+        }, 100)
+      })
+      resizeObserver.observe(editorPanelRef.current)
     }
   }
 
-  layoutEditors() {
-    this.editorPanel = document.getElementById('editor-drawer-panel')
-    if (this.editorPanel && this.editors.length > 0) {
-      const { otherYAMLTabs } = this.state
-      const rect = this.editorPanel.getBoundingClientRect()
+  function layoutEditors() {
+    editorPanelRef.current = document.getElementById('editor-drawer-panel')
+    if (editorPanelRef.current && editorsRef.current.length > 0) {
+      const { otherYAMLTabs } = state
+      const rect = editorPanelRef.current.getBoundingClientRect()
       const width = rect.width - 10
       let height = window.innerHeight - rect.top
       const header = document.getElementsByClassName('creation-view-yaml-header')[0]
@@ -265,45 +301,24 @@ export default class TemplateEditor extends React.Component<any, any> {
       } else {
         height = height - (otherYAMLTabs.length > 0 ? 80 : 50)
       }
-      this.setState({ showCondensed: width < 500 })
-      this.editors.forEach((editor) => {
+      setState((prev) => ({ ...prev, showCondensed: width < 500 }))
+      editorsRef.current.forEach((editor) => {
         editor.layout({ width, height })
       })
     }
   }
 
-  setEditorReadOnly = (readonly) => {
-    const editor = this.editors[0]
+  const setEditorReadOnly = (readonly) => {
+    const editor = editorsRef.current[0]
     if (editor) {
       editor.decorations = editor.deltaDecorations(editor.decorations, [])
       editor.revealLineInCenter(1)
     }
-    this.setState({ editorReadOnly: readonly })
+    setState((prev) => ({ ...prev, editorReadOnly: readonly }))
   }
 
-  render() {
-    const { isLoaded, showEditor, showWizard, resetInx } = this.state
-    if (!showEditor) {
-      this.editors = []
-    }
-    const viewClasses = classNames({
-      'template-editor': true,
-      showEditor,
-      showWizard,
-    })
-    return (
-      <div key={`key${resetInx}`} className={viewClasses} ref={this.setContainerRef}>
-        <LostChangesPrompt dirty={this.isDirty} />
-        {this.renderSplitEditor(isLoaded)}
-        {this.renderEditButton(isLoaded)}
-        {this.renderCreateButton(isLoaded)}
-        {this.renderCancelButton()}
-      </div>
-    )
-  }
-
-  renderSplitEditor(isLoaded) {
-    const { showEditor } = this.state
+  function renderSplitEditor(isLoaded) {
+    const { showEditor } = state
     const editorClasses = classNames({
       'creation-view-split-container': true,
       showEditor,
@@ -327,13 +342,13 @@ export default class TemplateEditor extends React.Component<any, any> {
                 colorVariant={DrawerColorVariant.secondary}
                 id="editor-drawer-panel"
               >
-                {showEditor && this.renderEditor()}
+                {showEditor && renderEditor()}
               </DrawerPanelContent>
             }
           >
             <DrawerContentBody style={{ height: '100%' }}>
               <PageSection hasBodyWrapper={false} isFilled type="wizard" style={{ height: '100%' }}>
-                {this.renderControls(isLoaded)}
+                {renderControls(isLoaded)}
               </PageSection>
             </DrawerContentBody>
           </DrawerContent>
@@ -342,42 +357,42 @@ export default class TemplateEditor extends React.Component<any, any> {
     )
   }
 
-  renderControls(isLoaded) {
-    const { controlData, showEditor, isCustomName, isEditing, notifications, i18n } = this.state
-    const { controlData: originalControlData, fetchControl } = this.props
+  function renderControls(isLoaded) {
+    const { controlData, showEditor, isCustomName, isEditing, notifications, i18n } = state
+    const { controlData: originalControlData, fetchControl } = props
     const { fetchData } = fetchControl || {}
     return (
       <Form
-        wizardClassName={this.props.wizardClassName}
-        handleControlChange={this.handleControlChange}
-        handleNewEditorMode={this.handleNewEditorMode}
-        handleGroupChange={this.handleGroupChange}
+        wizardClassName={props.wizardClassName}
+        handleControlChange={handleControlChange}
+        handleNewEditorMode={handleNewEditorMode}
+        handleGroupChange={handleGroupChange}
         controlData={controlData || originalControlData}
         fetchData={fetchData}
         originalControlData={originalControlData}
         notifications={notifications}
         showEditor={showEditor}
-        showPortals={this.props.portals ? null : Portals}
-        wizardData={this.wizardData}
-        handleCreateResource={this.handleCreateResource.bind(this)}
-        handleCancelCreate={this.handleCancelCreate.bind(this)}
+        showPortals={props.portals ? null : Portals}
+        wizardData={props.wizardData}
+        handleCreateResource={handleCreateResource}
+        handleCancelCreate={handleCancelCreate}
         isCustomName={isCustomName}
         isEditing={isEditing}
         isLoaded={isLoaded}
-        creationStatus={this.props.createControl.creationStatus}
+        creationStatus={props.createControl.creationStatus}
         i18n={i18n}
-        onChange={this.props.onControlChange}
-        templateYAML={this.state.templateYAML}
-        setEditorReadOnly={this.setEditorReadOnly.bind(this)}
-        controlProps={this.props.controlProps}
-        resetStatus={this.state.resetStatus}
-        backButtonOverride={this.props.createControl.backButtonOverride}
+        onChange={props.onControlChange}
+        templateYAML={state.templateYAML}
+        setEditorReadOnly={setEditorReadOnly}
+        controlProps={props.controlProps}
+        resetStatus={state.resetStatus}
+        backButtonOverride={props.createControl.backButtonOverride}
       />
     )
   }
 
-  forceGenerate() {
-    const { template, otherYAMLTabs, editStack, controlData, showEditor, i18n } = this.state
+  function forceGenerate() {
+    const { template, otherYAMLTabs, editStack, controlData, showEditor, i18n } = state
     if (showEditor) {
       const {
         templateYAML: newYAML,
@@ -385,18 +400,19 @@ export default class TemplateEditor extends React.Component<any, any> {
         templateResources,
         decorationRows,
       } = generateSource(template, editStack, controlData, otherYAMLTabs)
-      highlightDecorations(this.editors, decorationRows, i18n)
-      this.setState({
+      highlightDecorations(editorsRef.current, decorationRows, i18n)
+      setState((prev) => ({
+        ...prev,
         templateYAML: newYAML,
         templateObject,
         templateResources,
         decorationRows,
-      })
+      }))
     }
   }
 
-  handleControlChange(control, controlData, creationView, isCustomName) {
-    const { template, templateYAML, otherYAMLTabs, firstTemplateYAML, editStack, isFinalValidate, i18n } = this.state
+  function handleControlChange(control, controlData, creationView, isCustomName) {
+    const { template, templateYAML, otherYAMLTabs, firstTemplateYAML, editStack, isFinalValidate, i18n } = state
 
     // if user typed on a tab, save it to be merged with control changes
     otherYAMLTabs.forEach((tab) => {
@@ -419,21 +435,22 @@ export default class TemplateEditor extends React.Component<any, any> {
       decorationRows,
     } = generateSource(template, editStack, controlData, otherYAMLTabs)
     validateControls(
-      this.editors,
+      editorsRef.current,
       newYAML,
       otherYAMLTabs,
       undefined,
-      this.props.onControlValidation,
+      props.onControlValidation,
       controlData,
       isFinalValidate,
       i18n
     )
-    highlightAllChanges(this.editors, templateYAML, newYAML, otherYAMLTabs, this.selectedTab)
-    highlightDecorations(this.editors, decorationRows, i18n)
+    highlightAllChanges(editorsRef.current, templateYAML, newYAML, otherYAMLTabs, selectedTabRef.current)
+    highlightDecorations(editorsRef.current, decorationRows, i18n)
     const notifications = controlData.filter((c) => {
       return !!c.exception && isFinalValidate
     })
-    this.setState({
+    setState((prev) => ({
+      ...prev,
       controlData,
       isCustomName,
       templateYAML: newYAML,
@@ -442,12 +459,12 @@ export default class TemplateEditor extends React.Component<any, any> {
       exceptions: [],
       notifications,
       decorationRows,
-    })
-    this.isDirty = firstTemplateYAML !== newYAML
-    this.handleScrollAndCollapse(control, controlData, creationView)
+    }))
+    isDirtyRef.current = firstTemplateYAML !== newYAML
+    handleScrollAndCollapse(control, controlData, creationView)
   }
 
-  handleGroupChange(control, controlData, creationView, inx) {
+  function handleGroupChange(control, controlData, creationView, inx) {
     const {
       showEditor,
       editor,
@@ -458,9 +475,9 @@ export default class TemplateEditor extends React.Component<any, any> {
       editStack,
       isFinalValidate,
       i18n,
-    } = this.state
+    } = state
     const { active, controlData: cd, onChange } = control
-    const { onControlInitialize } = this.props
+    const { onControlInitialize } = props
     if (inx === undefined) {
       // add new group
       const {
@@ -497,29 +514,30 @@ export default class TemplateEditor extends React.Component<any, any> {
       decorationRows,
     } = generateSource(template, editStack, controlData, otherYAMLTabs)
     validateControls(
-      this.editors,
+      editorsRef.current,
       newYAML,
       otherYAMLTabs,
       undefined,
-      this.props.onControlValidation,
+      props.onControlValidation,
       controlData,
       isFinalValidate,
       i18n
     )
-    highlightAllChanges(this.editors, templateYAML, newYAML, otherYAMLTabs, this.selectedTab)
-    highlightDecorations(this.editors, decorationRows, i18n)
-    this.setState({
+    highlightAllChanges(editorsRef.current, templateYAML, newYAML, otherYAMLTabs, selectedTabRef.current)
+    highlightDecorations(editorsRef.current, decorationRows, i18n)
+    setState((prev) => ({
+      ...prev,
       controlData,
       templateYAML: newYAML,
       templateObject,
       templateResources,
       decorationRows,
-    })
-    this.isDirty = firstTemplateYAML !== newYAML
+    }))
+    isDirtyRef.current = firstTemplateYAML !== newYAML
   }
 
-  handleNewEditorMode(control, controlData, creationView, wizardRef) {
-    let { notifications } = this.state
+  function handleNewEditorMode(control, controlData, creationView, wizardRef) {
+    let { notifications } = state
     const {
       controlData: newControlData,
       template,
@@ -527,7 +545,7 @@ export default class TemplateEditor extends React.Component<any, any> {
       templateObject,
       templateResources,
       otherYAMLTabs,
-    } = this.changeEditorMode(control, controlData)
+    } = changeEditorMode(control, controlData)
     controlData = newControlData
 
     // custom action when control is selected
@@ -542,8 +560,9 @@ export default class TemplateEditor extends React.Component<any, any> {
         return !!c.exception
       })
     }
-    this.state.resetStatus()
-    this.setState({
+    state.resetStatus()
+    setState((prev) => ({
+      ...prev,
       controlData,
       template: template,
       templateYAML,
@@ -554,17 +573,17 @@ export default class TemplateEditor extends React.Component<any, any> {
       editorReadOnly: false,
       isFinalValidate: false,
       otherYAMLTabs,
-    })
+    }))
 
-    this.handleScrollAndCollapse(control, controlData, creationView, wizardRef)
+    handleScrollAndCollapse(control, controlData, creationView, wizardRef)
   }
 
   // change editor mode based on what card is selected
-  changeEditorMode(control, controlData) {
-    let { template } = this.props
-    const { onControlInitialize } = this.props
-    const { editStack, otherYAMLTabs, editor, i18n } = this.state
-    let { templateYAML, templateObject, templateResources, decorationRows } = this.state
+  function changeEditorMode(control, controlData) {
+    let { template } = props
+    const { onControlInitialize } = props
+    const { editStack, otherYAMLTabs, editor, i18n } = state
+    let { templateYAML, templateObject, templateResources, decorationRows } = state
     let newYAML = templateYAML
     let newYAMLTabs = otherYAMLTabs
 
@@ -610,11 +629,11 @@ export default class TemplateEditor extends React.Component<any, any> {
           templateResources,
           decorationRows,
         } = generateSource(template, editStack, controlData, newYAMLTabs))
-        if (newYAMLTabs.length === 0 && this.editors.length > 1) {
-          this.editors.length = 1
+        if (newYAMLTabs.length === 0 && editorsRef.current.length > 1) {
+          editorsRef.current.length = 1
         }
-        highlightAllChanges(this.editors, templateYAML, newYAML, otherYAMLTabs, this.selectedTab)
-        highlightDecorations(this.editors, decorationRows, i18n)
+        highlightAllChanges(editorsRef.current, templateYAML, newYAML, otherYAMLTabs, selectedTabRef.current)
+        highlightDecorations(editorsRef.current, decorationRows, i18n)
         templateYAML = newYAML
       }
     }
@@ -629,7 +648,7 @@ export default class TemplateEditor extends React.Component<any, any> {
     }
   }
 
-  handleScrollAndCollapse(control, controlData, creationView, wizardRef) {
+  function handleScrollAndCollapse(control, controlData, creationView, wizardRef) {
     if (wizardRef) {
       if (control.nextPageAfterSelection) {
         wizardRef.onNext()
@@ -646,7 +665,7 @@ export default class TemplateEditor extends React.Component<any, any> {
         }
       }
     } else {
-      const { showEditor, previouslySelectedCards } = this.state
+      const { showEditor, previouslySelectedCards } = state
       // user chose a card with new controls in it---scroll the view down to the new fields
       const {
         id,
@@ -708,21 +727,21 @@ export default class TemplateEditor extends React.Component<any, any> {
           }
         }
       }
-      this.setState({ previouslySelectedCards })
+      setState((prev) => ({ ...prev, previouslySelectedCards }))
     }
   }
 
-  renderEditor() {
-    const { type = 'main', title = 'YAML' } = this.props
-    const { editorReadOnly } = this.state
-    const { hasUndo, hasRedo, exceptions, otherYAMLTabs, showSecrets, i18n } = this.state
+  function renderEditor() {
+    const { type = 'main', title = 'YAML' } = props
+    const { editorReadOnly } = state
+    const { hasUndo, hasRedo, exceptions, otherYAMLTabs, showSecrets, i18n } = state
     return (
-      <div className="creation-view-yaml" ref={this.setYamlViewRef}>
+      <div className="creation-view-yaml" ref={setYamlViewRef}>
         <EditorHeader
           otherYAMLTabs={otherYAMLTabs}
-          handleTabChange={this.handleTabChange}
-          handleShowSecretChange={this.handleShowSecrets.bind(this)}
-          handleEditorCommand={this.handleEditorCommand}
+          handleTabChange={handleTabChange}
+          handleShowSecretChange={handleShowSecrets}
+          handleEditorCommand={handleEditorCommand}
           showSecrets={showSecrets}
           readOnly={editorReadOnly}
           title={title}
@@ -735,19 +754,19 @@ export default class TemplateEditor extends React.Component<any, any> {
             hasUndo={hasUndo}
             hasRedo={hasRedo}
             exceptions={exceptions}
-            handleEditorCommand={this.handleEditorCommand}
-            handleSearchChange={this.handleSearchChange}
-            i18n={this.props.i18n}
+            handleEditorCommand={handleEditorCommand}
+            handleSearchChange={handleSearchChange}
+            i18n={props.i18n}
           />
         </EditorHeader>
-        {this.renderEditors()}
+        {renderEditors()}
       </div>
     )
   }
 
-  renderEditors = () => {
-    const { monacoEditor } = this.props
-    const { activeYAMLEditor, otherYAMLTabs, editorReadOnly, templateYAML, decorationRows, showCondensed } = this.state
+  function renderEditors() {
+    const { monacoEditor } = props
+    const { activeYAMLEditor, otherYAMLTabs, editorReadOnly, templateYAML, decorationRows, showCondensed } = state
     return (
       <React.Fragment>
         <YamlEditor
@@ -758,9 +777,9 @@ export default class TemplateEditor extends React.Component<any, any> {
           width={'100%'}
           height={'100%'}
           wrapEnabled={true}
-          addEditor={this.addEditor.bind(this)}
+          addEditor={addEditor}
           showCondensed={showCondensed}
-          onYamlChange={this.handleEditorChange}
+          onYamlChange={handleEditorChange}
           yaml={templateYAML}
           readOnly={editorReadOnly}
           decorationRows={decorationRows}
@@ -776,8 +795,8 @@ export default class TemplateEditor extends React.Component<any, any> {
               height={'100%'}
               wrapEnabled={true}
               showCondensed={showCondensed}
-              addEditor={this.addEditor}
-              onYamlChange={this.handleEditorChange}
+              addEditor={addEditor}
+              onYamlChange={handleEditorChange}
               yaml={yaml}
               readOnly={editorReadOnly}
             />
@@ -787,28 +806,28 @@ export default class TemplateEditor extends React.Component<any, any> {
     )
   }
 
-  handleTabChange = (tabInx) => {
-    this.selectedTab = tabInx
-    this.setState({ activeYAMLEditor: tabInx })
-    this.layoutEditors()
+  function handleTabChange(tabInx) {
+    selectedTabRef.current = tabInx
+    setState((prev) => ({ ...prev, activeYAMLEditor: tabInx }))
+    layoutEditors()
   }
 
-  addEditor = (id, editor) => {
+  function addEditor(id, editor) {
     editor.id = id
-    const { otherYAMLTabs } = this.state
-    let editorIndex = this.editors.findIndex((e) => e.id === editor.id)
+    const { otherYAMLTabs } = state
+    let editorIndex = editorsRef.current.findIndex((e) => e.id === editor.id)
     if (editorIndex < 0) {
-      editorIndex = this.editors.push(editor) - 1
+      editorIndex = editorsRef.current.push(editor) - 1
     } else {
       // update to latest object for this editor ID
-      this.editors[editorIndex] = editor
+      editorsRef.current[editorIndex] = editor
     }
     if (editorIndex >= 1) {
-      set(otherYAMLTabs, `${editorIndex - 1}.editor`, this.editors[editorIndex])
+      set(otherYAMLTabs, `${editorIndex - 1}.editor`, editorsRef.current[editorIndex])
     } else {
-      highlightDecorations(this.editors, this.state.decorationRows, this.state.i18n)
+      highlightDecorations(editorsRef.current, state.decorationRows, state.i18n)
     }
-    this.layoutEditors()
+    layoutEditors()
     editor.clearedUndoRedoStack = false
     editor.onDidChangeModelContent(() => {
       const editorHasFocus = !!document.querySelector('.monaco-editor.focused')
@@ -821,34 +840,34 @@ export default class TemplateEditor extends React.Component<any, any> {
       }
       const hasUndo = model.canUndo()
       const hasRedo = model.canRedo()
-      this.setState({ hasUndo, hasRedo })
+      setState((prev) => ({ ...prev, hasUndo, hasRedo }))
     })
   }
 
   // text editor commands
-  handleEditorCommand(command) {
-    const { activeYAMLEditor } = this.state
-    const editor = this.editors[activeYAMLEditor]
+  function handleEditorCommand(command) {
+    const { activeYAMLEditor } = state
+    const editor = editorsRef.current[activeYAMLEditor]
     switch (command) {
       case 'next':
       case 'previous':
-        if (this.selectionIndex !== -1) {
-          if (this.selections && this.selections.length > 1) {
+        if (selectionIndexRef.current !== -1) {
+          if (selectionsRef.current && selectionsRef.current.length > 1) {
             switch (command) {
               case 'next':
-                this.selectionIndex++
-                if (this.selectionIndex >= this.selections.length) {
-                  this.selectionIndex = 0
+                selectionIndexRef.current++
+                if (selectionIndexRef.current >= selectionsRef.current.length) {
+                  selectionIndexRef.current = 0
                 }
                 break
               case 'previous':
-                this.selectionIndex--
-                if (this.selectionIndex < 0) {
-                  this.selectionIndex = this.selections.length - 1
+                selectionIndexRef.current--
+                if (selectionIndexRef.current < 0) {
+                  selectionIndexRef.current = selectionsRef.current.length - 1
                 }
                 break
             }
-            editor.revealLineInCenter(this.selections[this.selectionIndex].selectionStartLineNumber, 0)
+            editor.revealLineInCenter(selectionsRef.current[selectionIndexRef.current].selectionStartLineNumber, 0)
           }
         }
         break
@@ -875,22 +894,22 @@ export default class TemplateEditor extends React.Component<any, any> {
         }
         break
       case 'restore':
-        this.resetEditor()
+        resetEditor()
         break
       case 'close':
-        this.closeEdit()
+        closeEdit()
         break
     }
     return command
   }
 
-  closeEdit() {
+  function closeEdit() {
     localStorage.removeItem(TEMPLATE_EDITOR_OPEN_COOKIE)
-    this.setState({ showEditor: false })
+    setState((prev) => ({ ...prev, showEditor: false }))
   }
 
-  handleShowSecrets() {
-    const { showSecrets, controlData } = this.state
+  function handleShowSecrets() {
+    const { showSecrets, controlData } = state
     if (showSecrets) {
       localStorage.removeItem(TEMPLATE_EDITOR_SHOW_SECRETS_COOKIE)
     } else {
@@ -899,19 +918,19 @@ export default class TemplateEditor extends React.Component<any, any> {
     const showControl = controlData.find(({ id: idCtrl }) => idCtrl === 'showSecrets')
     if (showControl) {
       showControl.active = !showSecrets
-      this.setState({ showSecrets: !showSecrets })
-      this.handleControlChange(showControl, controlData)
+      setState((prev) => ({ ...prev, showSecrets: !showSecrets }))
+      handleControlChange(showControl, controlData)
     }
   }
 
-  handleSearchChange(searchName) {
-    const { activeYAMLEditor } = this.state
-    const editor = this.editors[activeYAMLEditor]
-    if (searchName.length > 1 || this.nameSearchMode) {
+  function handleSearchChange(searchName) {
+    const { activeYAMLEditor } = state
+    const editor = editorsRef.current[activeYAMLEditor]
+    if (searchName.length > 1 || nameSearchModeRef.current) {
       if (searchName) {
         const found = editor.getModel().findMatches(searchName)
         if (found.length > 0) {
-          this.selections = found.map(({ range }) => {
+          selectionsRef.current = found.map(({ range }) => {
             const { endColumn, endLineNumber, startColumn, startLineNumber } = range
             return {
               positionColumn: endColumn,
@@ -920,16 +939,16 @@ export default class TemplateEditor extends React.Component<any, any> {
               selectionStartLineNumber: startLineNumber,
             }
           })
-          editor.setSelections(this.selections)
-          editor.revealLineInCenter(this.selections[0].selectionStartLineNumber, 0)
-          this.selectionIndex = 1
+          editor.setSelections(selectionsRef.current)
+          editor.revealLineInCenter(selectionsRef.current[0].selectionStartLineNumber, 0)
+          selectionIndexRef.current = 1
         } else {
-          this.selections = null
-          this.selectionIndex = -1
+          selectionsRef.current = null
+          selectionIndexRef.current = -1
         }
       } else {
-        this.selections = null
-        this.selectionIndex = -1
+        selectionsRef.current = null
+        selectionIndexRef.current = -1
         editor.setSelections([
           {
             positionColumn: 0,
@@ -939,16 +958,16 @@ export default class TemplateEditor extends React.Component<any, any> {
           },
         ])
       }
-      this.nameSearch = searchName
-      this.nameSearchMode = searchName.length > 0
+      nameSearchRef.current = searchName
+      nameSearchModeRef.current = searchName.length > 0
     }
   }
 
-  handleEditorChange = (yaml) => {
-    this.parseDebounced(yaml)
+  function handleEditorChange(yaml) {
+    parseDebounced(yaml)
   }
 
-  handleParse = (yaml) => {
+  function handleParse(yaml) {
     const {
       otherYAMLTabs,
       activeYAMLEditor,
@@ -957,9 +976,9 @@ export default class TemplateEditor extends React.Component<any, any> {
       firstTemplateYAML,
       isFinalValidate,
       i18n,
-    } = this.state
+    } = state
     let tab
-    let { editStack, templateYAML, notifications } = this.state
+    let { editStack, templateYAML, notifications } = state
 
     if (activeYAMLEditor === 0) {
       templateYAML = yaml
@@ -981,11 +1000,11 @@ export default class TemplateEditor extends React.Component<any, any> {
 
     // update controls with values typed into yaml
     const { parsedResources, templateExceptionMap, hasSyntaxExceptions } = validateControls(
-      this.editors,
+      editorsRef.current,
       templateYAML,
       otherYAMLTabs,
       tab ? tab.id : undefined,
-      this.props.onControlValidation,
+      props.onControlValidation,
       controlData,
       isFinalValidate,
       i18n
@@ -1013,7 +1032,7 @@ export default class TemplateEditor extends React.Component<any, any> {
       }
     }
 
-    this.isDirty = firstTemplateYAML !== yaml
+    isDirtyRef.current = firstTemplateYAML !== yaml
 
     // update edit stack so that when the user changes something in the form
     // it doesn't wipe out what they just typed
@@ -1021,13 +1040,13 @@ export default class TemplateEditor extends React.Component<any, any> {
 
     let newState
     if (activeYAMLEditor !== 0) {
-      const { template, templateYAML: oldYAML } = this.state
+      const { template, templateYAML: oldYAML } = state
       const {
         templateYAML: newYAML,
         templateObject,
         templateResources: tr,
       } = generateSource(template, editStack, controlData, otherYAMLTabs)
-      highlightChanges(this.editors[0], oldYAML, newYAML, true)
+      highlightChanges(editorsRef.current[0], oldYAML, newYAML, true)
       newState = {
         controlData,
         notifications,
@@ -1046,30 +1065,30 @@ export default class TemplateEditor extends React.Component<any, any> {
     if (decorationData.length) {
       const parsed = parseYAML(newState.templateYAML)
       newState.decorationRows = getDecorationRows(decorationData, parsed.parsed)
-      highlightDecorations(this.editors, newState.decorationRows, newState.i18n)
+      highlightDecorations(editorsRef.current, newState.decorationRows, i18n)
     }
 
-    this.setState(newState)
+    setState((prev) => ({ ...prev, ...newState }))
 
     return templateYAML // for jest test
   }
 
-  getResourceJSON = () => {
-    const { templateYAML, controlData, otherYAMLTabs, editStack, i18n } = this.state
+  function getResourceJSON() {
+    const { templateYAML, controlData, otherYAMLTabs, editStack, i18n } = state
     let canCreate = false
     const { templateObjectMap, templateExceptionMap, hasSyntaxExceptions, hasValidationExceptions } = validateControls(
-      this.editors,
+      editorsRef.current,
       templateYAML,
       otherYAMLTabs,
       undefined,
-      this.props.onControlValidation,
+      props.onControlValidation,
       controlData,
       true,
       i18n
     )
     let notifications = []
     if (hasSyntaxExceptions || hasValidationExceptions) {
-      logSourceErrors(this.props.logging, templateYAML, controlData, otherYAMLTabs, templateExceptionMap)
+      logSourceErrors(props.logging, templateYAML, controlData, otherYAMLTabs, templateExceptionMap)
       Object.values(templateExceptionMap).forEach(({ exceptions }) => {
         exceptions.forEach(({ row, text, editor, tabInx, controlId, ref }) => {
           notifications.push({
@@ -1092,14 +1111,14 @@ export default class TemplateEditor extends React.Component<any, any> {
     }
     canCreate = notifications.length === 0
 
-    this.setState({
+    setState((prev) => ({
+      ...prev,
       notifications,
-
       hasFormExceptions: !canCreate,
       isFinalValidate: true,
-    })
-    this.context.submitForm()
-    this.scrollControlPaneToNotifications()
+    }))
+    lostChangesContext.submitForm()
+    scrollControlPaneToNotifications()
 
     if (canCreate) {
       // cache user data
@@ -1114,7 +1133,7 @@ export default class TemplateEditor extends React.Component<any, any> {
           }
         })
       })
-      this.replaceSecrets(payload)
+      replaceSecrets(payload)
 
       return {
         createResources: payload,
@@ -1124,8 +1143,8 @@ export default class TemplateEditor extends React.Component<any, any> {
     return null
   }
 
-  replaceSecrets = (payload) => {
-    const { templateObject } = this.state
+  function replaceSecrets(payload) {
+    const { templateObject } = state
     if (templateObject.Secret) {
       const secretsMap = keyBy(
         templateObject.Secret.filter(({ $raw: { metadata } }) => metadata),
@@ -1154,9 +1173,9 @@ export default class TemplateEditor extends React.Component<any, any> {
     }
   }
 
-  scrollControlPaneToNotifications = () => {
+  function scrollControlPaneToNotifications() {
     setTimeout(() => {
-      if (this.containerRef) {
+      if (containerRef.current) {
         const notifications = document.getElementsByClassName('creation-view-controls-notifications-footer')[0]
         if (notifications && notifications.scrollIntoView) {
           notifications.scrollIntoView({ behavior: 'smooth', block: 'end' })
@@ -1165,15 +1184,15 @@ export default class TemplateEditor extends React.Component<any, any> {
     }, 0)
   }
 
-  renderEditButton(isLoaded) {
-    const { monacoEditor, portals, i18n } = this.props
-    const { editorReadOnly } = this.state
+  function renderEditButton(isLoaded) {
+    const { monacoEditor, portals, i18n } = props
+    const { editorReadOnly } = state
     const { editBtn } = portals || Portals
     if (monacoEditor && editBtn && isLoaded) {
       const portal = document.getElementById(editBtn)
       if (portal) {
-        const { showSecrets, controlData } = this.state
-        let { showEditor } = this.state
+        const { showSecrets, controlData } = state
+        let { showEditor } = state
         const handleToggle = () => {
           if (showEditor) {
             localStorage.removeItem(TEMPLATE_EDITOR_OPEN_COOKIE)
@@ -1181,7 +1200,7 @@ export default class TemplateEditor extends React.Component<any, any> {
             localStorage.setItem(TEMPLATE_EDITOR_OPEN_COOKIE, 'true')
           }
           showEditor = !showEditor
-          this.setState({ showEditor })
+          setState((prev) => ({ ...prev, showEditor }))
 
           // if was closed before and now open
           // secrets may be shown, so hide if necessary
@@ -1189,11 +1208,11 @@ export default class TemplateEditor extends React.Component<any, any> {
             const showControl = controlData.find(({ id: idCtrl }) => idCtrl === 'showSecrets')
             if (showControl) {
               showControl.active = false
-              this.handleControlChange(showControl, controlData)
+              handleControlChange(showControl, controlData)
             }
           }
         }
-        this.renderedPortals = true
+        renderedPortalsRef.current = true
         let switchLabel = ''
         if (showEditor) {
           switchLabel = i18n ? i18n('edit.yaml.on') : 'Show Yaml'
@@ -1221,9 +1240,9 @@ export default class TemplateEditor extends React.Component<any, any> {
     return null
   }
 
-  renderCreateButton(isLoaded) {
-    const { showWizard, isEditing, controlData, showEditor } = this.state
-    const { portals, createControl = {}, i18n } = this.props
+  function renderCreateButton(isLoaded) {
+    const { showWizard, isEditing, controlData, showEditor } = state
+    const { portals, createControl = {}, i18n } = props
     const { createBtn } = portals || Portals
     if (createBtn && !showWizard && isLoaded) {
       const { hasPermissions = true } = createControl
@@ -1233,7 +1252,7 @@ export default class TemplateEditor extends React.Component<any, any> {
       const label = isEditing ? (i18n ? i18n('button.update') : 'Update') : i18n ? i18n('button.create') : 'Create'
 
       const onClick = () => {
-        this.setState((state) => ({
+        setState((state) => ({
           ...state,
           notifications: [],
         }))
@@ -1243,11 +1262,11 @@ export default class TemplateEditor extends React.Component<any, any> {
           Promise.all(validations.map((v) => v())).then((results) => {
             const hasErrors = results.some((result) => !isEmpty(result))
             if (hasErrors) {
-              this.setState((state) => ({
+              setState((state) => ({
                 ...state,
                 notifications: [{ exception: 'Please fix the form errors' }],
               }))
-              this.forceUpdate()
+              bump()
 
               setTimeout(() => {
                 const viewClassname = showEditor ? 'creation-view-controls' : 'SplitPane  vertical '
@@ -1259,17 +1278,17 @@ export default class TemplateEditor extends React.Component<any, any> {
               }, 100)
               return
             } else {
-              this.handleCreateResource()
+              handleCreateResource()
             }
           })
         } else {
-          this.handleCreateResource()
+          handleCreateResource()
         }
       }
       const button = (
         <Button
           id={`${createBtn}-btn`}
-          onClick={onClick.bind(this)}
+          onClick={onClick}
           variant={'primary'}
           isDisabled={disableButton}
           data-testid={createBtn}
@@ -1291,26 +1310,26 @@ export default class TemplateEditor extends React.Component<any, any> {
     return null
   }
 
-  handleCreateResource(noRedirect) {
-    const { createControl } = this.props
+  function handleCreateResource(noRedirect) {
+    const { createControl } = props
     const { createResource } = createControl
-    const resourceJSON = this.getResourceJSON()
+    const resourceJSON = getResourceJSON()
     if (resourceJSON) {
-      this.setState({ resourceJSON })
+      setState((prev) => ({ ...prev, resourceJSON }))
       createResource(resourceJSON, noRedirect)
       return resourceJSON
     }
   }
 
-  renderCancelButton() {
-    const { showWizard } = this.state
-    const { portals, i18n } = this.props
+  function renderCancelButton() {
+    const { showWizard } = state
+    const { portals, i18n } = props
     const { cancelBtn } = portals || Portals
     if (cancelBtn && !showWizard) {
       const portal = document.getElementById(cancelBtn)
       if (portal) {
         return ReactDOM.createPortal(
-          <Button id={cancelBtn} onClick={this.handleCancelCreate.bind(this)} variant={'secondary'}>
+          <Button id={cancelBtn} onClick={handleCancelCreate} variant={'secondary'}>
             {i18n ? i18n('button.cancel') : 'Cancel'}
           </Button>,
           portal
@@ -1320,16 +1339,16 @@ export default class TemplateEditor extends React.Component<any, any> {
     return null
   }
 
-  handleCancelCreate() {
-    const { createControl } = this.props
+  function handleCancelCreate() {
+    const { createControl } = props
     const { cancelCreate } = createControl
-    this.context.cancelForm()
+    lostChangesContext.cancelForm()
     cancelCreate()
   }
 
-  resetEditor() {
-    const { controlData: initialControlData, onControlInitialize } = this.props
-    const { template, editStack = {}, resetInx, editor, i18n } = this.state
+  function resetEditor() {
+    const { controlData: initialControlData, onControlInitialize } = props
+    const { template, editStack = {}, resetInx, editor, i18n } = state
     const cd = cloneControlData(initialControlData)
     const controlData = initializeControls(cd, editor, onControlInitialize, i18n)
     const otherYAMLTabs = []
@@ -1342,7 +1361,8 @@ export default class TemplateEditor extends React.Component<any, any> {
       controlData,
       otherYAMLTabs
     )
-    this.setState({
+    setState((prev) => ({
+      ...prev,
       isCustomName: false,
       template,
       controlData,
@@ -1360,12 +1380,39 @@ export default class TemplateEditor extends React.Component<any, any> {
       editStack,
       resetInx: resetInx + 1,
       decorationRows,
-    })
-    this.isDirty = false
-    this.selectedTab = 0
-    this.firstGoToLinePerformed = false
-    this.editors = []
+    }))
+    isDirtyRef.current = false
+    selectedTabRef.current = 0
+    firstGoToLinePerformedRef.current = false
+    editorsRef.current = []
   }
-}
 
-TemplateEditor.contextType = LostChangesContext
+  handleParseRef.current = handleParse
+  forceGenerateRef.current = forceGenerate
+
+  useImperativeHandle(ref, () => ({
+    getResourceJSON,
+  }))
+
+  const { isLoaded, showEditor, showWizard, resetInx } = state
+  if (!showEditor) {
+    editorsRef.current = []
+  }
+  const viewClasses = classNames({
+    'template-editor': true,
+    showEditor,
+    showWizard,
+  })
+
+  return (
+    <div key={`key${resetInx}`} className={viewClasses} ref={setContainerRef}>
+      <LostChangesPrompt dirty={isDirtyRef.current} />
+      {renderSplitEditor(isLoaded)}
+      {renderEditButton(isLoaded)}
+      {renderCreateButton(isLoaded)}
+      {renderCancelButton()}
+    </div>
+  )
+})
+
+export default TemplateEditor
