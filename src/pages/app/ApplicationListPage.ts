@@ -34,11 +34,20 @@ export class ApplicationListPage extends BasePage {
   /**
    * List view can keep transient spinners (table refresh, health) while the page is usable.
    * Wait for stable, user-facing readiness instead of global `.pf-v6-c-spinner` count 0.
+   *
+   * **Advanced configuration** does not mount the Overview toolbar — `#application-create` is absent; readiness is
+   * heading + skeleton only (empty state uses a **Create application** link, not the toolbar control).
    */
-  private async waitForApplicationsListReady(): Promise<void> {
+  private async waitForApplicationsListReady(options?: {
+    /** When `false`, do not wait for `#application-create` (Advanced tab). Default `true` (Overview). */
+    requireOverviewCreateToolbar?: boolean;
+  }): Promise<void> {
+    const requireToolbar = options?.requireOverviewCreateToolbar !== false;
     await this.getPageTitle().waitFor({ state: 'visible' });
     await expect(this.page.locator(PF_SKELETON)).toHaveCount(0);
-    await expect(this.applicationsTable.getCreateApplicationButton()).toBeEnabled();
+    if (requireToolbar) {
+      await expect(this.applicationsTable.getCreateApplicationButton()).toBeEnabled();
+    }
   }
 
   /** Navigate to the Applications list */
@@ -57,7 +66,8 @@ export class ApplicationListPage extends BasePage {
   /** Open the Advanced configuration tab */
   async openAdvancedConfigTab(): Promise<void> {
     await this.page.getByRole('tab', { name: APP_PAGE.tabs.advancedConfig }).click();
-    await this.waitForApplicationsListReady();
+    await this.waitForApplicationsListReady({ requireOverviewCreateToolbar: false });
+    await expect(this.getAdvancedConfigTab()).toHaveAttribute('aria-selected', 'true');
   }
 
   /** Locator for Overview tab content (applications table; no tabpanel in DOM) */
