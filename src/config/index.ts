@@ -33,3 +33,13 @@ export function getTestConfig(): TestConfig {
     hub: getHubAuth(),
   };
 }
+
+export {
+  clearE2eSpecDataCache,
+  getE2eScenario,
+  getSubscriptionDomainPayload,
+  getTestDataForE2e,
+  listE2eSpecYamlFiles,
+  loadE2eSpecData,
+  type ResolvedE2eScenario,
+} from './e2e-spec-loader';

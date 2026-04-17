@@ -267,14 +267,14 @@ The tree below is what **this** repo implements today (aligned with the layers a
 ```text
 console-e2e/
 ├── start.sh                    # Main dispatcher → component scripts
-├── .env / .env.example         # Universal vars (HUB_* for API+UI password, optional CONSOLE_USERNAME/CONSOLE_IDP, TEST_MODE); start.sh sources .env before oc login
+├── .env / .env.example         # Universal vars (HUB_*, optional ANSIBLE_* for AAP, CONSOLE_*, TEST_MODE); start.sh sources .env before oc login
 ├── playwright.config.ts        # Imports ./src/config/index (loads .env), projects, reporters
 ├── package.json                # `npm run test`, `npm run test:alc` → ./start.sh alc
 ├── env/
-│   └── alc.env.example         # ALC template → copy to env/alc.local.env (gitignored)
+│   └── alc.env.example         # ALC object-store template → copy to env/alc.local.env (gitignored)
 ├── scripts/
 │   ├── lib/common.sh           # Login, npm; exports CONSOLE_USERNAME/CONSOLE_IDP before login; after login universal env (BASE_URL, OC_CLUSTER_*, PLAYWRIGHT_TEST_MODE)
-│   └── lib/alc-env.sh          # Sources env/alc.local.env (ALC integrations only)
+│   └── lib/alc-env.sh          # Sources env/alc.local.env (object store only; ANSIBLE_* in .env)
 └── src/
     ├── config/                 # §1 — loader + types
     │   ├── schema.ts

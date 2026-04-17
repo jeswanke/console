@@ -41,6 +41,15 @@ import type { ApplicationListPage } from '@pages/app/ApplicationListPage';
  * `getRepositoryBlockContainer` / `getGit*InRepositoryBlock` / `getHelm*InRepositoryBlock` /
  * `getObjectStore*InRepositoryBlock` — `data-testid` values gain a `grp1`, `grp2`, … suffix
  * (see {@link subscriptionWizardGitTestId} / {@link subscriptionRepositoryDataTestId}).
+ * **Repository type tiles** (`card-github`, …) are **duplicated per block** — use {@link getRepositoryGitCardInBlock}
+ * / {@link getRepositoryHelmCardInBlock} / {@link getRepositoryObjectStorageCardInBlock}, not unscoped `getByTestId`.
+ * Prefer {@link selectRepositoryTypeInBlock} to **ensure** a type is selected without redundant clicks on an already-selected tile.
+ * **YAML: On** shows the Monaco panel and can hide form controls from layout — turn YAML off to exercise
+ * `data-testid` fields. **Repository types** / **cluster placement** accordions may need expanding before Git
+ * fields and placement comboboxes appear (verified on `qe6-vmware-ibm` subscription create).
+ *
+ * **Placement rule deprecation:** {@link getPlacementRuleDeprecationAlert} — assert title/body and documentation `href`
+ * (`APP_DOCS_ACM_DEPRECATIONS_RELEASE_NOTES_HREF_RE` in **`app.ts`**).
  */
 export class SubscriptionApplicationCreateWizardPage extends BasePage {
   constructor(
@@ -56,6 +65,19 @@ export class SubscriptionApplicationCreateWizardPage extends BasePage {
 
   private byTestId(testId: string): Locator {
     return this.page.getByTestId(testId);
+  }
+
+  /**
+   * Template editor accordion titles use a `collapsed` class when the section is closed.
+   * Clicks only when collapsed — avoids collapsing an already-open section (which breaks tests).
+   */
+  private async expandAccordionSectionIfCollapsed(sectionToggle: Locator): Promise<void> {
+    const needsExpand = await sectionToggle.evaluate((el) =>
+      (el as HTMLElement).classList.contains('collapsed')
+    );
+    if (!needsExpand) return;
+    await sectionToggle.click();
+    await this.waitForLoad();
   }
 
   /** Git control in repository block `blockIndex` (`0` = first) — suffixed `data-testid` (e.g. `combo-githubURLgrp1`). */
@@ -164,14 +186,30 @@ export class SubscriptionApplicationCreateWizardPage extends BasePage {
     });
   }
 
-  /** Discard wizard changes (toolbar). */
+  /**
+   * Discard wizard changes (toolbar).
+   * **Note:** some hubs render duplicate `#id`s — **`.first()`** keeps strict mode happy.
+   */
   getCancelButton(): Locator {
-    return this.byId(APP_SUBSCRIPTION_CREATE_WIZARD.shell.cancelButtonId);
+    return this.byId(APP_SUBSCRIPTION_CREATE_WIZARD.shell.cancelButtonId).first();
+  }
+
+  /** Portal mount for the **Update** control on edit flows (may be empty on create). */
+  getEditButtonPortal(): Locator {
+    return this.byId(APP_SUBSCRIPTION_CREATE_WIZARD.shell.editButtonPortalId);
   }
 
   /** Primary Create — `data-testid` from {@link APP_SUBSCRIPTION_CREATE_WIZARD.testIds.actions.create}. */
   getCreateButton(): Locator {
     return this.byTestId(APP_SUBSCRIPTION_CREATE_WIZARD.testIds.actions.create);
+  }
+
+  /**
+   * Same control as {@link getCreateButton} — the actual `<button>` **`#id`** (portal renders
+   * {@link APP_SUBSCRIPTION_CREATE_WIZARD.submit.createButtonElementId} with `data-testid` = create).
+   */
+  getCreateButtonElement(): Locator {
+    return this.byId(APP_SUBSCRIPTION_CREATE_WIZARD.submit.createButtonElementId);
   }
 
   /** Last primary button (save / create) in the wizard chrome. */
@@ -188,9 +226,98 @@ export class SubscriptionApplicationCreateWizardPage extends BasePage {
     return this.byId(APP_SUBSCRIPTION_CREATE_WIZARD.notificationsRegionId);
   }
 
-  /** Toggle form vs YAML editor */
+  /** Toggle form vs YAML editor (`#edit-yaml` — checkbox in current hub). */
   getYamlToggle(): Locator {
     return this.byId(APP_SUBSCRIPTION_CREATE_WIZARD.yamlToggleId);
+  }
+
+  /** Visible switch label for {@link getYamlToggle} — use for clicks (see {@link yamlClickToggle}). */
+  getYamlToggleLabel(): Locator {
+    return this.byId(APP_SUBSCRIPTION_CREATE_WIZARD.yamlToggleLabelId);
+  }
+
+  /**
+   * Clicks the YAML form/YAML switch. Uses `#edit-yaml-label` first; falls back to `force` on the input
+   * if needed (PatternFly switch layering).
+   */
+  async yamlClickToggle(): Promise<void> {
+    await this.getYamlToggleLabel()
+      .click()
+      .catch(async () => {
+        await this.getYamlToggle().click({ force: true });
+      });
+  }
+
+  /**
+   * Wrapper for the YAML editor region when YAML mode is on.
+   * Prefer {@link expandYamlEditor} before interacting with Monaco.
+   */
+  getYamlCreationView(): Locator {
+    return this.page.locator(APP_SUBSCRIPTION_CREATE_WIZARD.yamlEditor.creationViewSelector);
+  }
+
+  /** Inner container around the editor chrome (may wrap Monaco). */
+  getYamlEditorContainer(): Locator {
+    return this.page.locator(APP_SUBSCRIPTION_CREATE_WIZARD.yamlEditor.editorContainerSelector);
+  }
+
+  /**
+   * Monaco keyboard target (`textarea.inputarea`). Use {@link readYamlEditorText} / {@link setYamlEditorText}
+   * unless you need low-level focus.
+   */
+  getYamlMonacoTextarea(): Locator {
+    const y = APP_SUBSCRIPTION_CREATE_WIZARD.yamlEditor;
+    return this.getYamlCreationView()
+      .locator(y.monacoTextareaSelector)
+      .or(this.getYamlCreationView().locator('.monaco-editor textarea'))
+      .first();
+  }
+
+  /** `true` when the YAML creation panel is visible (YAML mode on). */
+  async isYamlEditorExpanded(): Promise<boolean> {
+    return this.getYamlCreationView().isVisible();
+  }
+
+  /** Turn YAML mode **on** — shows `.creation-view-yaml` and Monaco. No-op if already expanded. */
+  async expandYamlEditor(): Promise<void> {
+    if (await this.isYamlEditorExpanded()) return;
+    await this.yamlClickToggle();
+    await this.getYamlCreationView().waitFor({ state: 'visible', timeout: 60_000 });
+    await this.getYamlMonacoTextarea().waitFor({ state: 'visible', timeout: 30_000 });
+    await this.waitForLoad();
+  }
+
+  /** Turn YAML mode **off** — hides the YAML panel / returns toward form view. No-op if already collapsed. */
+  async collapseYamlEditor(): Promise<void> {
+    if (!(await this.isYamlEditorExpanded())) return;
+    await this.yamlClickToggle();
+    await this.getYamlCreationView().waitFor({ state: 'hidden', timeout: 60_000 });
+    await this.waitForLoad();
+  }
+
+  /**
+   * Read the current YAML document from Monaco (`inputValue` on the inputarea).
+   * Expands the YAML panel first if needed.
+   * Note: collapsing YAML and re-expanding may **regenerate** YAML from the form; unsaved Monaco-only edits can be lost.
+   */
+  async readYamlEditorText(): Promise<string> {
+    await this.expandYamlEditor();
+    const ta = this.getYamlMonacoTextarea();
+    await ta.waitFor({ state: 'attached', timeout: 30_000 });
+    return ta.inputValue();
+  }
+
+  /**
+   * Replace YAML editor content (same as pasting into Monaco — uses `fill` on the keyboard textarea).
+   * Expands the YAML panel first if needed.
+   * Note: see {@link readYamlEditorText} — toggling YAML off/on may resync from the form.
+   */
+  async setYamlEditorText(yaml: string): Promise<void> {
+    await this.expandYamlEditor();
+    const ta = this.getYamlMonacoTextarea();
+    await ta.waitFor({ state: 'visible', timeout: 30_000 });
+    await ta.click();
+    await ta.fill(yaml);
   }
 
   // ---------------------------------------------------------------------------
@@ -214,6 +341,14 @@ export class SubscriptionApplicationCreateWizardPage extends BasePage {
     return this.byId(APP_SUBSCRIPTION_CREATE_WIZARD.sectionToggles.repositoryLocation);
   }
 
+  /**
+   * Expand **Repository location for resources** if collapsed (same accordion `collapsed` class behavior as
+   * {@link expandRepositoryTypesSectionForRepositoryBlock}).
+   */
+  async expandRepositoryLocationSection(): Promise<void> {
+    await this.expandAccordionSectionIfCollapsed(this.getRepositoryLocationSectionToggle());
+  }
+
   getRepositoryTypesSectionToggle(): Locator {
     return this.getRepositoryTypesSectionToggleForRepositoryBlock(0);
   }
@@ -226,23 +361,39 @@ export class SubscriptionApplicationCreateWizardPage extends BasePage {
     return this.byId(subscriptionWizardChannelRepositoryTypesSectionToggleId(blockIndex));
   }
 
+  /**
+   * Expand **Repository types** for `blockIndex` so channel tiles / `combo-githubURL` (etc.) are available.
+   * Idempotent — skips the click if the section is already open (`collapsed` class on the title toggle).
+   * Pair with {@link selectRepositoryTypeInBlock} or {@link getRepositoryGitCardInBlock} /
+   * {@link getRepositoryHelmCardInBlock} / {@link getRepositoryObjectStorageCardInBlock}.
+   */
+  async expandRepositoryTypesSectionForRepositoryBlock(blockIndex: number): Promise<void> {
+    await this.expandAccordionSectionIfCollapsed(
+      this.getRepositoryTypesSectionToggleForRepositoryBlock(blockIndex)
+    );
+  }
+
   // ---------------------------------------------------------------------------
   // Channel repository type (Git / Helm / Object storage)
   // ---------------------------------------------------------------------------
 
   /**
-   * Git repository card. Use `.last()` when multiple channel groups exist on the page.
+   * Git repository card for the **first** block only — same as {@link getRepositoryGitCardInBlock} **`(0)`**.
+   * With multiple blocks, unscoped `card-github` matches **n** tiles (Playwright strict mode); always scope
+   * with {@link getRepositoryGitCardInBlock} / {@link getRepositoryBlockContainer}.
    */
   getGitChannelTypeButton(): Locator {
-    return this.byTestId(APP_SUBSCRIPTION_CREATE_WIZARD.testIds.repositoryCard.git);
+    return this.getRepositoryGitCardInBlock(0);
   }
 
+  /** Helm card — first block only (see {@link getGitChannelTypeButton}). */
   getHelmChannelTypeButton(): Locator {
-    return this.byTestId(APP_SUBSCRIPTION_CREATE_WIZARD.testIds.repositoryCard.helm);
+    return this.getRepositoryHelmCardInBlock(0);
   }
 
+  /** Object storage card — first block only (see {@link getGitChannelTypeButton}). */
   getObjectStorageChannelTypeButton(): Locator {
-    return this.byTestId(APP_SUBSCRIPTION_CREATE_WIZARD.testIds.repositoryCard.objectStorage);
+    return this.getRepositoryObjectStorageCardInBlock(0);
   }
 
   /** Add another subscription / channel block */
@@ -298,6 +449,55 @@ export class SubscriptionApplicationCreateWizardPage extends BasePage {
 
   getRepositoryObjectStorageCardInBlock(blockIndex: number): Locator {
     return this.repositoryCardInBlock('objectStorage', blockIndex);
+  }
+
+  /**
+   * Git / Helm / Object **type** tile in `blockIndex` (same as {@link getRepositoryGitCardInBlock} / Helm / Object).
+   */
+  private getRepositoryTypeCardInBlock(
+    blockIndex: number,
+    kind: SubscriptionWizardRepositoryCardKind
+  ): Locator {
+    switch (kind) {
+      case 'git':
+        return this.getRepositoryGitCardInBlock(blockIndex);
+      case 'helm':
+        return this.getRepositoryHelmCardInBlock(blockIndex);
+      case 'objectStorage':
+        return this.getRepositoryObjectStorageCardInBlock(blockIndex);
+      default: {
+        const _exhaustive: never = kind;
+        return _exhaustive;
+      }
+    }
+  }
+
+  /** `true` when the tile looks selected (`aria-selected`, `pf-m-selected` on self or ancestor). */
+  private async isRepositoryTypeCardSelected(card: Locator): Promise<boolean> {
+    return card.evaluate((el) => {
+      const node = el as HTMLElement;
+      if (node.getAttribute('aria-selected') === 'true') return true;
+      if (node.classList.contains('pf-m-selected')) return true;
+      return node.closest('.pf-m-selected') !== null;
+    });
+  }
+
+  /**
+   * Ensures `kind` is selected for repository block `blockIndex`. **No-op** if that card is already selected,
+   * avoiding flaky `click` timeouts when overlays intercept a redundant tap on the current selection (observed on live hub).
+   *
+   * **Prerequisite:** {@link expandRepositoryTypesSectionForRepositoryBlock} so tiles are visible.
+   */
+  async selectRepositoryTypeInBlock(
+    blockIndex: number,
+    kind: SubscriptionWizardRepositoryCardKind
+  ): Promise<void> {
+    const card = this.getRepositoryTypeCardInBlock(blockIndex, kind);
+    if (await this.isRepositoryTypeCardSelected(card)) return;
+    await card.click().catch(async () => {
+      await card.click({ force: true });
+    });
+    await this.waitForLoad();
   }
 
   // ---------------------------------------------------------------------------
@@ -529,14 +729,77 @@ export class SubscriptionApplicationCreateWizardPage extends BasePage {
     return this.byId(subscriptionWizardClusterDeploymentSectionToggleId(blockIndex));
   }
 
+  /**
+   * Expand **Select clusters for application deployment** for `blockIndex` so placement `data-testid`s and
+   * cluster label controls mount. Idempotent — does not collapse an already-expanded section.
+   */
+  async expandClusterDeploymentSectionForRepositoryBlock(blockIndex: number): Promise<void> {
+    await this.expandAccordionSectionIfCollapsed(
+      this.getClusterDeploymentSectionToggleForRepositoryBlock(blockIndex)
+    );
+  }
+
+  /**
+   * **Settings: Specify application behavior** accordion title inside repository block `blockIndex`
+   * (time window controls). Uses English title pattern from {@link APP_SUBSCRIPTION_CREATE_WIZARD.settings.sectionTitlePattern}.
+   */
+  getSettingsSectionToggleForRepositoryBlock(blockIndex: number): Locator {
+    return this.getRepositoryBlockContainer(blockIndex)
+      .locator('.creation-view-controls-title')
+      .filter({ hasText: APP_SUBSCRIPTION_CREATE_WIZARD.settings.sectionTitlePattern });
+  }
+
+  /** Expand **Settings** for `blockIndex` (idempotent). */
+  async expandSettingsSectionForRepositoryBlock(blockIndex: number): Promise<void> {
+    await this.expandAccordionSectionIfCollapsed(
+      this.getSettingsSectionToggleForRepositoryBlock(blockIndex)
+    );
+  }
+
+  /**
+   * **Configure automation for prehook and posthook** for `blockIndex`. Idempotent expand.
+   * **Prerequisite:** repository type selected for this block.
+   */
+  async expandConfigurePrePostAutomationSectionForRepositoryBlock(blockIndex: number): Promise<void> {
+    await this.expandAccordionSectionIfCollapsed(
+      this.getConfigurePrePostAutomationSectionForRepositoryBlock(blockIndex)
+    );
+  }
+
+  /**
+   * Inline **Placement rule deprecation** banner in the cluster placement area.
+   * **Prerequisite:** expand {@link expandClusterDeploymentSectionForRepositoryBlock} — copy is not in the DOM until that section is open. Uses `[class*="c-alert"]` because PF may not set `role="alert"` on the root in all builds.
+   */
+  getPlacementRuleDeprecationAlert(): Locator {
+    const copy = APP_SUBSCRIPTION_CREATE_WIZARD.clusterDeployment.placementRuleDeprecation;
+    return this.page
+      .locator('[class*="c-alert"]')
+      .filter({ hasText: new RegExp(copy.alertTitle, 'i') })
+      .first();
+  }
+
   /** **Deploy on local cluster only** — accessible name (no stable `data-testid` on all hubs). */
   getLocalClusterOnlyCheckbox(): Locator {
     return this.page.getByRole('checkbox', { name: /local cluster|deploy.*local|only.*local/i });
   }
 
+  /**
+   * **Deploy on local cluster only** scoped to repository block `blockIndex` (strict when multiple templates exist).
+   */
+  getLocalClusterOnlyCheckboxForRepositoryBlock(blockIndex: number): Locator {
+    return this.getRepositoryBlockContainer(blockIndex).getByRole('checkbox', {
+      name: /local cluster|deploy.*local|only.*local/i,
+    });
+  }
+
   /** **Online clusters only** — accessible name. */
   getOnlineClustersOnlyCheckbox(): Locator {
     return this.page.getByRole('checkbox', { name: /online/i });
+  }
+
+  /** **Online clusters only** scoped to repository block `blockIndex`. */
+  getOnlineClustersOnlyCheckboxForRepositoryBlock(blockIndex: number): Locator {
+    return this.getRepositoryBlockContainer(blockIndex).getByRole('checkbox', { name: /online/i });
   }
 
   getClusterSelectorCheckbox(): Locator {
@@ -549,6 +812,23 @@ export class SubscriptionApplicationCreateWizardPage extends BasePage {
    */
   getClusterSelectorCheckboxForRepositoryBlock(blockIndex: number): Locator {
     return this.byId(subscriptionWizardClusterSelectorCheckboxId(blockIndex));
+  }
+
+  /**
+   * **Deploy application resources on clusters with all specified labels** — PF `Radio` (not a checkbox;
+   * `id` still uses legacy `clusterSelector-checkbox-*`). Use {@link clickClusterPlacementLabelSelectorRadio}, not
+   * `setChecked(false)` (radios cannot be unchecked without choosing another option).
+   */
+  getClusterPlacementLabelSelectorRadioForRepositoryBlock(blockIndex: number): Locator {
+    return this.getRepositoryBlockContainer(blockIndex).getByRole('radio', {
+      name: /Deploy application resources on clusters with all specified labels/i,
+    });
+  }
+
+  /** Select label-based placement for this repository block. */
+  async clickClusterPlacementLabelSelectorRadio(blockIndex: number): Promise<void> {
+    await this.getClusterPlacementLabelSelectorRadioForRepositoryBlock(blockIndex).click();
+    await this.waitForLoad();
   }
 
   /**
@@ -610,6 +890,14 @@ export class SubscriptionApplicationCreateWizardPage extends BasePage {
     return this.page.getByRole('combobox', { name: n });
   }
 
+  /**
+   * **Cluster sets** for repository block `blockIndex` when multiple blocks each expose the control
+   * (same accessible name — **`.nth(blockIndex)`**).
+   */
+  getClusterSetsComboboxForRepositoryBlock(blockIndex: number): Locator {
+    return this.getClusterSetsCombobox().nth(blockIndex);
+  }
+
   getClusterPlacementLabelNameCombobox(): Locator {
     return this.clusterPlacementLabelCombobox('labelName');
   }
@@ -628,9 +916,46 @@ export class SubscriptionApplicationCreateWizardPage extends BasePage {
    * Same accessible names repeat per row — use {@link getClusterPlacementLabelNameComboboxForRow}, etc.
    */
   getClusterPlacementAddAnotherLabelButton(): Locator {
+    return this.getClusterPlacementAddAnotherLabelButtonForRepositoryBlock(0);
+  }
+
+  /**
+   * **Add another label** scoped to repository block `blockIndex` (required when multiple channel blocks exist).
+   */
+  getClusterPlacementAddAnotherLabelButtonForRepositoryBlock(blockIndex: number): Locator {
     const n =
       APP_SUBSCRIPTION_CREATE_WIZARD.clusterDeployment.placementAccessibleNames.addAnotherLabel;
-    return this.page.getByRole('button', { name: n });
+    return this.getRepositoryBlockContainer(blockIndex).getByRole('button', { name: n });
+  }
+
+  /**
+   * **Label** combobox for row `rowIndex` (`0` = first) in repository block `blockIndex`.
+   * Prefer this over page-wide {@link clusterPlacementLabelCombobox} when more than one channel block is present.
+   */
+  getClusterPlacementLabelNameComboboxForRowInRepositoryBlock(
+    blockIndex: number,
+    rowIndex: number
+  ): Locator {
+    const n = APP_SUBSCRIPTION_CREATE_WIZARD.clusterDeployment.placementAccessibleNames.labelName;
+    return this.getRepositoryBlockContainer(blockIndex).getByRole('combobox', { name: n }).nth(rowIndex);
+  }
+
+  /** **Operator** combobox for label row `rowIndex` in repository block `blockIndex`. */
+  getClusterPlacementLabelOperatorComboboxForRowInRepositoryBlock(
+    blockIndex: number,
+    rowIndex: number
+  ): Locator {
+    const n = APP_SUBSCRIPTION_CREATE_WIZARD.clusterDeployment.placementAccessibleNames.labelOperator;
+    return this.getRepositoryBlockContainer(blockIndex).getByRole('combobox', { name: n }).nth(rowIndex);
+  }
+
+  /** **Value** combobox for label row `rowIndex` in repository block `blockIndex`. */
+  getClusterPlacementLabelValueComboboxForRowInRepositoryBlock(
+    blockIndex: number,
+    rowIndex: number
+  ): Locator {
+    const n = APP_SUBSCRIPTION_CREATE_WIZARD.clusterDeployment.placementAccessibleNames.labelValue;
+    return this.getRepositoryBlockContainer(blockIndex).getByRole('combobox', { name: n }).nth(rowIndex);
   }
 
   /**
@@ -638,17 +963,71 @@ export class SubscriptionApplicationCreateWizardPage extends BasePage {
    * **`.nth(rowIndex)`** selects the correct instance after adding rows.
    */
   getClusterPlacementLabelNameComboboxForRow(rowIndex: number): Locator {
-    return this.clusterPlacementLabelComboboxForRow('labelName', rowIndex);
+    return this.getClusterPlacementLabelNameComboboxForRowInRepositoryBlock(0, rowIndex);
   }
 
   /** **Operator** combobox for label row `rowIndex`. */
   getClusterPlacementLabelOperatorComboboxForRow(rowIndex: number): Locator {
-    return this.clusterPlacementLabelComboboxForRow('labelOperator', rowIndex);
+    return this.getClusterPlacementLabelOperatorComboboxForRowInRepositoryBlock(0, rowIndex);
   }
 
   /** **Value** combobox for label row `rowIndex`. */
   getClusterPlacementLabelValueComboboxForRow(rowIndex: number): Locator {
-    return this.clusterPlacementLabelComboboxForRow('labelValue', rowIndex);
+    return this.getClusterPlacementLabelValueComboboxForRowInRepositoryBlock(0, rowIndex);
+  }
+
+  /**
+   * Clicks an open PatternFly menu / listbox option whose label matches `optionText` (case-insensitive, trimmed).
+   * Use after opening **Cluster sets** or label **Label** / **Value** comboboxes.
+   * Supports PF v5 (`menu__list-item`) and v6 (`pf-v6-c-menu__item` + `role="option"` on `button`).
+   */
+  async pickOpenMenuItemByExactLabel(optionText: string): Promise<void> {
+    const t = optionText.trim();
+    const escaped = this.escapeRegExpForMenuLabel(t);
+    const nameRe = new RegExp(`^\\s*${escaped}\\s*$`, 'i');
+    /** PF v6 cluster label **Value** menus use `.pf-v6-c-menu__item` without `role="option"` on the row. */
+    const v6Row = this.page.locator('.pf-v6-c-menu__item').filter({ hasText: nameRe });
+    const option = v6Row
+      .or(this.page.getByRole('option', { name: nameRe }))
+      .or(this.page.locator('[class*="menu__list-item"]').filter({ hasText: nameRe }))
+      .or(this.page.locator('[class*="c-menu__item"]').filter({ hasText: nameRe }))
+      .first();
+    await option.click({ timeout: 20_000 });
+  }
+
+  private escapeRegExpForMenuLabel(s: string): string {
+    return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  /**
+   * Opens **Cluster sets** for `blockIndex` and selects a menu entry (e.g. `global`) — matches console PF Select behavior.
+   */
+  async pickClusterSetMenuOptionForRepositoryBlock(blockIndex: number, optionText: string): Promise<void> {
+    await this.getClusterSetsComboboxForRepositoryBlock(blockIndex).click();
+    await this.pickOpenMenuItemByExactLabel(optionText);
+    await this.waitForLoad();
+  }
+
+  /** Opens the **Label** combobox for `rowIndex` in `blockIndex` and selects `optionText` from the menu. */
+  async pickClusterPlacementLabelNameMenuForRepositoryBlockRow(
+    blockIndex: number,
+    rowIndex: number,
+    optionText: string
+  ): Promise<void> {
+    await this.getClusterPlacementLabelNameComboboxForRowInRepositoryBlock(blockIndex, rowIndex).click();
+    await this.pickOpenMenuItemByExactLabel(optionText);
+    await this.waitForLoad();
+  }
+
+  /** Opens the **Value** combobox for `rowIndex` in `blockIndex` and selects `optionText` from the menu. */
+  async pickClusterPlacementLabelValueMenuForRepositoryBlockRow(
+    blockIndex: number,
+    rowIndex: number,
+    optionText: string
+  ): Promise<void> {
+    await this.getClusterPlacementLabelValueComboboxForRowInRepositoryBlock(blockIndex, rowIndex).click();
+    await this.pickOpenMenuItemByExactLabel(optionText);
+    await this.waitForLoad();
   }
 
   // ---------------------------------------------------------------------------
@@ -718,22 +1097,48 @@ export class SubscriptionApplicationCreateWizardPage extends BasePage {
   // ---------------------------------------------------------------------------
 
   /**
-   * Expand/collapse **Configure automation for prehook and posthook** (PatternFly accordion `Toggle`).
+   * Expand/collapse **Configure automation for prehook and posthook** — `#…` on the section control
+   * (see {@link subscriptionAutomationPrePostSectionToggleId}).
+   *
+   * **Prerequisite:** a **repository type** (Git / Helm / Object) must be selected or this section may not
+   * be in the DOM yet.
    */
   getConfigurePrePostAutomationSection(): Locator {
     return this.getConfigurePrePostAutomationSectionForRepositoryBlock(0);
   }
 
   /**
-   * Same as {@link getConfigurePrePostAutomationSection} for an **additional** repository block
-   * (see {@link subscriptionAutomationPrePostSectionToggleId}).
+   * Same as {@link getConfigurePrePostAutomationSection} for an **additional** repository block.
+   *
+   * Prefer **scoped** `.creation-view-controls-title` + section copy (same pattern as
+   * {@link getSettingsSectionToggleForRepositoryBlock}) — current hubs may not render
+   * `#perpostsectiongrp{N}-set-pre-and-post-deployment-tasks`. Fallback: {@link subscriptionAutomationPrePostSectionToggleId}.
    */
   getConfigurePrePostAutomationSectionForRepositoryBlock(blockIndex: number): Locator {
-    return this.byId(subscriptionAutomationPrePostSectionToggleId(blockIndex));
+    const block = this.getRepositoryBlockContainer(blockIndex);
+    const byTitle = block
+      .locator('.creation-view-controls-title')
+      .filter({
+        hasText: new RegExp(APP_SUBSCRIPTION_CREATE_WIZARD.automation.configurePrePostToggleAccessibleText, 'i'),
+      });
+    return byTitle.or(this.byId(subscriptionAutomationPrePostSectionToggleId(blockIndex)));
   }
 
   /**
-   * Same control by **accessible name** (pattern: PF may expose **Toggle** + section title in the tree).
+   * Section title text (**Configure automation for prehook and posthook**). Prefer **clicking this** to expand
+   * when {@link getConfigurePrePostAutomationToggle} does not resolve (some hubs do not expose a matching
+   * `role="button"` name on the accordion).
+   */
+  getConfigurePrePostAutomationSectionTitle(): Locator {
+    return this.page.getByText(
+      APP_SUBSCRIPTION_CREATE_WIZARD.automation.configurePrePostToggleAccessibleText,
+      { exact: true }
+    );
+  }
+
+  /**
+   * Accordion control by **accessible name** (`role="button"`) **or** the section `#id` fallback.
+   * If clicks time out, use {@link getConfigurePrePostAutomationSectionTitle} instead.
    */
   getConfigurePrePostAutomationToggle(): Locator {
     const t = APP_SUBSCRIPTION_CREATE_WIZARD.automation.configurePrePostToggleAccessibleText;
@@ -825,7 +1230,10 @@ export class SubscriptionApplicationCreateWizardPage extends BasePage {
   // Add credential modal (Ansible / Tower wizard)
   // ---------------------------------------------------------------------------
 
-  /** Root **Add credential** dialog. */
+  /**
+   * Root **Add credential** dialog. **Steps:** fill **credentials name** + **namespace**, **Next** →
+   * **ansibleHost** / **ansibleToken** (see {@link APP_SUBSCRIPTION_CREATE_WIZARD.addCredentialModal}).
+   */
   getAddCredentialDialog(): Locator {
     return this.page
       .locator(APP_SUBSCRIPTION_CREATE_WIZARD.addCredentialModal.dialogSelector)

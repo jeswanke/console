@@ -1,8 +1,8 @@
-import { Page, Locator } from '@playwright/test';
+import { Page, Locator, expect } from '@playwright/test';
 import { BasePage } from '@pages/BasePage';
 import { ApplicationsTable } from '@components/app/ApplicationsTable';
 import { OcCliService } from '@services/OcCliService';
-import { SELECTORS } from '@constants/selectors';
+import { PF_SKELETON, SELECTORS } from '@constants/selectors';
 import {
   APP_ROUTES,
   APP_PAGE,
@@ -31,23 +31,33 @@ export class ApplicationListPage extends BasePage {
     this.applicationsTable = new ApplicationsTable(page);
   }
 
+  /**
+   * List view can keep transient spinners (table refresh, health) while the page is usable.
+   * Wait for stable, user-facing readiness instead of global `.pf-v6-c-spinner` count 0.
+   */
+  private async waitForApplicationsListReady(): Promise<void> {
+    await this.getPageTitle().waitFor({ state: 'visible' });
+    await expect(this.page.locator(PF_SKELETON)).toHaveCount(0);
+    await expect(this.applicationsTable.getCreateApplicationButton()).toBeEnabled();
+  }
+
   /** Navigate to the Applications list */
   async goto(): Promise<void> {
     const consoleUrl = await this.oc.getConsoleUrl();
     await this.page.goto(`${consoleUrl}${APP_ROUTES.list}`);
-    await this.waitForLoad();
+    await this.waitForApplicationsListReady();
   }
 
   /** Open the Overview tab */
   async openOverviewTab(): Promise<void> {
     await this.page.getByRole('tab', { name: APP_PAGE.tabs.overview }).click();
-    await this.waitForLoad();
+    await this.waitForApplicationsListReady();
   }
 
   /** Open the Advanced configuration tab */
   async openAdvancedConfigTab(): Promise<void> {
     await this.page.getByRole('tab', { name: APP_PAGE.tabs.advancedConfig }).click();
-    await this.waitForLoad();
+    await this.waitForApplicationsListReady();
   }
 
   /** Locator for Overview tab content (applications table; no tabpanel in DOM) */
@@ -139,6 +149,6 @@ export class ApplicationListPage extends BasePage {
   /** Click Create application (opens dropdown/modal) */
   async openCreateApplication(): Promise<void> {
     await this.applicationsTable.clickCreateApplication();
-    await this.waitForLoad();
+    await expect(this.applicationsTable.getCreateApplicationMenu()).toBeVisible();
   }
 }

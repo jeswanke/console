@@ -5,4 +5,17 @@
  * @see docs/architecture-overview.md — §5 `/src/lib`
  */
 
-export {};
+export {
+  createSubscription,
+  DEFAULT_FULL_WIZARD_PER_BLOCK,
+  type AutomationSpec,
+  type ClusterDeploymentSpec,
+  type ClusterLabelSelectorRowSpec,
+  type CreateSubscriptionOptions,
+  type GitSubscriptionRepositoryFields,
+  type HelmSubscriptionRepositoryFields,
+  type ObjectStorageSubscriptionRepositoryFields,
+  type PerBlockSubscriptionSpec,
+  type SubscriptionRepositorySpec,
+  type TimeWindowSpec,
+} from './subscription-create';

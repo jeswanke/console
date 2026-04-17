@@ -17,7 +17,7 @@ npx playwright install chromium
 
 **Recommended:** keep **universal** values in a repo-root **`.env`** (copy from **`.env.example`**). It is gitignored. **`./start.sh`** loads `.env` before `oc login`, and Playwright loads it via `src/config/index.ts`. Use **`HUB_PASSWORD`** for both `oc login` and the console UI step in **`auth.setup.ts`** (no separate console password).
 
-**ALC integrations** (object store, Ansible) stay in **`env/alc.local.env`** — see **`env/alc.env.example`**.
+**Ansible (AAP):** **`ANSIBLE_TOKEN`** and **`ANSIBLE_URL`** in repo-root **`.env`** (see **`.env.example`**). **Object store** (S3) for ALC stays in **`env/alc.local.env`** — see **`env/alc.env.example`**.
 
 ---
 
@@ -86,7 +86,7 @@ export HUB_PASSWORD='<kubeadmin-password>'
 | `OC_CLUSTER_URL` / `OC_CLUSTER_USER` / `OC_CLUSTER_PASS` | Default from `HUB_URL`, `kubeadmin`, `HUB_PASSWORD` (override via env if needed) |
 | `PLAYWRIGHT_TEST_MODE`                                   | Default `e2e`, or from `TEST_MODE` / explicit `PLAYWRIGHT_TEST_MODE`             |
 
-**ALC-only file:** `./start.sh alc` also loads **`env/alc.local.env`** (gitignored) for integrations — **`OBJECTSTORE_*`**, **`ANSIBLE_*`** only (see `env/alc.env.example`).
+**ALC-only file:** `./start.sh alc` also loads **`env/alc.local.env`** (gitignored) for **`OBJECTSTORE_*`** integrations (see `env/alc.env.example`). **`ANSIBLE_*`** is read from repo-root **`.env`** with everything else.
 
 Add more components later by extending the `case` in `start.sh` and adding e.g. `src/tests/<area>/start.sh`. Shared logic lives in `scripts/lib/common.sh`.
 
@@ -119,7 +119,7 @@ This repo maps to it as follows:
 console-e2e/
 ├── docs/                    # architecture-overview.md; optional images in docs/images/
 ├── start.sh                 # Dispatcher → e.g. src/tests/app/start.sh (ALC)
-├── env/                     # ALC env template (alc.env.example); alc.local.env gitignored
+├── env/                     # ALC object-store template (alc.env.example); alc.local.env gitignored
 ├── scripts/lib/             # Shared shell (common.sh, alc-env.sh)
 ├── src/
 │   ├── config/              # .env loader, getHubAuth() / getTestConfig()

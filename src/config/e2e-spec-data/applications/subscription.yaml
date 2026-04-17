@@ -1,0 +1,64 @@
+# Subscription application create wizard. Scenarios may use legacy `subscription:` or `domains.subscription:` (equivalent after load).
+
+profiles:
+  # Fill channel + cluster / time window / automation using defaults (see DEFAULT_FULL_WIZARD_PER_BLOCK).
+  subscription_full_wizard:
+    fillEntireWizard: true
+
+  # Wizard exercises without submitting (typical console e2e).
+  subscription_dry_run:
+    submit: false
+    ensureFormMode: true
+
+  # Multi-repo flows: only fill what fragments + perBlock define; no DEFAULT_FULL_WIZARD_PER_BLOCK merge.
+  subscription_explicit_channels:
+    fillEntireWizard: false
+    submit: false
+    ensureFormMode: true
+
+scenarios:
+  smoke_subscription:
+    enabled: true
+    tests:
+      - RHACM4K-SMOKE-SUBSCRIPTION
+    fragments:
+      - git_application_lifecycle_samples
+    extends:
+      - subscription_full_wizard
+      - subscription_dry_run
+    subscription:
+      applicationName: e2e-spec-data-smoke-app
+      namespace: e2e-spec-data-smoke-ns
+
+  matrix_example_subscription:
+    enabled: true
+    tests:
+      - RHACM4K-MATRIX-0001
+    fragments:
+      - git_application_lifecycle_samples
+    extends:
+      - subscription_full_wizard
+      - subscription_dry_run
+    subscription:
+      applicationName: e2e-matrix-app
+      namespace: e2e-matrix-ns
+
+  auto_git_multi:
+    enabled: true
+    tests:
+      - RHACM4K-7554
+      - RHACM4K-7555
+      - RHACM4K-7556
+      - RHACM4K-7557
+      - RHACM4K-6903
+      - RHACM4K-6902
+    fragments:
+      - git_repos_auto_git_multi
+      - per_block_tw_active_mf_9_to_5
+      - per_block_cd_label_global_name_local
+      - per_block_cd_local_only_second
+    extends:
+      - subscription_explicit_channels
+    subscription:
+      applicationName: auto-git-multi
+      namespace: auto-git-multi-ns

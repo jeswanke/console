@@ -1,0 +1,69 @@
+# Shared fragments for ACM **Applications** subscription e2e (reusable channel / placement blocks).
+# Default sample Git URL is defined once below (`&stolostron-app-lifecycle-samples-git`); not wired to TS constants.
+# Merged with `subscription.yaml` in sorted order (`_shared` before `subscription`).
+# `perBlock` fragments merge by index — compose time window + cluster presets in any order.
+
+version: 1
+
+fragments:
+  git_application_lifecycle_samples:
+    repositories:
+      - kind: git
+        url: &stolostron-app-lifecycle-samples-git https://github.com/stolostron/application-lifecycle-samples.git
+        branch: main
+        path: helloworld
+
+  # Full channel list for auto-git-multi (repositories are replaced per layer — keep both repos in one fragment).
+  git_repos_auto_git_multi:
+    repositories:
+      - kind: git
+        url: *stolostron-app-lifecycle-samples-git
+        branch: main
+        path: helloworld
+        reconcileOption: merge
+        reconcileRate: medium
+      - kind: git
+        url: *stolostron-app-lifecycle-samples-git
+        branch: main
+        path: mortgage
+
+  per_block_tw_active_mf_9_to_5:
+    perBlock:
+      - timeWindow:
+          mode: active
+          weekdays:
+            Monday: true
+            Tuesday: true
+            Wednesday: true
+            Thursday: true
+            Friday: true
+          ranges:
+            - start: '09:00 AM'
+              end: '05:00 PM'
+
+  per_block_cd_label_global_name_local:
+    perBlock:
+      - clusterDeployment:
+          useExistingPlacementRule: false
+          useClusterLabelSelector: true
+          clusterSet: global
+          labelSelectorRows:
+            - labelName: name
+              labelValue: local-cluster
+          localClusterOnly: false
+          onlineClustersOnly: false
+
+  # Second channel: target hub/local via label selector (same as legacy Cypress local + no matchingLabel).
+  # The console exposes placement as radios + label rows — not a separate "local only" checkbox when label mode is on.
+  per_block_cd_local_only_second:
+    perBlock:
+      - {}
+      - clusterDeployment:
+          useExistingPlacementRule: false
+          useClusterLabelSelector: true
+          clusterSet: global
+          labelSelectorRows:
+            - labelName: name
+              labelValue: local-cluster
+          localClusterOnly: false
+          onlineClustersOnly: false

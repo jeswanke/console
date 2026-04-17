@@ -44,6 +44,7 @@ export default defineConfig({
     // Main test project - uses authenticated state
     {
       name: 'chromium',
+      testIgnore: /.*\.unit\.spec\.ts$/,
       use: {
         ...devices['Desktop Chrome'],
         viewport: { width: 1920, height: 1080 },
@@ -51,6 +52,16 @@ export default defineConfig({
         storageState: '.auth/user.json',
       },
       dependencies: ['setup'],
+    },
+
+    // Config / YAML unit tests (no hub login)
+    {
+      name: 'unit',
+      testMatch: /.*\.unit\.spec\.ts$/,
+      use: {
+        ...devices['Desktop Chrome'],
+      },
+      dependencies: [],
     },
   ],
 });

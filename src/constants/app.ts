@@ -40,6 +40,13 @@ export const APP_DOCS_MANAGING_APPLICATIONS_HREF_RE =
 export const APP_DOCS_ADVANCED_DEPRECATION_HREF_RE =
   /^https:\/\/docs\.redhat\.com\/en\/documentation\/red_hat_advanced_cluster_management_for_kubernetes\/2\.\d+\/html-single\/applications\/managing-applications#application-advanced-configuration$/;
 
+/**
+ * **Placement rule deprecation** inline alert in the subscription wizard (cluster placement section).
+ * Matches `ViewDocumentationLink` / `DOC_LINKS.DEPRECATIONS_ACM` from the console.
+ */
+export const APP_DOCS_ACM_DEPRECATIONS_RELEASE_NOTES_HREF_RE =
+  /^https:\/\/docs\.redhat\.com\/en\/documentation\/red_hat_advanced_cluster_management_for_kubernetes\/2\.\d+\/html-single\/release_notes\/release-notes#deprecations-removals-acm$/;
+
 // =============================================================================
 // Page structure
 // =============================================================================
@@ -326,6 +333,9 @@ export const APP_ADVANCED_TABLE_COLUMNS_PLACEMENT_RULES = {
 // Entry from list: `#application-create` → menu → `#create-subscription` (see APP_CREATE_MENU).
 // **Locators:** use **`testIds`** plus {@link subscriptionRepositoryDataTestId} /
 // {@link subscriptionWizardGitTestId} (and Helm / Object / placement variants) — not raw input `#id` maps.
+// **Hub check (`qe6-vmware-ibm`):** with **YAML off**, after Git + **Repository types** + **Select clusters…**
+// accordions are expanded, mapped `data-testid`s and `#id`s below match the DOM (including `grp1` with two blocks).
+// **Placement rule deprecation** alert lives under cluster placement (see `clusterDeployment.placementRuleDeprecation`).
 // =============================================================================
 
 export const APP_SUBSCRIPTION_CREATE_WIZARD = {
@@ -359,8 +369,21 @@ export const APP_SUBSCRIPTION_CREATE_WIZARD = {
    * ({@link subscriptionWizardPlacementTestId}).
    *
    * **Multiple label rows:** **Add another label** — same accessible names per row; use `*ForRow(rowIndex)`.
+   *
+   * **Placement rule deprecation:** an inline info **Alert** appears above existing placement rule / cluster
+   * selector controls — see {@link clusterDeployment.placementRuleDeprecation}.
    */
   clusterDeployment: {
+    /**
+     * Copy from the console **Placement rule deprecation** alert (English default locale).
+     * Use with {@link APP_DOCS_ACM_DEPRECATIONS_RELEASE_NOTES_HREF_RE} for the documentation link.
+     */
+    placementRuleDeprecation: {
+      alertTitle: 'Placement rule deprecation',
+      /** Primary body line (substring match is enough for i18n drift). */
+      resourceDeprecatedSnippet: 'PlacementRule resource is deprecated',
+      bestPracticeSnippet: 'Best practice',
+    },
     /**
      * Expand **Select clusters for application deployment** (first subscription only).
      * Additional subscriptions: {@link subscriptionWizardClusterDeploymentSectionToggleId}.
@@ -408,16 +431,31 @@ export const APP_SUBSCRIPTION_CREATE_WIZARD = {
     addAnotherTimeRangeButtonAccessibleName: 'Add another time range',
   },
   /**
+   * **Settings: Specify application behavior** — time window / scheduling lives in this TemplateEditor section.
+   * Section title is translated; {@link settings.sectionTitlePattern} matches the English console.
+   */
+  settings: {
+    /** Accordion title match (case-insensitive substring) inside each repository block container. */
+    sectionTitlePattern: /specify application behavior/i,
+  },
+  /**
    * Pre / post deployment automation (Ansible hooks, credential selection, etc.).
+   *
+   * **Prerequisite:** choose a **repository type** (Git / Helm / Object storage card) first. Until then, the
+   * automation block may not appear in the form (only the shell / YAML region may be present).
    *
    * In the expanded **Configure automation for prehook and posthook** section, the Ansible row uses a PF
    * **Select** whose outer toggle keeps **dynamic ids** (`pf-select-toggle-id-*`); prefer **accessible names**
    * in {@link SubscriptionApplicationCreateWizardPage} helpers. **`Add credential`** may not be in the DOM
-   * until a credential type is chosen — do not assume it is always visible.
+   * until a credential type is chosen in **Type to filter** — do not assume it is always visible.
    */
   automation: {
     configurePrePostSectionId: 'perpostsection-configure-automation-for-prehook-and-posthook',
-    /** Text on the expandable section toggle (`role="button"` PatternFly accordion). */
+    /**
+     * Section title / accordion label. On some hubs **`getByRole('button', { name })`** does not match the
+     * control — use exact **text**, **`#perpostsection-…`** ({@link subscriptionAutomationPrePostSectionToggleId}), or
+     * {@link SubscriptionApplicationCreateWizardPage.getConfigurePrePostAutomationSectionTitle} (subscription create wizard).
+     */
     configurePrePostToggleAccessibleText: 'Configure automation for prehook and posthook',
     /** Visible label before the Ansible / Tower control cluster. */
     ansibleCredentialLabelText: 'Ansible Automation Platform credential',
@@ -437,7 +475,8 @@ export const APP_SUBSCRIPTION_CREATE_WIZARD = {
   },
   /**
    * **Add credential** modal (Ansible / Tower) opened from {@link APP_SUBSCRIPTION_CREATE_WIZARD.automation}
-   * (separate from the main form DOM).
+   * (separate from the main form DOM). **Multi-step:** **Basic information** (`credentialsName` + namespace)
+   * then **Next** → **Ansible Automation Platform** (`ansibleHost`, `ansibleToken`) on current console.
    */
   addCredentialModal: {
     /** Narrow to the wizard dialog (OUIA modal). */
@@ -445,21 +484,44 @@ export const APP_SUBSCRIPTION_CREATE_WIZARD = {
     credentialsNameInputId: 'credentialsName',
     ansibleHostInputId: 'ansibleHost',
     ansibleTokenInputId: 'ansibleToken',
+    /** Namespace combobox on the first step (before **Next** reveals host/token fields). */
     namespacePlaceholder: 'Select a namespace for the credential',
     nextButtonAccessibleName: 'Next',
     addButtonAccessibleName: 'Add',
   },
-  /** YAML editor toggle on the create / edit form */
+  /** YAML editor toggle on the create / edit form (`input#edit-yaml` checkbox in current console). */
   yamlToggleId: 'edit-yaml',
+  /**
+   * Label for {@link yamlToggleId} (PatternFly switch). Prefer UI clicks on this id — the hidden
+   * checkbox can be covered by `.pf-v6-c-switch__toggle` (pointer events intercepted).
+   */
+  yamlToggleLabelId: 'edit-yaml-label',
+  /**
+   * YAML side panel (form vs YAML). Shown when **`yamlToggleId`** is on (checkbox checked).
+   * Aligns with OpenShift console creation view + Monaco (`.creation-view-yaml` / `.yamlEditorContainer`).
+   */
+  yamlEditor: {
+    creationViewSelector: '.creation-view-yaml',
+    editorContainerSelector: '.yamlEditorContainer',
+    /** Monaco keyboard sink — use for fill / inputValue. */
+    monacoTextareaSelector: '.monaco-editor textarea.inputarea',
+  },
   /** Hub notification drawer / region */
   notificationsRegionId: 'notifications',
   submit: {
     /** Same id as {@link APP_SUBSCRIPTION_CREATE_WIZARD.testIds.actions.create} on current console. */
     createButtonPortalVisibleId: 'create-button-portal-id',
+    /**
+     * Primary **Create** / **Update** `<Button>` id in the portal (`${createButtonPortalVisibleId}-btn`).
+     * {@link APP_SUBSCRIPTION_CREATE_WIZARD.testIds.actions.create} remains the `data-testid` on that button.
+     */
+    createButtonElementId: 'create-button-portal-id-btn',
   },
-  /** Leave wizard without saving */
+  /** Toolbar portals (TemplateEditor); create vs edit flows. */
   shell: {
     cancelButtonId: 'cancel-button-portal-id',
+    /** Portal mount for **Update** when editing an existing subscription app (create flow may leave empty). */
+    editButtonPortalId: 'edit-button-portal-id',
   },
   /**
    * Expand/collapse accordion sections around repository configuration.
