@@ -9,7 +9,6 @@ import {
   type AppSubscriptionTimeWindowWeekday,
   type SubscriptionWizardRepositoryCardKind,
 } from '@constants/app';
-import { SAMPLE_APPLICATION_LIFECYCLE_GIT_URL } from '@constants/sampleRepos';
 import type { SubscriptionApplicationCreateWizardPage } from '@pages/app/SubscriptionApplicationCreateWizardPage';
 
 // ---------------------------------------------------------------------------
@@ -118,7 +117,17 @@ export interface ClusterDeploymentSpec {
 // ---------------------------------------------------------------------------
 
 export interface TimeWindowSpec {
-  mode?: 'active' | 'blocked';
+  /**
+   * Matches subscription wizard radios: **`default`** (always / no window), **`active`** (deploy only in
+   * windows), **`blocked`** (do not deploy in windows). Timezone / weekdays / ranges apply only to
+   * `active` and `blocked` (the console hides them for `default`).
+   */
+  mode?: 'default' | 'active' | 'blocked';
+  /**
+   * IANA time zone string shown in the **Choose a location** / **Select timezone** control when
+   * `mode` is `active` or `blocked` (see console validation).
+   */
+  timezone?: string;
   /** Toggle weekday inclusion (`true` = checked) */
   weekdays?: Partial<Record<AppSubscriptionTimeWindowWeekday | string, boolean>>;
   /** Time ranges (row `0` first; further rows use **Add another time range**). */
@@ -152,74 +161,23 @@ export interface CreateSubscriptionOptions {
   applicationName: string;
   /** Typed into the namespace combobox (existing or new name) */
   namespace: string;
+  /** Repository blocks in order (`0` = first). Define in e2e-spec-data (`blocks[].use` / subscription); not defaulted in TS. */
+  repositories: SubscriptionRepositorySpec[];
   /**
-   * Repository blocks in order (`0` = first). Defaults to a single Git example when omitted
-   * (override for real runs).
-   */
-  repositories?: SubscriptionRepositorySpec[];
-  /**
-   * Optional **cluster deployment**, **settings / time window**, and **automation** per repository block
-   * (`perBlock[i]` lines up with `repositories[i]`). Applied after channel fields for that block.
-   * When {@link fillEntireWizard} is `true`, merged with {@link DEFAULT_FULL_WIZARD_PER_BLOCK} (override wins per field).
+   * Optional **cluster deployment**, **time window**, and **automation** per repository block (`perBlock[i]` ↔
+   * `repositories[i]`). Applied after channel fields. Values come only from this object / merged e2e-spec-data —
+   * no TypeScript default wizard payload is merged at runtime.
    */
   perBlock?: (PerBlockSubscriptionSpec | undefined)[];
   /**
-   * When `true` (default), after each channel block fills **Select clusters**, **Specify application behavior** (time window),
-   * and **Configure automation** using {@link DEFAULT_FULL_WIZARD_PER_BLOCK} plus any {@link perBlock} merge.
-   * Set `false` to only fill repository channels unless you pass explicit {@link perBlock} entries.
+   * Scenario metadata (e.g. `subscription_full_wizard` vs `subscription_explicit_channels`). `createSubscription`
+   * applies `perBlock?.[i]` whenever those sections are present; use `perBlock` entries to control what runs.
    */
   fillEntireWizard?: boolean;
   /** Call {@link SubscriptionApplicationCreateWizardPage.collapseYamlEditor} first (default `true`) */
   ensureFormMode?: boolean;
   /** Click primary **Create** when done (default `true`) */
   submit?: boolean;
-}
-
-const defaultRepositories: SubscriptionRepositorySpec[] = [
-  {
-    kind: 'git',
-    url: SAMPLE_APPLICATION_LIFECYCLE_GIT_URL,
-    branch: 'main',
-    path: 'helloworld',
-  },
-];
-
-/**
- * Default **per repository block** when {@link CreateSubscriptionOptions.fillEntireWizard} is `true`: cluster label
- * placement (`global` cluster set + `name` / `local-cluster`), active Monday window, Ansible filter.
- * Override pieces via {@link CreateSubscriptionOptions.perBlock}. Aligns with legacy Cypress `editDeployOnLocal`-style flows.
- */
-export const DEFAULT_FULL_WIZARD_PER_BLOCK: PerBlockSubscriptionSpec = {
-  clusterDeployment: {
-    useExistingPlacementRule: false,
-    useClusterLabelSelector: true,
-    clusterSet: 'global',
-    labelSelectorRows: [{ labelName: 'name', labelValue: 'local-cluster' }],
-  },
-  timeWindow: {
-    mode: 'active',
-    weekdays: { Monday: true },
-    ranges: [{ start: '09:00 AM', end: '05:00 PM' }],
-  },
-  automation: {
-    credentialTypeFilter: 'Ansible',
-  },
-};
-
-function mergePerBlockSpec(
-  defaults: PerBlockSubscriptionSpec,
-  override: PerBlockSubscriptionSpec | undefined
-): PerBlockSubscriptionSpec {
-  const o = override ?? {};
-  return {
-    clusterDeployment: { ...defaults.clusterDeployment, ...o.clusterDeployment },
-    timeWindow: {
-      ...defaults.timeWindow,
-      ...o.timeWindow,
-      weekdays: { ...defaults.timeWindow?.weekdays, ...o.timeWindow?.weekdays },
-    },
-    automation: { ...defaults.automation, ...o.automation },
-  };
 }
 
 async function fillIfDefined(locator: Locator, value: string | undefined): Promise<void> {
@@ -305,9 +263,7 @@ async function fillClusterDeployment(
 ): Promise<void> {
   await wizard.expandClusterDeploymentSectionForRepositoryBlock(blockIndex);
 
-  if (spec.useClusterLabelSelector === true && spec.useExistingPlacementRule !== true) {
-    await wizard.getExistingPlacementRuleCheckboxInRepositoryBlock(blockIndex).setChecked(false);
-  }
+  // Legacy placement-rule checkbox may be absent; false is applied via setCheckboxIfDefined (no blind setChecked).
 
   await setCheckboxIfDefined(
     wizard.getExistingPlacementRuleCheckboxInRepositoryBlock(blockIndex),
@@ -367,10 +323,19 @@ async function fillTimeWindow(
   spec: TimeWindowSpec
 ): Promise<void> {
   await wizard.expandSettingsSectionForRepositoryBlock(blockIndex);
+  if (spec.mode === 'default') {
+    await wizard.getTimeWindowDefaultModeRadioForBlock(blockIndex).click();
+    await wizard.waitForLoad();
+    return;
+  }
   if (spec.mode === 'active') {
     await wizard.getTimeWindowActiveModeRadioForBlock(blockIndex).click();
   } else if (spec.mode === 'blocked') {
     await wizard.getTimeWindowBlockedModeRadioForBlock(blockIndex).click();
+  }
+  // Mode selection expands the time-window accordion and enables the timezone control (`isDisabled={!mode}`).
+  if (spec.timezone !== undefined) {
+    await wizard.pickTimeWindowTimezoneMenuOptionForRepositoryBlock(blockIndex, spec.timezone);
   }
   if (spec.weekdays) {
     for (const [day, checked] of Object.entries(spec.weekdays)) {
@@ -440,9 +405,8 @@ async function applyPerBlockOptions(
  *
  * Covers for each repository block:
  * - **Channel:** Git / Helm / object storage (`data-testid` fields)
- * - **Select clusters for application deployment** — when {@link CreateSubscriptionOptions.fillEntireWizard} is `true`
- *   (default), uses {@link DEFAULT_FULL_WIZARD_PER_BLOCK} (cluster set + label menu picks); override via {@link CreateSubscriptionOptions.perBlock}.
- * - **Settings: Specify application behavior** / time window
+ * - **Cluster deployment / time window / automation** — only from {@link CreateSubscriptionOptions.perBlock} (e2e-spec-data YAML).
+ * - **Settings: Specify application behavior** / time window (timezone **Choose a location**, weekdays, ranges)
  * - **Configure automation for prehook and posthook**
  *
  * Placement **Cluster sets** / label **Label** and **Value** use menu picks ({@link SubscriptionApplicationCreateWizardPage.pickOpenMenuItemByExactLabel}).
@@ -452,15 +416,13 @@ export async function createSubscription(
   wizard: SubscriptionApplicationCreateWizardPage,
   options: CreateSubscriptionOptions
 ): Promise<void> {
-  const {
-    applicationName,
-    namespace,
-    repositories = defaultRepositories,
-    perBlock,
-    fillEntireWizard = true,
-    ensureFormMode = true,
-    submit = true,
-  } = options;
+  const { applicationName, namespace, repositories, perBlock, ensureFormMode = true, submit = true } = options;
+
+  if (!repositories?.length) {
+    throw new Error(
+      'createSubscription: `repositories` must be a non-empty array (define under e2e-spec-data blocks / subscription).'
+    );
+  }
 
   if (ensureFormMode) {
     await wizard.collapseYamlEditor();
@@ -494,11 +456,7 @@ export async function createSubscription(
 
     await wizard.waitForLoad();
 
-    const mergedPerBlock =
-      fillEntireWizard === true
-        ? mergePerBlockSpec(DEFAULT_FULL_WIZARD_PER_BLOCK, perBlock?.[blockIndex])
-        : perBlock?.[blockIndex];
-    await applyPerBlockOptions(wizard, blockIndex, mergedPerBlock);
+    await applyPerBlockOptions(wizard, blockIndex, perBlock?.[blockIndex]);
   }
 
   if (submit) {

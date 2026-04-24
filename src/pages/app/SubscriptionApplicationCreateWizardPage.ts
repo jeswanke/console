@@ -1043,6 +1043,17 @@ export class SubscriptionApplicationCreateWizardPage extends BasePage {
     return this.getTimeWindowBlockedModeRadioForBlock(0);
   }
 
+  getTimeWindowDefaultModeRadio(): Locator {
+    return this.getTimeWindowDefaultModeRadioForBlock(0);
+  }
+
+  /**
+   * **Default** time window (no schedule — deploy anytime). Additional blocks: `default-mode-timeWindowgrpN`.
+   */
+  getTimeWindowDefaultModeRadioForBlock(blockIndex: number): Locator {
+    return this.byId(subscriptionTimeWindowModeRadioIds(blockIndex).defaultId);
+  }
+
   /** **Active** interval mode for subscription block `blockIndex`. */
   getTimeWindowActiveModeRadioForBlock(blockIndex: number): Locator {
     return this.byId(subscriptionTimeWindowModeRadioIds(blockIndex).activeId);
@@ -1078,6 +1089,29 @@ export class SubscriptionApplicationCreateWizardPage extends BasePage {
   /** Timezone subsection. */
   getTimeWindowTimezoneSection(): Locator {
     return this.page.locator(APP_SUBSCRIPTION_CREATE_WIZARD.timeWindow.timezoneSectionSelector);
+  }
+
+  /**
+   * **Select timezone** / **Choose a location** typeahead inside repository block `blockIndex` (under
+   * `.config-timezone-section`). Requires active or blocked time-window mode so the control is enabled.
+   */
+  getTimeWindowTimezoneComboboxForRepositoryBlock(blockIndex: number): Locator {
+    return this.getRepositoryBlockContainer(blockIndex)
+      .locator(APP_SUBSCRIPTION_CREATE_WIZARD.timeWindow.timezoneSectionSelector)
+      .getByRole('combobox', { name: APP_SUBSCRIPTION_CREATE_WIZARD.timeWindow.timezoneComboboxNameRe });
+  }
+
+  /** Opens the timezone typeahead, filters by `ianaTimezone`, and picks the matching menu row. */
+  async pickTimeWindowTimezoneMenuOptionForRepositoryBlock(
+    blockIndex: number,
+    ianaTimezone: string
+  ): Promise<void> {
+    const tz = ianaTimezone.trim();
+    const cb = this.getTimeWindowTimezoneComboboxForRepositoryBlock(blockIndex);
+    await cb.click();
+    await cb.fill(tz);
+    await this.pickOpenMenuItemByExactLabel(tz);
+    await this.waitForLoad();
   }
 
   /**

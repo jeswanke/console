@@ -7,7 +7,6 @@
 
 export {
   createSubscription,
-  DEFAULT_FULL_WIZARD_PER_BLOCK,
   type AutomationSpec,
   type ClusterDeploymentSpec,
   type ClusterLabelSelectorRowSpec,

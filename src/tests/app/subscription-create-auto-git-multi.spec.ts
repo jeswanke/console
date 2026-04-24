@@ -1,6 +1,6 @@
 /**
  * End-to-end: drive subscription create wizard using e2e-spec-data `auto_git_multi` + createSubscription.
- * Requires authenticated hub (chromium project + setup). Does not submit (scenario uses submit: false).
+ * Scenario extends `subscription_submit` — wizard clicks **Create** and should leave the create URL on success.
  */
 import path from 'path';
 import {
@@ -18,28 +18,21 @@ test.describe('Subscription create — auto_git_multi from e2e-spec-data', { tag
     clearE2eSpecDataCache();
   });
 
-  test('createSubscription fills wizard from auto_git_multi YAML (dry run)', async ({
+  test('createSubscription fills auto_git_multi YAML and submits', async ({
+    page,
     applicationListPage,
     subscriptionApplicationCreateWizardPage,
   }) => {
+    test.setTimeout(180_000);
     const resolved = getE2eScenario('auto_git_multi', E2E_SPEC_DATA_DIR);
     const options = getSubscriptionDomainPayload(resolved);
+    expect(options.submit).toBe(true);
 
     await subscriptionApplicationCreateWizardPage.openFromApplicationsList(applicationListPage);
     await createSubscription(subscriptionApplicationCreateWizardPage, options);
 
-    await expect(subscriptionApplicationCreateWizardPage.getApplicationNameInput()).toHaveValue(
-      options.applicationName
-    );
-
-    await expect(
-      subscriptionApplicationCreateWizardPage.getGitPathInputInRepositoryBlock(0)
-    ).toHaveValue('helloworld');
-    await expect(
-      subscriptionApplicationCreateWizardPage.getGitPathInputInRepositoryBlock(1)
-    ).toHaveValue('mortgage');
-
-    await expect(subscriptionApplicationCreateWizardPage.getRepositoryBlockContainer(1)).toBeVisible();
-    await expect(subscriptionApplicationCreateWizardPage.getCreateButton()).toBeVisible();
+    await expect(page).not.toHaveURL(/\/multicloud\/applications\/create\/subscription/, {
+      timeout: 120_000,
+    });
   });
 });
