@@ -1,9 +1,7 @@
 import type { E2eSpecData } from './schema';
 import { e2eSpecDataSchema } from './schema';
 
-/**
- * Merge multiple parsed YAML documents (later files override duplicate keys in fragments, profiles, scenarios, matrix).
- */
+/** Later files override duplicate keys in `fragments`, `profiles`, `scenarios`, and `matrix`. */
 export function mergeE2eSpecData(parts: E2eSpecData[]): E2eSpecData {
   if (parts.length === 0) {
     return e2eSpecDataSchema.parse({});

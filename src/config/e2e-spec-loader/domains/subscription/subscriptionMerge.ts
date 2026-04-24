@@ -1,13 +1,6 @@
-/**
- * Merge rules for **subscription** domain payloads (CreateSubscriptionOptions-shaped layers).
- * Matches `mergePerBlockSpec` behavior in `subscription-create.ts` for `perBlock` arrays.
- */
+import { isPlainObject } from '../../isPlainObject';
 
-export function isPlainObject(v: unknown): v is Record<string, unknown> {
-  return v !== null && typeof v === 'object' && !Array.isArray(v);
-}
-
-/** One row of `perBlock` — shallow merge per section, weekdays merged. */
+/** One `perBlock` entry: shallow `clusterDeployment` / `timeWindow` / `automation`; `weekdays` merged. */
 export function mergePerBlockLayers(
   base: Record<string, unknown> | undefined,
   override: Record<string, unknown> | undefined
@@ -47,11 +40,7 @@ export function mergePerBlockArrays(base: unknown[] | undefined, override: unkno
   return out;
 }
 
-/**
- * Merge subscription-shaped layers (fragments → profiles → scenario).
- * `repositories` is **replaced** when the top layer defines it.
- * `perBlock` arrays are merged index-wise via {@link mergePerBlockArrays}.
- */
+/** Last layer replaces `repositories`; `perBlock` merged by index; nested plain objects recurse. */
 export function mergeSubscriptionLayers(
   ...layers: Array<Record<string, unknown> | undefined>
 ): Record<string, unknown> {

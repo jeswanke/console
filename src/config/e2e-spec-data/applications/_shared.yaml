@@ -1,20 +1,20 @@
-# Shared fragments for ACM **Applications** subscription e2e (reusable channel / placement blocks).
-# Default sample Git URL is defined once below (`&stolostron-app-lifecycle-samples-git`); not wired to TS constants.
-# Merged with `subscription.yaml` in sorted order (`_shared` before `subscription`).
-# `perBlock` fragments merge by index — compose time window + cluster presets in any order.
+# Shared subscription e2e fragments (merged before `subscription.yaml`; load order is sorted filenames).
+# Sample Git URL: anchor `&stolostron-app-lifecycle-samples-git` below (same string as `constants/sampleRepos.ts`).
+# Scenarios reference fragments via `blocks[].use`; `perBlock` / `clusterResources` merge by index across layers.
+# Wizard fields: top-level `repositories` and `perBlock`. Post-create checks: `specDomains.applicationExpectations.clusterResources`.
 
 version: 1
 
 fragments:
-  git_application_lifecycle_samples:
+  repo_samples_default:
     repositories:
       - kind: git
         url: &stolostron-app-lifecycle-samples-git https://github.com/stolostron/application-lifecycle-samples.git
         branch: main
         path: helloworld
 
-  # Full channel list for auto-git-multi (repositories are replaced per layer — keep both repos in one fragment).
-  git_repos_auto_git_multi:
+  # Both sample-repo paths in one blob (e.g. anchor tests). Paths align with `git_helloworld` + `git_mortgage`.
+  repo_samples_dual:
     repositories:
       - kind: git
         url: *stolostron-app-lifecycle-samples-git
@@ -27,10 +27,65 @@ fragments:
         branch: main
         path: mortgage
 
-  per_block_tw_active_mf_9_to_5:
+  # `kind` + `path` for the sole Git repo in this blob — wizard payload + verification in one fragment.
+  git_helloworld:
+    # Wizard / subscription-create (CreateSubscriptionOptions–shaped)
+    repositories:
+      - kind: git
+        url: *stolostron-app-lifecycle-samples-git
+        branch: main
+        path: helloworld
+        reconcileOption: merge
+        reconcileRate: medium
+    # Post-create cluster inventory (Details / topology assertions)
+    specDomains:
+      applicationExpectations:
+        clusterResources:
+          - # Route/Service/Deployment names from helloworld/ manifests. RS/Pod: stable deployment stem (suffixes from `oc get` vary per rollout).
+            - kind: Route
+              name: helloworld-app-route
+            - kind: Deployment
+              name: helloworld-app-deploy
+            - kind: Service
+              name: helloworld-app-svc
+            - kind: ReplicaSet
+              name: helloworld-app-deploy
+            - kind: Pod
+              name: helloworld-app-deploy
+
+  # Same naming pattern as `git_helloworld`: `kind` + `path` for this stream’s repo + expectations.
+  git_mortgage:
+    # Wizard / subscription-create
+    repositories:
+      - kind: git
+        url: *stolostron-app-lifecycle-samples-git
+        branch: main
+        path: mortgage
+    # Post-create cluster inventory
+    specDomains:
+      applicationExpectations:
+        clusterResources:
+          - # Deployment/Service from mortgage/ manifests. RS/Pod: deployment stem only (rollout suffixes omitted).
+            - kind: Deployment
+              name: mortgage-app-deploy
+            - kind: Service
+              name: mortgage-app-svc
+            - kind: ReplicaSet
+              name: mortgage-app-deploy
+            - kind: Pod
+              name: mortgage-app-deploy
+
+  # Three wizard modes: `default` (no schedule), `active` (deploy in windows), `blocked` (suppress in windows).
+  timewindow_default:
+    perBlock:
+      - timeWindow:
+          mode: default
+
+  timewindow_workweek_toronto:
     perBlock:
       - timeWindow:
           mode: active
+          timezone: America/Toronto
           weekdays:
             Monday: true
             Tuesday: true
@@ -41,7 +96,29 @@ fragments:
             - start: '09:00 AM'
               end: '05:00 PM'
 
-  per_block_cd_label_global_name_local:
+  timewindow_blocked_workweek_toronto:
+    perBlock:
+      - timeWindow:
+          mode: blocked
+          timezone: America/Toronto
+          weekdays:
+            Monday: true
+            Tuesday: true
+            Wednesday: true
+            Thursday: true
+            Friday: true
+          ranges:
+            - start: '09:00 AM'
+              end: '05:00 PM'
+
+  # Ansible credential filter (single-slot `perBlock[0]`; reusable in any `blocks[].use`).
+  automation_ansible:
+    perBlock:
+      - automation:
+          credentialTypeFilter: Ansible
+
+  # Label-based placement to local-cluster (reusable in any `blocks[].use`; single `perBlock[0]` slice).
+  placement_label_local:
     perBlock:
       - clusterDeployment:
           useExistingPlacementRule: false
@@ -53,17 +130,3 @@ fragments:
           localClusterOnly: false
           onlineClustersOnly: false
 
-  # Second channel: target hub/local via label selector (same as legacy Cypress local + no matchingLabel).
-  # The console exposes placement as radios + label rows — not a separate "local only" checkbox when label mode is on.
-  per_block_cd_local_only_second:
-    perBlock:
-      - {}
-      - clusterDeployment:
-          useExistingPlacementRule: false
-          useClusterLabelSelector: true
-          clusterSet: global
-          labelSelectorRows:
-            - labelName: name
-              labelValue: local-cluster
-          localClusterOnly: false
-          onlineClustersOnly: false

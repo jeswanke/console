@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { parse as parseYaml } from 'yaml';
 import type { CreateSubscriptionOptions } from '@lib/subscription-create';
+import type { ApplicationExpectationsPayload } from './domains/application-expectations/applicationExpectationsSchema';
 import { e2eSpecDataSchema } from './schema';
 import { mergeE2eSpecData } from './specFileMerge';
 import type { E2eSpecData } from './schema';
@@ -9,21 +10,18 @@ import { resolveScenarioDomains } from './domains/resolveScenarioDomains';
 
 export interface ResolvedE2eScenario {
   readonly scenarioId: string;
-  /** When `false`, excluded from “all enabled” listings. */
+  /** `false` omits the scenario from `getTestDataForE2e('')`. */
   readonly enabled: boolean;
-  /** Polarion ids: explicit `tests` on scenario plus any matrix keys pointing here. */
+  /** Polarion ids from `scenario.tests` plus `matrix` entries targeting this scenario. */
   readonly testIds: string[];
-  /**
-   * Resolved, validated payloads keyed by domain name (e.g. `subscription` → {@link CreateSubscriptionOptions}).
-   * Add resolvers in `domains/resolveScenarioDomains.ts` for new areas.
-   */
-  readonly domains: Record<string, unknown>;
+  /** Resolved domains (`subscription`, `applicationExpectations`, …). */
+  readonly specDomains: Record<string, unknown>;
 }
 
 let cachedSourcePath: string | undefined;
 let cachedParsed: E2eSpecData | undefined;
 
-/** Default directory: `src/config/e2e-spec-data/`. Override with `E2E_SPECS_PATH` (file or directory). */
+/** Default `src/config/e2e-spec-data/`; override with `E2E_SPECS_PATH` (file or directory). */
 function defaultSpecDataPath(): string {
   return path.join(__dirname, '..', 'e2e-spec-data');
 }
@@ -44,10 +42,7 @@ function isFile(p: string): boolean {
   }
 }
 
-/**
- * Stable load order: `applications/*.yaml` (sorted; typically `_shared.yaml` then `subscription.yaml`) → optional `matrix.yaml`.
- * `matrix.yaml` adds `spec.matrix` (testcase id → scenario id); omit it if you only use `scenario.tests`.
- */
+/** Sorted `applications/*.yaml`, then `matrix.yaml` if it exists. */
 export function listE2eSpecYamlFiles(dir: string): string[] {
   const out: string[] = [];
   const appsDir = path.join(dir, 'applications');
@@ -100,10 +95,7 @@ function resolveE2eSpecDataSource(configPath?: string): { source: string; load: 
   );
 }
 
-/**
- * Read and validate merged e2e YAML. Default: `e2e-spec-data` directory (see {@link listE2eSpecYamlFiles}).
- * Set `E2E_SPECS_PATH` to a single `.yaml` file or a directory with the same layout.
- */
+/** Parsed merged spec; cached per source path. `E2E_SPECS_PATH` or `configPath` selects file vs directory (see {@link listE2eSpecYamlFiles}). */
 export function loadE2eSpecData(configPath?: string): E2eSpecData {
   const { source, load } = resolveE2eSpecDataSource(configPath);
   if (cachedParsed && cachedSourcePath === source) {
@@ -115,7 +107,7 @@ export function loadE2eSpecData(configPath?: string): E2eSpecData {
   return parsed;
 }
 
-/** Clear cache (e.g. tests that swap config files). */
+/** Clears the in-memory spec cache. */
 export function clearE2eSpecDataCache(): void {
   cachedSourcePath = undefined;
   cachedParsed = undefined;
@@ -139,7 +131,7 @@ function toResolvedScenario(spec: E2eSpecData, scenarioId: string): ResolvedE2eS
   }
   const { enabled = true, tests = [] } = scenarioBody;
 
-  const domains = resolveScenarioDomains(spec, scenarioId, scenarioBody);
+  const specDomains = resolveScenarioDomains(spec, scenarioId, scenarioBody);
 
   const matrixIds = collectMatrixTestIdsForScenario(spec, scenarioId);
   const testIds = [...new Set([...tests, ...matrixIds])].sort();
@@ -148,15 +140,13 @@ function toResolvedScenario(spec: E2eSpecData, scenarioId: string): ResolvedE2eS
     scenarioId,
     enabled,
     testIds,
-    domains,
+    specDomains,
   };
 }
 
-/**
- * Convenience: subscription domain payload (throws if missing or scenario did not resolve subscription).
- */
+/** Throws if `specDomains.subscription` is missing. */
 export function getSubscriptionDomainPayload(resolved: ResolvedE2eScenario): CreateSubscriptionOptions {
-  const s = resolved.domains.subscription;
+  const s = resolved.specDomains.subscription;
   if (s === undefined) {
     throw new Error(
       `e2e-spec-data: scenario "${resolved.scenarioId}" has no subscription domain payload`
@@ -165,9 +155,19 @@ export function getSubscriptionDomainPayload(resolved: ResolvedE2eScenario): Cre
   return s as CreateSubscriptionOptions;
 }
 
-/**
- * Single resolved scenario by id (throws if missing).
- */
+/** Throws if `specDomains.applicationExpectations` is missing. */
+export function getApplicationExpectationsPayload(
+  resolved: ResolvedE2eScenario
+): ApplicationExpectationsPayload {
+  const d = resolved.specDomains.applicationExpectations;
+  if (d === undefined) {
+    throw new Error(
+      `e2e-spec-data: scenario "${resolved.scenarioId}" has no applicationExpectations domain payload`
+    );
+  }
+  return d as unknown as ApplicationExpectationsPayload;
+}
+
 export function getE2eScenario(scenarioId: string, configPath?: string): ResolvedE2eScenario {
   const spec = loadE2eSpecData(configPath);
   if (!spec.scenarios[scenarioId]) {
@@ -177,10 +177,8 @@ export function getE2eScenario(scenarioId: string, configPath?: string): Resolve
 }
 
 /**
- * Polarion / testcase id → scenarios (Cypress `getTestData` style).
- *
- * - `testId === ''` — every **enabled** scenario that resolves without error.
- * - Otherwise — scenarios where `matrix[testId]` matches, or `scenario.tests` includes `testId`.
+ * `testId === ''`: all enabled scenarios that resolve (failures skipped). Else: `matrix[testId]` or scenarios whose `tests` contains `testId`.
+ * With `E2E_SPEC_DEBUG` set, logs errors for skipped scenarios when `testId === ''`.
  */
 export function getTestDataForE2e(testId: string, configPath?: string): ResolvedE2eScenario[] {
   const spec = loadE2eSpecData(configPath);
@@ -193,8 +191,10 @@ export function getTestDataForE2e(testId: string, configPath?: string): Resolved
       if (body.enabled === false) continue;
       try {
         out.push(toResolvedScenario(spec, id));
-      } catch {
-        /* skip invalid */
+      } catch (e) {
+        if (process.env.E2E_SPEC_DEBUG) {
+          console.error(`e2e-spec-data: skipped scenario "${id}"`, e);
+        }
       }
     }
     return out;

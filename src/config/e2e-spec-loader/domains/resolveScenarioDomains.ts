@@ -1,20 +1,24 @@
 import type { E2eSpecData, ScenarioEntry } from '../schema';
+import { resolveApplicationExpectationsDomain } from './application-expectations/resolveApplicationExpectationsDomain';
 import { resolveSubscriptionDomain } from './subscription/resolveSubscriptionDomain';
 
-/**
- * Run all registered domain resolvers. Add new resolvers here for additional areas (e.g. Argo).
- */
+/** Resolves `subscription` and `applicationExpectations` into `specDomains`. */
 export function resolveScenarioDomains(
   spec: E2eSpecData,
   scenarioId: string,
   scenarioEntry: ScenarioEntry
 ): Record<string, unknown> {
-  const domains: Record<string, unknown> = {};
+  const specDomains: Record<string, unknown> = {};
 
   const subscription = resolveSubscriptionDomain(spec, scenarioId, scenarioEntry);
   if (subscription !== undefined) {
-    domains.subscription = subscription;
+    specDomains.subscription = subscription;
   }
 
-  return domains;
+  const applicationExpectations = resolveApplicationExpectationsDomain(spec, scenarioId, scenarioEntry);
+  if (applicationExpectations !== undefined) {
+    specDomains.applicationExpectations = applicationExpectations;
+  }
+
+  return specDomains;
 }

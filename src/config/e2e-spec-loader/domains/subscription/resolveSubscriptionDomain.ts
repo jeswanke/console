@@ -2,52 +2,29 @@ import type { CreateSubscriptionOptions } from '@lib/subscription-create';
 import type { E2eSpecData, ScenarioEntry } from '../../schema';
 import { mergeSubscriptionLayers } from './subscriptionMerge';
 import { subscriptionDomainPayloadSchema } from './subscriptionSchema';
+import { extractSubscriptionLayer } from './extractSubscriptionLayer';
+import {
+  buildComposerSyntheticSubscriptionLayer,
+  scenarioUsesBlocks,
+} from '../blocks/expandComposer';
 
-/**
- * Pull subscription-relevant fields from a fragment or profile blob.
- * - Nested: `domains.subscription` or top-level `subscription`
- * - Legacy: entire blob is the subscription slice (e.g. `{ repositories: [...] }` only)
- */
-export function extractSubscriptionLayer(blob: Record<string, unknown>): Record<string, unknown> {
-  const domains = blob.domains;
-  if (isPlainObject(domains) && isPlainObject(domains.subscription)) {
-    return { ...domains.subscription };
-  }
-  if (isPlainObject(blob.subscription)) {
-    return { ...blob.subscription };
-  }
-  return { ...blob };
-}
-
-function isPlainObject(v: unknown): v is Record<string, unknown> {
-  return v !== null && typeof v === 'object' && !Array.isArray(v);
-}
-
-/**
- * Merge fragments → profiles → scenario `domains.subscription` into one subscription payload and validate.
- */
+/** Merges composer blocks, profiles, and `specDomains.subscription`; validates merged payload. */
 export function resolveSubscriptionDomain(
   spec: E2eSpecData,
   scenarioId: string,
   scenarioEntry: ScenarioEntry
 ): CreateSubscriptionOptions | undefined {
-  const fragments = spec.fragments ?? {};
   const profiles = spec.profiles ?? {};
 
-  const fragNames = scenarioEntry.fragments ?? [];
   const profileNames = scenarioEntry.extends ?? [];
-  const scenarioOverlay = scenarioEntry.domains?.subscription ?? {};
+  const scenarioOverlay = scenarioEntry.specDomains?.subscription ?? {};
 
   const layers: Array<Record<string, unknown> | undefined> = [];
 
-  for (const name of fragNames) {
-    const f = fragments[name];
-    if (!f) {
-      throw new Error(
-        `e2e-spec-data: unknown fragment "${name}" referenced by scenario "${scenarioId}"`
-      );
-    }
-    layers.push(extractSubscriptionLayer(f));
+  if (scenarioUsesBlocks(scenarioEntry)) {
+    layers.push(
+      buildComposerSyntheticSubscriptionLayer(spec, scenarioId, scenarioEntry.blocks!)
+    );
   }
   for (const name of profileNames) {
     const pr = profiles[name];
@@ -68,5 +45,5 @@ export function resolveSubscriptionDomain(
   if (!parsed.success) {
     return undefined;
   }
-  return parsed.data as CreateSubscriptionOptions;
+  return parsed.data as unknown as CreateSubscriptionOptions;
 }

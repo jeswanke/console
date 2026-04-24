@@ -36,10 +36,10 @@ export function getTestConfig(): TestConfig {
 
 export {
   clearE2eSpecDataCache,
+  getApplicationExpectationsPayload,
   getE2eScenario,
   getSubscriptionDomainPayload,
   getTestDataForE2e,
-  listE2eSpecYamlFiles,
   loadE2eSpecData,
   type ResolvedE2eScenario,
 } from './e2e-spec-loader';
