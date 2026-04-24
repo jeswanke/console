@@ -107,7 +107,8 @@ test.describe('e2e-spec-data YAML processing', () => {
 
     const pb = sub.perBlock as Array<Record<string, unknown>> | undefined;
     expect(pb?.[0]?.timeWindow).toBeDefined();
-    expect(pb?.[0]?.timeWindow).toMatchObject({ timezone: 'America/Toronto' });
+    expect(pb?.[0]?.timeWindow).toMatchObject({ mode: 'default' });
+    expect(pb?.[1]?.timeWindow).toMatchObject({ mode: 'default' });
     expect(pb?.[0]?.automation).toMatchObject({ credentialTypeFilter: 'Ansible' });
     expect(pb?.[0]?.clusterDeployment).toMatchObject({
       useClusterLabelSelector: true,
