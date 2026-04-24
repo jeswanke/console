@@ -33,24 +33,80 @@ export default defineConfig({
     ignoreHTTPSErrors: true,
   },
 
-  /* Configure projects */
+  /*
+   * Projects — each test project uses testMatch to own its directories.
+   *
+   * Auth setup:
+   *   setup       — admin login (always runs)
+   *   rbac-setup  — RBAC user login (only runs when a dependent project has matching tests)
+   *
+   * Test projects (admin only):
+   *   cluster     — src/tests/cluster/
+   *   app         — src/tests/app/
+   *
+   * Test projects (admin + RBAC users):
+   *   fg-rbac     — src/tests/fg-rbac/
+   *
+   * Adding a new domain:
+   *   1. Add a project with testMatch: /your-domain/
+   *   2. If it needs RBAC users: add dependencies: ['setup', 'rbac-setup']
+   *      and add users to src/config/presets.ts with domains: ['your-domain']
+   *   3. If admin-only: add dependencies: ['setup']
+   *
+   * CLI examples:
+   *   npx playwright test --project=cluster           → setup → cluster tests
+   *   npx playwright test --project=fg-rbac           → setup + rbac-setup → fg-rbac tests
+   *   npx playwright test --project=cluster --project=app  → setup → cluster + app tests
+   *   RBAC_DOMAIN=fg-rbac npx playwright test         → rbac-setup only authenticates fg-rbac users
+   */
   projects: [
-    // Setup project - authenticates once and saves state
-    { 
-      name: 'setup', 
-      testMatch: /.*\.setup\.ts/,
+    {
+      name: 'setup',
+      testMatch: /\/auth\.setup\.ts/,
+      timeout: 120_000,
     },
 
-    // Main test project - uses authenticated state
     {
-      name: 'chromium',
+      name: 'rbac-setup',
+      testMatch: /rbac-auth\.setup\.ts/,
+      timeout: 120_000,
+    },
+
+    // -- Admin-only test projects --
+
+    {
+      name: 'cluster',
       use: {
         ...devices['Desktop Chrome'],
         viewport: { width: 1920, height: 1080 },
-        // Use the authenticated state saved by setup
-        storageState: '.auth/user.json',
+        storageState: '.auth/admin.json',
       },
       dependencies: ['setup'],
+      testMatch: /cluster/,
+    },
+
+    {
+      name: 'app',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1920, height: 1080 },
+        storageState: '.auth/admin.json',
+      },
+      dependencies: ['setup'],
+      testMatch: /app/,
+    },
+
+    // -- RBAC test projects --
+
+    {
+      name: 'fg-rbac',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1920, height: 1080 },
+        storageState: '.auth/admin.json',
+      },
+      dependencies: ['setup', 'rbac-setup'],
+      testMatch: /fg-rbac/,
     },
   ],
 });
