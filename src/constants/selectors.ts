@@ -58,7 +58,17 @@ export const SELECTORS = {
     resourceToggle: {
       subscriptions: '#subscriptions',
       channels: '#channels',
-      placementRules: '#placementrules',
+    },
+    /** Application details → Topology tab toolbar (zoom / pan); ids from ACM console topology view */
+    topologyToolbar: {
+      zoomIn: '#zoom-in',
+      zoomOut: '#zoom-out',
+      fitToScreen: '#fit-to-screen',
+      resetView: '#reset-view',
+    },
+    /** Topology graph: example channel node `id` when console emits it (see `APP_APPLICATION_TOPOLOGY.graphElementIds`). */
+    topologyGraph: {
+      channelCombo: '#comboChannel',
     },
   },
 

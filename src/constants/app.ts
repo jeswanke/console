@@ -2,8 +2,8 @@
  * Application Lifecycle (ALC) constants.
  *
  * Routes, toolbar IDs, table column labels, and UI strings for the
- * Applications list and related pages. Sourced from the Applications
- * main page DOM (multicloud/applications).
+ * Applications list, **application details** (Topology / Details), and related UI. Sourced from live hub DOM /
+ * Playwriter snapshots (`multicloud/applications`, `multicloud/applications/details/...`).
  */
 
 // =============================================================================
@@ -14,9 +14,84 @@ export const APP_ROUTES = {
   list: '/multicloud/applications',
   /** Advanced configuration tab (secondary nav) */
   advanced: '/multicloud/applications/advanced',
-  /** Application details: namespace, name; query params apiVersion, cluster come from UI */
+  /**
+   * Application details **base** path (no trailing tab segment). Overview name links may use this or a tabbed URL.
+   */
   details: (namespace: string, name: string) =>
     `/multicloud/applications/details/${namespace}/${name}`,
+  /**
+   * Application details with **tab** path segment (`topology`, `details`, …). Post–Create redirect observed:
+   * `/multicloud/applications/details/{namespace}/{name}/details` (qe6 hub, subscription app).
+   */
+  detailsTab: (namespace: string, name: string, tabSlug: AppApplicationDetailsTabSlug) =>
+    `/multicloud/applications/details/${namespace}/${name}/${tabSlug}`,
+} as const;
+
+/** URL path segment for {@link APP_ROUTES.detailsTab} (lowercase, matches console router). */
+export type AppApplicationDetailsTabSlug =
+  (typeof APP_APPLICATION_DETAILS.tabs)[keyof typeof APP_APPLICATION_DETAILS.tabs]['slug'];
+
+/**
+ * Single-application console view (`/multicloud/applications/details/...`).
+ * Tab labels, description-list terms, and slugs captured via Playwriter (subscription app **test** / **test-ns**, en).
+ */
+export const APP_APPLICATION_DETAILS = {
+  tabs: {
+    topology: { label: 'Topology', slug: 'topology' as const },
+    details: { label: 'Details', slug: 'details' as const },
+  },
+  /** `role="term"` labels on the Details tab (PatternFly DescriptionList). */
+  descriptionTerms: {
+    name: 'Name',
+    type: 'Type',
+    namespace: 'Namespace',
+    clusters: 'Clusters',
+    repository: 'Repository',
+    clusterResourceStatus: 'Cluster resource status',
+    created: 'Created',
+    lastSyncRequested: 'Last sync requested',
+  },
+  /** Subscription row value observed for **Type** on Details. */
+  typeValues: {
+    subscription: 'Subscription',
+  },
+  /** Breadcrumb link back to the Applications list. */
+  breadcrumb: {
+    applications: 'Applications',
+  },
+} as const;
+
+export type AppApplicationDetailsTabKey = keyof typeof APP_APPLICATION_DETAILS.tabs;
+
+/**
+ * Application **Topology** tab: graph chrome (zoom / fit / reset), legend help, secondary tabs wrapper.
+ * Captured from live hub (`…/details/{namespace}/{name}/topology`, en).
+ *
+ * **Graph nodes** (subscriptions, channels, deployments, …) use **app-generated** labels and ids; keep those
+ * out of this object except where the console exposes a **stable element id** on a recurring shape (see
+ * {@link APP_APPLICATION_TOPOLOGY.graphElementIds}). Prefer {@link ApplicationDetailsPage} `getTopologyNodeButtonByName`
+ * and tabpanel scoping for assertions.
+ */
+export const APP_APPLICATION_TOPOLOGY = {
+  /** Topology / Details tab list lives in this labelled region (PF). */
+  secondaryNavAccessibleName: 'Secondary page navigation tabs',
+  /** Topology canvas toolbar button `id`s (stable on observed hub). */
+  controlIds: {
+    zoomIn: 'zoom-in',
+    zoomOut: 'zoom-out',
+    fitToScreen: 'fit-to-screen',
+    resetView: 'reset-view',
+  },
+  /** Opens topology legend / how-to-read guidance. */
+  howToReadTopologyButtonName: 'How to read topology',
+  /**
+   * Stable **`id`s on topology graph elements** when present (subscription app graph, qe6). Other nodes may be
+   * text-only inside SVG — use role + name from your scenario, not hard-coded constants.
+   */
+  graphElementIds: {
+    /** Channel / subscription combo control rendered as a `button` in the graph (observed id). */
+    channelCombo: 'comboChannel',
+  },
 } as const;
 
 // =============================================================================
@@ -212,8 +287,8 @@ export const APP_FILTER = {
 } as const;
 
 // =============================================================================
-// Advanced Configuration tab: Subscriptions, Channels, Placement rules (three toggles).
-// Standalone Placements list removed from this page — use Infrastructure → Clusters → Placements (deprecation notice).
+// Advanced Configuration tab: **Subscriptions** and **Channels** toggles only (`#subscriptions`, `#channels`).
+// Placements and Placement rules UIs were removed from this page (see deprecation; use Infrastructure / app views).
 // =============================================================================
 
 /** Terminology card and resource-type toggle (Advanced configuration tab only). */
@@ -235,7 +310,6 @@ export const APP_ADVANCED_CONFIG = {
     termTitles: {
       subscriptions: 'Subscriptions',
       channels: 'Channels',
-      placementRules: 'Placement rules',
     },
     /** Deprecated label shown next to some terms */
     deprecatedLabel: 'Deprecated',
@@ -247,12 +321,10 @@ export const APP_ADVANCED_CONFIG = {
     ids: {
       subscriptions: 'subscriptions',
       channels: 'channels',
-      placementRules: 'placementrules',
     },
     labels: {
       subscriptions: 'Subscriptions',
       channels: 'Channels',
-      placementRules: 'Placement rules',
     },
   },
   /** Same toolbar search/export/pagination ids as Overview; table uses APP_TABLE. */
@@ -267,7 +339,6 @@ export const APP_ADVANCED_CONFIG = {
     titlePatterns: {
       subscriptions: /don't have any subscriptions/i,
       channels: /don't have any channels/i,
-      placementRules: /don't have any placement rules/i,
     },
   },
 } as const;
@@ -279,7 +350,6 @@ export const APP_ADVANCED_OC_RESOURCES: Record<
 > = {
   subscriptions: 'subscriptions.apps.open-cluster-management.io',
   channels: 'channels.apps.open-cluster-management.io',
-  placementRules: 'placementrules.apps.open-cluster-management.io',
 };
 
 /** Advanced config table columns – Subscriptions view. */
@@ -300,15 +370,6 @@ export const APP_ADVANCED_TABLE_COLUMNS_CHANNELS = {
   type: 'Type',
   subscriptions: 'Subscriptions',
   clusters: 'Clusters',
-  created: 'Created',
-} as const;
-
-/** Advanced config table columns – Placement rules view (adds Replicas). */
-export const APP_ADVANCED_TABLE_COLUMNS_PLACEMENT_RULES = {
-  name: 'Name',
-  namespace: 'Namespace',
-  clusters: 'Clusters',
-  replicas: 'Replicas',
   created: 'Created',
 } as const;
 
@@ -398,6 +459,8 @@ export const APP_SUBSCRIPTION_CREATE_WIZARD = {
    * (see {@link subscriptionTimeWindowModeRadioIds}).
    */
   timeWindow: {
+    /** No scheduling restriction — deploy anytime; hides timezone / weekdays / ranges. */
+    defaultModeId: 'default-mode-timeWindow',
     activeModeId: 'active-mode-timeWindow',
     blockedModeId: 'blocked-mode-timeWindow',
     /** Weekday checkbox id pattern: `{Weekday}-timeWindow` (e.g. `Monday-timeWindow`). */
@@ -414,6 +477,10 @@ export const APP_SUBSCRIPTION_CREATE_WIZARD = {
     ] as const,
     /** Timezone picker lives under this section. */
     timezoneSectionSelector: '.config-timezone-section',
+    /**
+     * PF typeahead for IANA zone (`AcmSelectBase`: `aria-label` **Select timezone**, placeholder **Choose a location**).
+     */
+    timezoneComboboxNameRe: /select timezone|choose a location/i,
     /** Adds another start/end interval row (`start-time-n-timeWindow…`). */
     addAnotherTimeRangeButtonAccessibleName: 'Add another time range',
   },
@@ -678,17 +745,20 @@ export type AppSubscriptionTimeWindowWeekday =
  * Active / blocked mode radio **`#id`** for subscription block `blockIndex` (additional blocks: `…grpN` suffix).
  */
 export function subscriptionTimeWindowModeRadioIds(blockIndex: number): {
+  defaultId: string;
   activeId: string;
   blockedId: string;
 } {
   if (blockIndex <= 0) {
     return {
+      defaultId: APP_SUBSCRIPTION_CREATE_WIZARD.timeWindow.defaultModeId,
       activeId: APP_SUBSCRIPTION_CREATE_WIZARD.timeWindow.activeModeId,
       blockedId: APP_SUBSCRIPTION_CREATE_WIZARD.timeWindow.blockedModeId,
     };
   }
   const g = `grp${blockIndex}`;
   return {
+    defaultId: `${APP_SUBSCRIPTION_CREATE_WIZARD.timeWindow.defaultModeId}${g}`,
     activeId: `${APP_SUBSCRIPTION_CREATE_WIZARD.timeWindow.activeModeId}${g}`,
     blockedId: `${APP_SUBSCRIPTION_CREATE_WIZARD.timeWindow.blockedModeId}${g}`,
   };

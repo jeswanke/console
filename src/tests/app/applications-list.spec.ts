@@ -16,7 +16,6 @@ import {
   APP_ADVANCED_CONFIG,
   APP_ADVANCED_TABLE_COLUMNS,
   APP_ADVANCED_TABLE_COLUMNS_CHANNELS,
-  APP_ADVANCED_TABLE_COLUMNS_PLACEMENT_RULES,
   APP_DOCS_ADVANCED_DEPRECATION_HREF_RE,
 } from '@constants/app';
 import type { AppTableColumnHelpKey } from '@constants/app';
@@ -263,7 +262,7 @@ test.describe('Applications list', { tag: ['@app', '@alc'] }, () => {
     );
   });
 
-  test('Advanced configuration resource toggle shows three options with Subscriptions selected', async ({
+  test('Advanced configuration resource toggle shows two options with Subscriptions selected', async ({
     applicationListPage,
   }) => {
     await applicationListPage.goto();
@@ -285,9 +284,6 @@ test.describe('Applications list', { tag: ['@app', '@alc'] }, () => {
 
     await expect(
       applicationListPage.getAdvancedResourceToggleButton('channels')
-    ).toBeVisible();
-    await expect(
-      applicationListPage.getAdvancedResourceToggleButton('placementRules')
     ).toBeVisible();
   });
 
@@ -411,72 +407,4 @@ test.describe('Applications list', { tag: ['@app', '@alc'] }, () => {
     ).toBeVisible();
   });
 
-  test('Advanced configuration table has Placement rules columns (Name, Namespace, Clusters, Replicas, Created)', async ({
-    applicationListPage,
-  }) => {
-    await applicationListPage.goto();
-    await applicationListPage.openAdvancedConfigTab();
-    await applicationListPage.getAdvancedResourceToggleButton('placementRules').click();
-    await applicationListPage.waitForLoad();
-
-    const hasResources =
-      await applicationListPage.advancedConfigViewHasResources('placementRules');
-    if (!hasResources) {
-      const emptyState = applicationListPage.getAdvancedEmptyState('placementRules');
-      await expect(emptyState).toBeVisible();
-      const hasBodyPr =
-        (await emptyState.getByText(APP_ADVANCED_CONFIG.emptyState.body).isVisible().catch(() => false)) ||
-        (await emptyState
-          .getByText(APP_ADVANCED_CONFIG.emptyState.bodyAltPattern)
-          .isVisible()
-          .catch(() => false));
-      if (hasBodyPr) {
-        await expect(emptyState).toContainText('Create application');
-        await expect(
-          emptyState.getByRole('link', {
-            name: APP_ADVANCED_CONFIG.emptyState.createApplicationLabel,
-          })
-        ).toBeVisible();
-      }
-      const viewDocsLink = emptyState.getByRole('link', {
-        name: APP_ADVANCED_CONFIG.terminologyCard.viewDocsLinkText,
-      });
-      await expect(viewDocsLink).toBeVisible();
-      await expect(viewDocsLink).toHaveAttribute(
-        'href',
-        APP_DOCS_MANAGING_APPLICATIONS_HREF_RE
-      );
-      return;
-    }
-    const table = applicationListPage.getAdvancedTable();
-    await expect(table).toBeVisible();
-    await expect(
-      table.getByRole('columnheader', {
-        name: APP_ADVANCED_TABLE_COLUMNS_PLACEMENT_RULES.name,
-        exact: true,
-      })
-    ).toBeVisible();
-    await expect(
-      table.getByRole('columnheader', {
-        name: APP_ADVANCED_TABLE_COLUMNS_PLACEMENT_RULES.namespace,
-        exact: true,
-      })
-    ).toBeVisible();
-    await expect(
-      table.getByRole('columnheader', {
-        name: /^Clusters\b/,
-      })
-    ).toBeVisible();
-    await expect(
-      table.getByRole('columnheader', {
-        name: /^Replicas\b/,
-      })
-    ).toBeVisible();
-    await expect(
-      table.getByRole('columnheader', {
-        name: APP_ADVANCED_TABLE_COLUMNS_PLACEMENT_RULES.created,
-        exact: true,
-      })
-    ).toBeVisible();
-  });
 });

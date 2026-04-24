@@ -19,6 +19,9 @@ import { acmToolbarSearchLocator } from '@utils/acm-locators';
  *
  * For **Create application → Subscription** wizard locators, see **`SubscriptionApplicationCreateWizardPage`**
  * (`src/pages/app/SubscriptionApplicationCreateWizardPage.ts`).
+ *
+ * For **single application** Topology / Details, see **`ApplicationDetailsPage`**
+ * (`src/pages/app/ApplicationDetailsPage.ts`).
  */
 export class ApplicationListPage extends BasePage {
   readonly applicationsTable: ApplicationsTable;
@@ -115,7 +118,7 @@ export class ApplicationListPage extends BasePage {
     });
   }
 
-  /** Resource type toggle button (Subscriptions, Channels, Placement rules) */
+  /** Resource type toggle button (Subscriptions, Channels) */
   getAdvancedResourceToggleButton(
     key: keyof typeof SELECTORS.application.resourceToggle
   ): Locator {
