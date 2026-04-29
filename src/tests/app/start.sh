@@ -5,8 +5,8 @@
 # ALC (Application Lifecycle) — Playwright tests under src/tests/app.
 # Invoked by the repo root ./start.sh alc [playwright args...]
 #
-# Defaults (when not overridden by env or CLI): --grep @alc, --project chromium
-# (matches external ALC CI job defaults, e.g. acmqe-autotest Jenkinsfile_console_alc.)
+# Defaults (when not overridden by env or CLI): --grep @alc, --project alc
+# (The `alc` project is the only one that includes src/tests/app/**; `chromium` ignores app/**/*.spec.ts.)
 
 set -e
 
@@ -24,6 +24,9 @@ cd "${CONSOLE_E2E_ROOT}"
 # ANSIBLE_* comes from repo-root .env (loaded by parent start.sh); this sources env/alc.local.env for OBJECTSTORE_* only.
 console_e2e_export_alc_env
 
+# Enable GitOps / addon prep in globalSetup only for ALC runs (see src/global-setup/gitOpsPrep.ts).
+export E2E_GITOPS_PREP="${E2E_GITOPS_PREP:-1}"
+
 console_e2e_detect_manual_grep "$@"
 if [ "${CONSOLE_E2E_MANUAL_GREP}" -eq 0 ] && [ -z "${PLAYWRIGHT_GREP:-}" ] && [ -z "${GREP:-}" ]; then
   export PLAYWRIGHT_GREP=@alc
@@ -34,7 +37,7 @@ console_e2e_build_pw_grep_args "$@"
 
 PW_PROJECT_ARGS=()
 if [[ "$*" != *--project* ]]; then
-  _proj="${PLAYWRIGHT_PROJECT:-chromium}"
+  _proj="${PLAYWRIGHT_PROJECT:-alc}"
   echo "ALC: defaulting --project ${_proj} (pass --project or set PLAYWRIGHT_PROJECT to override)"
   PW_PROJECT_ARGS=(--project "${_proj}")
 fi
