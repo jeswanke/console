@@ -33,6 +33,30 @@ npx playwright install chromium
 
 > **Typical kubeadmin:** `.env` with `HUB_URL` + `HUB_PASSWORD` only.
 
+### Playwright projects
+
+| Project        | Scope                                                                              |
+| -------------- | ---------------------------------------------------------------------------------- |
+| **`setup`**    | Auth (`auth.setup.ts`) → **`.auth/user.json`**                                     |
+| **`alc`**      | **Application Lifecycle** — `src/tests/app/**/*.spec.ts` (use **`--project alc`**) |
+| **`chromium`** | Other UI tests (e.g. **`src/tests/cluster/**`**) — excludes **`app/**`**           |
+| **`unit`**     | YAML / loader tests — no hub                                                       |
+
+**GitOps prep** in **`src/global-setup/gitOpsPrep.ts`** runs only when **`E2E_GITOPS_PREP`** is enabled (**`1/true/yes`**, set to `1` by default in **`./start.sh alc`**) **and** **`--project`** includes **`alc`** (and the run is not unit-only). Use **`E2E_GITOPS_PREP=0`** to disable. Non-ALC runs (e.g. **`--project chromium`**) skip GitOps even if the env is set.
+
+### Managed cluster context
+
+By default, **`globalSetup`** runs managed-cluster prep for any non-unit run:
+
+- **`scripts/cluster/generate-managed-cluster-data.py`** writes **`.auth/managedClusters.json`**
+- **`scripts/cluster/setup-managed-cluster-kubeconfig.sh`** writes **`.auth/MC_MERGED_kubeconfig`** and prepares spoke contexts named like `ManagedCluster` resources (same pattern used in application-ui-test)
+
+Managed-cluster prep is **skipped** when you run **only** the **`unit`** project (e.g. **`--project=unit`**) or when **`E2E_SKIP_MANAGED_CLUSTER_PREP=1`**.
+
+You can skip only the kubeconfig merge step with **`E2E_SKIP_MANAGED_KUBECONFIG_MERGE=1`**.
+
+Tests read **`.auth/managedClusters.json`** via **`loadManagedClusterContext()`** or the **`managedClusterContext`** fixture in **`app-test`**. Override the JSON path with **`MANAGED_CLUSTER_CONTEXT_PATH`**.
+
 ### Example Setup
 
 ```bash
@@ -71,7 +95,7 @@ export HUB_URL='https://api.<cluster>:6443'
 export HUB_PASSWORD='<kubeadmin-password>'
 # or: export HUB_TOKEN='<token>'
 
-./start.sh alc                          # ALC: default --grep @alc, --project chromium
+./start.sh alc                          # ALC entrypoint: default --grep @alc, --project alc
 ./start.sh alc --grep @app --headed     # override defaults via CLI
 ```
 
@@ -120,7 +144,10 @@ console-e2e/
 ├── docs/                    # architecture-overview.md; optional images in docs/images/
 ├── start.sh                 # Dispatcher → e.g. src/tests/app/start.sh (ALC)
 ├── env/                     # ALC object-store template (alc.env.example); alc.local.env gitignored
-├── scripts/lib/             # Shared shell (common.sh, alc-env.sh)
+├── scripts/
+│   ├── lib/                 # Shared shell (common.sh, alc-env.sh)
+│   ├── cluster/             # managedClusters.json + merged kubeconfig prep scripts
+│   └── gitops/              # argocd integration bootstrap + YAML templates
 ├── src/
 │   ├── config/              # .env loader, getHubAuth() / getTestConfig()
 │   ├── constants/           # Selectors, strings
@@ -134,6 +161,7 @@ console-e2e/
 │   │   ├── app/             # ApplicationListPage, SubscriptionApplicationCreateWizardPage
 │   │   └── cluster/         # ClusterListPage, ClusterSetsPage
 │   ├── services/            # OcCliService
+│   ├── global-setup/        # clusterPrep, gitOpsPrep, projectArgv, logPrefix
 │   ├── tests/
 │   │   ├── auth.setup.ts
 │   │   ├── app/

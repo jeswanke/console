@@ -262,7 +262,7 @@ export function generateClusterName(prefix: string): string {
 
 ## `console-e2e` — layout in _this_ repository
 
-The tree below is what **this** repo implements today (aligned with the layers above). Bash entrypoints live **outside** `/src` (`start.sh`, `scripts/lib/`). Env templates live in **`env/`** at the repo root.
+The tree below is what **this** repo implements today (aligned with the layers above). Bash entrypoints live **outside** `/src` (`start.sh`, `scripts/*`). Env templates live in **`env/`** at the repo root.
 
 ```text
 console-e2e/
@@ -274,7 +274,15 @@ console-e2e/
 │   └── alc.env.example         # ALC object-store template → copy to env/alc.local.env (gitignored)
 ├── scripts/
 │   ├── lib/common.sh           # Login, npm; exports CONSOLE_USERNAME/CONSOLE_IDP before login; after login universal env (BASE_URL, OC_CLUSTER_*, PLAYWRIGHT_TEST_MODE)
-│   └── lib/alc-env.sh          # Sources env/alc.local.env (object store only; ANSIBLE_* in .env)
+│   ├── lib/alc-env.sh          # Sources env/alc.local.env (object store only; ANSIBLE_* in .env)
+│   ├── cluster/
+│   │   ├── generate-managed-cluster-data.py
+│   │   └── setup-managed-cluster-kubeconfig.sh
+│   └── gitops/
+│       ├── argocd-integration.sh
+│       └── templates/
+│           ├── argocd_yaml/
+│           └── operators_yaml/
 └── src/
     ├── config/                 # §1 — loader + types
     │   ├── schema.ts
@@ -305,7 +313,13 @@ console-e2e/
     ├── fixtures/               # §7
     │   ├── acm-test.ts
     │   └── app-test.ts
-    ├── global-setup.ts         # Playwright global setup (not in diagram; standard hook)
+    ├── global-setup.ts         # Playwright global setup entrypoint
+    ├── global-setup/           # Setup modules
+    │   ├── clusterPrep.ts
+    │   ├── gitOpsPrep.ts
+    │   ├── projectArgv.ts
+    │   ├── logPrefix.ts
+    │   └── repoRoot.ts
     └── tests/                  # §8
         ├── auth.setup.ts       # Uses getHubAuth() from @config (not raw process.env)
         ├── app/
@@ -319,4 +333,5 @@ console-e2e/
 - Prefer **`getHubAuth()` / `getTestConfig()`** from `@config` over **`process.env` in specs and setup** (see `auth.setup.ts`).
 - **Cluster** page objects live under **`pages/cluster/`**; **app** pages under **`pages/app/`**.
 - **`AcmTable`** lives under **`components/patternfly/`** as the shared PF-oriented table primitive.
+- Keep setup orchestration in **`src/global-setup.ts`** and setup implementation details in **`src/global-setup/*`**.
 - Optional **`templates/`**, **`services/domains/`**, and **`constants/routes.ts`** can be added when needed without changing the overall model.
