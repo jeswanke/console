@@ -9,6 +9,7 @@ export function extractSubscriptionLayer(blob: Record<string, unknown>): Record<
   if (isPlainObject(sd) && isPlainObject(sd.subscription)) {
     return { ...sd.subscription };
   }
-  const { specDomains: _sd, ...rest } = blob;
-  return { ...rest };
+  const rest = { ...blob };
+  delete rest.specDomains;
+  return rest;
 }
