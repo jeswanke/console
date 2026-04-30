@@ -22,8 +22,11 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   /* Opt out of parallel tests on CI. */
   workers: process.env.CI ? 1 : undefined,
-  /* Reporter to use. See https://playwright.dev/docs/test-reporters */
-  reporter: 'html',
+  /* Reporters: HTML locally; JUnit XML for CI / tooling (`test-results/` is gitignored). */
+  reporter: [
+    ['html'],
+    ['junit', { outputFile: 'test-results/junit.xml' }],
+  ],
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
@@ -41,14 +44,27 @@ export default defineConfig({
       testMatch: /.*\.setup\.ts/,
     },
 
-    // Main test project - uses authenticated state
+    // Non–Application Lifecycle UI (e.g. cluster list); excludes `src/tests/app/**` (see `alc`).
     {
       name: 'chromium',
-      testIgnore: /.*\.unit\.spec\.ts$/,
+      testIgnore: [/.*\.unit\.spec\.ts$/, 'app/**/*.spec.ts'],
       use: {
         ...devices['Desktop Chrome'],
         viewport: { width: 1920, height: 1080 },
         // Use the authenticated state saved by setup
+        storageState: '.auth/user.json',
+      },
+      dependencies: ['setup'],
+    },
+
+    // Application Lifecycle (ALC) — `src/tests/app/**`; `./start.sh alc` sets E2E_GITOPS_PREP (GitOps prep runs with `--project alc`).
+    {
+      name: 'alc',
+      testMatch: 'app/**/*.spec.ts',
+      testIgnore: /.*\.unit\.spec\.ts$/,
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1920, height: 1080 },
         storageState: '.auth/user.json',
       },
       dependencies: ['setup'],

@@ -17,7 +17,7 @@ npx playwright install chromium
 
 **Recommended:** keep **universal** values in a repo-root **`.env`** (copy from **`.env.example`**). It is gitignored. **`./start.sh`** loads `.env` before `oc login`, and Playwright loads it via `src/config/index.ts`. Use **`HUB_PASSWORD`** for both `oc login` and the console UI step in **`auth.setup.ts`** (no separate console password).
 
-**Ansible (AAP):** **`ANSIBLE_TOKEN`** and **`ANSIBLE_URL`** in repo-root **`.env`** (see **`.env.example`**). **Object store** (S3) for ALC stays in **`env/alc.local.env`** — see **`env/alc.env.example`**.
+**Ansible (AAP):** Prefer **`ANSIBLE_URL`** + **`ANSIBLE_TOWER_PASSWORD`** in repo-root **`.env`** (see **`.env.example`**). On non-unit runs, `globalSetup` runs `scripts/ansible/setup-ansible-template.sh` unless **`E2E_SKIP_ANSIBLE_PREP=1`**. If `ANSIBLE_TOKEN` is not provided, the prep script mints it from URL/password; if URL/password are not provided, it discovers route/password/token from cluster secrets in `AAP_NAMESPACE` (default `aap`). The script ensures `default/alc-ansible-secret` and can bootstrap AWX templates (disable with `E2E_ANSIBLE_AWX_BOOTSTRAP=0`). **Object store** (S3) for ALC stays in **`env/alc.local.env`** — see **`env/alc.env.example`**.
 
 ---
 
