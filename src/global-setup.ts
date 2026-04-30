@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { runAnsiblePrep } from './global-setup/ansiblePrep';
 import { LOG_GLOBAL_SETUP } from './global-setup/logPrefix';
 import { runGitOpsPrep, isGitOpsPrepEnabled } from './global-setup/gitOpsPrep';
 import {
@@ -36,6 +37,12 @@ async function globalSetup() {
     );
   } else {
     await runManagedClusterPrep(authDir);
+  }
+
+  if (unitOnly) {
+    console.log(`${LOG_GLOBAL_SETUP} Skipping Ansible prep (only --project unit / -p unit).`);
+  } else {
+    await runAnsiblePrep(authDir);
   }
 
   const runGitOps = isGitOpsPrepEnabled() && !unitOnly && requestedProjectsIncludeAlc();
