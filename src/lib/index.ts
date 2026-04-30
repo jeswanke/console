@@ -26,3 +26,44 @@ export {
   type ManagedClusterContextFile,
   type ManagedClusterEntry,
 } from './cluster/managedClusterContext';
+
+export {
+  buildMergedTopologyDrawerSpotChecksForSubscriptionBlocks,
+  buildMergedTopologyNodeDataIdsForSubscriptionBlocks,
+  buildTopologyDrawerSpotChecksForSubscriptionBlock,
+  buildTopologyNodeDataIdsForSubscriptionBlock,
+  dedupeTopologyNodeDataIds,
+  defaultPlacementCrName,
+  defaultSubscriptionCrName,
+  expectedTopologyDrawerContains,
+  expectApplicationDetailsUrl,
+  expectApplicationTopologyUrl,
+  expectOpenShiftShellTitle,
+  expectTopologyGraphContainsNodeDataIds,
+  expectVisibleTopologyDrawerContains,
+  topologyApplicationDataId,
+  topologyClusterHubDataId,
+  topologyDeployedDeploymentDataId,
+  topologyDeployedPodDataId,
+  topologyDeployedReplicaSetDataId,
+  topologyDeployedRouteDataId,
+  topologyDeployedServiceDataId,
+  topologyPlacementDecisionDataId,
+  topologySubscriptionDataId,
+  TOPOLOGY_GRAPH_SURFACE_TEST_ID,
+  type TopologyClusterResourceRef,
+} from './topology-graph';
+
+export {
+  subscriptionDetailsClustersValuePattern,
+  verifySubscriptionAppDetailsTab,
+  type SubscriptionDetailsClustersSummary,
+  type SubscriptionDetailsRepositoryExpectation,
+  type VerifySubscriptionAppDetailsTabParams,
+} from './verify-subscription-details';
+export {
+  verifySubscriptionAppTopologyTab,
+  type TopologyDrawerSpotCheck,
+  type TopologySubscriptionScopeParam,
+  type VerifySubscriptionAppTopologyTabParams,
+} from './verify-subscription-topology';

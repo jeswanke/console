@@ -55,6 +55,14 @@ export const APP_APPLICATION_DETAILS = {
   typeValues: {
     subscription: 'Subscription',
   },
+  /** Repository kind badges/buttons shown inside Details → Repository value. */
+  repositoryKindLabels: {
+    git: 'Git',
+    helm: 'Helm',
+    objectStorage: 'Object storage',
+  },
+  /** Details → Last sync requested row action anchor id. */
+  syncActionAnchorId: 'sync-app',
   /** Breadcrumb link back to the Applications list. */
   breadcrumb: {
     applications: 'Applications',
@@ -73,6 +81,11 @@ export type AppApplicationDetailsTabKey = keyof typeof APP_APPLICATION_DETAILS.t
  * and tabpanel scoping for assertions.
  */
 export const APP_APPLICATION_TOPOLOGY = {
+  /**
+   * **`data-test-id`** on the PF topology visualization surface wrapping the `svg` graph (`g[data-kind=node]`,
+   * `data-id` values — see `src/lib/topology-graph.ts` / Playwriter hub capture).
+   */
+  graphSurfaceTestId: 'topology',
   /** Topology / Details tab list lives in this labelled region (PF). */
   secondaryNavAccessibleName: 'Secondary page navigation tabs',
   /** Topology canvas toolbar button `id`s (stable on observed hub). */
@@ -89,9 +102,14 @@ export const APP_APPLICATION_TOPOLOGY = {
    * text-only inside SVG — use role + name from your scenario, not hard-coded constants.
    */
   graphElementIds: {
-    /** Channel / subscription combo control rendered as a `button` in the graph (observed id). */
+    /**
+     * PF6 **MenuToggle** for topology **subscription scope** (`All Subscriptions` vs each Subscription CR name).
+     * Same element historically called “channel combo” (Playwriter / PF6 hub).
+     */
     channelCombo: 'comboChannel',
   },
+  /** `menuitem` label when opening {@link APP_APPLICATION_TOPOLOGY.graphElementIds.channelCombo}. */
+  subscriptionScopeMenuItemAll: 'All Subscriptions',
 } as const;
 
 // =============================================================================

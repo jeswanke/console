@@ -152,13 +152,34 @@ export function buildComposerSyntheticApplicationExpectationsLayer(
   blocks: ComposerBlockEntry[]
 ): Record<string, unknown> {
   const clusterResources: unknown[][] = [];
+  let mergedNonClusterExpectations: Record<string, unknown> | undefined;
 
   for (let i = 0; i < blocks.length; i++) {
-    const rows = mergeExpectationsRowsForComposerBlock(spec, scenarioId, blocks[i]!.use, i);
+    const use = blocks[i]!.use;
+    const rows = mergeExpectationsRowsForComposerBlock(spec, scenarioId, use, i);
     clusterResources.push(rows);
+
+    const fragments = spec.fragments ?? {};
+    const aeLayers: Array<Record<string, unknown>> = [];
+    for (const name of use) {
+      const blob = fragments[name];
+      if (!blob) {
+        throw new Error(
+          `e2e-spec-data: unknown fragment "${name}" in blocks for scenario "${scenarioId}" (expectations, block ${i})`
+        );
+      }
+      aeLayers.push(extractApplicationExpectationsLayer(blob as Record<string, unknown>));
+    }
+    const mergedBlockAe = mergeApplicationExpectationsLayers(...aeLayers);
+    const { clusterResources: _blockClusterResources, ...rest } = mergedBlockAe;
+    void _blockClusterResources;
+    if (Object.keys(rest).length > 0) {
+      mergedNonClusterExpectations = mergeApplicationExpectationsLayers(mergedNonClusterExpectations, rest);
+    }
   }
 
   return {
     clusterResources,
+    ...(mergedNonClusterExpectations ?? {}),
   };
 }

@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import type { TopologyClusterResourceRef } from '@lib/topology-graph';
+
 /**
  * Expected hub object for Details/topology. `namespace` may be omitted in YAML; filled before validation.
  */
@@ -26,14 +28,39 @@ export function flattenClusterResourceBlocks(
   return blocks.flatMap((rows) => rows);
 }
 
+/** Same blocks as {@link ApplicationClusterResourceRow} `clusterResources`; rows narrowed for topology `data-id` builders. */
+export function buildTopologyClusterResourceBlocks(
+  blocks: ApplicationClusterResourceRow[][]
+): TopologyClusterResourceRef[][] {
+  return blocks.map((rows) => rows.map(({ kind, name }) => ({ kind, name })));
+}
+
+/** Expected **Clusters** line on subscription app **Details** (e2e-spec-data → Details verifier). */
+export const applicationExpectationsDetailsClustersSummarySchema = z.discriminatedUnion('variant', [
+  z.object({ variant: z.literal('localOnly') }),
+  z.object({
+    variant: z.literal('remoteOnly'),
+    remoteCount: z.number().int().positive(),
+  }),
+  z.object({
+    variant: z.literal('localAndRemote'),
+    remoteCount: z.number().int().positive(),
+  }),
+]);
+
+export type ApplicationExpectationsDetailsClustersSummary = z.infer<
+  typeof applicationExpectationsDetailsClustersSummarySchema
+>;
+
 /**
  * Resolved `applicationExpectations`: nested `clusterResources` (aligned with `repositories[i]`),
- * `clusterResourcesFlat`, and `clusterResourcesPerRepo` from the resolver.
+ * `clusterResourcesFlat`, `clusterResourcesPerRepo`, and **`topologyClusterResourceBlocks`** (kind/name only for topology helpers) from the resolver.
  */
 export const applicationExpectationsDomainSchema = z
   .object({
     clusterResources: z.array(z.array(applicationClusterResourceRowSchema)).min(1),
     clusterResourcesFlat: z.array(applicationClusterResourceRowSchema).min(1),
+    detailsClustersSummary: applicationExpectationsDetailsClustersSummarySchema.optional(),
   })
   .superRefine((val, ctx) => {
     const fromBlocks = flattenClusterResourceBlocks(val.clusterResources);
@@ -52,4 +79,5 @@ export const applicationExpectationsDomainSchema = z
 
 export type ApplicationExpectationsPayload = z.infer<typeof applicationExpectationsDomainSchema> & {
   clusterResourcesPerRepo: ClusterResourcesPerRepoEntry[];
+  topologyClusterResourceBlocks: TopologyClusterResourceRef[][];
 };

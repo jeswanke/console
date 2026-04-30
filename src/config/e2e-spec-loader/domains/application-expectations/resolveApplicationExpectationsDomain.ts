@@ -1,6 +1,7 @@
 import type { E2eSpecData, ScenarioEntry } from '../../schema';
 import {
   applicationExpectationsDomainSchema,
+  buildTopologyClusterResourceBlocks,
   flattenClusterResourceBlocks,
 } from './applicationExpectationsSchema';
 import type {
@@ -138,5 +139,9 @@ export function resolveApplicationExpectationsDomain(
   const subscription = resolveSubscriptionDomain(spec, scenarioId, scenarioEntry);
   const repositories = subscription?.repositories as Array<Record<string, unknown>> | undefined;
   const clusterResourcesPerRepo = buildClusterResourcesPerRepo(parsed.data.clusterResources, repositories);
-  return { ...parsed.data, clusterResourcesPerRepo };
+  return {
+    ...parsed.data,
+    clusterResourcesPerRepo,
+    topologyClusterResourceBlocks: buildTopologyClusterResourceBlocks(parsed.data.clusterResources),
+  };
 }

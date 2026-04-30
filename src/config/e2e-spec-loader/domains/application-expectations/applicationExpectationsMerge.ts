@@ -38,6 +38,11 @@ function mergeTwo(
     }
   }
 
+  for (const [key, value] of Object.entries(o)) {
+    if (key === 'clusterResources') continue;
+    out[key] = value;
+  }
+
   return out;
 }
 

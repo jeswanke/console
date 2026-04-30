@@ -7,6 +7,10 @@ import {
   APP_ROUTES,
   type AppApplicationDetailsTabKey,
 } from '@constants/app';
+import {
+  expectTopologyGraphContainsNodeDataIds,
+  expectVisibleTopologyDrawerContains,
+} from '@lib/topology-graph';
 
 /**
  * ACM **single application** console view: Topology / Details (and other tab slugs on the same route family).
@@ -102,8 +106,8 @@ export class ApplicationDetailsPage extends BasePage {
   }
 
   /**
-   * **Topology** tab panel — scope node queries here so `button` matches stay on the graph (not masthead / nav).
-   * Uses the same accessible name as the Topology tab label (PF tab ↔ tabpanel wiring on observed hub).
+   * **Topology** tab panel — PF may omit `role="tabpanel"` on some hubs; prefer {@link getTopologySurface} for graph
+   * `data-id` / SVG queries.
    */
   getTopologyTabPanel(): Locator {
     return this.page.getByRole('tabpanel', {
@@ -112,33 +116,100 @@ export class ApplicationDetailsPage extends BasePage {
     });
   }
 
-  /**
-   * A topology graph **node** implemented as a `button` (channel / subscription / placement pills often are).
-   * Pass the visible name or regex for your app (e.g. subscription or channel display name from the hub).
-   */
-  getTopologyNodeButtonByName(name: string | RegExp): Locator {
-    return this.getTopologyTabPanel().getByRole('button', { name });
+  /** PF topology **`data-test-id`** wrapper around the `svg` graph (`g[data-kind=node][data-id=…]`). */
+  getTopologySurface(): Locator {
+    return this.page.locator(`[data-test-id="${APP_APPLICATION_TOPOLOGY.graphSurfaceTestId}"]`);
+  }
+
+  /** Graph **node** group (`g`) with ACM `data-id` (Playwriter — subscription app topology). */
+  getTopologyGraphNodeByDataId(dataId: string): Locator {
+    return this.getTopologySurface().locator(
+      `g[data-kind=node][data-type=node][data-id="${dataId}"]`
+    );
+  }
+
+  async clickTopologyGraphNodeByDataId(dataId: string): Promise<void> {
+    // SVG graph groups often sit under overlapping hit targets; `force` matches manual hub interaction.
+    // eslint-disable-next-line playwright/no-force-option -- topology `g` nodes are not always the top hit target
+    await this.getTopologyGraphNodeByDataId(dataId).click({ force: true });
   }
 
   /**
-   * Channel combo node when the console assigns **`id="comboChannel"`** (subscription topology on qe6). Prefer
-   * {@link getTopologyNodeButtonByName} when ids differ or are absent.
+   * Poll until all **`data-id`** nodes exist (graph hydration after navigation).
+   */
+  async expectTopologyGraphContainsNodeDataIds(
+    dataIds: string[],
+    options?: { timeout?: number }
+  ): Promise<void> {
+    await expectTopologyGraphContainsNodeDataIds(this.getTopologySurface(), dataIds, options);
+  }
+
+  /** Assert a **visible** drawer panel shows text after {@link clickTopologyGraphNodeByDataId}. */
+  async expectVisibleTopologyDrawerContains(
+    pattern: string | RegExp,
+    options?: { timeout?: number }
+  ): Promise<void> {
+    await expectVisibleTopologyDrawerContains(this.page, pattern, options);
+  }
+
+  /**
+   * A topology graph **node** implemented as a `button` (channel / subscription combo, legend, toolbar).
+   * Scoped to **`main`** because `role="tabpanel"` may be absent on some hubs.
+   */
+  getTopologyNodeButtonByName(name: string | RegExp): Locator {
+    return this.page.getByRole('main').getByRole('button', { name });
+  }
+
+  /**
+   * Channel / subscription **combo** (`#comboChannel`) — lives next to the SVG surface, not always inside
+   * `role="tabpanel"`.
    */
   getTopologyChannelComboNode(): Locator {
-    return this.getTopologyTabPanel().locator(`#${APP_APPLICATION_TOPOLOGY.graphElementIds.channelCombo}`);
+    return this.page.locator(`#${APP_APPLICATION_TOPOLOGY.graphElementIds.channelCombo}`);
+  }
+
+  /**
+   * PF6 **MenuToggle** for topology **subscription scope** (`All Subscriptions` vs each Subscription CR name).
+   * Same element as {@link getTopologyChannelComboNode} (`#comboChannel`).
+   */
+  getTopologySubscriptionScopeToggle(): Locator {
+    return this.getTopologyChannelComboNode();
+  }
+
+  async chooseTopologySubscriptionScopeAll(): Promise<void> {
+    const toggle = this.getTopologySubscriptionScopeToggle();
+    await toggle.click();
+    await this.page
+      .getByRole('menuitem', {
+        name: APP_APPLICATION_TOPOLOGY.subscriptionScopeMenuItemAll,
+        exact: true,
+      })
+      .click();
+    await expect(toggle).toHaveAttribute('aria-label', APP_APPLICATION_TOPOLOGY.subscriptionScopeMenuItemAll);
+  }
+
+  async chooseTopologySubscriptionScopeByCrName(subscriptionCrName: string): Promise<void> {
+    const toggle = this.getTopologySubscriptionScopeToggle();
+    await toggle.click();
+    await this.page.getByRole('menuitem', { name: subscriptionCrName, exact: true }).click();
+    await expect(toggle).toHaveAttribute('aria-label', subscriptionCrName);
   }
 
   /** Description list **term** (`dt` / `role="term"`) on the Details tab. */
   getDescriptionTerm(term: keyof typeof APP_APPLICATION_DETAILS.descriptionTerms): Locator {
     const label = APP_APPLICATION_DETAILS.descriptionTerms[term];
-    return this.page.getByRole('term', { name: label, exact: true });
+    const byRole = this.page.getByRole('term', { name: label, exact: true });
+    const byDt = this.page.locator('dt').filter({ hasText: label }).first();
+    return byRole.or(byDt).first();
   }
 
   /**
-   * Value cell beside a term (first following sibling — matches PatternFly DescriptionList pairing on qe6 hub).
+   * Value cell beside a term (`dd`) — first following sibling in the DescriptionList pair.
    */
   getDescriptionValue(term: keyof typeof APP_APPLICATION_DETAILS.descriptionTerms): Locator {
-    return this.getDescriptionTerm(term).locator('xpath=following-sibling::*[1]');
+    const label = APP_APPLICATION_DETAILS.descriptionTerms[term];
+    const byDt = this.page.locator('dt').filter({ hasText: label }).first();
+    return byDt.locator('xpath=following-sibling::dd[1]');
   }
 
   /** Breadcrumb back to Applications list. */

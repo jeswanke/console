@@ -144,6 +144,15 @@ test.describe('e2e-spec-data YAML processing', () => {
     );
     expect(appExp.clusterResources[0]!.map((r) => r.kind)).toContain('Deployment');
     expect(appExp.clusterResources[1]!.map((r) => r.kind)).not.toContain('Route');
+
+    expect(appExp.topologyClusterResourceBlocks).toHaveLength(2);
+    expect(appExp.topologyClusterResourceBlocks[0]).toEqual(
+      appExp.clusterResources[0]!.map(({ kind, name }) => ({ kind, name }))
+    );
+    expect(appExp.topologyClusterResourceBlocks[1]).toEqual(
+      appExp.clusterResources[1]!.map(({ kind, name }) => ({ kind, name }))
+    );
+    expect(appExp.detailsClustersSummary).toEqual({ variant: 'localOnly' });
   });
 
   test('mergeExpectationsRowsForComposerBlock: one outer clusterResources slot applies to any lane index', () => {
