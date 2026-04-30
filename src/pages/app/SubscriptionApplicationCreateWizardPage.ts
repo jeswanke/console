@@ -2,6 +2,8 @@ import { Page, Locator } from '@playwright/test';
 import { BasePage } from '@pages/BasePage';
 import { OcCliService } from '@services/OcCliService';
 import {
+  APP_APPLICATION_DETAILS,
+  APP_ROUTES,
   APP_SUBSCRIPTION_CREATE_WIZARD,
   APP_CREATE_MENU,
   getSubscriptionWizardHelpPopoverText,
@@ -156,6 +158,20 @@ export class SubscriptionApplicationCreateWizardPage extends BasePage {
   async goto(): Promise<void> {
     const consoleUrl = await this.oc.getConsoleUrl();
     await this.page.goto(`${consoleUrl}${APP_SUBSCRIPTION_CREATE_WIZARD.routePath}`);
+    await this.waitForLoad();
+  }
+
+  /**
+   * Opens an existing subscription application on the **Details** tab (same route as after **Create**).
+   * Used when `createSubscription` skips the wizard because the Application CR already exists.
+   */
+  async gotoApplicationDetailsTab(namespace: string, applicationName: string): Promise<void> {
+    const detailsPath = APP_ROUTES.detailsTab(
+      namespace,
+      applicationName,
+      APP_APPLICATION_DETAILS.tabs.details.slug
+    );
+    await this.page.goto(new URL(detailsPath, this.page.url()).toString());
     await this.waitForLoad();
   }
 

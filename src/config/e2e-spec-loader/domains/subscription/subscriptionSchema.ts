@@ -10,5 +10,7 @@ export const subscriptionDomainPayloadSchema = z
     fillEntireWizard: z.boolean().optional(),
     ensureFormMode: z.boolean().optional(),
     submit: z.boolean().optional(),
+    /** When true, `createSubscription` throws if the Application CR already exists; default false skips the wizard and opens Details. */
+    applicationExistsError: z.boolean().optional(),
   })
   .passthrough();

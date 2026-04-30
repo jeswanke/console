@@ -37,8 +37,8 @@ test.describe('Subscription create — auto_git_multi from e2e-spec-data', { tag
     const expectations = getApplicationExpectationsPayload(resolved);
     expect(options.submit).toBe(true);
 
-    await subscriptionApplicationCreateWizardPage.openFromApplicationsList(applicationListPage);
-    await createSubscription(subscriptionApplicationCreateWizardPage, options);
+    await applicationListPage.goto();
+    await createSubscription(applicationListPage, subscriptionApplicationCreateWizardPage, options);
 
     const { applicationName, namespace } = options;
     const mergedSubscriptionBlocks = [

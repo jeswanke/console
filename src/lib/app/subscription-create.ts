@@ -9,6 +9,7 @@ import {
   type AppSubscriptionTimeWindowWeekday,
   type SubscriptionWizardRepositoryCardKind,
 } from '@constants/app';
+import type { ApplicationListPage } from '@pages/app/ApplicationListPage';
 import type { SubscriptionApplicationCreateWizardPage } from '@pages/app/SubscriptionApplicationCreateWizardPage';
 
 // ---------------------------------------------------------------------------
@@ -179,10 +180,12 @@ export interface CreateSubscriptionOptions {
   /** Click primary **Create** when done (default `true`) */
   submit?: boolean;
   /**
-   * Skip `oc get applications.app.k8s.io` preflight (same name/namespace). Default **false** — duplicate
-   * Application CRs fail late in the UI; preflight fails fast with a clear error.
+   * When **false** (default): if an Application CR already exists for `applicationName`/`namespace`, {@link createSubscription}
+   * skips the wizard, navigates to that application’s **Details** tab (same URL as post–Create), then returns.
+   * If it does not exist, runs the wizard as usual.
+   * When **true**: if that Application already exists, throws before the wizard (treat duplicate as an error).
    */
-  skipExistingApplicationCheck?: boolean;
+  applicationExistsError?: boolean;
 }
 
 async function fillIfDefined(locator: Locator, value: string | undefined): Promise<void> {
@@ -416,13 +419,20 @@ async function applyPerBlockOptions(
  *
  * Placement **Cluster sets** / label **Label** and **Value** use menu picks ({@link SubscriptionApplicationCreateWizardPage.pickOpenMenuItemByExactLabel}).
  *
- * **Before** filling the form (unless {@link CreateSubscriptionOptions.skipExistingApplicationCheck}), runs
- * `OcCliService#applicationsAppK8sIoExists` so a duplicate **Application** (`applications.app.k8s.io`) is
- * rejected with an explicit error instead of a vague console failure.
+ * **Before** the wizard, runs {@link OcCliService.applicationsAppK8sIoExists}: if the Application exists and
+ * {@link CreateSubscriptionOptions.applicationExistsError} is **false** (default), skips the wizard and navigates to
+ * **Details** for that app (so callers can run the same post-create checks). If it exists and **applicationExistsError**
+ * is **true**, throws. If it does not exist, opens the wizard via
+ * {@link SubscriptionApplicationCreateWizardPage.openFromApplicationsList} then fills and optionally submits.
+ *
+ * Callers should open the hub **Applications** list first (e.g. `await applicationListPage.goto()`), then call this
+ * function. When the app is absent, {@link SubscriptionApplicationCreateWizardPage.openFromApplicationsList} runs
+ * (it navigates to the list again before **Create application → Subscription**).
  *
  * Does not assert — callers own expectations (navigation after Create, toast, etc.).
  */
 export async function createSubscription(
+  applicationListPage: ApplicationListPage,
   wizard: SubscriptionApplicationCreateWizardPage,
   options: CreateSubscriptionOptions
 ): Promise<void> {
@@ -433,7 +443,7 @@ export async function createSubscription(
     perBlock,
     ensureFormMode = true,
     submit = true,
-    skipExistingApplicationCheck = false,
+    applicationExistsError = false,
   } = options;
 
   if (!repositories?.length) {
@@ -442,15 +452,20 @@ export async function createSubscription(
     );
   }
 
-  if (!skipExistingApplicationCheck) {
-    const exists = await wizard.oc.applicationsAppK8sIoExists(namespace, applicationName);
-    if (exists) {
+  const exists = await wizard.oc.applicationsAppK8sIoExists(namespace, applicationName);
+  if (exists) {
+    if (applicationExistsError) {
       throw new Error(
         `createSubscription: Application "${applicationName}" already exists in namespace "${namespace}" ` +
-          '(applications.app.k8s.io). Delete it or pick another name/namespace, or set skipExistingApplicationCheck.'
+          '(applications.app.k8s.io). Delete it or pick another name/namespace, or set applicationExistsError to ' +
+          '`false` (default) to skip the wizard and open Details when the app is already present.'
       );
     }
+    await wizard.gotoApplicationDetailsTab(namespace, applicationName);
+    return;
   }
+
+  await wizard.openFromApplicationsList(applicationListPage);
 
   if (ensureFormMode) {
     await wizard.collapseYamlEditor();

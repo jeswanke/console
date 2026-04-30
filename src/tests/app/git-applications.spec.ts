@@ -35,8 +35,8 @@ test.describe('Git Applications', { tag: ['@alc', '@app'] }, () => {
     const options = getSubscriptionDomainPayload(resolved);
     const expectations = getApplicationExpectationsPayload(resolved);
 
-    await subscriptionApplicationCreateWizardPage.openFromApplicationsList(applicationListPage);
-    await createSubscription(subscriptionApplicationCreateWizardPage, options);
+    await applicationListPage.goto();
+    await createSubscription(applicationListPage, subscriptionApplicationCreateWizardPage, options);
 
     const { applicationName, namespace } = options;
     const clusterResourceRows = expectations.topologyClusterResourceBlocks[0]!;
