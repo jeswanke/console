@@ -18,3 +18,11 @@ export {
   type SubscriptionRepositorySpec,
   type TimeWindowSpec,
 } from './subscription-create';
+
+export {
+  getManagedClusterContextPath,
+  getPrimaryManagedCluster,
+  loadManagedClusterContext,
+  type ManagedClusterContextFile,
+  type ManagedClusterEntry,
+} from './cluster/managedClusterContext';

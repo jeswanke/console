@@ -54,7 +54,8 @@ import type { ApplicationListPage } from '@pages/app/ApplicationListPage';
 export class SubscriptionApplicationCreateWizardPage extends BasePage {
   constructor(
     page: Page,
-    private readonly oc: OcCliService
+    /** Used by {@link createSubscription} for `oc` preflight (existing Application CR). */
+    public readonly oc: OcCliService
   ) {
     super(page);
   }

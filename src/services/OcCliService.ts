@@ -1,7 +1,16 @@
-import { exec } from 'child_process';
+import { exec, execFile } from 'child_process';
 import { promisify } from 'util';
 
 const execPromise = promisify(exec);
+const execFilePromise = promisify(execFile);
+
+/** Minimal validation so `applicationName` / `namespace` are safe as `oc` argv (no shell). */
+function assertSafeOcSingleArg(value: string, field: string): void {
+  const v = value.trim();
+  if (!v || v.length > 253 || /[^a-zA-Z0-9.-]/.test(v)) {
+    throw new Error(`OcCliService: invalid ${field} for oc argv (${JSON.stringify(value)})`);
+  }
+}
 
 /**
  * Service for executing OpenShift CLI (oc) commands.
@@ -42,6 +51,39 @@ export class OcCliService {
       return out.length > 0;
     } catch {
       return false;
+    }
+  }
+
+  /**
+   * Whether an **Application** (`applications.app.k8s.io`) already exists in the namespace.
+   * Matches the primary resource created from **Create application → Subscription** (application name + namespace).
+   */
+  async applicationsAppK8sIoExists(namespace: string, applicationName: string): Promise<boolean> {
+    assertSafeOcSingleArg(namespace, 'namespace');
+    assertSafeOcSingleArg(applicationName, 'applicationName');
+    try {
+      const { stdout } = await execFilePromise(
+        'oc',
+        [
+          'get',
+          'applications.app.k8s.io',
+          applicationName,
+          '-n',
+          namespace,
+          '--ignore-not-found',
+          '-o',
+          'name',
+        ],
+        { encoding: 'utf8', maxBuffer: 1024 * 1024 }
+      );
+      return stdout.trim().length > 0;
+    } catch (err: unknown) {
+      const stderr =
+        err && typeof err === 'object' && 'stderr' in err ? String((err as { stderr?: unknown }).stderr) : '';
+      if (/NotFound|not found/i.test(stderr)) {
+        return false;
+      }
+      throw err;
     }
   }
 }

@@ -178,6 +178,11 @@ export interface CreateSubscriptionOptions {
   ensureFormMode?: boolean;
   /** Click primary **Create** when done (default `true`) */
   submit?: boolean;
+  /**
+   * Skip `oc get applications.app.k8s.io` preflight (same name/namespace). Default **false** — duplicate
+   * Application CRs fail late in the UI; preflight fails fast with a clear error.
+   */
+  skipExistingApplicationCheck?: boolean;
 }
 
 async function fillIfDefined(locator: Locator, value: string | undefined): Promise<void> {
@@ -410,18 +415,41 @@ async function applyPerBlockOptions(
  * - **Configure automation for prehook and posthook**
  *
  * Placement **Cluster sets** / label **Label** and **Value** use menu picks ({@link SubscriptionApplicationCreateWizardPage.pickOpenMenuItemByExactLabel}).
+ *
+ * **Before** filling the form (unless {@link CreateSubscriptionOptions.skipExistingApplicationCheck}), runs
+ * `OcCliService#applicationsAppK8sIoExists` so a duplicate **Application** (`applications.app.k8s.io`) is
+ * rejected with an explicit error instead of a vague console failure.
+ *
  * Does not assert — callers own expectations (navigation after Create, toast, etc.).
  */
 export async function createSubscription(
   wizard: SubscriptionApplicationCreateWizardPage,
   options: CreateSubscriptionOptions
 ): Promise<void> {
-  const { applicationName, namespace, repositories, perBlock, ensureFormMode = true, submit = true } = options;
+  const {
+    applicationName,
+    namespace,
+    repositories,
+    perBlock,
+    ensureFormMode = true,
+    submit = true,
+    skipExistingApplicationCheck = false,
+  } = options;
 
   if (!repositories?.length) {
     throw new Error(
       'createSubscription: `repositories` must be a non-empty array (define under e2e-spec-data blocks / subscription).'
     );
+  }
+
+  if (!skipExistingApplicationCheck) {
+    const exists = await wizard.oc.applicationsAppK8sIoExists(namespace, applicationName);
+    if (exists) {
+      throw new Error(
+        `createSubscription: Application "${applicationName}" already exists in namespace "${namespace}" ` +
+          '(applications.app.k8s.io). Delete it or pick another name/namespace, or set skipExistingApplicationCheck.'
+      );
+    }
   }
 
   if (ensureFormMode) {
