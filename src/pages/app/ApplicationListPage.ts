@@ -8,8 +8,18 @@ import {
   APP_PAGE,
   APP_ADVANCED_CONFIG,
   APP_ADVANCED_OC_RESOURCES,
+  APP_ADVANCED_TABLE_COLUMNS,
+  APP_ADVANCED_TABLE_COLUMNS_CHANNELS,
+  APP_APPLICATION_DETAILS,
+  APP_FILTER,
 } from '@constants/app';
+import type { ApplicationExpectationsPayload } from '@config/e2e-spec-loader/domains/application-expectations/applicationExpectationsSchema';
+import { defaultSubscriptionCrName } from '@lib/app/topology-graph';
 import { acmToolbarSearchLocator } from '@utils/acm-locators';
+
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
 
 /**
  * Applications list page (Application Lifecycle).
@@ -163,5 +173,178 @@ export class ApplicationListPage extends BasePage {
   async openCreateApplication(): Promise<void> {
     await this.applicationsTable.clickCreateApplication();
     await expect(this.applicationsTable.getCreateApplicationMenu()).toBeVisible();
+  }
+
+  /**
+   * Applications list **toolbar search** + **Type** filter checks (parity with legacy Cypress
+   * `searchApplication(appName, type)` in `application-ui-test`).
+   *
+   * 1. Toolbar search by `appName` → row with that name is visible.
+   * 2. **Filter** → check **Type** `typeFilterLabel` → row still visible.
+   * 3. Clear search → row still visible (type filter only), same as clearing the name field after filtering.
+   * 4. **Clear all filters** (toolbar link). Does not assert the row afterward — the unfiltered list can paginate
+   *    or omit the app from the first page.
+   */
+  async expectApplicationDiscoverableViaSearchAndTypeFilter(
+    appName: string,
+    typeFilterLabel: string = APP_FILTER.typeOptions.subscription
+  ): Promise<void> {
+    await this.goto();
+    await this.waitForLoad();
+    const table = this.applicationsTable;
+    await table.search(appName);
+    await expect(table.getRowByName(appName)).toBeVisible();
+    await table.selectFilterOption(typeFilterLabel);
+    await expect(table.getRowByName(appName)).toBeVisible();
+    await table.clearSearch();
+    await expect(table.getRowByName(appName)).toBeVisible();
+    await table.clickClearAllFilters();
+  }
+
+  /**
+   * **Advanced configuration → Subscriptions**: row for `subscriptionCrName` has a **Channel** cell whose link text
+   * contains `channelDisplaySubstring` (from e2e-spec-data `applicationExpectations.advancedConfiguration`).
+   */
+  async expectAdvancedConfigSubscriptionTabLinksChannel(params: {
+    subscriptionCrName: string;
+    channelDisplaySubstring: string;
+  }): Promise<void> {
+    await this.openAdvancedConfigTab();
+    await this.assertAdvancedConfigSubscriptionRowChannelColumn(params);
+  }
+
+  /**
+   * **Advanced configuration → Channels**: toolbar search, non-empty **Subscriptions** / **Clusters** / **Created**,
+   * then **Type** label → popover shows `channelRepositoryUrl` with an enabled **Copy** control.
+   */
+  async expectAdvancedConfigChannelTabListsSubscription(params: {
+    channelDisplaySubstring: string;
+    channelRepositoryUrl: string;
+    channelRepositoryTypeLabel?: string;
+  }): Promise<void> {
+    await this.openAdvancedConfigTab();
+    await this.assertAdvancedConfigChannelRowTypePopoverAndColumns(params);
+  }
+
+  /**
+   * Runs subscription + channel Advanced checks in one visit. Requires `advancedConfiguration` in e2e-spec-data
+   * (`channelDisplaySubstring`, `channelRepositoryUrl`, optional `channelRepositoryTypeLabel`).
+   */
+  async expectAdvancedConfigShowsSubscriptionAndChannelForBlock(params: {
+    applicationName: string;
+    applicationExpectations: ApplicationExpectationsPayload;
+    /** 1-based block index (first Git repo block is `1`). */
+    blockIndex?: number;
+  }): Promise<void> {
+    const blockIndex = params.blockIndex ?? 1;
+    const { applicationName, applicationExpectations } = params;
+    const adv = applicationExpectations.advancedConfiguration;
+    const channelDisplaySubstring = adv?.channelDisplaySubstring;
+    const channelRepositoryUrl = adv?.channelRepositoryUrl;
+    if (!channelDisplaySubstring || !channelRepositoryUrl) {
+      throw new Error(
+        'expectAdvancedConfigShowsSubscriptionAndChannelForBlock: add ' +
+          'specDomains.applicationExpectations.advancedConfiguration.channelDisplaySubstring and ' +
+          'channelRepositoryUrl to e2e-spec-data'
+      );
+    }
+    const subscriptionCrName = defaultSubscriptionCrName(applicationName, blockIndex);
+
+    await this.openAdvancedConfigTab();
+    await this.assertAdvancedConfigSubscriptionRowChannelColumn({
+      subscriptionCrName,
+      channelDisplaySubstring,
+    });
+    await this.assertAdvancedConfigChannelRowTypePopoverAndColumns({
+      channelDisplaySubstring,
+      channelRepositoryUrl,
+      channelRepositoryTypeLabel: adv?.channelRepositoryTypeLabel,
+    });
+  }
+
+  /** Subscriptions toggle + toolbar search + **Channel** column assertion (caller must already be on Advanced). */
+  private async assertAdvancedConfigSubscriptionRowChannelColumn(params: {
+    subscriptionCrName: string;
+    channelDisplaySubstring: string;
+  }): Promise<void> {
+    const { subscriptionCrName, channelDisplaySubstring } = params;
+    const channelLinkPattern = new RegExp(escapeRegExp(channelDisplaySubstring), 'i');
+    await this.getAdvancedResourceToggleButton('subscriptions').click();
+    await this.waitForLoad();
+
+    await this.applicationsTable.search(subscriptionCrName);
+    await this.waitForLoad();
+
+    const subTable = this.getAdvancedTable();
+    const subByLink = subTable.getByRole('row').filter({
+      has: subTable.getByRole('link', { name: subscriptionCrName, exact: true }),
+    });
+    const subRow =
+      (await subByLink.count()) > 0
+        ? subByLink.first()
+        : subTable.locator('tbody tr').filter({ hasText: subscriptionCrName }).first();
+    await expect(subRow).toBeVisible({ timeout: 120_000 });
+    const channelCell = subRow.locator(`td[data-label="${APP_ADVANCED_TABLE_COLUMNS.channel}"]`);
+    const channelLink = channelCell.getByRole('link');
+    await expect(channelLink).toBeVisible();
+    await expect(channelLink).toHaveText(channelLinkPattern);
+    await expect(channelLink).toHaveAttribute('href', /channel|Channel/i);
+  }
+
+  /**
+   * Channels toggle + toolbar search: **Subscriptions** / **Clusters** / **Created** are non-empty, **Type** matches,
+   * popover shows repo URL, **Copy** is enabled (caller must already be on Advanced).
+   */
+  private async assertAdvancedConfigChannelRowTypePopoverAndColumns(params: {
+    channelDisplaySubstring: string;
+    channelRepositoryUrl: string;
+    channelRepositoryTypeLabel?: string;
+  }): Promise<void> {
+    const { channelDisplaySubstring, channelRepositoryUrl, channelRepositoryTypeLabel } = params;
+    const typeLabel =
+      channelRepositoryTypeLabel ?? APP_APPLICATION_DETAILS.repositoryKindLabels.git;
+    const channelLinkPattern = new RegExp(escapeRegExp(channelDisplaySubstring), 'i');
+
+    await this.getAdvancedResourceToggleButton('channels').click();
+    await this.waitForLoad();
+    await this.applicationsTable.clearSearch();
+    await this.applicationsTable.search(channelDisplaySubstring);
+    await this.waitForLoad();
+
+    const chTable = this.getAdvancedTable();
+    const chByLink = chTable.getByRole('row').filter({
+      has: chTable.getByRole('link', { name: channelLinkPattern }),
+    });
+    const chRow =
+      (await chByLink.count()) > 0
+        ? chByLink.first()
+        : chTable.locator('tbody tr').filter({ hasText: channelDisplaySubstring }).first();
+    await expect(chRow).toBeVisible({ timeout: 120_000 });
+
+    const subsCell = chRow.locator(`td[data-label="${APP_ADVANCED_TABLE_COLUMNS_CHANNELS.subscriptions}"]`);
+    const clustersCell = chRow.locator(`td[data-label="${APP_ADVANCED_TABLE_COLUMNS_CHANNELS.clusters}"]`);
+    const createdCell = chRow.locator(`td[data-label="${APP_ADVANCED_TABLE_COLUMNS_CHANNELS.created}"]`);
+    await expect(subsCell).toHaveText(/\S/);
+    await expect(clustersCell).toHaveText(/\S/);
+    await expect(createdCell).toHaveText(/\S/);
+
+    const typeCell = chRow.locator(`td[data-label="${APP_ADVANCED_TABLE_COLUMNS_CHANNELS.type}"]`);
+    const typeButton = typeCell.getByRole('button', { name: typeLabel, exact: true });
+    await expect(typeButton).toBeVisible();
+    await typeButton.click();
+
+    // Channel **Type** popover: anchor by expected URL inside a floating layer (`role=dialog` or `role=tooltip`),
+    // not PatternFly `pf-v5` / `pf-v6` class names (those churn with design-system upgrades).
+    const popover = this.page
+      .locator('[role="dialog"], [role="tooltip"]')
+      .filter({ hasText: channelRepositoryUrl })
+      .first();
+    await expect(popover).toBeVisible({ timeout: 15_000 });
+    await expect(popover).toContainText(channelRepositoryUrl);
+    const copyButton = popover.getByRole('button', { name: /copy/i }).first();
+    await expect(copyButton).toBeVisible();
+    await expect(copyButton).toBeEnabled();
+
+    await this.page.keyboard.press('Escape');
   }
 }

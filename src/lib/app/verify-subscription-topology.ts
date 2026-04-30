@@ -48,7 +48,9 @@ export type VerifySubscriptionAppTopologyTabParams = {
    */
   mergedSubscriptionBlocks?: { blockIndex: number; clusterResourceRows: TopologyClusterResourceRef[] }[];
   /**
-   * Topology **`#comboChannel`** PF6 MenuToggle — pick **All Subscriptions** or one subscription before graph assertions.
+   * Topology **`#comboChannel`** PF6 MenuToggle — only rendered when **more than one** subscription/repo exists.
+   * When {@link mergedSubscriptionBlocks} has **two or more** entries, pass **`'all'`** (or a subscription CR) so
+   * the graph shows the right scope; if omitted in that case, defaults to **`'all'`**.
    */
   subscriptionScope?: TopologySubscriptionScopeParam;
   /** Poll until all graph node `data-id`s exist (default 120s). */
@@ -58,8 +60,8 @@ export type VerifySubscriptionAppTopologyTabParams = {
 };
 
 /**
- * Opens **Topology**, asserts URL / title / graph chrome, optional **subscription scope** menu, polls until
- * expected **node** `data-id`s exist, then runs **drawer** spot checks.
+ * Opens **Topology**, asserts URL / title / graph chrome, **`#comboChannel`** only when multi-repo merged blocks,
+ * polls until expected **node** `data-id`s exist, then runs **drawer** spot checks.
  */
 export async function verifySubscriptionAppTopologyTab(
   params: VerifySubscriptionAppTopologyTabParams
@@ -119,12 +121,22 @@ export async function verifySubscriptionAppTopologyTab(
   await expectApplicationTopologyUrl(page, namespace, applicationName);
   await expect(detailsPage.getApplicationHeading()).toHaveText(applicationName);
   await expect(detailsPage.getTopologyZoomInButton()).toBeVisible();
-  await expect(detailsPage.getTopologySubscriptionScopeToggle()).toBeVisible();
 
-  if (subscriptionScope === 'all') {
-    await detailsPage.chooseTopologySubscriptionScopeAll();
-  } else if (subscriptionScope && typeof subscriptionScope === 'object') {
-    await detailsPage.chooseTopologySubscriptionScopeByCrName(subscriptionScope.subscriptionCrName);
+  const mergedBlockCount = merged?.length ?? 0;
+  const hasComboChannel = mergedBlockCount > 1;
+
+  if (hasComboChannel) {
+    await expect(detailsPage.getTopologySubscriptionScopeToggle()).toBeVisible();
+    const scope = subscriptionScope ?? 'all';
+    if (scope === 'all') {
+      await detailsPage.chooseTopologySubscriptionScopeAll();
+    } else {
+      await detailsPage.chooseTopologySubscriptionScopeByCrName(scope.subscriptionCrName);
+    }
+  } else if (subscriptionScope !== undefined) {
+    throw new Error(
+      'verifySubscriptionAppTopologyTab: subscriptionScope is only used when mergedSubscriptionBlocks has more than one block (#comboChannel). For a single Git repo, omit it.'
+    );
   }
 
   await detailsPage.expectTopologyGraphContainsNodeDataIds(topologyDataIds, {

@@ -89,6 +89,22 @@ export class ApplicationsTable extends AcmTable {
     await listbox.getByRole('checkbox').first().waitFor({ state: 'visible', timeout: 10000 });
   }
 
+  /**
+   * Toolbar **Clear all filters** (PF link button). Present when at least one table filter is active
+   * (see Playwriter snapshot on Applications list).
+   */
+  getClearAllFiltersButton(): Locator {
+    return this.page.getByRole('button', {
+      name: APP_TOOLBAR.clearAllFiltersButtonName,
+      exact: true,
+    });
+  }
+
+  /** Click **Clear all filters** (resets filter chips / type checks). */
+  async clickClearAllFilters(): Promise<void> {
+    await this.getClearAllFiltersButton().click();
+  }
+
   /** Root of the filter control (toggle + label). The open listbox may be portaled and NOT under this node. */
   getFilterMenu(): Locator {
     return this.page.locator(`[aria-label="${APP_FILTER.menuAriaLabel}"]`);

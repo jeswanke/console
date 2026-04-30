@@ -55,7 +55,7 @@ export const APP_APPLICATION_DETAILS = {
   typeValues: {
     subscription: 'Subscription',
   },
-  /** Repository kind badges/buttons shown inside Details → Repository value. */
+  /** Repository kind badges/buttons shown inside Details → Repository value and Advanced → Channels **Type** label. */
   repositoryKindLabels: {
     git: 'Git',
     helm: 'Helm',
@@ -104,6 +104,7 @@ export const APP_APPLICATION_TOPOLOGY = {
   graphElementIds: {
     /**
      * PF6 **MenuToggle** for topology **subscription scope** (`All Subscriptions` vs each Subscription CR name).
+     * Rendered only when the application has **more than one** subscription/repo; absent on single-repo topology.
      * Same element historically called “channel combo” (Playwriter / PF6 hub).
      */
     channelCombo: 'comboChannel',
@@ -173,6 +174,11 @@ export const APP_TOOLBAR = {
   exportButtonAriaLabel: 'export-search-result',
   /** Compare application types link */
   compareTypesLabel: 'Compare application types',
+  /**
+   * PF link **Clear all filters** on the Applications table toolbar (shown when filters are active).
+   * Validated with Playwriter on `multicloud/applications` (PF6 `role="button"`).
+   */
+  clearAllFiltersButtonName: 'Clear all filters',
 } as const;
 
 /** Create application dropdown. Open panel uses role="menu". */
@@ -297,10 +303,12 @@ export const APP_FILTER = {
     type: 'Type',
     cluster: 'Cluster',
   },
-  /** Known Type filter option labels */
+  /** Known Type filter option labels (checkbox accessible names often include counts, e.g. `System 3`). */
   typeOptions: {
     system: 'System',
     openshift: 'OpenShift',
+    /** Subscription / ALC Git apps — matches legacy Cypress `searchApplication(..., 'Subscription')`. */
+    subscription: 'Subscription',
   },
 } as const;
 

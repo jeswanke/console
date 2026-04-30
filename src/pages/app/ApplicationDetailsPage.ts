@@ -161,8 +161,8 @@ export class ApplicationDetailsPage extends BasePage {
   }
 
   /**
-   * Channel / subscription **combo** (`#comboChannel`) — lives next to the SVG surface, not always inside
-   * `role="tabpanel"`.
+   * Channel / subscription **combo** (`#comboChannel`) — only when **multiple** subscriptions/repos; lives next to
+   * the SVG surface, not always inside `role="tabpanel"`.
    */
   getTopologyChannelComboNode(): Locator {
     return this.page.locator(`#${APP_APPLICATION_TOPOLOGY.graphElementIds.channelCombo}`);

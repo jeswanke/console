@@ -33,6 +33,7 @@ export {
   buildTopologyDrawerSpotChecksForSubscriptionBlock,
   buildTopologyNodeDataIdsForSubscriptionBlock,
   dedupeTopologyNodeDataIds,
+  defaultChannelCrName,
   defaultPlacementCrName,
   defaultSubscriptionCrName,
   expectedTopologyDrawerContains,

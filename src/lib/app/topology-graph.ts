@@ -18,6 +18,11 @@ export function defaultSubscriptionCrName(applicationName: string, blockIndex: n
   return `${applicationName}-subscription-${blockIndex}`;
 }
 
+/** Default **Channel** CR name for block *i* (1-based), matching the create wizard. */
+export function defaultChannelCrName(applicationName: string, blockIndex: number): string {
+  return `${applicationName}-channel-${blockIndex}`;
+}
+
 /** Default **Placement** CR name for block *i* (1-based). */
 export function defaultPlacementCrName(applicationName: string, blockIndex: number): string {
   return `${applicationName}-placement-${blockIndex}`;
