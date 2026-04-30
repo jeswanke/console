@@ -59,6 +59,24 @@ scenarios:
         applicationName: e2e-matrix-app
         namespace: e2e-matrix-ns
 
+  # Single Git repo (helloworld path) + label placement to local-cluster; submit + Details/Topology e2e.
+  auto_git_helloworld_local:
+    enabled: true
+    tests:
+      - RHACM4K-7484
+    blocks:
+      - use:
+          - git_helloworld
+          - automation_ansible
+          - placement_label_local
+          - timewindow_default
+    extends:
+      - subscription_submit
+    specDomains:
+      subscription:
+        applicationName: auto-git-helloworld
+        namespace: auto-git-helloworld-ns
+
   auto_git_multi:
     enabled: true
     tests:

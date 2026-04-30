@@ -52,6 +52,20 @@ export type ApplicationExpectationsDetailsClustersSummary = z.infer<
   typeof applicationExpectationsDetailsClustersSummarySchema
 >;
 
+/** Advanced configuration tab: **Channel** slug, **Type** popover repo URL, and copy control. */
+export const applicationExpectationsAdvancedConfigurationSchema = z.object({
+  /** Subscriptions **Channel** link / Channels **Name** toolbar search (Git-URL slug in the console). */
+  channelDisplaySubstring: z.string().min(1),
+  /** Full URL expected inside the **Type** label popover after click (matches wizard repo). */
+  channelRepositoryUrl: z.string().min(1),
+  /** **Type** column PF label button text (`Git`, `Helm`, …). Default in tests: Details `repositoryKindLabels.git`. */
+  channelRepositoryTypeLabel: z.string().min(1).optional(),
+});
+
+export type ApplicationExpectationsAdvancedConfiguration = z.infer<
+  typeof applicationExpectationsAdvancedConfigurationSchema
+>;
+
 /**
  * Resolved `applicationExpectations`: nested `clusterResources` (aligned with `repositories[i]`),
  * `clusterResourcesFlat`, `clusterResourcesPerRepo`, and **`topologyClusterResourceBlocks`** (kind/name only for topology helpers) from the resolver.
@@ -61,6 +75,7 @@ export const applicationExpectationsDomainSchema = z
     clusterResources: z.array(z.array(applicationClusterResourceRowSchema)).min(1),
     clusterResourcesFlat: z.array(applicationClusterResourceRowSchema).min(1),
     detailsClustersSummary: applicationExpectationsDetailsClustersSummarySchema.optional(),
+    advancedConfiguration: applicationExpectationsAdvancedConfigurationSchema.optional(),
   })
   .superRefine((val, ctx) => {
     const fromBlocks = flattenClusterResourceBlocks(val.clusterResources);

@@ -155,6 +155,38 @@ test.describe('e2e-spec-data YAML processing', () => {
     expect(appExp.detailsClustersSummary).toEqual({ variant: 'localOnly' });
   });
 
+  test('auto_git_helloworld_local: single Git block, local placement, expectations for Details/Topology', () => {
+    const spec = loadE2eSpecData(E2E_SPEC_DATA_DIR);
+    expect(spec.scenarios.auto_git_helloworld_local?.blocks).toHaveLength(1);
+    expect(spec.scenarios.auto_git_helloworld_local?.blocks?.[0]?.use).toContain('git_helloworld');
+    expect(spec.scenarios.auto_git_helloworld_local?.blocks?.[0]?.use).toContain('placement_label_local');
+
+    const resolved = getE2eScenario('auto_git_helloworld_local', E2E_SPEC_DATA_DIR);
+    const sub = getSubscriptionDomainPayload(resolved);
+
+    expect(sub.submit).toBe(true);
+    expect(sub.applicationName).toBe('auto-git-helloworld');
+    expect(sub.namespace).toBe('auto-git-helloworld-ns');
+    expect(sub.repositories).toHaveLength(1);
+    expect(sub.repositories?.[0]).toMatchObject({ path: 'helloworld', kind: 'git' });
+
+    const appExp = getApplicationExpectationsPayload(resolved);
+    expect(appExp.clusterResourcesFlat.every((r) => r.namespace === 'auto-git-helloworld-ns')).toBe(true);
+    expect(appExp.clusterResources).toHaveLength(1);
+    expect(appExp.clusterResources[0]).toHaveLength(5);
+    expect(appExp.topologyClusterResourceBlocks).toHaveLength(1);
+    expect(appExp.topologyClusterResourceBlocks[0]).toEqual(
+      appExp.clusterResources[0]!.map(({ kind, name }) => ({ kind, name }))
+    );
+    expect(appExp.detailsClustersSummary).toEqual({ variant: 'localOnly' });
+    expect(appExp.advancedConfiguration?.channelDisplaySubstring).toBe(
+      'stolostron-application-lifecycle-samples'
+    );
+    expect(appExp.advancedConfiguration?.channelRepositoryUrl).toBe(
+      'https://github.com/stolostron/application-lifecycle-samples.git'
+    );
+  });
+
   test('mergeExpectationsRowsForComposerBlock: one outer clusterResources slot applies to any lane index', () => {
     const spec = loadE2eSpecData(E2E_SPEC_DATA_DIR);
     const use = ['git_mortgage'];

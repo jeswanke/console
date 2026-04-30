@@ -52,6 +52,10 @@ fragments:
               name: helloworld-app-deploy
             - kind: Pod
               name: helloworld-app-deploy
+        # Advanced configuration → Subscriptions **Channel** / Channels **Name** (console Git-URL slug, not CR name).
+        advancedConfiguration:
+          channelDisplaySubstring: stolostron-application-lifecycle-samples
+          channelRepositoryUrl: *stolostron-app-lifecycle-samples-git
 
   # Same naming pattern as `git_helloworld`: `kind` + `path` for this stream’s repo + expectations.
   git_mortgage:
