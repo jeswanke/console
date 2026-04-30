@@ -2,7 +2,7 @@
  * Shared test logic: assertions, factories, and other non-page, non-service code.
  * Add modules under `assertions/`, `factories/`, etc. as the suite grows.
  *
- * @see docs/architecture-overview.md — §5 `/src/lib`
+ * @see docs/architecture-overview.md — §5 `/src/lib` (application helpers under `./app/`)
  */
 
 export {
@@ -17,7 +17,7 @@ export {
   type PerBlockSubscriptionSpec,
   type SubscriptionRepositorySpec,
   type TimeWindowSpec,
-} from './subscription-create';
+} from './app/subscription-create';
 
 export {
   getManagedClusterContextPath,
@@ -52,7 +52,7 @@ export {
   topologySubscriptionDataId,
   TOPOLOGY_GRAPH_SURFACE_TEST_ID,
   type TopologyClusterResourceRef,
-} from './topology-graph';
+} from './app/topology-graph';
 
 export {
   subscriptionDetailsClustersValuePattern,
@@ -60,10 +60,10 @@ export {
   type SubscriptionDetailsClustersSummary,
   type SubscriptionDetailsRepositoryExpectation,
   type VerifySubscriptionAppDetailsTabParams,
-} from './verify-subscription-details';
+} from './app/verify-subscription-details';
 export {
   verifySubscriptionAppTopologyTab,
   type TopologyDrawerSpotCheck,
   type TopologySubscriptionScopeParam,
   type VerifySubscriptionAppTopologyTabParams,
-} from './verify-subscription-topology';
+} from './app/verify-subscription-topology';

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import type { TopologyClusterResourceRef } from '@lib/topology-graph';
+import type { TopologyClusterResourceRef } from '@lib/app/topology-graph';
 
 /**
  * Expected hub object for Details/topology. `namespace` may be omitted in YAML; filled before validation.

@@ -83,7 +83,7 @@ export type AppApplicationDetailsTabKey = keyof typeof APP_APPLICATION_DETAILS.t
 export const APP_APPLICATION_TOPOLOGY = {
   /**
    * **`data-test-id`** on the PF topology visualization surface wrapping the `svg` graph (`g[data-kind=node]`,
-   * `data-id` values — see `src/lib/topology-graph.ts` / Playwriter hub capture).
+   * `data-id` values — see `src/lib/app/topology-graph.ts` / Playwriter hub capture).
    */
   graphSurfaceTestId: 'topology',
   /** Topology / Details tab list lives in this labelled region (PF). */

@@ -13,10 +13,10 @@ import {
 } from '@config';
 import {
   verifySubscriptionAppDetailsTab,
-} from '@lib/verify-subscription-details';
-import { verifySubscriptionAppTopologyTab } from '@lib/verify-subscription-topology';
+} from '@lib/app/verify-subscription-details';
+import { verifySubscriptionAppTopologyTab } from '@lib/app/verify-subscription-topology';
 import { test, expect } from '@fixtures/app-test';
-import { createSubscription } from '@lib/subscription-create';
+import { createSubscription } from '@lib/app/subscription-create';
 
 const E2E_SPEC_DATA_DIR = path.join(process.cwd(), 'src/config/e2e-spec-data');
 

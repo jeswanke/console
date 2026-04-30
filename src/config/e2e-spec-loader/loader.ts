@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { parse as parseYaml } from 'yaml';
-import type { CreateSubscriptionOptions } from '@lib/subscription-create';
+import type { CreateSubscriptionOptions } from '@lib/app/subscription-create';
 import type { ApplicationExpectationsPayload } from './domains/application-expectations/applicationExpectationsSchema';
 import { e2eSpecDataSchema } from './schema';
 import { mergeE2eSpecData } from './specFileMerge';

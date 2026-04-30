@@ -10,7 +10,7 @@ import {
 import {
   expectTopologyGraphContainsNodeDataIds,
   expectVisibleTopologyDrawerContains,
-} from '@lib/topology-graph';
+} from '@lib/app/topology-graph';
 
 /**
  * ACM **single application** console view: Topology / Details (and other tab slugs on the same route family).
