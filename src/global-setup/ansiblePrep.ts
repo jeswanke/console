@@ -3,19 +3,16 @@ import fs from 'fs';
 import path from 'path';
 import { promisify } from 'util';
 
+import { isTruthyEnv } from './envTruthy';
 import { LOG_ANSIBLE_PREP } from './logPrefix';
+import { assertAapOperatorRunning } from './operatorPreflight';
 import { getRepoRoot } from './repoRoot';
 
 const execFileAsync = promisify(execFile);
 
-function isTruthy(v: string | undefined): boolean {
-  const s = v?.trim().toLowerCase();
-  return s === '1' || s === 'true' || s === 'yes';
-}
-
 /** Explicit override to skip global Ansible secret prep. */
 export function isAnsiblePrepExplicitlySkipped(): boolean {
-  return isTruthy(process.env.E2E_SKIP_ANSIBLE_PREP);
+  return isTruthyEnv(process.env.E2E_SKIP_ANSIBLE_PREP);
 }
 
 /**
@@ -32,6 +29,8 @@ export async function runAnsiblePrep(authDir: string): Promise<void> {
   if (!fs.existsSync(scriptPath)) {
     throw new Error(`${LOG_ANSIBLE_PREP} script not found: ${scriptPath}`);
   }
+
+  await assertAapOperatorRunning();
 
   console.log(`${LOG_ANSIBLE_PREP} Running setup-ansible-template.sh …`);
   console.log(`${LOG_ANSIBLE_PREP} cwd=${authDir} (timeout 400s)`);

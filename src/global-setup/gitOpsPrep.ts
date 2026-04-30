@@ -9,6 +9,7 @@ import path from 'path';
 import { promisify } from 'util';
 
 import { LOG_GITOPS_PREP } from './logPrefix';
+import { assertOpenshiftGitOpsOperatorRunning } from './operatorPreflight';
 import { getRepoRoot } from './repoRoot';
 
 const execFileAsync = promisify(execFile);
@@ -127,6 +128,8 @@ export async function runGitOpsPrep(): Promise<void> {
     );
     return;
   }
+
+  await assertOpenshiftGitOpsOperatorRunning();
 
   const repoRoot = getRepoRoot();
   const gitOpsDir = path.join(repoRoot, 'scripts', 'gitops');
