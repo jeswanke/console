@@ -267,6 +267,16 @@ export const APP_TABLE_ROW_ACTIONS = {
   menuItemLabels: ['View application', 'Search application'] as const,
 } as const;
 
+/**
+ * Delete application from the Applications **Overview** table (row kebab → modal).
+ * IDs align with Cypress `deleteApplicationUI` / `modal.clickResources` in CLC `application-ui-test`.
+ */
+export const APP_APPLICATION_DELETE = {
+  modalSelector: '#remove-resource-modal',
+  /** Also remove application-related resources before confirming delete. */
+  removeRelatedResourcesSelector: '#remove-app-resources',
+} as const;
+
 /** Overview table column help popovers (click help control next to column header). */
 export const APP_TABLE_COLUMN_HELP = {
   viewDocsLinkText: 'View documentation',

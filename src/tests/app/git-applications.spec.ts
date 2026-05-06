@@ -13,11 +13,13 @@ import {
 import { createSubscription } from '@lib/app/subscription-create';
 import { verifySubscriptionAppDetailsTab } from '@lib/app/verify-subscription-details';
 import { verifySubscriptionAppTopologyTab } from '@lib/app/verify-subscription-topology';
-import { test, expect } from '@fixtures/app-test';
+import { test } from '@fixtures/app-test';
 
 const E2E_SPEC_DATA_DIR = path.join(process.cwd(), 'src/config/e2e-spec-data');
 
 test.describe('Git Applications', { tag: ['@alc', '@app'] }, () => {
+  test.describe.configure({ mode: 'serial' });
+
   test.beforeEach(() => {
     clearE2eSpecDataCache();
   });
@@ -30,7 +32,6 @@ test.describe('Git Applications', { tag: ['@alc', '@app'] }, () => {
   }) => {
     test.setTimeout(180_000);
     const matched = getTestDataForE2e('RHACM4K-7484', E2E_SPEC_DATA_DIR);
-    expect(matched, 'e2e-spec-data: testcase RHACM4K-7484').toHaveLength(1);
     const resolved = matched[0]!;
     const options = getSubscriptionDomainPayload(resolved);
     const expectations = getApplicationExpectationsPayload(resolved);
@@ -66,6 +67,24 @@ test.describe('Git Applications', { tag: ['@alc', '@app'] }, () => {
       applicationName,
       applicationExpectations: expectations,
       blockIndex: 1,
+    });
+  });
+
+  test('RHACM4K-7487: ALC: Delete a Git Application deployed on a Local Cluster', async ({
+    applicationListPage,
+    subscriptionApplicationCreateWizardPage,
+  }) => {
+    test.setTimeout(240_000);
+    const matched = getTestDataForE2e('RHACM4K-7487', E2E_SPEC_DATA_DIR);
+    const resolved = matched[0]!;
+    const options = getSubscriptionDomainPayload(resolved);
+
+    await applicationListPage.goto();
+    await createSubscription(applicationListPage, subscriptionApplicationCreateWizardPage, options);
+
+    await applicationListPage.deleteApplicationFromOverviewViaSearch({
+      applicationName: options.applicationName,
+      removeRelatedResources: true,
     });
   });
 });

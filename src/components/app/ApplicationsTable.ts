@@ -1,7 +1,8 @@
-import { Page, Locator } from '@playwright/test';
+import { Page, Locator, expect } from '@playwright/test';
 import { AcmTable } from '@components/patternfly/AcmTable';
 import { SELECTORS } from '@constants/selectors';
 import {
+  APP_APPLICATION_DELETE,
   APP_TABLE,
   APP_TABLE_COLUMNS,
   APP_TABLE_ROW_ACTIONS,
@@ -268,6 +269,49 @@ export class ApplicationsTable extends AcmTable {
 
   async openRowActions(row: Locator): Promise<void> {
     await this.getRowActionsButton(row).click();
+  }
+
+  getDeleteApplicationModal(): Locator {
+    return this.page.locator(APP_APPLICATION_DELETE.modalSelector);
+  }
+
+  /**
+   * Assumes row actions menu is open. Clicks **Delete application** (subscription apps on hub;
+   * label matches Cypress `menuClick('delete application')`).
+   */
+  async clickDeleteApplicationMenuItem(): Promise<void> {
+    const menu = this.page.getByRole('menu');
+    await expect(menu).toBeVisible();
+    await menu.getByRole('menuitem', { name: /^Delete application$/i }).click();
+  }
+
+  /**
+   * Confirms the remove-application modal: optionally enables **Remove application related resources**
+   * (`#remove-app-resources`), then the danger **Delete** button. Waits until the modal is gone.
+   */
+  async confirmDeleteApplicationModal(options: { removeRelatedResources: boolean }): Promise<void> {
+    const modal = this.getDeleteApplicationModal();
+    await expect(modal).toBeVisible({ timeout: 60_000 });
+    await expect(modal.locator('[class*="c-empty-state"]')).toHaveCount(0, { timeout: 100_000 });
+    const deleteInModal = () => modal.getByRole('button', { name: /^Delete$/i });
+    await deleteInModal().waitFor({ state: 'visible', timeout: 60_000 });
+    if (options.removeRelatedResources) {
+      const removeRelated = this.page.locator(APP_APPLICATION_DELETE.removeRelatedResourcesSelector);
+      if ((await removeRelated.count()) > 0 && (await removeRelated.first().isVisible().catch(() => false))) {
+        await removeRelated.first().click({ force: true });
+      }
+    }
+    await expect(deleteInModal()).toBeEnabled({ timeout: 60_000 });
+    await deleteInModal().click();
+    await expect(modal).toBeHidden({ timeout: 120_000 });
+  }
+
+  /** Search must already narrow to this row (or row is visible on the current page). */
+  async deleteApplicationByRow(row: Locator, options?: { removeRelatedResources?: boolean }): Promise<void> {
+    const removeRelatedResources = options?.removeRelatedResources !== false;
+    await this.openRowActions(row);
+    await this.clickDeleteApplicationMenuItem();
+    await this.confirmDeleteApplicationModal({ removeRelatedResources });
   }
 
   /** First data row (tbody); use when the table has at least one application. */

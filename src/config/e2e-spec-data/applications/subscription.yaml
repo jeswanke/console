@@ -64,6 +64,7 @@ scenarios:
     enabled: true
     tests:
       - RHACM4K-7484
+      - RHACM4K-7487
     blocks:
       - use:
           - git_helloworld

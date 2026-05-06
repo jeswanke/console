@@ -347,4 +347,27 @@ export class ApplicationListPage extends BasePage {
 
     await this.page.keyboard.press('Escape');
   }
+
+  /**
+   * **Overview** list: toolbar search by `applicationName`, row **Actions** → **Delete application**,
+   * then confirm modal (optionally `#remove-app-resources` before **Delete**). Asserts the row is gone.
+   * Parity with Cypress `deleteApplicationUI` (CLC).
+   */
+  async deleteApplicationFromOverviewViaSearch(params: {
+    applicationName: string;
+    /** Default `true`: enable removing application-related resources in the modal when the control exists. */
+    removeRelatedResources?: boolean;
+  }): Promise<void> {
+    const { applicationName, removeRelatedResources = true } = params;
+    await this.goto();
+    await this.waitForLoad();
+    const table = this.applicationsTable;
+    await table.search(applicationName);
+    await this.waitForLoad();
+    const row = table.getRowByName(applicationName);
+    await expect(row).toBeVisible({ timeout: 120_000 });
+    await table.deleteApplicationByRow(row, { removeRelatedResources });
+    await this.waitForLoad();
+    await expect(table.getRowByName(applicationName)).toHaveCount(0, { timeout: 120_000 });
+  }
 }
