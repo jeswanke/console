@@ -269,7 +269,6 @@ export const APP_TABLE_ROW_ACTIONS = {
 
 /**
  * Delete application from the Applications **Overview** table (row kebab → modal).
- * IDs align with Cypress `deleteApplicationUI` / `modal.clickResources` in CLC `application-ui-test`.
  */
 export const APP_APPLICATION_DELETE = {
   modalSelector: '#remove-resource-modal',
@@ -317,7 +316,7 @@ export const APP_FILTER = {
   typeOptions: {
     system: 'System',
     openshift: 'OpenShift',
-    /** Subscription / ALC Git apps — matches legacy Cypress `searchApplication(..., 'Subscription')`. */
+    /** Subscription / ALC Git apps. */
     subscription: 'Subscription',
   },
 } as const;

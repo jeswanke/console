@@ -73,8 +73,8 @@ export async function runManagedClusterPrep(authDir: string): Promise<void> {
 
 /**
  * Same idea as application-ui-test `setup-cluster-contexts.sh`: merge kubeconfigs and **rename**
- * each spoke context to the ManagedCluster name so `oc config use-context <mc>` matches Cypress
- * `managedOcLogin`. Writes **`MC_MERGED_kubeconfig`** into `authDir` and sets **`process.env.KUBECONFIG`**.
+ * each spoke context to the ManagedCluster name so `oc config use-context <mc>` works consistently.
+ * Writes **`MC_MERGED_kubeconfig`** into `authDir` and sets **`process.env.KUBECONFIG`**.
  *
  * Requires **jq** and **yq** on `PATH`.
  */

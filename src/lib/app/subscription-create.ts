@@ -1,6 +1,6 @@
 /**
  * Subscription **create** wizard orchestration for **Playwright** tests only (`@playwright/test`,
- * {@link SubscriptionApplicationCreateWizardPage}). Does not use Cypress. For exploratory hub verification,
+ * {@link SubscriptionApplicationCreateWizardPage}). For exploratory hub verification,
  * use the **Playwriter** CLI against your logged-in Chrome session.
  */
 import type { Locator } from '@playwright/test';
@@ -84,7 +84,7 @@ export interface ClusterLabelSelectorRowSpec {
   /** **Operator** — typed into the combobox when set (e.g. `equals any of`). */
   labelOperator?: string;
   /**
-   * **Value** — menu pick when set (e.g. `local-cluster`), same as legacy Cypress subscription flows.
+   * **Value** — menu pick when set (e.g. `local-cluster`).
    */
   labelValue?: string;
 }
@@ -186,6 +186,37 @@ export interface CreateSubscriptionOptions {
    * When **true**: if that Application already exists, throws before the wizard (treat duplicate as an error).
    */
   applicationExistsError?: boolean;
+}
+
+export interface AddSubscriptionToExistingApplicationOptions {
+  /** Existing application name to edit. */
+  applicationName: string;
+  /** Existing application namespace to edit. */
+  namespace: string;
+  /** New repository blocks to append (`0` = first added block). */
+  repositories: SubscriptionRepositorySpec[];
+  /** Optional extras aligned to `repositories` indexes above. */
+  perBlock?: (PerBlockSubscriptionSpec | undefined)[];
+  /** Call {@link SubscriptionApplicationCreateWizardPage.collapseYamlEditor} first (default `true`) */
+  ensureFormMode?: boolean;
+  /** Click primary **Update** when done (default `true`) */
+  submit?: boolean;
+}
+
+export interface DeleteSubscriptionFromExistingApplicationOptions {
+  /** Existing application name to edit. */
+  applicationName: string;
+  /** Existing application namespace to edit. */
+  namespace: string;
+  /**
+   * Zero-based repository block index to remove from edit form.
+   * Defaults to the last block.
+   */
+  deleteBlockIndex?: number;
+  /** Call {@link SubscriptionApplicationCreateWizardPage.collapseYamlEditor} first (default `true`) */
+  ensureFormMode?: boolean;
+  /** Click primary **Update** when done (default `true`) */
+  submit?: boolean;
 }
 
 async function fillIfDefined(locator: Locator, value: string | undefined): Promise<void> {
@@ -408,6 +439,25 @@ async function applyPerBlockOptions(
   }
 }
 
+async function fillRepositoryBlockBySpec(
+  wizard: SubscriptionApplicationCreateWizardPage,
+  blockIndex: number,
+  spec: SubscriptionRepositorySpec
+): Promise<void> {
+  await wizard.expandRepositoryTypesSectionForRepositoryBlock(blockIndex);
+  await wizard.selectRepositoryTypeInBlock(blockIndex, spec.kind as SubscriptionWizardRepositoryCardKind);
+
+  if (spec.kind === 'git') {
+    await fillGitRepositoryBlock(wizard, blockIndex, spec);
+  } else if (spec.kind === 'helm') {
+    await fillHelmRepositoryBlock(wizard, blockIndex, spec);
+  } else {
+    await fillObjectStorageRepositoryBlock(wizard, blockIndex, spec);
+  }
+
+  await wizard.waitForLoad();
+}
+
 /**
  * Fills the subscription **create** wizard using {@link SubscriptionApplicationCreateWizardPage} building blocks.
  *
@@ -486,24 +536,138 @@ export async function createSubscription(
     }
 
     const spec = repositories[blockIndex]!;
-    await wizard.expandRepositoryTypesSectionForRepositoryBlock(blockIndex);
-    await wizard.selectRepositoryTypeInBlock(blockIndex, spec.kind as SubscriptionWizardRepositoryCardKind);
-
-    if (spec.kind === 'git') {
-      await fillGitRepositoryBlock(wizard, blockIndex, spec);
-    } else if (spec.kind === 'helm') {
-      await fillHelmRepositoryBlock(wizard, blockIndex, spec);
-    } else {
-      await fillObjectStorageRepositoryBlock(wizard, blockIndex, spec);
-    }
-
-    await wizard.waitForLoad();
+    await fillRepositoryBlockBySpec(wizard, blockIndex, spec);
 
     await applyPerBlockOptions(wizard, blockIndex, perBlock?.[blockIndex]);
   }
 
   if (submit) {
     await wizard.getCreateButton().click();
+    await wizard.waitForLoad();
+  }
+}
+
+/**
+ * Opens an existing subscription application in **Edit** mode, appends one or more repository blocks
+ * (subscriptions), fills the new blocks, and optionally clicks **Update**.
+ *
+ * Unlike {@link createSubscription}, this requires the Application CR to already exist.
+ */
+export async function addSubscriptionToExistingApplication(
+  applicationListPage: ApplicationListPage,
+  wizard: SubscriptionApplicationCreateWizardPage,
+  options: AddSubscriptionToExistingApplicationOptions
+): Promise<void> {
+  const {
+    applicationName,
+    namespace,
+    repositories,
+    perBlock,
+    ensureFormMode = true,
+    submit = true,
+  } = options;
+
+  if (!repositories?.length) {
+    throw new Error(
+      'addSubscriptionToExistingApplication: `repositories` must be a non-empty array (new blocks to append).'
+    );
+  }
+
+  const exists = await wizard.oc.applicationsAppK8sIoExists(namespace, applicationName);
+  if (!exists) {
+    throw new Error(
+      `addSubscriptionToExistingApplication: Application "${applicationName}" does not exist in namespace "${namespace}" ` +
+        '(applications.app.k8s.io). Create it first before adding another subscription.'
+    );
+  }
+
+  await wizard.openEditFromApplicationsList(applicationListPage, applicationName);
+
+  if (ensureFormMode) {
+    await wizard.collapseYamlEditor();
+  }
+
+  const existingBlockCount = await wizard.getRepositoryBlockContainers().count();
+
+  for (let addIndex = 0; addIndex < repositories.length; addIndex++) {
+    const blockIndex = existingBlockCount + addIndex;
+    await wizard.getAddChannelsButton().click();
+    await wizard.waitForLoad();
+    await wizard.getRepositoryBlockContainer(blockIndex).waitFor({ state: 'visible', timeout: 60_000 });
+
+    const spec = repositories[addIndex]!;
+    await fillRepositoryBlockBySpec(wizard, blockIndex, spec);
+    await applyPerBlockOptions(wizard, blockIndex, perBlock?.[addIndex]);
+  }
+
+  if (submit) {
+    await wizard.getPrimarySubmitButton().click();
+    await wizard.waitForLoad();
+    // Edit flow can return to Applications list instead of Details; normalize for shared post-create assertions.
+    await wizard.gotoApplicationDetailsTab(namespace, applicationName);
+    await wizard.waitForLoad();
+  }
+}
+
+/**
+ * Opens an existing subscription application in **Edit** mode, deletes one repository block
+ * (subscription), and optionally clicks **Update**.
+ */
+export async function deleteSubscriptionFromExistingApplication(
+  applicationListPage: ApplicationListPage,
+  wizard: SubscriptionApplicationCreateWizardPage,
+  options: DeleteSubscriptionFromExistingApplicationOptions
+): Promise<void> {
+  const {
+    applicationName,
+    namespace,
+    deleteBlockIndex,
+    ensureFormMode = true,
+    submit = true,
+  } = options;
+
+  const exists = await wizard.oc.applicationsAppK8sIoExists(namespace, applicationName);
+  if (!exists) {
+    throw new Error(
+      `deleteSubscriptionFromExistingApplication: Application "${applicationName}" does not exist in namespace "${namespace}" ` +
+        '(applications.app.k8s.io). Create it first before deleting a subscription.'
+    );
+  }
+
+  await wizard.openEditFromApplicationsList(applicationListPage, applicationName);
+
+  if (ensureFormMode) {
+    await wizard.collapseYamlEditor();
+  }
+
+  const beforeCount = await wizard.getRepositoryBlockContainers().count();
+  if (beforeCount <= 1) {
+    throw new Error(
+      `deleteSubscriptionFromExistingApplication: expected at least 2 repository blocks, found ${beforeCount}.`
+    );
+  }
+
+  const blockIndex = deleteBlockIndex ?? beforeCount - 1;
+  if (blockIndex < 0 || blockIndex >= beforeCount) {
+    throw new Error(
+      `deleteSubscriptionFromExistingApplication: deleteBlockIndex ${blockIndex} is out of range (0..${beforeCount - 1}).`
+    );
+  }
+
+  await wizard.getDeleteRepositoryBlockButton(blockIndex).click();
+  await wizard.waitForLoad();
+
+  const afterCount = await wizard.getRepositoryBlockContainers().count();
+  if (afterCount !== beforeCount - 1) {
+    throw new Error(
+      `deleteSubscriptionFromExistingApplication: expected ${beforeCount - 1} repository blocks after delete, found ${afterCount}.`
+    );
+  }
+
+  if (submit) {
+    await wizard.getPrimarySubmitButton().click();
+    await wizard.waitForLoad();
+    await wizard.gotoApplicationDetailsTab(namespace, applicationName);
     await wizard.waitForLoad();
   }
 }

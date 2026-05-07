@@ -187,6 +187,19 @@ export class SubscriptionApplicationCreateWizardPage extends BasePage {
     await this.getApplicationNameInput().waitFor({ state: 'visible', timeout: 60_000 });
   }
 
+  /**
+   * Open existing subscription app editor from Applications list row actions.
+   * Flow: list search by name → row kebab → **Edit application**.
+   */
+  async openEditFromApplicationsList(
+    listPage: ApplicationListPage,
+    applicationName: string
+  ): Promise<void> {
+    await listPage.openEditSubscriptionApplicationFromOverviewViaSearch(applicationName);
+    await this.waitForLoad();
+    await this.getYamlToggle().waitFor({ state: 'visible', timeout: 60_000 });
+  }
+
   // ---------------------------------------------------------------------------
   // Shell: title & save
   // ---------------------------------------------------------------------------
@@ -229,9 +242,14 @@ export class SubscriptionApplicationCreateWizardPage extends BasePage {
     return this.byId(APP_SUBSCRIPTION_CREATE_WIZARD.submit.createButtonElementId);
   }
 
-  /** Last primary button (save / create) in the wizard chrome. */
+  /**
+   * Primary submit action in wizard chrome.
+   * Prefer shared test id (`create-button-portal-id`), with role/name fallback for Update/Create labels.
+   */
   getPrimarySubmitButton(): Locator {
-    return this.page.locator('.pf-v5-c-button.pf-m-primary').last();
+    return this.getCreateButton()
+      .or(this.page.getByRole('button', { name: /^(Update|Create)$/i }))
+      .first();
   }
 
   /** Visibility anchor before submit (same as {@link getCreateButton}). */
@@ -442,6 +460,11 @@ export class SubscriptionApplicationCreateWizardPage extends BasePage {
     return this.page
       .locator(APP_SUBSCRIPTION_CREATE_WIZARD.multiChannel.repositoryBlockContainerSelector)
       .nth(blockIndex);
+  }
+
+  /** All repository/subscription block containers in the form (for count/introspection). */
+  getRepositoryBlockContainers(): Locator {
+    return this.page.locator(APP_SUBSCRIPTION_CREATE_WIZARD.multiChannel.repositoryBlockContainerSelector);
   }
 
   /**

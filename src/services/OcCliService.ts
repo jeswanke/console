@@ -86,4 +86,17 @@ export class OcCliService {
       throw err;
     }
   }
+
+  /**
+   * `oc delete namespace` on the hub — use after UI **Delete application** when e2e should drop the app namespace
+   * entirely (`--ignore-not-found`, `--wait=true`).
+   */
+  async deleteNamespace(namespace: string): Promise<void> {
+    assertSafeOcSingleArg(namespace, 'namespace');
+    await execFilePromise(
+      'oc',
+      ['delete', 'namespace', namespace, '--ignore-not-found', '--wait=true'],
+      { encoding: 'utf8', maxBuffer: 1024 * 1024, timeout: 600_000 }
+    );
+  }
 }

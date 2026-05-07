@@ -176,8 +176,7 @@ export class ApplicationListPage extends BasePage {
   }
 
   /**
-   * Applications list **toolbar search** + **Type** filter checks (parity with legacy Cypress
-   * `searchApplication(appName, type)` in `application-ui-test`).
+   * Applications list **toolbar search** + **Type** filter checks.
    *
    * 1. Toolbar search by `appName` → row with that name is visible.
    * 2. **Filter** → check **Type** `typeFilterLabel` → row still visible.
@@ -349,16 +348,36 @@ export class ApplicationListPage extends BasePage {
   }
 
   /**
+   * **Overview** list: toolbar search by `applicationName`, row **Actions** → **Edit application**.
+   * Lands on subscription edit route (`/multicloud/applications/edit/subscription/...`).
+   */
+  async openEditSubscriptionApplicationFromOverviewViaSearch(applicationName: string): Promise<void> {
+    await this.goto();
+    await this.waitForLoad();
+    const table = this.applicationsTable;
+    await table.search(applicationName);
+    await this.waitForLoad();
+    const row = table.getRowByName(applicationName);
+    await expect(row).toBeVisible({ timeout: 120_000 });
+    await table.openRowActions(row);
+    await table.clickEditApplicationMenuItem();
+    await this.waitForLoad();
+  }
+
+  /**
    * **Overview** list: toolbar search by `applicationName`, row **Actions** → **Delete application**,
-   * then confirm modal (optionally `#remove-app-resources` before **Delete**). Asserts the row is gone.
-   * Parity with Cypress `deleteApplicationUI` (CLC).
+   * then confirm modal (optionally `#remove-app-resources` before **Delete**). Asserts the row is gone, then runs
+   * {@link OcCliService.deleteNamespace} so the app namespace is removed from the cluster (e2e cleanup).
+   * Includes explicit namespace teardown after UI delete.
    */
   async deleteApplicationFromOverviewViaSearch(params: {
     applicationName: string;
+    /** Hub namespace for the Application CR; deleted via `oc` after the UI delete succeeds. */
+    namespace: string;
     /** Default `true`: enable removing application-related resources in the modal when the control exists. */
     removeRelatedResources?: boolean;
   }): Promise<void> {
-    const { applicationName, removeRelatedResources = true } = params;
+    const { applicationName, namespace, removeRelatedResources = true } = params;
     await this.goto();
     await this.waitForLoad();
     const table = this.applicationsTable;
@@ -369,5 +388,6 @@ export class ApplicationListPage extends BasePage {
     await table.deleteApplicationByRow(row, { removeRelatedResources });
     await this.waitForLoad();
     await expect(table.getRowByName(applicationName)).toHaveCount(0, { timeout: 120_000 });
+    await this.oc.deleteNamespace(namespace);
   }
 }

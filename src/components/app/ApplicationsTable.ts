@@ -276,13 +276,22 @@ export class ApplicationsTable extends AcmTable {
   }
 
   /**
-   * Assumes row actions menu is open. Clicks **Delete application** (subscription apps on hub;
-   * label matches Cypress `menuClick('delete application')`).
+   * Assumes row actions menu is open. Clicks **Delete application** (subscription apps on hub).
    */
   async clickDeleteApplicationMenuItem(): Promise<void> {
     const menu = this.page.getByRole('menu');
     await expect(menu).toBeVisible();
     await menu.getByRole('menuitem', { name: /^Delete application$/i }).click();
+  }
+
+  /**
+   * Assumes row actions menu is open. Opens subscription edit flow from list row actions.
+   * Current hub label is "Edit application".
+   */
+  async clickEditApplicationMenuItem(): Promise<void> {
+    const menu = this.page.getByRole('menu');
+    await expect(menu).toBeVisible();
+    await menu.getByRole('menuitem', { name: /^Edit application$/i }).click();
   }
 
   /**

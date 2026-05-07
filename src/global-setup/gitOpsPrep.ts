@@ -124,7 +124,7 @@ export async function runGitOpsPrep(): Promise<void> {
   const skipInterop = process.env.E2E_OCP_INTEROP?.trim() === '1';
   if (skipInterop) {
     console.log(
-      `${LOG_GITOPS_PREP} Skipping (E2E_OCP_INTEROP=1, parity with Cypress @ocpInterop).`
+      `${LOG_GITOPS_PREP} Skipping (E2E_OCP_INTEROP=1).`
     );
     return;
   }

@@ -78,11 +78,66 @@ scenarios:
         applicationName: auto-git-helloworld
         namespace: auto-git-helloworld-ns
 
-  auto_git_multi:
+  # Isolated baseline app for RHACM4K-7554 add-subscription edit flow (single existing subscription).
+  auto_git_add_subscription_base:
+    enabled: true
+    blocks:
+      - use:
+          - git_helloworld
+          - automation_ansible
+          - placement_label_local
+          - timewindow_default
+    extends:
+      - subscription_submit
+    specDomains:
+      subscription:
+        applicationName: auto-git-add-sub
+        namespace: auto-git-add-sub-ns
+
+  # Add one Git subscription (mortgage) to an existing helloworld app via edit flow.
+  auto_git_add_second_subscription:
     enabled: true
     tests:
       - RHACM4K-7554
+    blocks:
+      - use:
+          - git_mortgage
+          - automation_ansible
+          - placement_label_local
+          - timewindow_default
+    extends:
+      - subscription_submit
+    specDomains:
+      subscription:
+        applicationName: auto-git-add-sub
+        namespace: auto-git-add-sub-ns
+
+  # Isolated two-subscription app for RHACM4K-7555 delete-subscription edit flow.
+  auto_git_delete_subscription_multi:
+    enabled: true
+    tests:
       - RHACM4K-7555
+    blocks:
+      - use:
+          - git_helloworld
+          - automation_ansible
+          - placement_label_local
+          - timewindow_default
+      - use:
+          - git_mortgage
+          - automation_ansible
+          - placement_label_local
+          - timewindow_default
+    extends:
+      - subscription_submit
+    specDomains:
+      subscription:
+        applicationName: auto-git-delete-sub
+        namespace: auto-git-delete-sub-ns
+
+  auto_git_multi:
+    enabled: true
+    tests:
       - RHACM4K-7556
       - RHACM4K-7557
       - RHACM4K-6903

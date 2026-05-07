@@ -32,7 +32,7 @@ async function runningPodNames(namespace: string): Promise<string> {
   }
 }
 
-/** AAP operator subscription pods (same name checks as legacy Cypress `checkAnsibleOperator`). */
+/** AAP operator subscription pods required for suite preflight. */
 const AAP_REQUIRED_SUBSTRINGS = [
   'automation-controller-operator-controller-manager',
   'automation-hub-operator-controller-manager',

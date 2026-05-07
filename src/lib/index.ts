@@ -6,11 +6,15 @@
  */
 
 export {
+  addSubscriptionToExistingApplication,
   createSubscription,
+  deleteSubscriptionFromExistingApplication,
+  type AddSubscriptionToExistingApplicationOptions,
   type AutomationSpec,
   type ClusterDeploymentSpec,
   type ClusterLabelSelectorRowSpec,
   type CreateSubscriptionOptions,
+  type DeleteSubscriptionFromExistingApplicationOptions,
   type GitSubscriptionRepositoryFields,
   type HelmSubscriptionRepositoryFields,
   type ObjectStorageSubscriptionRepositoryFields,
