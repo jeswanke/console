@@ -3,7 +3,7 @@
  * {@link SubscriptionApplicationCreateWizardPage}). For exploratory hub verification,
  * use the **Playwriter** CLI against your logged-in Chrome session.
  */
-import type { Locator } from '@playwright/test';
+import { expect, type Locator } from '@playwright/test';
 import {
   APP_SUBSCRIPTION_CREATE_WIZARD,
   type AppSubscriptionTimeWindowWeekday,
@@ -201,6 +201,52 @@ export interface AddSubscriptionToExistingApplicationOptions {
   ensureFormMode?: boolean;
   /** Click primary **Update** when done (default `true`) */
   submit?: boolean;
+  /** Where edit flow is opened from: Applications list row actions or Details page actions. Default `list`. */
+  entry?: 'list' | 'details';
+  /**
+   * Optional explicit edit URL expectation. When omitted, asserts the standard
+   * `/multicloud/applications/edit/subscription/{namespace}/{applicationName}` route.
+   */
+  expectedEditUrl?: string | RegExp;
+  /**
+   * Optional post-submit URL expectation. When omitted, defaults to Applications list
+   * for `entry: 'list'` and Details tab for `entry: 'details'`.
+   */
+  expectedPostSubmitUrl?: string | RegExp;
+  /** Timeout for edit/post-submit URL assertions. */
+  expectedUrlTimeout?: number;
+}
+
+/**
+ * Opens an existing subscription application in **Edit** mode, updates one or more existing repository blocks
+ * in place, and optionally clicks **Update**.
+ */
+export interface EditSubscriptionInExistingApplicationOptions {
+  applicationName: string;
+  namespace: string;
+  /** Repository payloads to apply to existing blocks (index-aligned). */
+  repositories: SubscriptionRepositorySpec[];
+  /**
+   * Per-block extras applied to the same indexes as `repositories`.
+   * Useful for placement/time-window/automation edits.
+   */
+  perBlock?: (PerBlockSubscriptionSpec | undefined)[];
+  /** Ensure YAML editor is collapsed before filling form controls. */
+  ensureFormMode?: boolean;
+  /** Click Update after applying edits. */
+  submit?: boolean;
+  /**
+   * Where to enter edit flow from:
+   * - `details`: open from Details page
+   * - `list`: open from Applications list
+   */
+  entry?: 'details' | 'list';
+  /** Optional explicit edit URL expectation (string or regex). */
+  expectedEditUrl?: string | RegExp;
+  /** Optional explicit post-submit URL expectation (string or regex). */
+  expectedPostSubmitUrl?: string | RegExp;
+  /** Timeout for URL assertions. */
+  expectedUrlTimeout?: number;
 }
 
 export interface DeleteSubscriptionFromExistingApplicationOptions {
@@ -217,6 +263,20 @@ export interface DeleteSubscriptionFromExistingApplicationOptions {
   ensureFormMode?: boolean;
   /** Click primary **Update** when done (default `true`) */
   submit?: boolean;
+  /** Where edit flow is opened from: Applications list row actions or Details page actions. Default `details`. */
+  entry?: 'list' | 'details';
+  /**
+   * Optional explicit edit URL expectation. When omitted, asserts the standard
+   * `/multicloud/applications/edit/subscription/{namespace}/{applicationName}` route.
+   */
+  expectedEditUrl?: string | RegExp;
+  /**
+   * Optional post-submit URL expectation. When omitted, defaults to edit route for `entry: 'details'`
+   * and Applications list for `entry: 'list'`.
+   */
+  expectedPostSubmitUrl?: string | RegExp;
+  /** Timeout for edit/post-submit URL assertions. */
+  expectedUrlTimeout?: number;
 }
 
 async function fillIfDefined(locator: Locator, value: string | undefined): Promise<void> {
@@ -542,7 +602,10 @@ export async function createSubscription(
   }
 
   if (submit) {
-    await wizard.getCreateButton().click();
+    const submitButton = wizard.getPrimarySubmitButton();
+    await submitButton.waitFor({ state: 'visible', timeout: 30_000 });
+    await expect(submitButton).toBeEnabled({ timeout: 30_000 });
+    await submitButton.click();
     await wizard.waitForLoad();
   }
 }
@@ -565,6 +628,10 @@ export async function addSubscriptionToExistingApplication(
     perBlock,
     ensureFormMode = true,
     submit = true,
+    entry = 'list',
+    expectedEditUrl,
+    expectedPostSubmitUrl,
+    expectedUrlTimeout = 120_000,
   } = options;
 
   if (!repositories?.length) {
@@ -581,7 +648,19 @@ export async function addSubscriptionToExistingApplication(
     );
   }
 
-  await wizard.openEditFromApplicationsList(applicationListPage, applicationName);
+  if (entry === 'details') {
+    await wizard.openEditFromApplicationDetails(namespace, applicationName);
+  } else {
+    await wizard.openEditFromApplicationsList(applicationListPage, applicationName);
+  }
+
+  if (expectedEditUrl !== undefined) {
+    await wizard.expectUrl(expectedEditUrl, { timeout: expectedUrlTimeout });
+  } else {
+    await wizard.expectOnEditSubscriptionUrl(namespace, applicationName, {
+      timeout: expectedUrlTimeout,
+    });
+  }
 
   if (ensureFormMode) {
     await wizard.collapseYamlEditor();
@@ -601,11 +680,102 @@ export async function addSubscriptionToExistingApplication(
   }
 
   if (submit) {
-    await wizard.getPrimarySubmitButton().click();
+    const submitButton = wizard.getPrimarySubmitButton();
+    await submitButton.waitFor({ state: 'visible', timeout: 30_000 });
+    await expect(submitButton).toBeEnabled({ timeout: 30_000 });
+    await submitButton.click();
     await wizard.waitForLoad();
-    // Edit flow can return to Applications list instead of Details; normalize for shared post-create assertions.
-    await wizard.gotoApplicationDetailsTab(namespace, applicationName);
+    if (expectedPostSubmitUrl !== undefined) {
+      await wizard.expectUrl(expectedPostSubmitUrl, { timeout: expectedUrlTimeout });
+    } else if (entry === 'details') {
+      await wizard.expectOnApplicationDetailsTabUrl(namespace, applicationName, {
+        timeout: expectedUrlTimeout,
+      });
+    } else {
+      await wizard.expectOnApplicationsListUrl({ timeout: expectedUrlTimeout });
+    }
+  }
+}
+
+export async function editSubscriptionInExistingApplication(
+  applicationListPage: ApplicationListPage,
+  wizard: SubscriptionApplicationCreateWizardPage,
+  options: EditSubscriptionInExistingApplicationOptions
+): Promise<void> {
+  const {
+    applicationName,
+    namespace,
+    repositories,
+    perBlock,
+    ensureFormMode = true,
+    submit = true,
+    entry = 'details',
+    expectedEditUrl,
+    expectedPostSubmitUrl,
+    expectedUrlTimeout = 120_000,
+  } = options;
+
+  if (!repositories?.length) {
+    throw new Error(
+      'editSubscriptionInExistingApplication: `repositories` must be a non-empty array (existing blocks to update).'
+    );
+  }
+
+  const exists = await wizard.oc.applicationsAppK8sIoExists(namespace, applicationName);
+  if (!exists) {
+    throw new Error(
+      `editSubscriptionInExistingApplication: Application "${applicationName}" does not exist in namespace "${namespace}" ` +
+        '(applications.app.k8s.io). Create it first before editing.'
+    );
+  }
+
+  if (entry === 'details') {
+    await wizard.openEditFromApplicationDetails(namespace, applicationName);
+  } else {
+    await wizard.openEditFromApplicationsList(applicationListPage, applicationName);
+  }
+
+  if (expectedEditUrl !== undefined) {
+    await wizard.expectUrl(expectedEditUrl, { timeout: expectedUrlTimeout });
+  } else {
+    await wizard.expectOnEditSubscriptionUrl(namespace, applicationName, {
+      timeout: expectedUrlTimeout,
+    });
+  }
+
+  if (ensureFormMode) {
+    await wizard.collapseYamlEditor();
+  }
+
+  const existingBlockCount = await wizard.getRepositoryBlockContainers().count();
+  if (repositories.length > existingBlockCount) {
+    throw new Error(
+      `editSubscriptionInExistingApplication: requested update for ${repositories.length} repository blocks, but only ${existingBlockCount} block(s) exist.`
+    );
+  }
+
+  for (let blockIndex = 0; blockIndex < repositories.length; blockIndex++) {
+    await wizard.getRepositoryBlockContainer(blockIndex).waitFor({ state: 'visible', timeout: 60_000 });
+    const spec = repositories[blockIndex]!;
+    await fillRepositoryBlockBySpec(wizard, blockIndex, spec);
+    await applyPerBlockOptions(wizard, blockIndex, perBlock?.[blockIndex]);
+  }
+
+  if (submit) {
+    const submitButton = wizard.getPrimarySubmitButton();
+    await submitButton.waitFor({ state: 'visible', timeout: 30_000 });
+    await expect(submitButton).toBeEnabled({ timeout: 30_000 });
+    await submitButton.click();
     await wizard.waitForLoad();
+    if (expectedPostSubmitUrl !== undefined) {
+      await wizard.expectUrl(expectedPostSubmitUrl, { timeout: expectedUrlTimeout });
+    } else if (entry === 'details') {
+      await wizard.expectOnApplicationDetailsTabUrl(namespace, applicationName, {
+        timeout: expectedUrlTimeout,
+      });
+    } else {
+      await wizard.expectOnApplicationsListUrl({ timeout: expectedUrlTimeout });
+    }
   }
 }
 
@@ -624,6 +794,10 @@ export async function deleteSubscriptionFromExistingApplication(
     deleteBlockIndex,
     ensureFormMode = true,
     submit = true,
+    entry = 'details',
+    expectedEditUrl,
+    expectedPostSubmitUrl,
+    expectedUrlTimeout = 120_000,
   } = options;
 
   const exists = await wizard.oc.applicationsAppK8sIoExists(namespace, applicationName);
@@ -634,40 +808,92 @@ export async function deleteSubscriptionFromExistingApplication(
     );
   }
 
-  await wizard.openEditFromApplicationsList(applicationListPage, applicationName);
+  if (entry === 'details') {
+    await wizard.openEditFromApplicationDetails(namespace, applicationName);
+  } else {
+    await wizard.openEditFromApplicationsList(applicationListPage, applicationName);
+  }
+
+  if (expectedEditUrl !== undefined) {
+    await wizard.expectUrl(expectedEditUrl, { timeout: expectedUrlTimeout });
+  } else {
+    await wizard.expectOnEditSubscriptionUrl(namespace, applicationName, {
+      timeout: expectedUrlTimeout,
+    });
+  }
 
   if (ensureFormMode) {
     await wizard.collapseYamlEditor();
   }
 
-  const beforeCount = await wizard.getRepositoryBlockContainers().count();
-  if (beforeCount <= 1) {
+  const beforeRepoCount = await wizard.getRepositoryBlockContainers().count();
+  const beforeDeleteControls = await wizard.getDeleteRepositoryButtons().count();
+  if (beforeRepoCount <= 1) {
     throw new Error(
-      `deleteSubscriptionFromExistingApplication: expected at least 2 repository blocks, found ${beforeCount}.`
+      `deleteSubscriptionFromExistingApplication: expected at least 2 repository blocks, found ${beforeRepoCount}.`
     );
   }
 
-  const blockIndex = deleteBlockIndex ?? beforeCount - 1;
-  if (blockIndex < 0 || blockIndex >= beforeCount) {
+  const blockIndex = deleteBlockIndex ?? beforeRepoCount - 1;
+  if (blockIndex < 0 || blockIndex >= beforeRepoCount) {
     throw new Error(
-      `deleteSubscriptionFromExistingApplication: deleteBlockIndex ${blockIndex} is out of range (0..${beforeCount - 1}).`
+      `deleteSubscriptionFromExistingApplication: deleteBlockIndex ${blockIndex} is out of range (0..${beforeRepoCount - 1}).`
+    );
+  }
+  if (beforeDeleteControls < 1) {
+    throw new Error(
+      `deleteSubscriptionFromExistingApplication: expected at least one delete control, found ${beforeDeleteControls}.`
     );
   }
 
-  await wizard.getDeleteRepositoryBlockButton(blockIndex).click();
+  let deleteControlIndex = blockIndex;
+  // Some console variants do not render a delete control for the first repository.
+  if (beforeDeleteControls === beforeRepoCount - 1) {
+    if (blockIndex === 0) {
+      throw new Error(
+        'deleteSubscriptionFromExistingApplication: first repository block is not deletable in this UI variant.'
+      );
+    }
+    deleteControlIndex = blockIndex - 1;
+  } else if (deleteControlIndex >= beforeDeleteControls) {
+    deleteControlIndex = beforeDeleteControls - 1;
+  }
+
+  const targetRepoSectionToggle = wizard.getRepositoryTypeSectionToggleInBlock(blockIndex);
+  const targetRepoSectionCountBefore = await targetRepoSectionToggle.count();
+
+  const deleteButton = wizard.getDeleteRepositoryButtons().nth(deleteControlIndex);
+  await deleteButton.scrollIntoViewIfNeeded();
+  await deleteButton.waitFor({ state: 'visible', timeout: 30_000 });
+  await deleteButton.click();
   await wizard.waitForLoad();
 
-  const afterCount = await wizard.getRepositoryBlockContainers().count();
-  if (afterCount !== beforeCount - 1) {
-    throw new Error(
-      `deleteSubscriptionFromExistingApplication: expected ${beforeCount - 1} repository blocks after delete, found ${afterCount}.`
-    );
+  await expect
+    .poll(async () => wizard.getRepositoryBlockContainers().count(), {
+      timeout: 30_000,
+      intervals: [500, 1_000, 2_000],
+      message: `Expected repository blocks to decrease from ${beforeRepoCount} to ${beforeRepoCount - 1}`,
+    })
+    .toBe(beforeRepoCount - 1);
+
+  if (targetRepoSectionCountBefore > 0) {
+    await expect(targetRepoSectionToggle).toHaveCount(0, { timeout: 30_000 });
   }
 
   if (submit) {
-    await wizard.getPrimarySubmitButton().click();
+    const submitButton = wizard.getPrimarySubmitButton();
+    await submitButton.waitFor({ state: 'visible', timeout: 30_000 });
+    await expect(submitButton).toBeEnabled({ timeout: 30_000 });
+    await submitButton.click();
     await wizard.waitForLoad();
-    await wizard.gotoApplicationDetailsTab(namespace, applicationName);
-    await wizard.waitForLoad();
+    if (expectedPostSubmitUrl !== undefined) {
+      await wizard.expectUrl(expectedPostSubmitUrl, { timeout: expectedUrlTimeout });
+    } else if (entry === 'details') {
+      await wizard.expectOnApplicationDetailsTabUrl(namespace, applicationName, {
+        timeout: expectedUrlTimeout,
+      });
+    } else {
+      await wizard.expectOnApplicationsListUrl({ timeout: expectedUrlTimeout });
+    }
   }
 }

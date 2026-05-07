@@ -1,4 +1,4 @@
-import { Page, Locator } from '@playwright/test';
+import { Page, Locator, expect } from '@playwright/test';
 import { BasePage } from '@pages/BasePage';
 import { OcCliService } from '@services/OcCliService';
 import {
@@ -200,6 +200,56 @@ export class SubscriptionApplicationCreateWizardPage extends BasePage {
     await this.getYamlToggle().waitFor({ state: 'visible', timeout: 60_000 });
   }
 
+  /**
+   * Open subscription edit from an application's **Details** page actions menu.
+   * Navigates to Details first to avoid depending on caller's current tab.
+   */
+  async openEditFromApplicationDetails(namespace: string, applicationName: string): Promise<void> {
+    await this.gotoApplicationDetailsTab(namespace, applicationName);
+    await this.page.getByRole('button', { name: 'Actions', exact: true }).click();
+    await this.page.getByRole('menuitem', { name: /^Edit application$/i }).click();
+    await this.waitForLoad();
+    await this.getYamlToggle().waitFor({ state: 'visible', timeout: 60_000 });
+  }
+
+  /** Assert current URL using Playwright `toHaveURL` semantics. */
+  async expectUrl(url: string | RegExp, options?: { timeout?: number }): Promise<void> {
+    await expect(this.page).toHaveURL(url, options);
+  }
+
+  /** Assert `/multicloud/applications/edit/subscription/{ns}/{name}` URL. */
+  async expectOnEditSubscriptionUrl(
+    namespace: string,
+    applicationName: string,
+    options?: { timeout?: number }
+  ): Promise<void> {
+    const escapedNs = namespace.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const escapedName = applicationName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    await this.expectUrl(
+      new RegExp(`/multicloud/applications/edit/subscription/${escapedNs}/${escapedName}(\\?|$)`),
+      options
+    );
+  }
+
+  /** Assert Applications list URL (`/multicloud/applications`). */
+  async expectOnApplicationsListUrl(options?: { timeout?: number }): Promise<void> {
+    await this.expectUrl(/\/multicloud\/applications(\?|$)/, options);
+  }
+
+  /** Assert `/multicloud/applications/details/{ns}/{name}/details` URL. */
+  async expectOnApplicationDetailsTabUrl(
+    namespace: string,
+    applicationName: string,
+    options?: { timeout?: number }
+  ): Promise<void> {
+    const escapedNs = namespace.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const escapedName = applicationName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    await this.expectUrl(
+      new RegExp(`/multicloud/applications/details/${escapedNs}/${escapedName}/details(\\?|$)`),
+      options
+    );
+  }
+
   // ---------------------------------------------------------------------------
   // Shell: title & save
   // ---------------------------------------------------------------------------
@@ -244,10 +294,11 @@ export class SubscriptionApplicationCreateWizardPage extends BasePage {
 
   /**
    * Primary submit action in wizard chrome.
-   * Prefer shared test id (`create-button-portal-id`), with role/name fallback for Update/Create labels.
+   * Target the actual submit `<button>` first (`create-button-portal-id-btn`) and fall back
+   * to the visible role/name control (`Update`/`Create`) when needed.
    */
   getPrimarySubmitButton(): Locator {
-    return this.getCreateButton()
+    return this.getCreateButtonElement()
       .or(this.page.getByRole('button', { name: /^(Update|Create)$/i }))
       .first();
   }
@@ -447,9 +498,18 @@ export class SubscriptionApplicationCreateWizardPage extends BasePage {
    * Same ordering as {@link getRepositoryBlockContainer}.
    */
   getDeleteRepositoryBlockButton(blockIndex: number): Locator {
+    const byBlockContainer = this.getRepositoryBlockContainer(blockIndex)
+      .locator(APP_SUBSCRIPTION_CREATE_WIZARD.multiChannel.deleteRepositoryBlockButtonSelector)
+      .first();
+    const byRole = this.page.getByRole('button', { name: /^Delete repository$/i }).nth(blockIndex);
+    return byBlockContainer.or(byRole).first();
+  }
+
+  /** Visible delete controls for extra repository/subscription blocks on edit form. */
+  getDeleteRepositoryButtons(): Locator {
     return this.page
       .locator(APP_SUBSCRIPTION_CREATE_WIZARD.multiChannel.deleteRepositoryBlockButtonSelector)
-      .nth(blockIndex);
+      .or(this.page.getByRole('button', { name: /^Delete repository$/i }));
   }
 
   /**
@@ -465,6 +525,34 @@ export class SubscriptionApplicationCreateWizardPage extends BasePage {
   /** All repository/subscription block containers in the form (for count/introspection). */
   getRepositoryBlockContainers(): Locator {
     return this.page.locator(APP_SUBSCRIPTION_CREATE_WIZARD.multiChannel.repositoryBlockContainerSelector);
+  }
+
+  /**
+   * One "Repository types" toggle per repository block (`channel-repository-types`, `channelgrp1-repository-types`, ...).
+   * More stable count signal than delete buttons (which can disappear when only one block remains).
+   */
+  getRepositoryTypeToggles(): Locator {
+    return this.page.locator('button[id$="repository-types"]');
+  }
+
+  /**
+   * Repository-type section toggles across all blocks.
+   * Matches first block id (`channel-repository-types`) and additional block ids
+   * (`channelgrp1-repository-types`, `channelgrp2-repository-types`, ...).
+   */
+  getRepositoryTypeSectionToggles(): Locator {
+    return this.page.locator(
+      `#${APP_SUBSCRIPTION_CREATE_WIZARD.sectionToggles.repositoryTypes}, [id^="channelgrp"][id$="-repository-types"]`
+    );
+  }
+
+  /** Repository-type section toggle for a specific block index. */
+  getRepositoryTypeSectionToggleInBlock(blockIndex: number): Locator {
+    const id =
+      blockIndex <= 0
+        ? APP_SUBSCRIPTION_CREATE_WIZARD.sectionToggles.repositoryTypes
+        : `channelgrp${blockIndex}-repository-types`;
+    return this.byId(id);
   }
 
   /**

@@ -78,6 +78,9 @@ fragments:
               name: mortgage-app-deploy
             - kind: Pod
               name: mortgage-app-deploy
+        advancedConfiguration:
+          channelDisplaySubstring: stolostron-application-lifecycle-samples
+          channelRepositoryUrl: *stolostron-app-lifecycle-samples-git
 
   # Three wizard modes: `default` (no schedule), `active` (deploy in windows), `blocked` (suppress in windows).
   timewindow_default:
@@ -138,3 +141,4 @@ fragments:
         # Details tab **Clusters** line for label placement to `local-cluster` (console-e2e Details verifier).
         detailsClustersSummary:
           variant: localOnly
+

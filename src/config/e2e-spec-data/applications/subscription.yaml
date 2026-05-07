@@ -78,6 +78,41 @@ scenarios:
         applicationName: auto-git-helloworld
         namespace: auto-git-helloworld-ns
 
+  # Baseline for RHACM4K-1427: same app/namespace as edit scenario, but **helloworld** repo (create wizard).
+  # The test then edits block 0 to **mortgage** via `auto_git_mortgage_edit_local` payload.
+  auto_git_mortgage_edit_base:
+    enabled: true
+    blocks:
+      - use:
+          - git_helloworld
+          - automation_ansible
+          - placement_label_local
+          - timewindow_default
+    extends:
+      - subscription_submit
+    specDomains:
+      subscription:
+        applicationName: auto-git-mortgage
+        namespace: auto-git-mortgage-ns
+
+  # RHACM4K-1427: subscription payload + expectations **after** edit (mortgage path, mortgage topology).
+  auto_git_mortgage_edit_local:
+    enabled: true
+    tests:
+      - RHACM4K-1427
+    blocks:
+      - use:
+          - git_mortgage
+          - automation_ansible
+          - placement_label_local
+          - timewindow_default
+    extends:
+      - subscription_submit
+    specDomains:
+      subscription:
+        applicationName: auto-git-mortgage
+        namespace: auto-git-mortgage-ns
+
   # Isolated baseline app for RHACM4K-7554 add-subscription edit flow (single existing subscription).
   auto_git_add_subscription_base:
     enabled: true
