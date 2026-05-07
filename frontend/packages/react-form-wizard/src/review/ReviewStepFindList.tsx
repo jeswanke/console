@@ -297,6 +297,9 @@ function reviewValuesEqualAtPath(a: unknown, b: unknown): boolean {
   if (typeof a === 'boolean' && typeof b === 'boolean') {
     return a === b
   }
+  if (b === undefined && a === false) {
+    return true
+  }
   if (a === null || b === null || a === undefined || b === undefined) {
     return a === b
   }
@@ -381,8 +384,7 @@ export function ReviewStepFindList(props: ReviewStepFindListProps) {
   const { sectionRoots, searchQuery, showChangesOnly, onReviewEdit, showYaml } = props
   const item = useItem<object>()
   const defaultItem = useDefaultItem<object>()
-  const { noResults, reviewBooleanTrue, reviewBooleanFalse, reviewBooleanNotSet, reviewChangesOnlyBanner } =
-    useStringContext()
+  const { noResults, reviewBooleanTrue, reviewBooleanFalse, reviewBooleanNotSet } = useStringContext()
   const q = searchQuery.trim()
 
   const booleanStrings = useMemo(
@@ -398,109 +400,119 @@ export function ReviewStepFindList(props: ReviewStepFindListProps) {
   const yamlVisible = showYaml !== false
 
   const hasAnyRows = sections.some((s) => s.rows.length > 0)
+
   if (!hasAnyRows) {
-    return <div className="wizard-review-find-list wizard-review-find-list--empty">{noResults}</div>
+    const emptyClassName = [
+      'wizard-review-find-list',
+      showChangesOnly && 'wizard-review-find-list--changes-only',
+      'wizard-review-find-list--empty',
+    ]
+      .filter(Boolean)
+      .join(' ')
+    return <div className={emptyClassName}>{noResults}</div>
   }
 
   return (
     <div className="wizard-review-find-list">
-      {showChangesOnly ? (
-        <div className="wizard-review-changes-only-banner" style={{ marginBottom: 16 }}>
-          {reviewChangesOnlyBanner}
-        </div>
-      ) : null}
-      {sections.map((section, sectionIndex) => {
-        if (section.rows.length === 0) return null
-        const mod = horizontalTermWidthModifierForInputRun(section.rows.map((r) => r.node))
+      <div className={showChangesOnly ? 'wizard-review-find-list--changes-only' : undefined}>
+        {sections.map((section, sectionIndex) => {
+          if (section.rows.length === 0) return null
+          const mod = horizontalTermWidthModifierForInputRun(section.rows.map((r) => r.node))
 
-        return (
-          <Fragment key={`review-find-section-${sectionIndex}`}>
-            <Title
-              headingLevel="h2"
-              style={{
-                color: 'var(--pf-t--global--text--color--regular)',
-                marginBottom: 12,
-              }}
-            >
-              {section.stepLabel}
-            </Title>
-            <DescriptionList isHorizontal horizontalTermWidthModifier={mod} style={{ rowGap: 0, marginBottom: 24 }}>
-              {section.rows.map((row) => {
-                const lv = lvByPath.get(row.node.path)
-                const pr = pathByPath.get(row.node.path)
-                const pathOnly = lv === undefined && pr !== undefined
-                const labelIndices = indicesForKey(lv ?? pr, 'searchLabel')
-                const valueIndices = indicesForKey(lv ?? pr, 'searchValue')
-                const pathIndices = indicesForKey(pr, 'pathLast')
+          return (
+            <Fragment key={`review-find-section-${sectionIndex}`}>
+              <Title
+                headingLevel="h2"
+                style={{
+                  color: 'var(--pf-t--global--text--color--regular)',
+                  marginBottom: 12,
+                }}
+              >
+                {section.stepLabel}
+              </Title>
+              <DescriptionList isHorizontal horizontalTermWidthModifier={mod} style={{ rowGap: 0, marginBottom: 24 }}>
+                {section.rows.map((row) => {
+                  const lv = lvByPath.get(row.node.path)
+                  const pr = pathByPath.get(row.node.path)
+                  const pathOnly = lv === undefined && pr !== undefined
+                  const labelIndices = indicesForKey(lv ?? pr, 'searchLabel')
+                  const valueIndices = indicesForKey(lv ?? pr, 'searchValue')
+                  const pathIndices = indicesForKey(pr, 'pathLast')
 
-                const termText = row.node.label ?? row.node.path
-                const valueText = row.searchValue
-                const pathLastRaw = row.pathLast
-                const pathDisplay = formatPathLastSegmentForDisplay(pathLastRaw)
-                const rowExact = rowHasExactSubstringMatch(q, termText, valueText, pathLastRaw)
+                  const termText = row.node.label ?? row.node.path
+                  const valueText = row.searchValue
+                  const pathLastRaw = row.pathLast
+                  const pathDisplay = formatPathLastSegmentForDisplay(pathLastRaw)
+                  const rowExact = rowHasExactSubstringMatch(q, termText, valueText, pathLastRaw)
 
-                const labelHighlight = pickHighlightIndices(termText, q, pathOnly ? undefined : labelIndices, rowExact)
-                const valueHighlight = pickHighlightIndices(valueText, q, valueIndices, rowExact)
-                const pathHighlight =
-                  pathDisplay === pathLastRaw
-                    ? pickHighlightIndices(pathLastRaw, q, pathIndices, rowExact)
-                    : pickHighlightIndices(pathDisplay, q, undefined, rowExact)
+                  const labelHighlight = pickHighlightIndices(
+                    termText,
+                    q,
+                    pathOnly ? undefined : labelIndices,
+                    rowExact
+                  )
+                  const valueHighlight = pickHighlightIndices(valueText, q, valueIndices, rowExact)
+                  const pathHighlight =
+                    pathDisplay === pathLastRaw
+                      ? pickHighlightIndices(pathLastRaw, q, pathIndices, rowExact)
+                      : pickHighlightIndices(pathDisplay, q, undefined, rowExact)
 
-                const termBase = (
-                  <>
-                    {renderHighlighted(termText, labelHighlight)}
-                    {pathOnly ? (
-                      <>
-                        {' '}
-                        <span className="wizard-review-find-path-suffix">
-                          ({renderHighlighted(pathDisplay, pathHighlight)})
-                        </span>
-                      </>
-                    ) : null}
-                  </>
-                )
+                  const termBase = (
+                    <>
+                      {renderHighlighted(termText, labelHighlight)}
+                      {pathOnly ? (
+                        <>
+                          {' '}
+                          <span className="wizard-review-find-path-suffix">
+                            ({renderHighlighted(pathDisplay, pathHighlight)})
+                          </span>
+                        </>
+                      ) : null}
+                    </>
+                  )
 
-                const valueContent = row.node.error ? (
-                  <span className="wizard-review-find-value-with-trailing-icon">
+                  const valueContent = row.node.error ? (
+                    <span className="wizard-review-find-value-with-trailing-icon">
+                      <span className="wizard-review-find-inline-body">
+                        {renderFindValueContent(row.node, row.searchValue, valueHighlight)}
+                      </span>
+                      <ExclamationCircleIcon color={REVIEW_ERROR_TEXT_COLOR} />
+                    </span>
+                  ) : (
                     <span className="wizard-review-find-inline-body">
                       {renderFindValueContent(row.node, row.searchValue, valueHighlight)}
                     </span>
-                    <ExclamationCircleIcon color={REVIEW_ERROR_TEXT_COLOR} />
-                  </span>
-                ) : (
-                  <span className="wizard-review-find-inline-body">
-                    {renderFindValueContent(row.node, row.searchValue, valueHighlight)}
-                  </span>
-                )
+                  )
 
-                return (
-                  <DescriptionListGroup key={row.node.path} style={{ marginLeft: 32 }}>
-                    {onReviewEdit != null ? (
-                      <ReviewPenHoverZone
-                        ariaLabel="Edit"
-                        descriptionListTerm={termBase}
-                        descriptionListDescriptionId={row.node.id}
-                        onPenClick={() => onReviewEdit(row.node, yamlVisible ? 'highlight' : 'navigate')}
-                        onPenIconClick={() => onReviewEdit(row.node, 'navigate')}
-                        onArrowClick={yamlVisible ? () => onReviewEdit(row.node, 'highlight') : undefined}
-                      >
-                        {valueContent}
-                      </ReviewPenHoverZone>
-                    ) : (
-                      <>
-                        <DescriptionListTerm>{termBase}</DescriptionListTerm>
-                        <DescriptionListDescription id={row.node.id ?? ''} style={{ whiteSpace: 'pre-wrap' }}>
-                          <span className="wizard-review-inline-value">{valueContent}</span>
-                        </DescriptionListDescription>
-                      </>
-                    )}
-                  </DescriptionListGroup>
-                )
-              })}
-            </DescriptionList>
-          </Fragment>
-        )
-      })}
+                  return (
+                    <DescriptionListGroup key={row.node.path} style={{ marginLeft: 32 }}>
+                      {onReviewEdit != null ? (
+                        <ReviewPenHoverZone
+                          ariaLabel="Edit"
+                          descriptionListTerm={termBase}
+                          descriptionListDescriptionId={row.node.id}
+                          onPenClick={() => onReviewEdit(row.node, yamlVisible ? 'highlight' : 'navigate')}
+                          onPenIconClick={() => onReviewEdit(row.node, 'navigate')}
+                          onArrowClick={yamlVisible ? () => onReviewEdit(row.node, 'highlight') : undefined}
+                        >
+                          {valueContent}
+                        </ReviewPenHoverZone>
+                      ) : (
+                        <>
+                          <DescriptionListTerm>{termBase}</DescriptionListTerm>
+                          <DescriptionListDescription id={row.node.id ?? ''} style={{ whiteSpace: 'pre-wrap' }}>
+                            <span className="wizard-review-inline-value">{valueContent}</span>
+                          </DescriptionListDescription>
+                        </>
+                      )}
+                    </DescriptionListGroup>
+                  )
+                })}
+              </DescriptionList>
+            </Fragment>
+          )
+        })}
+      </div>
     </div>
   )
 }

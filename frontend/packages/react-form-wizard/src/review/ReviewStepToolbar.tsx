@@ -30,7 +30,7 @@ export function ReviewStepToolbar(props: ReviewStepToolbarProps) {
       <FlexItem>
         <Checkbox
           id="wizard-review-tldr"
-          label="tl:dr;"
+          label="Show only differences from default"
           isChecked={props.showChangesOnly}
           onChange={(_event, checked) => props.onShowChangesOnlyChange(checked)}
         />
