@@ -2788,6 +2788,7 @@
   "show.more": "{{count}} more",
   "show.more_plural": "{{count}} more",
   "Showing clusters that match your defined labels, tolerations, and limits.": "Showing clusters that match your defined labels, tolerations, and limits.",
+  "Showing only the changes you made to this wizard": "Showing only the changes you made to this wizard",
   "Simple Table": "Simple Table",
   "Single cluster": "Single cluster",
   "Single node OpenShift": "Single node OpenShift",

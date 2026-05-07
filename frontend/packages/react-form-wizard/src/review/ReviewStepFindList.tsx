@@ -9,10 +9,12 @@ import {
 import { ExclamationCircleIcon } from '@patternfly/react-icons'
 import Fuse from 'fuse.js'
 import { Fragment, type ReactNode, useMemo } from 'react'
+import { useDefaultItem } from '../contexts/DefaultDataContext'
+import { useItem } from '../contexts/ItemContext'
 import { useStringContext } from '../contexts/StringContext'
 import { InputReviewMeta, type WizardDomTreeNode } from './ReviewStepContexts'
 import { ReviewPenHoverZone, type OnReviewEditHandler } from './ReviewStepNavigation'
-import { horizontalTermWidthModifierForInputRun, REVIEW_ERROR_TEXT_COLOR } from './utils'
+import { getItemValue, horizontalTermWidthModifierForInputRun, REVIEW_ERROR_TEXT_COLOR } from './utils'
 
 type WizardInputDomNode = Extract<WizardDomTreeNode, { type: InputReviewMeta.INPUT }>
 
@@ -44,6 +46,7 @@ type ReviewFindRow = {
 export interface ReviewStepFindListProps {
   sectionRoots: WizardDomTreeNode[]
   searchQuery: string
+  showChangesOnly: boolean
   onReviewEdit?: OnReviewEditHandler
   showYaml?: boolean
 }
@@ -289,6 +292,35 @@ function renderFindValueContent(
   return renderHighlighted(searchValue, valueIndices)
 }
 
+function reviewValuesEqualAtPath(a: unknown, b: unknown): boolean {
+  if (Object.is(a, b)) return true
+  if (typeof a === 'boolean' && typeof b === 'boolean') {
+    return a === b
+  }
+  if (a === null || b === null || a === undefined || b === undefined) {
+    return a === b
+  }
+  if (typeof a !== 'object' || typeof b !== 'object') {
+    return a === b
+  }
+  try {
+    return JSON.stringify(a) === JSON.stringify(b)
+  } catch {
+    return false
+  }
+}
+
+function rowMatchesChangesOnlyFilter(row: ReviewFindRow, item: object, defaultItem: object): boolean {
+  const path = row.node.path
+  if (!path) {
+    return Boolean(row.node.error)
+  }
+  if (row.node.error) return true
+  const currentVal = getItemValue(item, path)
+  const defaultVal = getItemValue(defaultItem, path)
+  return !reviewValuesEqualAtPath(currentVal, defaultVal)
+}
+
 type FindListModel = {
   sections: { stepLabel: string; rows: ReviewFindRow[] }[]
   lvByPath: Map<string, Fuse.FuseResult<ReviewFindRow>>
@@ -298,7 +330,10 @@ type FindListModel = {
 function buildFindListModel(
   sectionRoots: WizardDomTreeNode[],
   q: string,
-  booleanStrings: ReviewFindBooleanStrings
+  booleanStrings: ReviewFindBooleanStrings,
+  showChangesOnly: boolean,
+  item: object,
+  defaultItem: object
 ): FindListModel {
   const sections: { stepLabel: string; rows: ReviewFindRow[] }[] = []
   const allRows: ReviewFindRow[] = []
@@ -307,13 +342,16 @@ function buildFindListModel(
     const stepLabel = reviewNodeLabel(root)
     const ordered: WizardInputDomNode[] = []
     collectVisibleInputsInOrder(getReviewSectionBodyNodes(root), ordered)
-    const rows: ReviewFindRow[] = ordered.map((node) => ({
+    let rows: ReviewFindRow[] = ordered.map((node) => ({
       node,
       stepLabel,
       searchLabel: node.label ?? node.path,
       searchValue: formatReviewFindSearchValue(node, booleanStrings),
       pathLast: pathLastSegment(node.path),
     }))
+    if (showChangesOnly) {
+      rows = rows.filter((row) => rowMatchesChangesOnlyFilter(row, item, defaultItem))
+    }
     sections.push({ stepLabel, rows })
     allRows.push(...rows)
   }
@@ -340,8 +378,11 @@ function buildFindListModel(
 }
 
 export function ReviewStepFindList(props: ReviewStepFindListProps) {
-  const { sectionRoots, searchQuery, onReviewEdit, showYaml } = props
-  const { noResults, reviewBooleanTrue, reviewBooleanFalse, reviewBooleanNotSet } = useStringContext()
+  const { sectionRoots, searchQuery, showChangesOnly, onReviewEdit, showYaml } = props
+  const item = useItem<object>()
+  const defaultItem = useDefaultItem<object>()
+  const { noResults, reviewBooleanTrue, reviewBooleanFalse, reviewBooleanNotSet, reviewChangesOnlyBanner } =
+    useStringContext()
   const q = searchQuery.trim()
 
   const booleanStrings = useMemo(
@@ -350,8 +391,8 @@ export function ReviewStepFindList(props: ReviewStepFindListProps) {
   )
 
   const { sections, lvByPath, pathByPath } = useMemo(
-    () => buildFindListModel(sectionRoots, q, booleanStrings),
-    [sectionRoots, q, booleanStrings]
+    () => buildFindListModel(sectionRoots, q, booleanStrings, showChangesOnly, item, defaultItem),
+    [sectionRoots, q, booleanStrings, showChangesOnly, item, defaultItem]
   )
 
   const yamlVisible = showYaml !== false
@@ -363,6 +404,11 @@ export function ReviewStepFindList(props: ReviewStepFindListProps) {
 
   return (
     <div className="wizard-review-find-list">
+      {showChangesOnly ? (
+        <div className="wizard-review-changes-only-banner" style={{ marginBottom: 16 }}>
+          {reviewChangesOnlyBanner}
+        </div>
+      ) : null}
       {sections.map((section, sectionIndex) => {
         if (section.rows.length === 0) return null
         const mod = horizontalTermWidthModifierForInputRun(section.rows.map((r) => r.node))

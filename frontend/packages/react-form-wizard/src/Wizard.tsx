@@ -28,12 +28,14 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react'
 import { EditMode } from './contexts/EditMode'
 import { DataContext } from './contexts/DataContext'
 import { DisplayMode, DisplayModeContext } from './contexts/DisplayModeContext'
 import { EditModeContext } from './contexts/EditModeContext'
+import { DefaultDataContext } from './contexts/DefaultDataContext'
 import { ItemContext, useItem } from './contexts/ItemContext'
 import { ShowValidationProvider, useSetShowValidation, useShowValidation } from './contexts/ShowValidationProvider'
 import { StepHasInputsProvider } from './contexts/StepHasInputsProvider'
@@ -85,9 +87,66 @@ export interface WizardProps {
 export type WizardSubmit = (data: unknown) => Promise<void>
 export type WizardCancel = () => void
 
+/** Recursive comparison counts for "how much" two wizard data trees differ (used for default snapshot refresh). */
+function deepDataDifferenceStats(a: unknown, b: unknown): { compared: number; mismatched: number } {
+  if (Object.is(a, b)) {
+    return { compared: 1, mismatched: 0 }
+  }
+  if (typeof a === 'number' && typeof b === 'number' && Number.isNaN(a) && Number.isNaN(b)) {
+    return { compared: 1, mismatched: 0 }
+  }
+  if (a === null || b === null || typeof a !== 'object' || typeof b !== 'object') {
+    return { compared: 1, mismatched: 1 }
+  }
+  if (Array.isArray(a) && Array.isArray(b)) {
+    const max = Math.max(a.length, b.length)
+    if (max === 0) {
+      return { compared: 1, mismatched: 0 }
+    }
+    let compared = 0
+    let mismatched = 0
+    for (let i = 0; i < max; i++) {
+      const r = deepDataDifferenceStats(a[i], b[i])
+      compared += r.compared
+      mismatched += r.mismatched
+    }
+    return { compared, mismatched }
+  }
+  if (Array.isArray(a) !== Array.isArray(b)) {
+    return { compared: 1, mismatched: 1 }
+  }
+  const aObj = a as Record<string, unknown>
+  const bObj = b as Record<string, unknown>
+  const keySet = new Set([...Object.keys(aObj), ...Object.keys(bObj)])
+  if (keySet.size === 0) {
+    return { compared: 1, mismatched: 0 }
+  }
+  let compared = 0
+  let mismatched = 0
+  for (const k of keySet) {
+    const r = deepDataDifferenceStats(aObj[k], bObj[k])
+    compared += r.compared
+    mismatched += r.mismatched
+  }
+  return { compared, mismatched }
+}
+
 export function Wizard(props: WizardProps & { showHeader?: boolean; showYaml?: boolean }) {
   const [data, setData] = useState(props.defaultData ? klona(props.defaultData) : {})
-  const update = useCallback((newData: any) => setData((data: unknown) => klona(newData ?? data)), [])
+  const [defaultDataSnapshot, setDefaultDataSnapshot] = useState<object>(() => klona(props.defaultData ?? {}))
+  const dataRef = useRef(data)
+  dataRef.current = data
+  const update = useCallback((newData: unknown) => {
+    const prev = dataRef.current
+    const next = klona(newData ?? prev)
+    if (newData != null) {
+      const { compared, mismatched } = deepDataDifferenceStats(prev, newData)
+      if (compared > 0 && mismatched / compared > 0.2) {
+        setDefaultDataSnapshot(klona(newData as object))
+      }
+    }
+    setData(next)
+  }, [])
   const [drawerExpanded, setDrawerExpanded] = useState<boolean>(false)
   useEffect(() => {
     if (props.showYaml !== undefined) {
@@ -112,23 +171,25 @@ export function Wizard(props: WizardProps & { showHeader?: boolean; showYaml?: b
                             <Drawer isExpanded={drawerExpanded} isInline>
                               <DrawerContent panelContent={<WizardDrawer yamlEditor={props.yamlEditor} />}>
                                 <DrawerContentBody>
-                                  <ItemContext.Provider value={data}>
-                                    <StringContext.Provider value={wizardStrings || defaultStrings}>
-                                      <WizardInternal
-                                        id={props.id}
-                                        reviewStorageKey={props.reviewStorageKey}
-                                        showYaml={props.showYaml}
-                                        onSubmit={props.onSubmit}
-                                        onCancel={props.onCancel}
-                                        hasButtons={props.hasButtons}
-                                        submitButtonText={props.submitButtonText}
-                                        submittingButtonText={props.submittingButtonText}
-                                        isLoading={props.isLoading}
-                                      >
-                                        {props.children}
-                                      </WizardInternal>
-                                    </StringContext.Provider>
-                                  </ItemContext.Provider>
+                                  <DefaultDataContext.Provider value={defaultDataSnapshot}>
+                                    <ItemContext.Provider value={data}>
+                                      <StringContext.Provider value={wizardStrings || defaultStrings}>
+                                        <WizardInternal
+                                          id={props.id}
+                                          reviewStorageKey={props.reviewStorageKey}
+                                          showYaml={props.showYaml}
+                                          onSubmit={props.onSubmit}
+                                          onCancel={props.onCancel}
+                                          hasButtons={props.hasButtons}
+                                          submitButtonText={props.submitButtonText}
+                                          submittingButtonText={props.submittingButtonText}
+                                          isLoading={props.isLoading}
+                                        >
+                                          {props.children}
+                                        </WizardInternal>
+                                      </StringContext.Provider>
+                                    </ItemContext.Provider>
+                                  </DefaultDataContext.Provider>
                                 </DrawerContentBody>
                               </DrawerContent>
                             </Drawer>
