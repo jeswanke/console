@@ -12,6 +12,14 @@ function assertSafeOcSingleArg(value: string, field: string): void {
   }
 }
 
+/** Short resource kinds / API groups for `oc get <resource> -n …` (no shell metacharacters). */
+function assertSafeOcResourceKind(value: string, field: string): void {
+  const v = value.trim();
+  if (!v || v.length > 200 || !/^[a-zA-Z0-9.]+$/.test(v)) {
+    throw new Error(`OcCliService: invalid ${field} for oc argv (${JSON.stringify(value)})`);
+  }
+}
+
 /**
  * Service for executing OpenShift CLI (oc) commands.
  */
@@ -98,5 +106,20 @@ export class OcCliService {
       ['delete', 'namespace', namespace, '--ignore-not-found', '--wait=true'],
       { encoding: 'utf8', maxBuffer: 1024 * 1024, timeout: 600_000 }
     );
+  }
+
+  /**
+   * `oc get <resource> -n <namespace>` — stdout for assertions / polling (argv-only, no shell).
+   * @param resource - e.g. `subscription`, `deployment`, `applications.app`
+   */
+  async getNamespacedResourceList(resource: string, namespace: string): Promise<string> {
+    assertSafeOcResourceKind(resource, 'resource');
+    assertSafeOcSingleArg(namespace, 'namespace');
+    const { stdout } = await execFilePromise(
+      'oc',
+      ['get', resource, '-n', namespace],
+      { encoding: 'utf8', maxBuffer: 1024 * 1024 }
+    );
+    return stdout.trim();
   }
 }

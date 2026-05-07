@@ -309,6 +309,9 @@ console-e2e/
     │       ├── ClusterListPage.ts
     │       └── ClusterSetsPage.ts
     ├── lib/                    # §5 — assertions, factories (expand here)
+    │   ├── assertions/         # Playwright `expect.poll` + services (e.g. oc list assertions)
+    │   │   └── oc-resource-list.ts
+    │   ├── app/                # ALC orchestration + verification helpers
     │   └── index.ts
     ├── fixtures/               # §7
     │   ├── acm-test.ts

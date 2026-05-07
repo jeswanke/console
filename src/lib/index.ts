@@ -5,16 +5,22 @@
  * @see docs/architecture-overview.md — §5 `/src/lib` (application helpers under `./app/`)
  */
 
+export { expectOcGetListContains } from './assertions/oc-resource-list';
+
+export { deleteHubApplicationIfExists } from './app/application-test-setup';
+
 export {
   addSubscriptionToExistingApplication,
   createSubscription,
   deleteSubscriptionFromExistingApplication,
+  editSubscriptionInExistingApplication,
   type AddSubscriptionToExistingApplicationOptions,
   type AutomationSpec,
   type ClusterDeploymentSpec,
   type ClusterLabelSelectorRowSpec,
   type CreateSubscriptionOptions,
   type DeleteSubscriptionFromExistingApplicationOptions,
+  type EditSubscriptionInExistingApplicationOptions,
   type GitSubscriptionRepositoryFields,
   type HelmSubscriptionRepositoryFields,
   type ObjectStorageSubscriptionRepositoryFields,
