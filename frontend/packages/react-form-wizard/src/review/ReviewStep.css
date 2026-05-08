@@ -259,11 +259,11 @@
 }
 
 .wizard-review-find-list--changes-only {
-  background-color: rgba(21, 128, 61, 0.035);
+  background-color: rgba(21, 128, 61, 0.1);
 }
 
 :root:where(.pf-v5-theme-dark, .pf-v6-theme-dark) .wizard-review-find-list--changes-only {
-  background-color: rgba(110, 193, 115, 0.06);
+  background-color: rgba(110, 193, 115, 0.16);
 }
 
 .wizard-review-find-list--empty {
