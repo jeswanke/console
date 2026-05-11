@@ -2264,6 +2264,7 @@
   "One or more of the selected clusters have automations that will run before or after the update. Expand the table rows to view the Ansible templates for each cluster.": "One or more of the selected clusters have automations that will run before or after the update. Expand the table rows to view the Ansible templates for each cluster.",
   "One or more selected policies can not be found.": "One or more selected policies can not be found.",
   "Only add placement to this policy if you want it to be placed in addition to the policy set placement.": "Only add placement to this policy if you want it to be placed in addition to the policy set placement.",
+  "Show changes": "Show changes",
   "Only synchronize out-of-sync resources": "Only synchronize out-of-sync resources",
   "Only the current log is available for this container.": "Only the current log is available for this container.",
   "Open cluster console": "Open cluster console",

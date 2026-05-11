@@ -239,8 +239,6 @@ export function getItemValue(item: unknown, yamlPath: string): unknown {
 
 // --- Review description-list layout (shared by ReviewStep, ReviewStepFindList) ---
 
-type WizardInputDomNode = Extract<WizardDomTreeNode, { type: InputReviewMeta.INPUT }>
-
 type HorizontalTermWidthModifier = NonNullable<ComponentProps<typeof DescriptionList>['horizontalTermWidthModifier']>
 
 const REVIEW_HORIZONTAL_TERM_WIDTH_COMPACT: HorizontalTermWidthModifier = {
@@ -264,7 +262,7 @@ const REVIEW_HORIZONTAL_TERM_WIDTH_WIDE: HorizontalTermWidthModifier = {
 export const REVIEW_ERROR_TEXT_COLOR = 'var(--pf-t--global--text--color--status--danger--default)'
 
 export function horizontalTermWidthModifierForInputRun(
-  nodes: readonly WizardInputDomNode[]
+  nodes: readonly { label?: string; path: string }[]
 ): HorizontalTermWidthModifier {
   let maxLen = 0
   for (const n of nodes) {

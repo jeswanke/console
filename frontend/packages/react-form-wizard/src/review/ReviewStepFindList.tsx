@@ -17,6 +17,9 @@ import { ReviewPenHoverZone, type OnReviewEditHandler } from './ReviewStepNaviga
 import { getItemValue, horizontalTermWidthModifierForInputRun, REVIEW_ERROR_TEXT_COLOR } from './utils'
 
 type WizardInputDomNode = Extract<WizardDomTreeNode, { type: InputReviewMeta.INPUT }>
+type WizardArrayInputDomNode = Extract<WizardDomTreeNode, { type: InputReviewMeta.ARRAY_INPUT }>
+/** Inputs plus array-input containers when surfaced for errors (find list). */
+type ReviewFindListDomNode = WizardInputDomNode | WizardArrayInputDomNode
 
 const FUSE_LV: Fuse.IFuseOptions<ReviewFindRow> = {
   keys: ['searchLabel', 'searchValue'],
@@ -35,7 +38,7 @@ const FUSE_PATH: Fuse.IFuseOptions<ReviewFindRow> = {
 }
 
 type ReviewFindRow = {
-  node: WizardInputDomNode
+  node: ReviewFindListDomNode
   stepLabel: string
   searchLabel: string
   searchValue: string
@@ -49,6 +52,38 @@ export interface ReviewStepFindListProps {
   showChangesOnly: boolean
   onReviewEdit?: OnReviewEditHandler
   showYaml?: boolean
+}
+
+function rowMatchesChangesOnlyFilter(row: ReviewFindRow, item: object, defaultItem: object): boolean {
+  const path = row.node.path
+  if (!path) {
+    return Boolean(row.node.error)
+  }
+  if (row.node.error) return true
+  const currentVal = getItemValue(item, path)
+  const defaultVal = getItemValue(defaultItem, path)
+  return !reviewValuesEqualAtPath(currentVal, defaultVal)
+}
+
+function reviewValuesEqualAtPath(a: unknown, b: unknown): boolean {
+  if (Object.is(a, b)) return true
+  if (typeof a === 'boolean' && typeof b === 'boolean') {
+    return a === b
+  }
+  if (b === undefined && a === false) {
+    return true
+  }
+  if (a === null || b === null || a === undefined || b === undefined) {
+    return a === b
+  }
+  if (typeof a !== 'object' || typeof b !== 'object') {
+    return a === b
+  }
+  try {
+    return JSON.stringify(a) === JSON.stringify(b)
+  } catch {
+    return false
+  }
 }
 
 function isReviewInputNode(node: WizardDomTreeNode): node is WizardInputDomNode {
@@ -160,7 +195,7 @@ type ReviewFindBooleanStrings = {
   reviewBooleanNotSet: string
 }
 
-function formatReviewFindSearchValue(node: WizardInputDomNode, labels: ReviewFindBooleanStrings): string {
+function formatReviewFindSearchValue(node: ReviewFindListDomNode, labels: ReviewFindBooleanStrings): string {
   if (node.error) return node.error
   if (typeof node.value === 'boolean') {
     return node.value ? labels.reviewBooleanTrue : labels.reviewBooleanFalse
@@ -169,13 +204,16 @@ function formatReviewFindSearchValue(node: WizardInputDomNode, labels: ReviewFin
   return formatReviewValueString(node.value)
 }
 
-function collectVisibleInputsInOrder(nodes: WizardDomTreeNode[], out: WizardInputDomNode[]): void {
+function collectVisibleInputsInOrder(nodes: WizardDomTreeNode[], out: ReviewFindListDomNode[]): void {
   for (const n of nodes) {
     if (isReviewInputNode(n)) {
       out.push(n)
       continue
     }
     if (isReviewArrayInputNode(n)) {
+      if (n.error) {
+        out.push(n)
+      }
       for (const inst of n.children ?? []) {
         collectVisibleInputsInOrder(inst.children ?? [], out)
       }
@@ -278,7 +316,7 @@ function indicesForKey(
 }
 
 function renderFindValueContent(
-  node: WizardInputDomNode,
+  node: ReviewFindListDomNode,
   searchValue: string,
   valueIndices: readonly Fuse.RangeTuple[] | undefined
 ): ReactNode {
@@ -290,38 +328,6 @@ function renderFindValueContent(
     )
   }
   return renderHighlighted(searchValue, valueIndices)
-}
-
-function reviewValuesEqualAtPath(a: unknown, b: unknown): boolean {
-  if (Object.is(a, b)) return true
-  if (typeof a === 'boolean' && typeof b === 'boolean') {
-    return a === b
-  }
-  if (b === undefined && a === false) {
-    return true
-  }
-  if (a === null || b === null || a === undefined || b === undefined) {
-    return a === b
-  }
-  if (typeof a !== 'object' || typeof b !== 'object') {
-    return a === b
-  }
-  try {
-    return JSON.stringify(a) === JSON.stringify(b)
-  } catch {
-    return false
-  }
-}
-
-function rowMatchesChangesOnlyFilter(row: ReviewFindRow, item: object, defaultItem: object): boolean {
-  const path = row.node.path
-  if (!path) {
-    return Boolean(row.node.error)
-  }
-  if (row.node.error) return true
-  const currentVal = getItemValue(item, path)
-  const defaultVal = getItemValue(defaultItem, path)
-  return !reviewValuesEqualAtPath(currentVal, defaultVal)
 }
 
 type FindListModel = {
@@ -343,7 +349,7 @@ function buildFindListModel(
 
   for (const root of sectionRoots) {
     const stepLabel = reviewNodeLabel(root)
-    const ordered: WizardInputDomNode[] = []
+    const ordered: ReviewFindListDomNode[] = []
     collectVisibleInputsInOrder(getReviewSectionBodyNodes(root), ordered)
     let rows: ReviewFindRow[] = ordered.map((node) => ({
       node,

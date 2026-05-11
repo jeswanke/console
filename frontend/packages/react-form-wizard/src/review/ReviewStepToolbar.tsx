@@ -15,7 +15,12 @@ export interface ReviewStepToolbarProps {
 }
 
 export function ReviewStepToolbar(props: ReviewStepToolbarProps) {
-  const { reviewExpandAllTooltip, reviewCollapseAllTooltip, reviewSearchDetailsPlaceholder } = useStringContext()
+  const {
+    reviewExpandAllTooltip,
+    reviewCollapseAllTooltip,
+    reviewSearchDetailsPlaceholder,
+    reviewShowChangesOnlyLabel,
+  } = useStringContext()
   const toolbarItems = (
     <Flex direction={{ default: 'row' }} style={{ width: '100%' }} alignItems={{ default: 'alignItemsCenter' }}>
       <FlexItem>
@@ -29,8 +34,8 @@ export function ReviewStepToolbar(props: ReviewStepToolbarProps) {
       </FlexItem>
       <FlexItem>
         <Checkbox
-          id="wizard-review-tldr"
-          label="Show only differences from default"
+          id="wizard-review-changes-only"
+          label={reviewShowChangesOnlyLabel}
           isChecked={props.showChangesOnly}
           onChange={(_event, checked) => props.onShowChangesOnlyChange(checked)}
         />
