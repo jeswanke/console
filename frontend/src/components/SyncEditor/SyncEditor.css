@@ -17,6 +17,27 @@
   overflow: hidden;
 }
 
+.sync-editor__stack {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.sync-editor__stack > .pf-v6-c-code-editor {
+  flex: 1;
+  min-height: 0;
+}
+
+.sync-editor__stack:has(.sync-editor__diff-host) > .pf-v6-c-code-editor {
+  flex: 0 0 auto;
+}
+
+.sync-editor__diff-host {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+}
+
 .sync-editor__container .pf-v6-c-code-editor__header {
   font-size: 14px;
   font-weight: 600;
@@ -36,6 +57,24 @@
 
 .sync-editor__container .pf-v6-c-code-editor__controls .pf-v6-c-button.pf-m-control {
   background-color: var(--pf-v5-c-page__main-section--BackgroundColor);
+}
+
+.sync-editor__container .monaco-diff-editor .codicon-light-bulb {
+  display: none !important;
+}
+
+/* PF6 code editor header: v5 border vars are often unset; use t-global tokens + flex sizing so the rule paints. */
+.sync-editor__container .sy-toolbar-buttons .sy-toolbar-separator {
+  box-sizing: content-box;
+  flex: 0 0 auto;
+  align-self: stretch;
+  width: 1px;
+  min-width: 1px;
+  min-height: var(--pf-v6-c-button--MinHeight, 2.25rem);
+  margin-block: 0;
+  margin-inline: var(--pf-t--global--spacer--xs);
+  border: 0;
+  background-color: var(--pf-t--global--border--color--default, var(--pf-v5-global--BorderColor--200, #c7c7c7));
 }
 
 .sync-editor__container .sy-toolbar-buttons .pf-v6-c-button.pf-m-plain,

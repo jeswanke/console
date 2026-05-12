@@ -399,6 +399,17 @@ const sortMapEntries = (a: { key: { value: string } }, b: { key: { value: string
   return ai - bi
 }
 
+/** Deep-clone resources and drop `metadata.managedFields` (e.g. for stable diff output). */
+export const filterfy = (resources: any[]): any[] =>
+  resources.map((resource) => {
+    if (resource == null || typeof resource !== 'object') {
+      return resource
+    }
+    const copy = cloneDeep(resource)
+    unset(copy, 'metadata.managedFields')
+    return copy
+  })
+
 export const stringify = (resources: any[]) => {
   const yamls: string[] = []
   resources.forEach((resource: any) => {

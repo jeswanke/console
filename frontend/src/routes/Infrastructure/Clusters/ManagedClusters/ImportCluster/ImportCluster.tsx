@@ -47,6 +47,7 @@ import {
   Step,
   Sync,
   useData,
+  useDefaultItem,
   useItem,
   Wizard,
   WizItemSelector,
@@ -505,6 +506,7 @@ export default function ImportClusterPage() {
 
   function WizardSyncEditor() {
     const resources = useItem() // Wizard framework sets this context
+    const defaultItem = useDefaultItem()
     const { setEditorValidationStatus } = useEditorValidationStatus()
     const { highlightEditorPath } = useHighlightEditorPath()
     const { update } = useData() // Wizard framework sets this context
@@ -516,6 +518,7 @@ export default function ImportClusterPage() {
         id="code-content"
         schema={isACMAvailable ? acmSchema : schema}
         resources={resources}
+        originalResources={defaultItem}
         highlightEditorPath={highlightEditorPath}
         secrets={[
           'Secret.*.stringData.token',

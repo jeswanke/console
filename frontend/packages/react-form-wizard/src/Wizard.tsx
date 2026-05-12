@@ -169,9 +169,9 @@ export function Wizard(props: WizardProps & { showHeader?: boolean; showYaml?: b
                         <HighlightEditorPathProvider>
                           <FooterContentProvider>
                             <Drawer isExpanded={drawerExpanded} isInline>
-                              <DrawerContent panelContent={<WizardDrawer yamlEditor={props.yamlEditor} />}>
-                                <DrawerContentBody>
-                                  <DefaultDataContext.Provider value={defaultDataSnapshot}>
+                              <DefaultDataContext.Provider value={defaultDataSnapshot}>
+                                <DrawerContent panelContent={<WizardDrawer yamlEditor={props.yamlEditor} />}>
+                                  <DrawerContentBody>
                                     <ItemContext.Provider value={data}>
                                       <StringContext.Provider value={wizardStrings || defaultStrings}>
                                         <WizardInternal
@@ -189,9 +189,9 @@ export function Wizard(props: WizardProps & { showHeader?: boolean; showYaml?: b
                                         </WizardInternal>
                                       </StringContext.Provider>
                                     </ItemContext.Provider>
-                                  </DefaultDataContext.Provider>
-                                </DrawerContentBody>
-                              </DrawerContent>
+                                  </DrawerContentBody>
+                                </DrawerContent>
+                              </DefaultDataContext.Provider>
                             </Drawer>
                           </FooterContentProvider>
                         </HighlightEditorPathProvider>

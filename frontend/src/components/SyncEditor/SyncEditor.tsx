@@ -1,11 +1,10 @@
 /* Copyright Contributors to the Open Cluster Management project */
 import { HTMLProps, ReactNode, useRef, useEffect, useState, useCallback, useMemo } from 'react'
 import useResizeObserver from '@react-hook/resize-observer'
-import { CodeEditor, CodeEditorControl, Language } from '@patternfly/react-code-editor'
-import { RedoIcon, UndoIcon, SearchIcon, EyeIcon, EyeSlashIcon, CloseIcon } from '@patternfly/react-icons'
-import { ClipboardCopyButton } from '@patternfly/react-core'
-import { debounce, noop, isEqual, cloneDeep } from 'lodash'
-import { processForm, processUser, ProcessedType } from './process'
+import { CodeEditor, Language } from '@patternfly/react-code-editor'
+import { debounce, isEqual, cloneDeep } from 'lodash'
+import { filterfy, processForm, processUser, ProcessedType, stringify } from './process'
+import { SyncEditorToolbar } from './SyncEditorToolbar'
 import { compileAjvSchemas } from './validation'
 import { getFormChanges, getUserChanges } from './changes'
 import { decorate, getResourceEditorDecorations } from './decorate'
@@ -13,14 +12,14 @@ import { setFormValues, updateReferences } from './synchronize'
 import './SyncEditor.css'
 import { useTranslation } from '../../lib/acm-i18next'
 import { ChangeHandler } from 'react-monaco-editor'
-import * as monaco from 'monaco-editor'
+import * as monacoEditor from 'monaco-editor'
 import { editor as editorTypes } from 'monaco-editor'
 import { loader, Monaco } from '@monaco-editor/react'
 import { Schema } from 'ajv'
 import { defineThemes, getTheme, mountTheme, dismountTheme } from '../theme'
 
 // loader can be null in tests
-loader?.config({ monaco })
+loader?.config({ monaco: monacoEditor })
 
 export enum ValidationStatus {
   success = 'success',
@@ -47,6 +46,8 @@ export interface SyncEditorProps extends HTMLProps<HTMLPreElement> {
   onEditorChange?: (editorResources: any) => void
   /** Wizard review / form dot path used to scroll and highlight the matching YAML region. */
   highlightEditorPath?: string
+  /** Initial wizard resources; when set with variant "toolbar", enables compare-to-original diff view. */
+  originalResources?: unknown
 }
 
 export function SyncEditor(props: SyncEditorProps): JSX.Element {
@@ -68,12 +69,16 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
     onEditorChange,
     onClose,
     highlightEditorPath,
+    originalResources,
   } = props
   const [editorHighlightPath, setEditorHighlightPath] = useState(() => highlightEditorPath ?? '')
   useEffect(() => {
     setEditorHighlightPath(highlightEditorPath ?? '')
   }, [highlightEditorPath])
   const pageRef = useRef<HTMLDivElement>(null)
+  const diffContainerRef = useRef<HTMLDivElement>(null)
+  const diffEditorRef = useRef<editorTypes.IStandaloneDiffEditor | null>(null)
+  const diffNavigatorRef = useRef<editorTypes.IDiffNavigator | null>(null)
   const [editor, setEditor] = useState<editorTypes.IStandaloneCodeEditor | null>(null)
   const [monaco, setMonaco] = useState<Monaco | null>(null)
   if (mock) {
@@ -129,6 +134,11 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
   const [showCondensed, setShowCondensed] = useState<boolean>(false)
   const [hasUndo, setHasUndo] = useState<boolean>(false)
   const [hasRedo, setHasRedo] = useState<boolean>(false)
+  const [showChanges, setShowChanges] = useState<boolean>(false)
+
+  useEffect(() => {
+    setShowChanges(false)
+  }, [editorHighlightPath])
 
   // compile schema(s) just once
   const validationRef = useRef<unknown>()
@@ -359,7 +369,12 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
       editor.onDidBlurEditorWidget(() => {
         const editorHasFocus = !!document.querySelector('.monaco-editor.focused')
         const activeId = document.activeElement?.id as string
-        if (!editorHasFocus && ['undo-button', 'redo-button'].indexOf(activeId) === -1) {
+        if (
+          !editorHasFocus &&
+          ['undo-button', 'redo-button', 'compare-changes-button', 'diff-prev-button', 'diff-next-button'].indexOf(
+            activeId
+          ) === -1
+        ) {
           setClickedOnFilteredLine(false)
           setEditorHasFocus(false)
         }
@@ -637,103 +652,57 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
     [editorChanged, onStatusChange]
   )
 
+  const onDiffPrevious = useCallback(() => {
+    diffNavigatorRef.current?.previous()
+    requestAnimationFrame(() => {
+      diffEditorRef.current?.focus()
+    })
+  }, [])
+
+  const onDiffNext = useCallback(() => {
+    diffNavigatorRef.current?.next()
+    requestAnimationFrame(() => {
+      diffEditorRef.current?.focus()
+    })
+  }, [])
+
   const toolbarControls = useMemo(() => {
     return (
-      <>
-        <div className="sy-c-code-editor__title">{editorTitle || 'YAML'}</div>
-        <div className="sy-toolbar-buttons" style={{ display: 'flex' }}>
-          {/* undo */}
-          {!readonly && (
-            <CodeEditorControl
-              id="undo-button"
-              icon={<UndoIcon />}
-              aria-label={t('Undo')}
-              tooltipProps={{ content: t('Undo') }}
-              isDisabled={!hasUndo}
-              onClick={() => {
-                editor?.trigger('source', 'undo', undefined)
-              }}
-            />
-          )}
-          {/* redo */}
-          {!readonly && (
-            <CodeEditorControl
-              id="redo-button"
-              icon={<RedoIcon />}
-              aria-label={t('Redo')}
-              tooltipProps={{ content: t('Redo') }}
-              isDisabled={!hasRedo}
-              onClick={() => {
-                editor?.trigger('source', 'redo', undefined)
-              }}
-            />
-          )}
-          {/* search */}
-          <CodeEditorControl
-            id="search-button"
-            icon={<SearchIcon />}
-            aria-label={t('Find')}
-            tooltipProps={{ content: t('Find') }}
-            onClick={() => {
-              editor?.trigger('source', 'actions.find', undefined)
-            }}
-          />
-          {/* secrets */}
-          {secrets && (
-            <CodeEditorControl
-              id="secret-button"
-              icon={showSecrets ? <EyeIcon /> : <EyeSlashIcon />}
-              aria-label={t('Show Secrets')}
-              tooltipProps={{ content: t('Show Secrets') }}
-              onClick={() => {
-                setShowSecrets(!showSecrets)
-              }}
-            />
-          )}
-          {/* copy */}
-          <ClipboardCopyButton
-            id="copy-button"
-            textId="code-content"
-            aria-label={t('Copy to clipboard')}
-            disabled={false}
-            onClick={() => {
-              if (editor && editor.getModel()) {
-                const model = editor.getModel()
-                const selection = editor.getSelection()
-                if (model && selection) {
-                  const selectedText = model.getValueInRange(selection)
-                  navigator.clipboard.writeText(selectedText || lastUnredactedChange?.yaml || '')
-                  setCopyHint(selectedText.length === 0 ? allCopiedCopy : copiedCopy)
-                  setTimeout(() => {
-                    setCopyHint(defaultCopy)
-                  }, 800)
-                }
-              }
-            }}
-            exitDelay={600}
-            variant="plain"
-          >
-            {copyHint}
-          </ClipboardCopyButton>
-          {!!onClose && (
-            <CodeEditorControl
-              icon={<CloseIcon />}
-              aria-label={t('Close')}
-              tooltipProps={{ content: t('Close') }}
-              onClick={onClose || noop}
-            />
-          )}
-        </div>
-      </>
+      <SyncEditorToolbar
+        editorTitle={editorTitle}
+        readonly={readonly}
+        hasUndo={hasUndo}
+        hasRedo={hasRedo}
+        secrets={secrets}
+        showSecrets={showSecrets}
+        setShowSecrets={setShowSecrets}
+        showCompareButton={originalResources !== undefined}
+        showChanges={showChanges}
+        setShowChanges={setShowChanges}
+        onDiffPrevious={onDiffPrevious}
+        onDiffNext={onDiffNext}
+        copyHint={copyHint}
+        setCopyHint={setCopyHint}
+        onClose={onClose}
+        editor={editor}
+        lastUnredactedYaml={lastUnredactedChange?.yaml}
+        allCopiedCopy={allCopiedCopy}
+        copiedCopy={copiedCopy}
+        defaultCopy={defaultCopy}
+        t={t}
+      />
     )
   }, [
     editorTitle,
     readonly,
-    t,
     hasUndo,
     hasRedo,
     secrets,
     showSecrets,
+    originalResources,
+    showChanges,
+    onDiffPrevious,
+    onDiffNext,
     copyHint,
     onClose,
     editor,
@@ -741,10 +710,78 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
     allCopiedCopy,
     copiedCopy,
     defaultCopy,
+    t,
   ])
 
+  useEffect(() => {
+    const showDiffView = showChanges && originalResources !== undefined && !mock
+    if (!showDiffView) {
+      return
+    }
+    const container = diffContainerRef.current
+    if (!container || typeof monacoEditor.editor.createDiffEditor !== 'function') {
+      return
+    }
+
+    const originalYaml = stringify(filterfy(Array.isArray(originalResources) ? originalResources : [originalResources]))
+    const modifiedYaml = stringify(filterfy(Array.isArray(resources) ? resources : [resources]))
+
+    defineThemes(monacoEditor.editor)
+    mountTheme('se')
+    monacoEditor.editor.setTheme(getTheme())
+
+    const originalModel = monacoEditor.editor.createModel(originalYaml, 'yaml')
+    const modifiedModel = monacoEditor.editor.createModel(modifiedYaml, 'yaml')
+
+    const diffEditor = monacoEditor.editor.createDiffEditor(container, {
+      renderSideBySide: false,
+      readOnly: false,
+      automaticLayout: false,
+      scrollBeyondLastLine: true,
+      cursorSmoothCaretAnimation: true,
+      minimap: { enabled: false },
+      quickSuggestions: false,
+      lightbulb: { enabled: false },
+      theme: getTheme(),
+    })
+    diffEditor.setModel({ original: originalModel, modified: modifiedModel })
+    diffEditorRef.current = diffEditor
+
+    diffNavigatorRef.current?.dispose()
+    diffNavigatorRef.current = monacoEditor.editor.createDiffNavigator(diffEditor, {
+      followsCaret: true,
+      ignoreCharChanges: true,
+    })
+
+    const layoutDiff = () => {
+      if (!diffContainerRef.current || !diffEditorRef.current) return
+      const { width, height } = diffContainerRef.current.getBoundingClientRect()
+      if (width > 0 && height > 0) {
+        diffEditorRef.current.layout({ width, height })
+      }
+    }
+    requestAnimationFrame(() => {
+      layoutDiff()
+    })
+
+    return () => {
+      diffNavigatorRef.current?.dispose()
+      diffNavigatorRef.current = null
+      diffEditorRef.current = null
+      diffEditor.setModel(null)
+      diffEditor.dispose()
+      originalModel.dispose()
+      modifiedModel.dispose()
+    }
+  }, [showChanges, originalResources, resources, mock])
   useResizeObserver(pageRef, () => {
     layoutEditor(editor)
+    if (diffEditorRef.current && diffContainerRef.current) {
+      const { width, height } = diffContainerRef.current.getBoundingClientRect()
+      if (width > 0 && height > 0) {
+        diffEditorRef.current.layout({ width, height })
+      }
+    }
   })
   const layoutEditor = useCallback(
     (editor: any) => {
@@ -772,31 +809,37 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
 
   return (
     <div ref={pageRef} className="sync-editor__container">
-      <CodeEditor
-        isLineNumbersVisible={true}
-        isReadOnly={readonly}
-        isMinimapVisible={true}
-        onChange={editorChange}
-        language={Language.yaml}
-        customControls={variant === 'toolbar' ? toolbarControls : undefined}
-        onEditorDidMount={onEditorDidMount}
-        options={{
-          theme: getTheme(),
-          wordWrap: 'wordWrapColumn',
-          wordWrapColumn: showCondensed ? 512 : 256,
-          scrollBeyondLastLine: true,
-          smoothScrolling: true,
-          glyphMargin: true,
-          tabSize: 2,
-          scrollbar: {
-            verticalScrollbarSize: 17,
-            horizontalScrollbarSize: 17,
-          },
-          minimap: {
-            enabled: false,
-          },
-        }}
-      />
+      <div className="sync-editor__stack">
+        <CodeEditor
+          isLineNumbersVisible={true}
+          isReadOnly={readonly}
+          isMinimapVisible={true}
+          onChange={editorChange}
+          language={Language.yaml}
+          customControls={variant === 'toolbar' ? toolbarControls : undefined}
+          onEditorDidMount={onEditorDidMount}
+          showEditor={!(showChanges && originalResources !== undefined && !mock)}
+          options={{
+            theme: getTheme(),
+            wordWrap: 'wordWrapColumn',
+            wordWrapColumn: showCondensed ? 512 : 256,
+            scrollBeyondLastLine: true,
+            smoothScrolling: true,
+            glyphMargin: true,
+            tabSize: 2,
+            scrollbar: {
+              verticalScrollbarSize: 17,
+              horizontalScrollbarSize: 17,
+            },
+            minimap: {
+              enabled: false,
+            },
+          }}
+        />
+        {showChanges && originalResources !== undefined && !mock && (
+          <div ref={diffContainerRef} className="sync-editor__diff-host" />
+        )}
+      </div>
     </div>
   )
 }

@@ -2,6 +2,7 @@
 import {
   EditorValidationStatus,
   useData,
+  useDefaultItem,
   useEditorValidationStatus,
   useHighlightEditorPath,
   useItem,
@@ -22,6 +23,7 @@ import schema from './schema.json'
 
 export function WizardSyncEditor() {
   const resources = useItem() // Wizard framework sets this context
+  const defaultItem = useDefaultItem()
   const { update } = useData() // Wizard framework sets this context
   const { setEditorValidationStatus } = useEditorValidationStatus()
   const { highlightEditorPath } = useHighlightEditorPath()
@@ -32,6 +34,7 @@ export function WizardSyncEditor() {
       editorTitle={t('Policy YAML')}
       variant="toolbar"
       resources={resources}
+      originalResources={defaultItem}
       schema={schema}
       highlightEditorPath={highlightEditorPath}
       onEditorChange={(changes: { resources: any[] }): void => {
