@@ -6,9 +6,10 @@
 }
 
 .sy-c-code-editor__title {
-  display: flex;
-  align-items: center;
-  padding: 0 12px;
+  flex: 0 1 auto;
+  min-width: 0;
+  padding: 0 12px 0 0;
+  line-height: var(--pf-v6-global--LineHeight--md, 1.5);
 }
 
 .sync-editor__container {
@@ -63,7 +64,27 @@
   display: none !important;
 }
 
-/* PF6 code editor header: v5 border vars are often unset; use t-global tokens + flex sizing so the rule paints. */
+/* Title + controls share one typographic baseline in the code editor header. */
+.sync-editor__container .sy-toolbar-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  width: 100%;
+  column-gap: var(--pf-t--global--spacer--md);
+  row-gap: var(--pf-t--global--spacer--xs);
+}
+
+/* Toolbar: single text/icon baseline across controls, copy, and checkbox. */
+.sync-editor__container .sy-toolbar-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  flex: 1 1 auto;
+  min-width: 0;
+  justify-content: flex-end;
+}
+
 .sync-editor__container .sy-toolbar-buttons .sy-toolbar-separator {
   box-sizing: content-box;
   flex: 0 0 auto;
@@ -75,6 +96,12 @@
   margin-inline: var(--pf-t--global--spacer--xs);
   border: 0;
   background-color: var(--pf-t--global--border--color--default, var(--pf-v5-global--BorderColor--200, #c7c7c7));
+}
+
+.sync-editor__container .sy-toolbar-buttons .sy-toolbar-checkbox-wrap {
+  display: inline-flex;
+  align-items: baseline;
+  padding-inline: var(--pf-t--global--spacer--xs);
 }
 
 .sync-editor__container .sy-toolbar-buttons .pf-v6-c-button.pf-m-plain,

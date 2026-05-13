@@ -11,8 +11,7 @@ import {
   ArrowUpIcon,
   ArrowDownIcon,
 } from '@patternfly/react-icons'
-import XRayIcon from '@patternfly/react-icons/dist/esm/icons/x-ray-icon'
-import { ClipboardCopyButton } from '@patternfly/react-core'
+import { Checkbox, ClipboardCopyButton } from '@patternfly/react-core'
 import { noop } from 'lodash'
 import type { editor as editorTypes } from 'monaco-editor'
 
@@ -66,33 +65,14 @@ export function SyncEditorToolbar(props: SyncEditorToolbarProps): JSX.Element {
   } = props
 
   return (
-    <>
+    <div className="sy-toolbar-row">
       <div className="sy-c-code-editor__title">{editorTitle || 'YAML'}</div>
-      <div className="sy-toolbar-buttons" style={{ display: 'flex' }}>
+      <div className="sy-toolbar-buttons">
         {showCompareButton && (
           <>
-            {showChanges && <div className="sy-toolbar-separator" role="separator" aria-orientation="vertical" />}
-            <CodeEditorControl
-              id="compare-changes-button"
-              icon={<XRayIcon />}
-              aria-label={t('Show changes')}
-              tooltipProps={{ content: t('Show changes') }}
-              isClicked={showChanges}
-              onClick={() => {
-                setShowChanges((v) => !v)
-              }}
-            />
+            <div className="sy-toolbar-separator" role="separator" aria-orientation="vertical" />
             {showChanges && (
               <>
-                <CodeEditorControl
-                  id="diff-next-button"
-                  icon={<ArrowDownIcon />}
-                  aria-label={t('Next change')}
-                  tooltipProps={{ content: t('Next change') }}
-                  onClick={() => {
-                    onDiffNext?.()
-                  }}
-                />
                 <CodeEditorControl
                   id="diff-prev-button"
                   icon={<ArrowUpIcon />}
@@ -102,9 +82,26 @@ export function SyncEditorToolbar(props: SyncEditorToolbarProps): JSX.Element {
                     onDiffPrevious?.()
                   }}
                 />
-                <div className="sy-toolbar-separator" role="separator" aria-orientation="vertical" />
+                <CodeEditorControl
+                  id="diff-next-button"
+                  icon={<ArrowDownIcon />}
+                  aria-label={t('Next change')}
+                  tooltipProps={{ content: t('Next change') }}
+                  onClick={() => {
+                    onDiffNext?.()
+                  }}
+                />
               </>
             )}
+            <div className="sy-toolbar-checkbox-wrap">
+              <Checkbox
+                id="compare-changes-checkbox"
+                label={t('Show changes')}
+                isChecked={showChanges}
+                onChange={(_event, checked) => setShowChanges(checked)}
+              />
+            </div>
+            <div className="sy-toolbar-separator" role="separator" aria-orientation="vertical" />
           </>
         )}
         {/* undo */}
@@ -190,6 +187,6 @@ export function SyncEditorToolbar(props: SyncEditorToolbarProps): JSX.Element {
           />
         )}
       </div>
-    </>
+    </div>
   )
 }

@@ -3,7 +3,8 @@ import { HTMLProps, ReactNode, useRef, useEffect, useState, useCallback, useMemo
 import useResizeObserver from '@react-hook/resize-observer'
 import { CodeEditor, Language } from '@patternfly/react-code-editor'
 import { debounce, isEqual, cloneDeep } from 'lodash'
-import { filterfy, processForm, processUser, ProcessedType, stringify } from './process'
+import { processForm, processUser, ProcessedType } from './process'
+import { SyncEditorDiff, SyncEditorDiffHandle } from './SyncEditorDiff'
 import { SyncEditorToolbar } from './SyncEditorToolbar'
 import { compileAjvSchemas } from './validation'
 import { getFormChanges, getUserChanges } from './changes'
@@ -76,9 +77,7 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
     setEditorHighlightPath(highlightEditorPath ?? '')
   }, [highlightEditorPath])
   const pageRef = useRef<HTMLDivElement>(null)
-  const diffContainerRef = useRef<HTMLDivElement>(null)
-  const diffEditorRef = useRef<editorTypes.IStandaloneDiffEditor | null>(null)
-  const diffNavigatorRef = useRef<editorTypes.IDiffNavigator | null>(null)
+  const syncEditorDiffRef = useRef<SyncEditorDiffHandle>(null)
   const [editor, setEditor] = useState<editorTypes.IStandaloneCodeEditor | null>(null)
   const [monaco, setMonaco] = useState<Monaco | null>(null)
   if (mock) {
@@ -653,17 +652,11 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
   )
 
   const onDiffPrevious = useCallback(() => {
-    diffNavigatorRef.current?.previous()
-    requestAnimationFrame(() => {
-      diffEditorRef.current?.focus()
-    })
+    syncEditorDiffRef.current?.previous()
   }, [])
 
   const onDiffNext = useCallback(() => {
-    diffNavigatorRef.current?.next()
-    requestAnimationFrame(() => {
-      diffEditorRef.current?.focus()
-    })
+    syncEditorDiffRef.current?.next()
   }, [])
 
   const toolbarControls = useMemo(() => {
@@ -713,76 +706,10 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
     t,
   ])
 
-  useEffect(() => {
-    const showDiffView = showChanges && originalResources !== undefined && !mock
-    if (!showDiffView) {
-      return
-    }
-    const container = diffContainerRef.current
-    if (!container || typeof monacoEditor.editor.createDiffEditor !== 'function') {
-      return
-    }
-
-    const originalYaml = stringify(filterfy(Array.isArray(originalResources) ? originalResources : [originalResources]))
-    const modifiedYaml = stringify(filterfy(Array.isArray(resources) ? resources : [resources]))
-
-    defineThemes(monacoEditor.editor)
-    mountTheme('se')
-    monacoEditor.editor.setTheme(getTheme())
-
-    const originalModel = monacoEditor.editor.createModel(originalYaml, 'yaml')
-    const modifiedModel = monacoEditor.editor.createModel(modifiedYaml, 'yaml')
-
-    const diffEditor = monacoEditor.editor.createDiffEditor(container, {
-      renderSideBySide: false,
-      readOnly: false,
-      automaticLayout: false,
-      scrollBeyondLastLine: true,
-      cursorSmoothCaretAnimation: true,
-      minimap: { enabled: false },
-      quickSuggestions: false,
-      lightbulb: { enabled: false },
-      theme: getTheme(),
-    })
-    diffEditor.setModel({ original: originalModel, modified: modifiedModel })
-    diffEditorRef.current = diffEditor
-
-    diffNavigatorRef.current?.dispose()
-    diffNavigatorRef.current = monacoEditor.editor.createDiffNavigator(diffEditor, {
-      followsCaret: true,
-      ignoreCharChanges: true,
-    })
-
-    const layoutDiff = () => {
-      if (!diffContainerRef.current || !diffEditorRef.current) return
-      const { width, height } = diffContainerRef.current.getBoundingClientRect()
-      if (width > 0 && height > 0) {
-        diffEditorRef.current.layout({ width, height })
-      }
-    }
-    requestAnimationFrame(() => {
-      layoutDiff()
-    })
-
-    return () => {
-      diffNavigatorRef.current?.dispose()
-      diffNavigatorRef.current = null
-      diffEditorRef.current = null
-      diffEditor.setModel(null)
-      diffEditor.dispose()
-      originalModel.dispose()
-      modifiedModel.dispose()
-    }
-  }, [showChanges, originalResources, resources, mock])
   useResizeObserver(pageRef, () => {
     layoutEditor(editor)
-    if (diffEditorRef.current && diffContainerRef.current) {
-      const { width, height } = diffContainerRef.current.getBoundingClientRect()
-      if (width > 0 && height > 0) {
-        diffEditorRef.current.layout({ width, height })
-      }
-    }
   })
+
   const layoutEditor = useCallback(
     (editor: any) => {
       if (pageRef.current && editor) {
@@ -836,9 +763,14 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
             },
           }}
         />
-        {showChanges && originalResources !== undefined && !mock && (
-          <div ref={diffContainerRef} className="sync-editor__diff-host" />
-        )}
+        <SyncEditorDiff
+          ref={syncEditorDiffRef}
+          showChanges={showChanges}
+          originalResources={originalResources}
+          resources={resources}
+          mock={mock}
+          resizeRootRef={pageRef}
+        />
       </div>
     </div>
   )
