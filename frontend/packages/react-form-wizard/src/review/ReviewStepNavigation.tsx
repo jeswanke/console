@@ -42,7 +42,10 @@ export function useReviewEditHandler(): OnReviewEditHandler {
       if (intent === 'highlight') {
         const yamlPath = getReviewNodeYamlHighlightPath(node)
         if (yamlPath !== undefined && yamlPathBelongsToItem(yamlPath, resources)) {
-          setHighlightEditorPath(yamlPath)
+          setHighlightEditorPath('') // clear highlight
+          setTimeout(() => {
+            setHighlightEditorPath(yamlPath)
+          }, 0)
           return
         }
         // if highlight yaml fails, do link back to controls

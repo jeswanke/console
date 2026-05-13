@@ -10,6 +10,10 @@ import { defineThemes, getTheme, mountTheme } from '../theme'
 export interface SyncEditorDiffHandle {
   previous: () => void
   next: () => void
+  /** When the diff view is mounted, the `createDiffEditor` instance (e.g. Find). */
+  getDiffEditor: () => editorTypes.IStandaloneDiffEditor | null
+  /** When the diff view is mounted, the modified-side editor (for copy/selection). */
+  getModifiedEditor: () => editorTypes.IStandaloneCodeEditor | null
 }
 
 export interface SyncEditorDiffProps {
@@ -18,7 +22,7 @@ export interface SyncEditorDiffProps {
   resources: unknown
   mock?: boolean
   /** Observed for layout when the editor page resizes. */
-  resizeRootRef: RefObject<HTMLDivElement | null>
+  resizeRootRef: RefObject<HTMLDivElement>
 }
 
 export const SyncEditorDiff = forwardRef<SyncEditorDiffHandle, SyncEditorDiffProps>(function SyncEditorDiff(
@@ -44,6 +48,8 @@ export const SyncEditorDiff = forwardRef<SyncEditorDiffHandle, SyncEditorDiffPro
           diffEditorRef.current?.focus()
         })
       },
+      getDiffEditor: () => diffEditorRef.current,
+      getModifiedEditor: () => diffEditorRef.current?.getModifiedEditor() ?? null,
     }),
     []
   )

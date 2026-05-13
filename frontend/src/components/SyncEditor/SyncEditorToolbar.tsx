@@ -1,5 +1,5 @@
 /* Copyright Contributors to the Open Cluster Management project */
-import { ReactNode } from 'react'
+import { ReactNode, type RefObject } from 'react'
 import { CodeEditorControl } from '@patternfly/react-code-editor'
 import {
   RedoIcon,
@@ -14,6 +14,8 @@ import {
 import { Checkbox, ClipboardCopyButton } from '@patternfly/react-core'
 import { noop } from 'lodash'
 import type { editor as editorTypes } from 'monaco-editor'
+
+import type { SyncEditorDiffHandle } from './SyncEditorDiff'
 
 export interface SyncEditorToolbarProps {
   editorTitle?: string
@@ -32,6 +34,8 @@ export interface SyncEditorToolbarProps {
   setCopyHint: (hint: ReactNode) => void
   onClose?: () => void
   editor: editorTypes.IStandaloneCodeEditor | null
+  /** When set, copy uses the diff modified pane while Show changes is on. */
+  syncEditorDiffRef?: RefObject<SyncEditorDiffHandle | null>
   lastUnredactedYaml?: string
   allCopiedCopy: ReactNode
   copiedCopy: ReactNode
@@ -57,6 +61,7 @@ export function SyncEditorToolbar(props: SyncEditorToolbarProps): JSX.Element {
     setCopyHint,
     onClose,
     editor,
+    syncEditorDiffRef,
     lastUnredactedYaml,
     allCopiedCopy,
     copiedCopy,
@@ -138,7 +143,9 @@ export function SyncEditorToolbar(props: SyncEditorToolbarProps): JSX.Element {
           aria-label={t('Find')}
           tooltipProps={{ content: t('Find') }}
           onClick={() => {
-            editor?.trigger('source', 'actions.find', undefined)
+            // getDiffEditor() is null on the render that toggles showChanges; diff mounts in a child useEffect.
+            const diffEditor = showChanges ? syncEditorDiffRef?.current?.getDiffEditor() ?? null : null
+            ;(diffEditor ?? editor)?.trigger('source', 'actions.find', undefined)
           }}
         />
         {/* secrets */}
@@ -160,12 +167,15 @@ export function SyncEditorToolbar(props: SyncEditorToolbarProps): JSX.Element {
           aria-label={t('Copy to clipboard')}
           disabled={false}
           onClick={() => {
-            if (editor && editor.getModel()) {
-              const model = editor.getModel()
-              const selection = editor.getSelection()
+            const diffModifiedEditor = showChanges ? syncEditorDiffRef?.current?.getModifiedEditor() ?? null : null
+            const targetEditor = diffModifiedEditor ?? editor
+            if (targetEditor && targetEditor.getModel()) {
+              const model = targetEditor.getModel()
+              const selection = targetEditor.getSelection()
               if (model && selection) {
                 const selectedText = model.getValueInRange(selection)
-                navigator.clipboard.writeText(selectedText || lastUnredactedYaml || '')
+                const fallbackFull = diffModifiedEditor != null ? model.getValue() : lastUnredactedYaml || ''
+                navigator.clipboard.writeText(selectedText || fallbackFull)
                 setCopyHint(selectedText.length === 0 ? allCopiedCopy : copiedCopy)
                 setTimeout(() => {
                   setCopyHint(defaultCopy)

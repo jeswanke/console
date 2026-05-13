@@ -136,8 +136,16 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
   const [showChanges, setShowChanges] = useState<boolean>(false)
 
   useEffect(() => {
-    setShowChanges(false)
+    if (editorHighlightPath) {
+      setShowChanges(false)
+    }
   }, [editorHighlightPath])
+
+  useEffect(() => {
+    if (showChanges) {
+      setEditorHighlightPath('')
+    }
+  }, [showChanges])
 
   // compile schema(s) just once
   const validationRef = useRef<unknown>()
@@ -678,6 +686,7 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
         setCopyHint={setCopyHint}
         onClose={onClose}
         editor={editor}
+        syncEditorDiffRef={syncEditorDiffRef}
         lastUnredactedYaml={lastUnredactedChange?.yaml}
         allCopiedCopy={allCopiedCopy}
         copiedCopy={copiedCopy}
@@ -699,6 +708,7 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
     copyHint,
     onClose,
     editor,
+    syncEditorDiffRef,
     lastUnredactedChange?.yaml,
     allCopiedCopy,
     copiedCopy,
