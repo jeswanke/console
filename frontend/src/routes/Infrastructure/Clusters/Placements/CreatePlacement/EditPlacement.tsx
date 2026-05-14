@@ -3,7 +3,6 @@
 import {
   EditorValidationStatus,
   useData,
-  useDefaultItem,
   useEditorValidationStatus,
   useHighlightEditorPath,
   useItem,
@@ -27,7 +26,6 @@ import { useSearchParams } from '~/lib/search'
 
 export function WizardSyncEditor() {
   const resources = useItem()
-  const defaultItem = useDefaultItem()
   const { update } = useData()
   const { setEditorValidationStatus } = useEditorValidationStatus()
   const { highlightEditorPath } = useHighlightEditorPath()
@@ -38,7 +36,6 @@ export function WizardSyncEditor() {
       editorTitle={t('Placement YAML')}
       variant="toolbar"
       resources={resources}
-      originalResources={defaultItem}
       schema={schema}
       onEditorChange={(changes: { resources: any[] }): void => {
         update(changes?.resources)

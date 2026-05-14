@@ -74,7 +74,9 @@ jest.mock('../../ui-components', () => ({
 }))
 
 const renderWithContext = (component: React.ReactNode, updateFn: () => void = jest.fn()) => {
-  return render(<DataContext.Provider value={{ update: updateFn }}>{component}</DataContext.Provider>)
+  return render(
+    <DataContext.Provider value={{ update: updateFn, defaultData: {} }}>{component}</DataContext.Provider>
+  )
 }
 
 describe('ScopeSelectionStepContent', () => {

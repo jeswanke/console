@@ -3,7 +3,6 @@
 import {
   EditorValidationStatus,
   useData,
-  useDefaultItem,
   useEditorValidationStatus,
   useHighlightEditorPath,
   useItem,
@@ -39,7 +38,6 @@ import { useTimezones } from '~/hooks/useTimezone'
 
 export function WizardSyncEditor() {
   const resources = useItem() // Wizard framework sets this context
-  const defaultItem = useDefaultItem()
   const { update } = useData() // Wizard framework sets this context
   const { setEditorValidationStatus } = useEditorValidationStatus()
   const { highlightEditorPath } = useHighlightEditorPath()
@@ -49,7 +47,6 @@ export function WizardSyncEditor() {
       editorTitle={t('Application set YAML')}
       variant="toolbar"
       resources={resources}
-      originalResources={defaultItem}
       schema={pushmodelschema}
       filters={['*.metadata.managedFields']}
       highlightEditorPath={highlightEditorPath}

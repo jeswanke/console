@@ -9,7 +9,7 @@ import {
 import { ExclamationCircleIcon } from '@patternfly/react-icons'
 import Fuse from 'fuse.js'
 import { Fragment, type ReactNode, useMemo } from 'react'
-import { useDefaultItem } from '../contexts/DefaultDataContext'
+import { useData } from '../contexts/DataContext'
 import { useItem } from '../contexts/ItemContext'
 import { useStringContext } from '../contexts/StringContext'
 import { InputReviewMeta, type WizardDomTreeNode } from './ReviewStepContexts'
@@ -391,7 +391,7 @@ function buildFindListModel(
 export function ReviewStepFindList(props: ReviewStepFindListProps) {
   const { sectionRoots, searchQuery, showChangesOnly, onReviewEdit, showYaml } = props
   const item = useItem<object>()
-  const defaultItem = useDefaultItem<object>()
+  const { defaultData: defaultItem } = useData()
   const { noResults, reviewBooleanTrue, reviewBooleanFalse, reviewBooleanNotSet } = useStringContext()
   const q = searchQuery.trim()
 

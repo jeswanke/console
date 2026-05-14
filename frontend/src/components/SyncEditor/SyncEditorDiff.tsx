@@ -1,5 +1,13 @@
 /* Copyright Contributors to the Open Cluster Management project */
-import { forwardRef, useEffect, useImperativeHandle, useRef, useMemo, type RefObject } from 'react'
+import {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useMemo,
+  type MutableRefObject,
+  type RefObject,
+} from 'react'
 import useResizeObserver from '@react-hook/resize-observer'
 import * as monacoEditor from 'monaco-editor'
 import { editor as editorTypes } from 'monaco-editor'
@@ -19,7 +27,10 @@ export interface SyncEditorDiffHandle {
 
 export interface SyncEditorDiffProps {
   showChanges: boolean
-  originalResources?: unknown
+  /** Ref holding compare baseline resources (left diff pane); updated by parent. */
+  baselineResources: MutableRefObject<unknown>
+  /** Bumps when `baselineResources` content changes so diff effects re-run. */
+  baselineSyncKey: number
   resources: unknown
   mock?: boolean
   /** When true, external resource updates must not reset diff models (see blur to flush). */
@@ -43,7 +54,8 @@ const TOOLBAR_IDS_SKIP_DIFF_BLUR = [
 export const SyncEditorDiff = forwardRef<SyncEditorDiffHandle, SyncEditorDiffProps>(function SyncEditorDiff(
   {
     showChanges,
-    originalResources,
+    baselineResources,
+    baselineSyncKey,
     resources,
     mock,
     diffEditorHasFocus,
@@ -63,12 +75,13 @@ export const SyncEditorDiff = forwardRef<SyncEditorDiffHandle, SyncEditorDiffPro
   const onDiffEditorFocusChangeRef = useRef(onDiffEditorFocusChange)
   onDiffEditorFocusChangeRef.current = onDiffEditorFocusChange
 
-  const showDiffView = showChanges && originalResources !== undefined && !mock
+  const hasBaseline = baselineSyncKey > 0 && baselineResources.current !== undefined
+  const showDiffView = showChanges && hasBaseline && !mock
 
   const resourcesContentKey = useMemo(
-    () => JSON.stringify(resources) + '\n---\n' + JSON.stringify(originalResources),
+    () => JSON.stringify(resources) + '\n---\n' + baselineSyncKey,
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [JSON.stringify(resources), JSON.stringify(originalResources)]
+    [JSON.stringify(resources), baselineSyncKey]
   )
 
   useImperativeHandle(
@@ -102,10 +115,11 @@ export const SyncEditorDiff = forwardRef<SyncEditorDiffHandle, SyncEditorDiffPro
       return
     }
 
-    const { original: filteredOriginal, current: filteredCurrent } = filterfy(
-      Array.isArray(originalResources) ? originalResources : [originalResources],
-      Array.isArray(resources) ? resources : [resources]
-    )
+    const baseline = baselineResources.current
+    const baselineArr = Array.isArray(baseline) ? baseline : [baseline]
+    const resourcesArr = Array.isArray(resources) ? resources : [resources]
+    const filteredOriginal = filterfy(baselineArr)
+    const filteredCurrent = filterfy(resourcesArr)
     const originalYaml = stringify(filteredOriginal)
     const modifiedYaml = stringify(filteredCurrent)
 
@@ -215,10 +229,11 @@ export const SyncEditorDiff = forwardRef<SyncEditorDiffHandle, SyncEditorDiffPro
       return
     }
 
-    const { original: filteredOriginal, current: filteredCurrent } = filterfy(
-      Array.isArray(originalResources) ? originalResources : [originalResources],
-      Array.isArray(resources) ? resources : [resources]
-    )
+    const baseline = baselineResources.current
+    const baselineArr = Array.isArray(baseline) ? baseline : [baseline]
+    const resourcesArr = Array.isArray(resources) ? resources : [resources]
+    const filteredOriginal = filterfy(baselineArr)
+    const filteredCurrent = filterfy(resourcesArr)
     const originalYaml = stringify(filteredOriginal)
     const modifiedYaml = stringify(filteredCurrent)
     originalModelRef.current.setValue(originalYaml)
@@ -233,7 +248,7 @@ export const SyncEditorDiff = forwardRef<SyncEditorDiffHandle, SyncEditorDiffPro
     }
   })
 
-  if (!(showChanges && originalResources !== undefined && !mock)) {
+  if (!(showChanges && hasBaseline && !mock)) {
     return null
   }
 
@@ -283,8 +298,36 @@ function stripEmptyOriginalVsCurrent(original: any, current: any): void {
   }
 }
 
-/** Deep-clone resource lists for diff: strip `managedFields`, then align empty placeholders on `original` with populated `current`. */
-function filterfy(original: any[], current: any[]): { original: any[]; current: any[] } {
+/**
+ * Align `currentBaseline` with `current` resources: deep-clone, strip empty placeholders on the baseline side
+ * (same lockstep logic as the former `filterfy`), then store the baseline branch in `currentBaseline`.
+ */
+export function normalizeBaseline(
+  original: unknown,
+  current: unknown,
+  lastBaseline: MutableRefObject<unknown>,
+  currentBaseline: MutableRefObject<unknown>
+): void {
+  lastBaseline.current = cloneDeep(currentBaseline.current)
+  let origSeed = original
+  if (origSeed === undefined || origSeed === null) {
+    origSeed = cloneDeep(current)
+  }
+  const origArr = Array.isArray(origSeed) ? origSeed : [origSeed]
+  const currentIsArray = Array.isArray(current)
+  const currArr = currentIsArray ? current : current != null ? [current] : []
+
+  const orig = origArr.map((r) => cloneDeep(r))
+  const curr = currArr.map((r) => cloneDeep(r))
+  const n = Math.min(orig.length, curr.length)
+  for (let i = 0; i < n; i++) {
+    stripEmptyOriginalVsCurrent(orig[i], curr[i])
+  }
+  currentBaseline.current = currentIsArray ? orig : orig[0]
+}
+
+/** Strip `metadata.managedFields` from each resource (for diff display). */
+function filterfy(resources: any[]): any[] {
   const filterManagedFields = (resource: any): any => {
     if (resource == null || typeof resource !== 'object') {
       return resource
@@ -307,11 +350,5 @@ function filterfy(original: any[], current: any[]): { original: any[]; current: 
     return copy
   }
 
-  const orig = (original ?? []).map(filterManagedFields)
-  const curr = (current ?? []).map(filterManagedFields)
-  const n = Math.min(orig.length, curr.length)
-  for (let i = 0; i < n; i++) {
-    stripEmptyOriginalVsCurrent(orig[i], curr[i])
-  }
-  return { original: orig, current: curr }
+  return (resources ?? []).map(filterManagedFields)
 }

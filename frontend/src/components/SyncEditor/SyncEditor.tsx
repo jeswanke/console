@@ -3,8 +3,9 @@ import { HTMLProps, ReactNode, useRef, useEffect, useState, useCallback, useMemo
 import useResizeObserver from '@react-hook/resize-observer'
 import { CodeEditor, Language } from '@patternfly/react-code-editor'
 import { debounce, isEqual, cloneDeep } from 'lodash'
+import YAML from 'yaml'
 import { processForm, processUser, ProcessedType } from './process'
-import { SyncEditorDiff, SyncEditorDiffHandle } from './SyncEditorDiff'
+import { SyncEditorDiff, SyncEditorDiffHandle, normalizeBaseline } from './SyncEditorDiff'
 import { SyncEditorToolbar } from './SyncEditorToolbar'
 import { compileAjvSchemas } from './validation'
 import { getFormChanges, getUserChanges } from './changes'
@@ -47,8 +48,6 @@ export interface SyncEditorProps extends HTMLProps<HTMLPreElement> {
   onEditorChange?: (editorResources: any) => void
   /** Wizard review / form dot path used to scroll and highlight the matching YAML region. */
   highlightEditorPath?: string
-  /** Initial wizard resources; when set with variant "toolbar", enables compare-to-original diff view. */
-  originalResources?: unknown
 }
 
 export function SyncEditor(props: SyncEditorProps): JSX.Element {
@@ -70,7 +69,6 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
     onEditorChange,
     onClose,
     highlightEditorPath,
-    originalResources,
   } = props
   const [editorHighlightPath, setEditorHighlightPath] = useState(() => highlightEditorPath ?? '')
   useEffect(() => {
@@ -78,6 +76,9 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
   }, [highlightEditorPath])
   const pageRef = useRef<HTMLDivElement>(null)
   const syncEditorDiffRef = useRef<SyncEditorDiffHandle>(null)
+  const lastBaseline = useRef<unknown>(undefined)
+  const currentBaseline = useRef<unknown>(undefined)
+  const [baselineSyncKey, setBaselineSyncKey] = useState(0)
   const [editor, setEditor] = useState<editorTypes.IStandaloneCodeEditor | null>(null)
   const [monaco, setMonaco] = useState<Monaco | null>(null)
   if (mock) {
@@ -150,10 +151,16 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
   }, [showChanges])
 
   useEffect(() => {
-    if (!(showChanges && originalResources !== undefined && !mock)) {
+    if (!(showChanges && baselineSyncKey > 0 && !mock)) {
       setDiffEditorHasFocus(false)
     }
-  }, [showChanges, originalResources, mock])
+  }, [showChanges, baselineSyncKey, mock])
+
+  useEffect(() => {
+    void normalizeBaseline(currentBaseline.current, resources, lastBaseline, currentBaseline)
+    setBaselineSyncKey((k) => k + 1)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(resources)])
 
   // compile schema(s) just once
   const validationRef = useRef<unknown>()
@@ -215,69 +222,83 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
     if (editor && monaco) {
       // if user is pasting a certificate, fix the indent
       const domNode = editor.getDomNode()
-      domNode?.addEventListener(
-        'paste',
-        (event: ClipboardEvent) => {
-          const selection = editor.getSelection()
-          const pasteText = event.clipboardData?.getData('text/plain').trim()
+      const onPaste = (event: ClipboardEvent) => {
+        const selection = editor.getSelection()
+        const pasteText = event.clipboardData?.getData('text/plain').trim()
 
-          if (selection && pasteText) {
-            const model = editor.getModel()
-            const lines = pasteText?.split(/\r?\n/)
-            if (selection.selectionStartLineNumber - 1 > 0 && pasteText?.startsWith('-----BEGIN')) {
+        if (selection && pasteText) {
+          const model = editor.getModel()
+          const lines = pasteText?.split(/\r?\n/)
+          if (selection.selectionStartLineNumber - 1 > 0 && pasteText?.startsWith('-----BEGIN')) {
+            event.stopPropagation()
+            event.preventDefault()
+            const lines = pasteText.split(/\r?\n/)
+            const spaces = (model?.getLineContent(selection.selectionStartLineNumber - 1)?.search(/\S/) ?? 0) + 2
+            const leadSpaces = spaces - selection.selectionStartColumn + 1
+            const lead = ' '.repeat(leadSpaces < 0 ? spaces : leadSpaces)
+            const spacer = ' '.repeat(spaces)
+            const joint = `\r\n${spacer}`
+            const text = `${lead}${lines.map((line: string) => line.trim()).join(joint)}\r\n`
+            editor.executeEdits('my-source', [{ range: selection, text: text, forceMoveMarkers: true }])
+          }
+
+          // when user is pasting in a complete yaml, do we need to make sure the resource has a namespace
+          if (
+            autoCreateNs && // make sure resource has namespace
+            selection?.startColumn === 1 &&
+            selection?.endLineNumber === model?.getLineCount()
+          ) {
+            let nameInx
+            let hasMetadata = false
+            let hasNamespace = false
+            for (let i = 0; i < lines.length; i++) {
+              if (lines[i].startsWith('metadata:')) {
+                hasMetadata = true
+              }
+              if (hasMetadata) {
+                if (lines[i].includes(' name:')) {
+                  nameInx = i
+                }
+                if (lines[i].includes(' namespace:')) {
+                  hasNamespace = true
+                }
+              }
+              if (hasNamespace || lines[i].startsWith('spec:')) {
+                break
+              }
+            }
+            if (nameInx && !hasNamespace) {
+              // add missing namespace
               event.stopPropagation()
               event.preventDefault()
-              const lines = pasteText.split(/\r?\n/)
-              const spaces = (model?.getLineContent(selection.selectionStartLineNumber - 1)?.search(/\S/) ?? 0) + 2
-              const leadSpaces = spaces - selection.selectionStartColumn + 1
-              const lead = ' '.repeat(leadSpaces < 0 ? spaces : leadSpaces)
-              const spacer = ' '.repeat(spaces)
-              const joint = `\r\n${spacer}`
-              const text = `${lead}${lines.map((line: string) => line.trim()).join(joint)}\r\n`
+              lines.splice(nameInx + 1, 0, '  namespace: ""')
+              const text = lines.join('\r\n')
               editor.executeEdits('my-source', [{ range: selection, text: text, forceMoveMarkers: true }])
             }
+          }
 
-            // when user is pasting in a complete yaml, do we need to make sure the resource has a namespace
-            if (
-              autoCreateNs && // make sure resource has namespace
-              selection?.startColumn === 1 &&
-              selection?.endLineNumber === model?.getLineCount()
-            ) {
-              let nameInx
-              let hasMetadata = false
-              let hasNamespace = false
-              for (let i = 0; i < lines.length; i++) {
-                if (lines[i].startsWith('metadata:')) {
-                  hasMetadata = true
-                }
-                if (hasMetadata) {
-                  if (lines[i].includes(' name:')) {
-                    nameInx = i
-                  }
-                  if (lines[i].includes(' namespace:')) {
-                    hasNamespace = true
-                  }
-                }
-                if (hasNamespace || lines[i].startsWith('spec:')) {
-                  break
-                }
+          if (model && pasteText && selection?.startColumn === 1 && selection?.endLineNumber === model.getLineCount()) {
+            try {
+              const documents = YAML.parseAllDocuments(pasteText, { prettyErrors: true, keepCstNodes: true })
+              const parsedResources = documents
+                .filter((d) => !d.errors?.length)
+                .map((d) => d.toJSON())
+                .filter(Boolean)
+              if (parsedResources.length > 0) {
+                currentBaseline.current = parsedResources.length === 1 ? parsedResources[0] : parsedResources
+                setBaselineSyncKey((k) => k + 1)
               }
-              if (nameInx && !hasNamespace) {
-                // add missing namespace
-                event.stopPropagation()
-                event.preventDefault()
-                lines.splice(nameInx + 1, 0, '  namespace: ""')
-                const text = lines.join('\r\n')
-                editor.executeEdits('my-source', [{ range: selection, text: text, forceMoveMarkers: true }])
-              }
+            } catch {
+              /* ignore invalid yaml */
             }
           }
-        },
-        true
-      )
+        }
+      }
+      domNode?.addEventListener('paste', onPaste, true)
       // clear our the getEditorValue method
       return () => {
         window.getEditorValue = undefined
+        domNode?.removeEventListener('paste', onPaste, true)
       }
     }
   }, [autoCreateNs, editor, monaco])
@@ -704,7 +725,7 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
         secrets={secrets}
         showSecrets={showSecrets}
         setShowSecrets={setShowSecrets}
-        showCompareButton={originalResources !== undefined}
+        showCompareButton={variant === 'toolbar'}
         showChanges={showChanges}
         setShowChanges={setShowChanges}
         onDiffPrevious={onDiffPrevious}
@@ -728,7 +749,7 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
     hasRedo,
     secrets,
     showSecrets,
-    originalResources,
+    variant,
     showChanges,
     onDiffPrevious,
     onDiffNext,
@@ -782,7 +803,7 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
           language={Language.yaml}
           customControls={variant === 'toolbar' ? toolbarControls : undefined}
           onEditorDidMount={onEditorDidMount}
-          showEditor={!(showChanges && originalResources !== undefined && !mock)}
+          showEditor={!(showChanges && baselineSyncKey > 0 && !mock)}
           options={{
             theme: getTheme(),
             wordWrap: 'wordWrapColumn',
@@ -803,7 +824,8 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
         <SyncEditorDiff
           ref={syncEditorDiffRef}
           showChanges={showChanges}
-          originalResources={originalResources}
+          baselineResources={currentBaseline}
+          baselineSyncKey={baselineSyncKey}
           resources={resources}
           mock={mock}
           diffEditorHasFocus={diffEditorHasFocus}

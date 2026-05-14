@@ -3,7 +3,6 @@ import {
   EditMode,
   EditorValidationStatus,
   useData,
-  useDefaultItem,
   useEditorValidationStatus,
   useHighlightEditorPath,
   useItem,
@@ -25,7 +24,6 @@ import { LostChangesContext } from '../../../components/LostChanges'
 
 export function WizardSyncEditor() {
   const resources = useItem() // Wizard framework sets this context
-  const defaultItem = useDefaultItem()
   const { update } = useData() // Wizard framework sets this context
   const { setEditorValidationStatus } = useEditorValidationStatus()
   const { highlightEditorPath } = useHighlightEditorPath()
@@ -36,7 +34,6 @@ export function WizardSyncEditor() {
       variant="toolbar"
       filters={['*.metadata.managedFields']}
       resources={resources}
-      originalResources={defaultItem}
       schema={schema}
       highlightEditorPath={highlightEditorPath}
       onEditorChange={(changes: { resources: any[] }): void => {
