@@ -54,6 +54,8 @@ export interface ReviewStepFindListProps {
   showYaml?: boolean
 }
 
+// when only showing changes in  Review page, filter out all key/value pairs where the values are equual
+// when values aren't equal they will appear in Review page
 function rowMatchesChangesOnlyFilter(row: ReviewFindRow, item: object, defaultItem: object): boolean {
   const path = row.node.path
   if (!path) {

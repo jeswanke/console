@@ -102,6 +102,7 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
   }
   const { t } = useTranslation()
   const editorHadFocus = useRef(false)
+  const diffHadFocus = useRef(false)
   const defaultCopy = useMemo<ReactNode>(() => <span style={{ wordBreak: 'keep-all' }}>{t('Copy')}</span>, [t])
   const copiedCopy = useMemo<ReactNode>(
     () => <span style={{ wordBreak: 'keep-all' }}>{t('Selection copied')}</span>,
@@ -129,6 +130,7 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
   const [showFiltered, setShowFiltered] = useState<boolean>(false)
   const [clickedOnFilteredLine, setClickedOnFilteredLine] = useState<boolean>(false)
   const [editorHasFocus, setEditorHasFocus] = useState<boolean>(false)
+  const [diffEditorHasFocus, setDiffEditorHasFocus] = useState<boolean>(false)
   const [editorHasErrors, setEditorHasErrors] = useState<boolean>(false)
   const [showCondensed, setShowCondensed] = useState<boolean>(false)
   const [hasUndo, setHasUndo] = useState<boolean>(false)
@@ -146,6 +148,12 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
       setEditorHighlightPath('')
     }
   }, [showChanges])
+
+  useEffect(() => {
+    if (!(showChanges && originalResources !== undefined && !mock)) {
+      setDiffEditorHasFocus(false)
+    }
+  }, [showChanges, originalResources, mock])
 
   // compile schema(s) just once
   const validationRef = useRef<unknown>()
@@ -400,12 +408,13 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
       const model = editor?.getModel()
 
       // if editor didn't have focus before and now it does, ignore form change
-      if (!editorHadFocus.current && editorHasFocus) {
+      // same when focus moves into the compare diff panes
+      if ((!editorHadFocus.current && editorHasFocus) || (!diffHadFocus.current && diffEditorHasFocus)) {
         // ignore
       } else if (editor && monaco && model) {
         // debounce changes from form
         const formChange = () => {
-          if (editorHasFocus || editorHasErrors) {
+          if (editorHasFocus || editorHasErrors || diffEditorHasFocus) {
             return
           }
           // parse/validate/secrets
@@ -494,9 +503,13 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
         }
         // if form changed, and editor doesn't have focus (user isn't typing) process form change immediately
         // if form changed, and editor has focus (user is typing) process form with debounce of 1 s to allow user to type
-        changeTimeoutId = setTimeout(formChange, !clickedOnFilteredLine && editorHasFocus ? 1000 : 100)
+        changeTimeoutId = setTimeout(
+          formChange,
+          !clickedOnFilteredLine && (editorHasFocus || diffEditorHasFocus) ? 1000 : 100
+        )
       }
       editorHadFocus.current = editorHasFocus
+      diffHadFocus.current = diffEditorHasFocus
 
       return () => {
         clearTimeout(changeTimeoutId)
@@ -510,6 +523,7 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
       showSecrets,
       showFiltered,
       editorHasFocus,
+      diffEditorHasFocus,
       clickedOnFilteredLine,
       changeStack,
       editor,
@@ -540,7 +554,8 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
   // react to changes from user editing yaml
   const editorChanged = useCallback(
     (value: string, e: { isFlush: any }) => {
-      if (editor && monaco) {
+      const activeEditor = syncEditorDiffRef.current?.getModifiedEditor() ?? editor
+      if (activeEditor && monaco) {
         if (!e.isFlush) {
           // parse/validate/secrets
           const {
@@ -595,7 +610,7 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
           const squigglyTooltips = decorate(
             true,
             editorHasFocus,
-            editor,
+            activeEditor,
             monaco,
             [...allErrors, ...customErrors],
             [],
@@ -619,7 +634,7 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
           }
 
           // undo/redo enable
-          const model = editor.getModel()
+          const model = activeEditor.getModel()
           if (model) {
             setHasRedo((model as any).canRedo())
             setHasUndo((model as any).canUndo())
@@ -657,6 +672,18 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
       editorChanged(value, e)
     },
     [editorChanged, onStatusChange]
+  )
+
+  /** Ignore diff `onDidChangeModelContent` when the modified pane is not focused (programmatic setValue / model churn). */
+  const syncEditorDiffOnChange = useCallback<ChangeHandler>(
+    (value, e) => {
+      const modified = syncEditorDiffRef.current?.getModifiedEditor()
+      if (modified != null && !modified.hasTextFocus()) {
+        return
+      }
+      editorChange(value, e)
+    },
+    [editorChange]
   )
 
   const onDiffPrevious = useCallback(() => {
@@ -779,7 +806,10 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
           originalResources={originalResources}
           resources={resources}
           mock={mock}
+          diffEditorHasFocus={diffEditorHasFocus}
+          onDiffEditorFocusChange={setDiffEditorHasFocus}
           resizeRootRef={pageRef}
+          onChange={syncEditorDiffOnChange}
         />
       </div>
     </div>

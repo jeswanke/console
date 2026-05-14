@@ -131,22 +131,25 @@ function deepDataDifferenceStats(a: unknown, b: unknown): { compared: number; mi
   return { compared, mismatched }
 }
 
+const DIFF_THRESHOLD = 0.2
+
 export function Wizard(props: WizardProps & { showHeader?: boolean; showYaml?: boolean }) {
   const [data, setData] = useState(props.defaultData ? klona(props.defaultData) : {})
   const [defaultDataSnapshot, setDefaultDataSnapshot] = useState<object>(() => klona(props.defaultData ?? {}))
   const dataRef = useRef(data)
   dataRef.current = data
-  const update = useCallback((newData: unknown) => {
-    const prev = dataRef.current
-    const next = klona(newData ?? prev)
-    if (newData != null) {
-      const { compared, mismatched } = deepDataDifferenceStats(prev, newData)
-      if (compared > 0 && mismatched / compared > 0.2) {
-        setDefaultDataSnapshot(klona(newData as object))
+  const update = useCallback(
+    (newData: unknown) => {
+      const prev = dataRef.current
+      const next = klona(newData ?? prev)
+      const { compared, mismatched } = deepDataDifferenceStats(defaultDataSnapshot, next)
+      if (compared > 0 && mismatched / compared > DIFF_THRESHOLD) {
+        setDefaultDataSnapshot(klona(next as object))
       }
-    }
-    setData(next)
-  }, [])
+      setData(next)
+    },
+    [defaultDataSnapshot, dataRef, setDefaultDataSnapshot, setData]
+  )
   const [drawerExpanded, setDrawerExpanded] = useState<boolean>(false)
   useEffect(() => {
     if (props.showYaml !== undefined) {

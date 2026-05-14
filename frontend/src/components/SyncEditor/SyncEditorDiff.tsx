@@ -1,11 +1,12 @@
 /* Copyright Contributors to the Open Cluster Management project */
-import { forwardRef, useEffect, useImperativeHandle, useRef, type RefObject } from 'react'
+import { forwardRef, useEffect, useImperativeHandle, useRef, useMemo, type RefObject } from 'react'
 import useResizeObserver from '@react-hook/resize-observer'
 import * as monacoEditor from 'monaco-editor'
 import { editor as editorTypes } from 'monaco-editor'
 import { cloneDeep, unset } from 'lodash'
 import { stringify } from './process'
 import { defineThemes, getTheme, mountTheme } from '../theme'
+import { ChangeHandler } from 'react-monaco-editor'
 
 export interface SyncEditorDiffHandle {
   previous: () => void
@@ -21,17 +22,54 @@ export interface SyncEditorDiffProps {
   originalResources?: unknown
   resources: unknown
   mock?: boolean
+  /** When true, external resource updates must not reset diff models (see blur to flush). */
+  diffEditorHasFocus: boolean
+  /** Notifies parent when either diff pane gains or loses text focus. */
+  onDiffEditorFocusChange: (focused: boolean) => void
   /** Observed for layout when the editor page resizes. */
   resizeRootRef: RefObject<HTMLDivElement>
+  /** Called when the modified (editable) side of the diff changes. */
+  onChange?: ChangeHandler
 }
 
+const TOOLBAR_IDS_SKIP_DIFF_BLUR = [
+  'undo-button',
+  'redo-button',
+  'compare-changes-button',
+  'diff-prev-button',
+  'diff-next-button',
+] as const
+
 export const SyncEditorDiff = forwardRef<SyncEditorDiffHandle, SyncEditorDiffProps>(function SyncEditorDiff(
-  { showChanges, originalResources, resources, mock, resizeRootRef },
+  {
+    showChanges,
+    originalResources,
+    resources,
+    mock,
+    diffEditorHasFocus,
+    onDiffEditorFocusChange,
+    resizeRootRef,
+    onChange,
+  },
   ref
 ) {
   const diffContainerRef = useRef<HTMLDivElement>(null)
   const diffEditorRef = useRef<editorTypes.IStandaloneDiffEditor | null>(null)
+  const originalModelRef = useRef<monacoEditor.editor.ITextModel | null>(null)
+  const modifiedModelRef = useRef<monacoEditor.editor.ITextModel | null>(null)
   const diffNavigatorRef = useRef<editorTypes.IDiffNavigator | null>(null)
+  const onChangeRef = useRef(onChange)
+  onChangeRef.current = onChange
+  const onDiffEditorFocusChangeRef = useRef(onDiffEditorFocusChange)
+  onDiffEditorFocusChangeRef.current = onDiffEditorFocusChange
+
+  const showDiffView = showChanges && originalResources !== undefined && !mock
+
+  const resourcesContentKey = useMemo(
+    () => JSON.stringify(resources) + '\n---\n' + JSON.stringify(originalResources),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [JSON.stringify(resources), JSON.stringify(originalResources)]
+  )
 
   useImperativeHandle(
     ref,
@@ -54,8 +92,8 @@ export const SyncEditorDiff = forwardRef<SyncEditorDiffHandle, SyncEditorDiffPro
     []
   )
 
+  // Create / destroy diff widget only when compare mode toggles — resource updates run in the sync effect below.
   useEffect(() => {
-    const showDiffView = showChanges && originalResources !== undefined && !mock
     if (!showDiffView) {
       return
     }
@@ -91,6 +129,45 @@ export const SyncEditorDiff = forwardRef<SyncEditorDiffHandle, SyncEditorDiffPro
     })
     diffEditor.setModel({ original: originalModel, modified: modifiedModel })
     diffEditorRef.current = diffEditor
+    originalModelRef.current = originalModel
+    modifiedModelRef.current = modifiedModel
+
+    const originalEditor = diffEditor.getOriginalEditor()
+    const modifiedEditor = diffEditor.getModifiedEditor()
+
+    const notifyBlurIfReallyLeft = () => {
+      requestAnimationFrame(() => {
+        const de = diffEditorRef.current
+        if (!de) return
+        if (de.getOriginalEditor().hasTextFocus() || de.getModifiedEditor().hasTextFocus()) {
+          return
+        }
+        const activeId = document.activeElement?.id as string
+        if (TOOLBAR_IDS_SKIP_DIFF_BLUR.indexOf(activeId as (typeof TOOLBAR_IDS_SKIP_DIFF_BLUR)[number]) !== -1) {
+          return
+        }
+        onDiffEditorFocusChangeRef.current(false)
+      })
+    }
+
+    const focusDisposables = [
+      originalEditor.onDidFocusEditorWidget(() => onDiffEditorFocusChangeRef.current(true)),
+      originalEditor.onDidBlurEditorWidget(notifyBlurIfReallyLeft),
+      modifiedEditor.onDidFocusEditorWidget(() => onDiffEditorFocusChangeRef.current(true)),
+      modifiedEditor.onDidBlurEditorWidget(notifyBlurIfReallyLeft),
+    ]
+
+    const onContainerMouseDown = () => {
+      const focusedEl = document.querySelector('.monaco-editor.focused')
+      if (focusedEl && diffContainerRef.current?.contains(focusedEl)) {
+        onDiffEditorFocusChangeRef.current(true)
+      }
+    }
+    container.addEventListener('mousedown', onContainerMouseDown)
+
+    const onChangeDisposable = modifiedEditor.onDidChangeModelContent((event) => {
+      onChangeRef.current?.(modifiedEditor.getValue(), event)
+    })
 
     diffNavigatorRef.current?.dispose()
     diffNavigatorRef.current = monacoEditor.editor.createDiffNavigator(diffEditor, {
@@ -110,15 +187,43 @@ export const SyncEditorDiff = forwardRef<SyncEditorDiffHandle, SyncEditorDiffPro
     })
 
     return () => {
+      focusDisposables.forEach((d) => d.dispose())
+      container.removeEventListener('mousedown', onContainerMouseDown)
+      onChangeDisposable.dispose()
       diffNavigatorRef.current?.dispose()
       diffNavigatorRef.current = null
       diffEditorRef.current = null
+      originalModelRef.current = null
+      modifiedModelRef.current = null
       diffEditor.setModel(null)
       diffEditor.dispose()
       originalModel.dispose()
       modifiedModel.dispose()
+      onDiffEditorFocusChangeRef.current(false)
     }
-  }, [showChanges, originalResources, resources, mock])
+  }, [showDiffView]) // eslint-disable-line react-hooks/exhaustive-deps -- compare open/close only; YAML synced in next effect
+
+  // Push resource changes into diff models when the user is not typing in the diff (re-runs as soon as focus is lost).
+  useEffect(() => {
+    if (!showDiffView) {
+      return
+    }
+    if (!diffEditorRef.current || !originalModelRef.current || !modifiedModelRef.current) {
+      return
+    }
+    if (diffEditorHasFocus) {
+      return
+    }
+
+    const { original: filteredOriginal, current: filteredCurrent } = filterfy(
+      Array.isArray(originalResources) ? originalResources : [originalResources],
+      Array.isArray(resources) ? resources : [resources]
+    )
+    const originalYaml = stringify(filteredOriginal)
+    const modifiedYaml = stringify(filteredCurrent)
+    originalModelRef.current.setValue(originalYaml)
+    modifiedModelRef.current.setValue(modifiedYaml)
+  }, [showDiffView, diffEditorHasFocus, resourcesContentKey]) // eslint-disable-line react-hooks/exhaustive-deps -- resourcesContentKey tracks deep resource changes
 
   useResizeObserver(resizeRootRef, () => {
     if (!diffEditorRef.current || !diffContainerRef.current) return

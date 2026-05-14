@@ -69,6 +69,12 @@ export function SyncEditorToolbar(props: SyncEditorToolbarProps): JSX.Element {
     t,
   } = props
 
+  /** Diff mounts in a child useEffect, so getModifiedEditor() can be null on the render that toggles showChanges. */
+  const getActiveEditor = () => {
+    const diffModified = showChanges ? syncEditorDiffRef?.current?.getModifiedEditor() ?? null : null
+    return diffModified ?? editor
+  }
+
   return (
     <div className="sy-toolbar-row">
       <div className="sy-c-code-editor__title">{editorTitle || 'YAML'}</div>
@@ -118,7 +124,7 @@ export function SyncEditorToolbar(props: SyncEditorToolbarProps): JSX.Element {
             tooltipProps={{ content: t('Undo') }}
             isDisabled={!hasUndo}
             onClick={() => {
-              editor?.trigger('source', 'undo', undefined)
+              getActiveEditor()?.trigger('source', 'undo', undefined)
             }}
           />
         )}
@@ -131,7 +137,7 @@ export function SyncEditorToolbar(props: SyncEditorToolbarProps): JSX.Element {
             tooltipProps={{ content: t('Redo') }}
             isDisabled={!hasRedo}
             onClick={() => {
-              editor?.trigger('source', 'redo', undefined)
+              getActiveEditor()?.trigger('source', 'redo', undefined)
             }}
           />
         )}
@@ -143,9 +149,7 @@ export function SyncEditorToolbar(props: SyncEditorToolbarProps): JSX.Element {
           aria-label={t('Find')}
           tooltipProps={{ content: t('Find') }}
           onClick={() => {
-            // getDiffEditor() is null on the render that toggles showChanges; diff mounts in a child useEffect.
-            const diffEditor = showChanges ? syncEditorDiffRef?.current?.getDiffEditor() ?? null : null
-            ;(diffEditor ?? editor)?.trigger('source', 'actions.find', undefined)
+            getActiveEditor()?.trigger('source', 'actions.find', undefined)
           }}
         />
         {/* secrets */}
