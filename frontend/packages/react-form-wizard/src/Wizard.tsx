@@ -33,6 +33,7 @@ import {
 } from 'react'
 import { EditMode } from './contexts/EditMode'
 import { DataContext } from './contexts/DataContext'
+import { DefaultDataContext } from './contexts/DefaultDataContext'
 import { DisplayMode, DisplayModeContext } from './contexts/DisplayModeContext'
 import { EditModeContext } from './contexts/EditModeContext'
 import { ItemContext, useItem } from './contexts/ItemContext'
@@ -87,7 +88,7 @@ export interface WizardProps {
 export type WizardSubmit = (data: unknown) => Promise<void>
 export type WizardCancel = () => void
 
-const DIFF_THRESHOLD = 0.2
+const DIFF_THRESHOLD = 0.4
 
 export function Wizard(props: WizardProps & { showHeader?: boolean; showYaml?: boolean }) {
   const [data, setData] = useState(props.defaultData ? klona(props.defaultData) : {})
@@ -121,34 +122,36 @@ export function Wizard(props: WizardProps & { showHeader?: boolean; showYaml?: b
           <StepShowValidationProvider>
             <StepValidationProvider>
               <DisplayModeContext.Provider value={displayMode}>
-                <DataContext.Provider value={{ update, defaultData: defaultDataSnapshot }}>
+                <DataContext.Provider value={{ update }}>
                   <ItemContext.Provider value={data}>
                     <ShowValidationProvider>
                       <ValidationProvider>
                         <HighlightEditorPathProvider>
                           <FooterContentProvider>
                             <Drawer isExpanded={drawerExpanded} isInline>
-                              <DrawerContent panelContent={<WizardDrawer yamlEditor={props.yamlEditor} />}>
-                                <DrawerContentBody>
-                                  <ItemContext.Provider value={data}>
-                                    <StringContext.Provider value={wizardStrings || defaultStrings}>
-                                      <WizardInternal
-                                        id={props.id}
-                                        reviewStorageKey={props.reviewStorageKey}
-                                        showYaml={props.showYaml}
-                                        onSubmit={props.onSubmit}
-                                        onCancel={props.onCancel}
-                                        hasButtons={props.hasButtons}
-                                        submitButtonText={props.submitButtonText}
-                                        submittingButtonText={props.submittingButtonText}
-                                        isLoading={props.isLoading}
-                                      >
-                                        {props.children}
-                                      </WizardInternal>
-                                    </StringContext.Provider>
-                                  </ItemContext.Provider>
-                                </DrawerContentBody>
-                              </DrawerContent>
+                              <DefaultDataContext.Provider value={defaultDataSnapshot}>
+                                <DrawerContent panelContent={<WizardDrawer yamlEditor={props.yamlEditor} />}>
+                                  <DrawerContentBody>
+                                    <ItemContext.Provider value={data}>
+                                      <StringContext.Provider value={wizardStrings || defaultStrings}>
+                                        <WizardInternal
+                                          id={props.id}
+                                          reviewStorageKey={props.reviewStorageKey}
+                                          showYaml={props.showYaml}
+                                          onSubmit={props.onSubmit}
+                                          onCancel={props.onCancel}
+                                          hasButtons={props.hasButtons}
+                                          submitButtonText={props.submitButtonText}
+                                          submittingButtonText={props.submittingButtonText}
+                                          isLoading={props.isLoading}
+                                        >
+                                          {props.children}
+                                        </WizardInternal>
+                                      </StringContext.Provider>
+                                    </ItemContext.Provider>
+                                  </DrawerContentBody>
+                                </DrawerContent>
+                              </DefaultDataContext.Provider>
                             </Drawer>
                           </FooterContentProvider>
                         </HighlightEditorPathProvider>

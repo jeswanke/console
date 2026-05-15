@@ -3,11 +3,9 @@ import { createContext, useContext } from 'react'
 
 export interface IDataContext {
   update: (data?: any) => void
-  /** Snapshot for review "changes only" vs baseline wizard data (see Wizard). */
-  defaultData: object
 }
 
-export const DataContext = createContext<IDataContext>({ update: () => null, defaultData: {} })
+export const DataContext = createContext<IDataContext>({ update: () => null })
 DataContext.displayName = 'DataContext'
 
 export function useData() {
