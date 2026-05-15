@@ -59,6 +59,7 @@ import {
 } from './contexts/ValidationProvider'
 import { ReviewStep } from './review/ReviewStep'
 import { Step } from './Step'
+import { deepDataDifferenceStats } from './review/utils'
 
 export interface WizardProps {
   wizardStrings?: WizardStrings
@@ -85,50 +86,6 @@ export interface WizardProps {
 
 export type WizardSubmit = (data: unknown) => Promise<void>
 export type WizardCancel = () => void
-
-/** Recursive comparison counts for "how much" two wizard data trees differ (used for default snapshot refresh). */
-function deepDataDifferenceStats(a: unknown, b: unknown): { compared: number; mismatched: number } {
-  if (Object.is(a, b)) {
-    return { compared: 1, mismatched: 0 }
-  }
-  if (typeof a === 'number' && typeof b === 'number' && Number.isNaN(a) && Number.isNaN(b)) {
-    return { compared: 1, mismatched: 0 }
-  }
-  if (a === null || b === null || typeof a !== 'object' || typeof b !== 'object') {
-    return { compared: 1, mismatched: 1 }
-  }
-  if (Array.isArray(a) && Array.isArray(b)) {
-    const max = Math.max(a.length, b.length)
-    if (max === 0) {
-      return { compared: 1, mismatched: 0 }
-    }
-    let compared = 0
-    let mismatched = 0
-    for (let i = 0; i < max; i++) {
-      const r = deepDataDifferenceStats(a[i], b[i])
-      compared += r.compared
-      mismatched += r.mismatched
-    }
-    return { compared, mismatched }
-  }
-  if (Array.isArray(a) !== Array.isArray(b)) {
-    return { compared: 1, mismatched: 1 }
-  }
-  const aObj = a as Record<string, unknown>
-  const bObj = b as Record<string, unknown>
-  const keySet = new Set([...Object.keys(aObj), ...Object.keys(bObj)])
-  if (keySet.size === 0) {
-    return { compared: 1, mismatched: 0 }
-  }
-  let compared = 0
-  let mismatched = 0
-  for (const k of keySet) {
-    const r = deepDataDifferenceStats(aObj[k], bObj[k])
-    compared += r.compared
-    mismatched += r.mismatched
-  }
-  return { compared, mismatched }
-}
 
 const DIFF_THRESHOLD = 0.2
 

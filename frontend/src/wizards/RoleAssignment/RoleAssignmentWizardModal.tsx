@@ -399,7 +399,7 @@ export const RoleAssignmentWizardModal = ({
       <Drawer isExpanded={isDrawerExpanded}>
         <DrawerContent panelContent={<ExampleScopesPanelContent onClose={() => setIsDrawerExpanded(false)} />}>
           <ItemContext.Provider value={formData}>
-            <DataContext.Provider value={{ update, defaultData: {} }}>
+            <DataContext.Provider value={{ update }}>
               <Wizard
                 isVisitRequired={!isEditing}
                 onClose={handleClose}
