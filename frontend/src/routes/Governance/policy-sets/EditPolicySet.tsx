@@ -39,8 +39,8 @@ export function WizardSyncEditor() {
       filters={['*.metadata.managedFields']}
       highlightEditorPath={highlightEditorPath}
       immutables={['PlacementBinding.0.*']}
-      onEditorChange={(changes: { resources: any[] }): void => {
-        update(changes?.resources)
+      onEditorChange={(changes, resetDefaultSnapshot): void => {
+        update(changes?.resources, resetDefaultSnapshot)
       }}
       onStatusChange={(editorStatus: ValidationStatus): void => {
         setEditorValidationStatus(editorStatus as unknown as EditorValidationStatus)

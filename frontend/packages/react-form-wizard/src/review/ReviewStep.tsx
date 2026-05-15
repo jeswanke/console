@@ -37,7 +37,7 @@ import {
 import { useStringContext } from '../contexts/StringContext'
 import { InputReviewMeta, useStepRegister, type WizardDomTreeNode } from './ReviewStepContexts'
 import { ReviewPenHoverZone, useReviewEditHandler, type OnReviewEditHandler } from './ReviewStepNavigation'
-import { ReviewStepFindList } from './ReviewStepFindList'
+import { ReviewStepFindList } from './ReviewStepFilterList'
 import { ReviewStepToolbar, useReviewExpandCollapseHandlers, type ReviewToolbarAction } from './ReviewStepToolbar'
 import { horizontalTermWidthModifierForInputRun, REVIEW_ERROR_TEXT_COLOR, simplifyLabels } from './utils'
 import { Step } from '../Step'

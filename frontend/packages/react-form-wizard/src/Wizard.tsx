@@ -60,7 +60,6 @@ import {
 } from './contexts/ValidationProvider'
 import { ReviewStep } from './review/ReviewStep'
 import { Step } from './Step'
-import { deepDataDifferenceStats } from './review/utils'
 
 export interface WizardProps {
   wizardStrings?: WizardStrings
@@ -88,24 +87,21 @@ export interface WizardProps {
 export type WizardSubmit = (data: unknown) => Promise<void>
 export type WizardCancel = () => void
 
-const DIFF_THRESHOLD = 0.4
-
 export function Wizard(props: WizardProps & { showHeader?: boolean; showYaml?: boolean }) {
   const [data, setData] = useState(props.defaultData ? klona(props.defaultData) : {})
   const [defaultDataSnapshot, setDefaultDataSnapshot] = useState<object>(() => klona(props.defaultData ?? {}))
   const dataRef = useRef(data)
   dataRef.current = data
   const update = useCallback(
-    (newData: unknown) => {
+    (newData: unknown, resetDefaultSnapshot = false) => {
       const prev = dataRef.current
       const next = klona(newData ?? prev)
-      const { compared, mismatched } = deepDataDifferenceStats(defaultDataSnapshot, next)
-      if (compared > 0 && mismatched / compared > DIFF_THRESHOLD) {
+      if (resetDefaultSnapshot) {
         setDefaultDataSnapshot(klona(next as object))
       }
       setData(next)
     },
-    [defaultDataSnapshot, dataRef, setDefaultDataSnapshot, setData]
+    [dataRef, setDefaultDataSnapshot, setData]
   )
   const [drawerExpanded, setDrawerExpanded] = useState<boolean>(false)
   useEffect(() => {

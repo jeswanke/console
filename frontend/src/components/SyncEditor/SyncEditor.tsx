@@ -45,7 +45,8 @@ export interface SyncEditorProps extends HTMLProps<HTMLPreElement> {
   autoCreateNs?: boolean
   onClose?: () => void
   onStatusChange?: (status: ValidationStatus) => void
-  onEditorChange?: (editorResources: any) => void
+  /** Second argument is true when the user replaced the full document (paste-all); wizards should pass it to {@link IDataContext.update}. */
+  onEditorChange?: (editorResources: any, resetDefaultSnapshot?: boolean) => void
   /** Wizard review / form dot path used to scroll and highlight the matching YAML region. */
   highlightEditorPath?: string
 }
@@ -557,7 +558,7 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
 
   // report resource changes to form
   const reportResourceChanges = useCallback(
-    (resourceChanges: ProcessedType) => {
+    (resourceChanges: ProcessedType, resetDefaultSnapshot?: boolean) => {
       if (resourceChanges) {
         const isArr = Array.isArray(resources)
         const _resources = isArr ? resources : [resources]
@@ -565,7 +566,7 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
           const editChanges = {
             resources: isArr ? resourceChanges.resources : resourceChanges.resources[0],
           }
-          onEditorChange(editChanges)
+          onEditorChange(editChanges, resetDefaultSnapshot)
         }
       }
     },
@@ -574,10 +575,24 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
 
   // react to changes from user editing yaml
   const editorChanged = useCallback(
-    (value: string, e: { isFlush: any }) => {
+    (value: string, e: editorTypes.IModelContentChangedEvent) => {
       const activeEditor = syncEditorDiffRef.current?.getModifiedEditor() ?? editor
       if (activeEditor && monaco) {
         if (!e.isFlush) {
+          const modelForChange = activeEditor.getModel()
+          // Large paste/replace: if this edit replaced most of the *previous* model (by UTF-16 length), tell the form to reset its default snapshot.
+          let resetDefaultSnapshot = false
+          if (modelForChange && e.changes.length > 0) {
+            let oldValueLength = modelForChange.getValueLength()
+            for (let i = e.changes.length - 1; i >= 0; i--) {
+              const ch = e.changes[i]
+              oldValueLength = oldValueLength - ch.text.length + ch.rangeLength
+            }
+            const replacedLengthInOldModel = e.changes.reduce((sum, ch) => sum + ch.rangeLength, 0)
+            if (oldValueLength > 0) {
+              resetDefaultSnapshot = Math.min(replacedLengthInOldModel, oldValueLength) / oldValueLength > 0.8
+            }
+          }
           // parse/validate/secrets
           const {
             protectedRanges,
@@ -620,7 +635,7 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
           let customErrors = []
           if (!editorHasErrors) {
             const clonedUnredactedChange = cloneDeep(unredactedChange)
-            reportResourceChanges(clonedUnredactedChange)
+            reportResourceChanges(clonedUnredactedChange, resetDefaultSnapshot)
             customErrors = setFormValues(syncs, clonedUnredactedChange) || []
             setCustomValidationErrors(customErrors)
           }

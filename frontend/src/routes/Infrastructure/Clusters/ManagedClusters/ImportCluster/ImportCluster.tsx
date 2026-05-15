@@ -524,8 +524,8 @@ export default function ImportClusterPage() {
           'Secret.*.stringData.client_secret',
         ]}
         syncs={syncs}
-        onEditorChange={(changes: { resources: any[] }): void => {
-          update(changes?.resources)
+        onEditorChange={(changes, resetDefaultSnapshot): void => {
+          update(changes?.resources, resetDefaultSnapshot)
         }}
         onStatusChange={(editorStatus: ValidationStatus): void => {
           setEditorValidationStatus(editorStatus as unknown as EditorValidationStatus)

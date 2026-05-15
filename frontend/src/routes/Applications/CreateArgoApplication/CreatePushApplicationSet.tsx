@@ -60,8 +60,8 @@ export function WizardSyncEditor() {
       schema={pushmodelschema}
       filters={['*.metadata.managedFields']}
       highlightEditorPath={highlightEditorPath}
-      onEditorChange={(changes: { resources: any[] }): void => {
-        update(setRepositoryTypeForSources(changes?.resources))
+      onEditorChange={(changes, resetDefaultSnapshot): void => {
+        update(setRepositoryTypeForSources(changes?.resources), resetDefaultSnapshot)
       }}
       onStatusChange={(editorStatus: ValidationStatus): void => {
         setEditorValidationStatus(editorStatus as unknown as EditorValidationStatus)
