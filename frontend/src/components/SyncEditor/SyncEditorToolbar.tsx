@@ -17,6 +17,16 @@ import type { editor as editorTypes } from 'monaco-editor'
 
 import type { SyncEditorDiffHandle } from './SyncEditorDiff'
 
+export const SYNC_EDITOR_SHOW_CHANGES_STORAGE_KEY = 'sync-editor-show-changes'
+
+export function readShowChangesPreference(): boolean {
+  try {
+    return localStorage.getItem(SYNC_EDITOR_SHOW_CHANGES_STORAGE_KEY) === 'true'
+  } catch {
+    return false
+  }
+}
+
 export interface SyncEditorToolbarProps {
   editorTitle?: string
   readonly?: boolean
@@ -109,7 +119,14 @@ export function SyncEditorToolbar(props: SyncEditorToolbarProps): JSX.Element {
                 id="compare-changes-checkbox"
                 label={t('Show changes')}
                 isChecked={showChanges}
-                onChange={(_event, checked) => setShowChanges(checked)}
+                onChange={(_event, checked) => {
+                  try {
+                    localStorage.setItem(SYNC_EDITOR_SHOW_CHANGES_STORAGE_KEY, String(checked))
+                  } catch {
+                    /* ignore quota / private mode */
+                  }
+                  setShowChanges(checked)
+                }}
               />
             </div>
             <div className="sy-toolbar-separator" role="separator" aria-orientation="vertical" />

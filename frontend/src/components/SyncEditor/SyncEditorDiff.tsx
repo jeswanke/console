@@ -41,6 +41,8 @@ export interface SyncEditorDiffProps {
   resizeRootRef: RefObject<HTMLDivElement>
   /** Called when the modified (editable) side of the diff changes. */
   onChange?: ChangeHandler
+  /** Invoked after a diff editor is created and again right before it is disposed (parent can re-run form sync). */
+  onDiffEditorInstanceChange?: () => void
 }
 
 const TOOLBAR_IDS_SKIP_DIFF_BLUR = [
@@ -62,18 +64,19 @@ export const SyncEditorDiff = forwardRef<SyncEditorDiffHandle, SyncEditorDiffPro
     onDiffEditorFocusChange,
     resizeRootRef,
     onChange,
+    onDiffEditorInstanceChange,
   },
   ref
 ) {
   const diffContainerRef = useRef<HTMLDivElement>(null)
   const diffEditorRef = useRef<editorTypes.IStandaloneDiffEditor | null>(null)
-  const originalModelRef = useRef<monacoEditor.editor.ITextModel | null>(null)
-  const modifiedModelRef = useRef<monacoEditor.editor.ITextModel | null>(null)
   const diffNavigatorRef = useRef<editorTypes.IDiffNavigator | null>(null)
   const onChangeRef = useRef(onChange)
   onChangeRef.current = onChange
   const onDiffEditorFocusChangeRef = useRef(onDiffEditorFocusChange)
   onDiffEditorFocusChangeRef.current = onDiffEditorFocusChange
+  const onDiffEditorInstanceChangeRef = useRef(onDiffEditorInstanceChange)
+  onDiffEditorInstanceChangeRef.current = onDiffEditorInstanceChange
 
   const hasBaseline = baselineSyncKey > 0 && baselineResources.current !== undefined
   const showDiffView = showChanges && hasBaseline && !mock
@@ -143,8 +146,6 @@ export const SyncEditorDiff = forwardRef<SyncEditorDiffHandle, SyncEditorDiffPro
     })
     diffEditor.setModel({ original: originalModel, modified: modifiedModel })
     diffEditorRef.current = diffEditor
-    originalModelRef.current = originalModel
-    modifiedModelRef.current = modifiedModel
 
     const originalEditor = diffEditor.getOriginalEditor()
     const modifiedEditor = diffEditor.getModifiedEditor()
@@ -200,15 +201,16 @@ export const SyncEditorDiff = forwardRef<SyncEditorDiffHandle, SyncEditorDiffPro
       layoutDiff()
     })
 
+    onDiffEditorInstanceChangeRef.current?.()
+
     return () => {
+      onDiffEditorInstanceChangeRef.current?.()
       focusDisposables.forEach((d) => d.dispose())
       container.removeEventListener('mousedown', onContainerMouseDown)
       onChangeDisposable.dispose()
       diffNavigatorRef.current?.dispose()
       diffNavigatorRef.current = null
       diffEditorRef.current = null
-      originalModelRef.current = null
-      modifiedModelRef.current = null
       diffEditor.setModel(null)
       diffEditor.dispose()
       originalModel.dispose()
@@ -222,10 +224,17 @@ export const SyncEditorDiff = forwardRef<SyncEditorDiffHandle, SyncEditorDiffPro
     if (!showDiffView) {
       return
     }
-    if (!diffEditorRef.current || !originalModelRef.current || !modifiedModelRef.current) {
+    const de = diffEditorRef.current
+    if (!de) {
       return
     }
     if (diffEditorHasFocus) {
+      return
+    }
+
+    const originalModel = de.getOriginalEditor().getModel()
+    const modifiedModel = de.getModifiedEditor().getModel()
+    if (!originalModel || !modifiedModel || originalModel.isDisposed() || modifiedModel.isDisposed()) {
       return
     }
 
@@ -236,8 +245,8 @@ export const SyncEditorDiff = forwardRef<SyncEditorDiffHandle, SyncEditorDiffPro
     const filteredCurrent = filterfy(resourcesArr)
     const originalYaml = stringify(filteredOriginal)
     const modifiedYaml = stringify(filteredCurrent)
-    originalModelRef.current.setValue(originalYaml)
-    modifiedModelRef.current.setValue(modifiedYaml)
+    originalModel.setValue(originalYaml)
+    modifiedModel.setValue(modifiedYaml)
   }, [showDiffView, diffEditorHasFocus, resourcesContentKey]) // eslint-disable-line react-hooks/exhaustive-deps -- resourcesContentKey tracks deep resource changes
 
   useResizeObserver(resizeRootRef, () => {
@@ -254,49 +263,6 @@ export const SyncEditorDiff = forwardRef<SyncEditorDiffHandle, SyncEditorDiffPro
 
   return <div ref={diffContainerRef} className="sync-editor__diff-host" />
 })
-
-const isEmptyComparisonValue = (v: unknown): boolean => {
-  if (v === '') return true
-  if (typeof v === 'string' && v.startsWith('-')) return true
-  if (v == null) return false
-  if (Array.isArray(v)) return v.length === 0
-  if (typeof v === 'object') return Object.keys(v as object).length === 0
-  return false
-}
-
-/** When `original` has an empty string, a `-`-prefixed string, an empty object / array, and `current` does not, drop that slot from `original` only; recurse in lockstep. After stripping children, remove parents that became empty the same way. */
-function stripEmptyOriginalVsCurrent(original: any, current: any): void {
-  if (original == null || current == null) return
-  if (Array.isArray(original) && Array.isArray(current)) {
-    for (let i = original.length - 1; i >= 0; i--) {
-      const o = original[i]
-      const c = current[i]
-      if (isEmptyComparisonValue(o) && !isEmptyComparisonValue(c)) {
-        original.splice(i, 1)
-      } else if (typeof o === 'object' && typeof c === 'object' && o !== null && c !== null) {
-        stripEmptyOriginalVsCurrent(o, c)
-        if (isEmptyComparisonValue(o) && !isEmptyComparisonValue(c)) {
-          original.splice(i, 1)
-        }
-      }
-    }
-    return
-  }
-  if (Array.isArray(original) || Array.isArray(current)) return
-  if (typeof original !== 'object' || typeof current !== 'object') return
-  for (const key of Object.keys(original)) {
-    const o = original[key]
-    const c = current[key]
-    if (isEmptyComparisonValue(o) && !isEmptyComparisonValue(c)) {
-      delete original[key]
-    } else if (typeof o === 'object' && typeof c === 'object' && o !== null && c !== null) {
-      stripEmptyOriginalVsCurrent(o, c)
-      if (isEmptyComparisonValue(o) && !isEmptyComparisonValue(c)) {
-        delete original[key]
-      }
-    }
-  }
-}
 
 /**
  * Align `currentBaseline` with `current` resources: deep-clone, strip empty placeholders on the baseline side
@@ -351,4 +317,47 @@ function filterfy(resources: any[]): any[] {
   }
 
   return (resources ?? []).map(filterManagedFields)
+}
+
+const isEmptyComparisonValue = (v: unknown): boolean => {
+  if (v === '') return true
+  if (typeof v === 'string' && v.startsWith('-')) return true
+  if (v == null) return false
+  if (Array.isArray(v)) return v.length === 0
+  if (typeof v === 'object') return Object.keys(v as object).length === 0
+  return false
+}
+
+/** When `original` has an empty string, a `-`-prefixed string, an empty object / array, and `current` does not, drop that slot from `original` only; recurse in lockstep. After stripping children, remove parents that became empty the same way. */
+function stripEmptyOriginalVsCurrent(original: any, current: any): void {
+  if (original == null || current == null) return
+  if (Array.isArray(original) && Array.isArray(current)) {
+    for (let i = original.length - 1; i >= 0; i--) {
+      const o = original[i]
+      const c = current[i]
+      if (isEmptyComparisonValue(o) && !isEmptyComparisonValue(c)) {
+        original.splice(i, 1)
+      } else if (typeof o === 'object' && typeof c === 'object' && o !== null && c !== null) {
+        stripEmptyOriginalVsCurrent(o, c)
+        if (isEmptyComparisonValue(o) && !isEmptyComparisonValue(c)) {
+          original.splice(i, 1)
+        }
+      }
+    }
+    return
+  }
+  if (Array.isArray(original) || Array.isArray(current)) return
+  if (typeof original !== 'object' || typeof current !== 'object') return
+  for (const key of Object.keys(original)) {
+    const o = original[key]
+    const c = current[key]
+    if (isEmptyComparisonValue(o) && !isEmptyComparisonValue(c)) {
+      delete original[key]
+    } else if (typeof o === 'object' && typeof c === 'object' && o !== null && c !== null) {
+      stripEmptyOriginalVsCurrent(o, c)
+      if (isEmptyComparisonValue(o) && !isEmptyComparisonValue(c)) {
+        delete original[key]
+      }
+    }
+  }
 }

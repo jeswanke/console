@@ -6,7 +6,7 @@ import { debounce, isEqual, cloneDeep } from 'lodash'
 import YAML from 'yaml'
 import { processForm, processUser, ProcessedType } from './process'
 import { SyncEditorDiff, SyncEditorDiffHandle, normalizeBaseline } from './SyncEditorDiff'
-import { SyncEditorToolbar } from './SyncEditorToolbar'
+import { SyncEditorToolbar, readShowChangesPreference } from './SyncEditorToolbar'
 import { compileAjvSchemas } from './validation'
 import { getFormChanges, getUserChanges } from './changes'
 import { decorate, getResourceEditorDecorations } from './decorate'
@@ -137,7 +137,9 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
   const [showCondensed, setShowCondensed] = useState<boolean>(false)
   const [hasUndo, setHasUndo] = useState<boolean>(false)
   const [hasRedo, setHasRedo] = useState<boolean>(false)
-  const [showChanges, setShowChanges] = useState<boolean>(false)
+  const [showChanges, setShowChanges] = useState<boolean>(readShowChangesPreference)
+  const [diffEditorInstanceEpoch, setDiffEditorInstanceEpoch] = useState(0)
+  const onDiffEditorInstanceChange = useCallback(() => setDiffEditorInstanceEpoch((n) => n + 1), [])
 
   useEffect(() => {
     if (editorHighlightPath) {
@@ -419,6 +421,19 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
     }
   }, [editor, setClickedOnFilteredLine, setEditorHasFocus])
 
+  //  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  //  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  //  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  //
+  // ██    ██ ██████  ██████   █████  ████████ ███████     ███████  ██████  ██████  ███    ███
+  // ██    ██ ██   ██ ██   ██ ██   ██    ██    ██          ██      ██    ██ ██   ██ ████  ████
+  // ██    ██ ██████  ██   ██ ███████    ██    █████       █████   ██    ██ ██████  ██ ████ ██
+  // ██    ██ ██      ██   ██ ██   ██    ██    ██          ██      ██    ██ ██   ██ ██  ██  ██
+  //  ██████  ██      ██████  ██   ██    ██    ███████     ██       ██████  ██   ██ ██      ██
+  // //  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  //  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  //  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
   // react to changes from form
   useEffect(
     () => {
@@ -427,16 +442,33 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
       // if editor loses focus, update form immediately
       // otherwise if form already had focus, no need to call formChange
 
-      const model = editor?.getModel()
+      const diffViewActive = showChanges && baselineSyncKey > 0 && !mock
+      const preferModifiedPane = diffEditorHasFocus || diffViewActive
+      const modifiedEditor = preferModifiedPane ? syncEditorDiffRef.current?.getModifiedEditor() ?? null : null
+      const activeEditor = preferModifiedPane ? modifiedEditor : editor
+      const model = activeEditor?.getModel() ?? null
 
-      // if editor didn't have focus before and now it does, ignore form change
-      // same when focus moves into the compare diff panes
-      if ((!editorHadFocus.current && editorHasFocus) || (!diffHadFocus.current && diffEditorHasFocus)) {
+      // If focus just moved into the main editor or the diff, skip this run so we do not fight the caret.
+      // When neither surface has focus, always allow the effect (e.g. form/resources changed after blur).
+      const focusJustEnteredEditorOrDiff =
+        (!editorHadFocus.current && editorHasFocus) || (!diffHadFocus.current && diffEditorHasFocus)
+      if ((editorHasFocus || diffEditorHasFocus) && focusJustEnteredEditorOrDiff) {
         // ignore
-      } else if (editor && monaco && model) {
+      } else if (activeEditor && monaco && model) {
         // debounce changes from form
         const formChange = () => {
-          if (editorHasFocus || editorHasErrors || diffEditorHasFocus) {
+          const diffViewActiveNow = showChanges && baselineSyncKey > 0 && !mock
+          const preferModified = diffEditorHasFocus || diffViewActiveNow
+          const syncEditor = preferModified ? syncEditorDiffRef.current?.getModifiedEditor() ?? null : editor
+          const syncModel = syncEditor?.getModel() ?? null
+          if (editorHasErrors) {
+            return
+          }
+          // Main editor: defer while typing. Diff compare: apply to the modified pane (not the hidden standalone editor).
+          if (!diffEditorHasFocus && editorHasFocus) {
+            return
+          }
+          if (!syncEditor || !syncModel) {
             return
           }
           // parse/validate/secrets
@@ -461,7 +493,7 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
             readonly === true,
             userEdits,
             validationRef.current,
-            model?.getValue() ?? '',
+            syncModel.getValue() ?? '',
             editableUidSiblings
           )
           setProhibited(protectedRanges)
@@ -481,20 +513,22 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
 
           // update yaml in editor
           //model.resources = cloneDeep(change.resources)
-          const saveDecorations = getResourceEditorDecorations(editor, false)
-          const viewState = editor.saveViewState()
-          // instead of setValue, it's more robust to create a new text model
-          // but fall back to setValue for test environments where createModel may not be available
-          if (typeof monaco.editor.createModel === 'function') {
-            editor.getModel()?.dispose?.()
-            editor.setModel(monaco.editor.createModel(yaml, 'yaml'))
+          const saveDecorations = getResourceEditorDecorations(syncEditor, false)
+          const viewState = syncEditor.saveViewState()
+          const diffModifiedEditor = syncEditorDiffRef.current?.getModifiedEditor()
+          const isDiffModifiedPane = Boolean(diffModifiedEditor && syncEditor === diffModifiedEditor)
+          // Diff compare: never dispose/replace the modified model — SyncEditorDiff keeps refs and push-YAML effects use that model.
+          // Standalone editor: recreate the model when createModel exists (tests may omit it).
+          if (typeof monaco.editor.createModel === 'function' && !isDiffModifiedPane) {
+            syncEditor.getModel()?.dispose?.()
+            syncEditor.setModel(monaco.editor.createModel(yaml, 'yaml'))
           } else {
-            model.setValue(yaml)
+            syncModel.setValue(yaml)
           }
           if (viewState) {
-            editor.restoreViewState(viewState)
+            syncEditor.restoreViewState(viewState)
           }
-          editor.deltaDecorations([], saveDecorations)
+          syncEditor.deltaDecorations([], saveDecorations)
           setHasRedo(false)
           setHasUndo(false)
 
@@ -507,8 +541,8 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
           // decorate errors, changes
           const squigglyTooltips = decorate(
             false,
-            editorHasFocus,
-            editor,
+            editorHasFocus || diffEditorHasFocus,
+            syncEditor,
             monaco,
             [...allErrors, ...customValidationErrors],
             yamlChanges,
@@ -551,6 +585,9 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
       editor,
       monaco,
       editorHighlightPath,
+      showChanges,
+      mock,
+      diffEditorInstanceEpoch,
       // eslint-disable-next-line react-hooks/exhaustive-deps
       JSON.stringify(immutables),
     ]
@@ -572,6 +609,18 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
     },
     [onEditorChange, resources]
   )
+  //  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  //  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  //  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  //
+  //  ███████ ██████  ██ ████████  ██████  ██████      ████████ ██    ██ ██████  ██ ███    ██  ██████
+  //  ██      ██   ██ ██    ██    ██    ██ ██   ██        ██     ██  ██  ██   ██ ██ ████   ██ ██
+  //  █████   ██   ██ ██    ██    ██    ██ ██████         ██      ████   ██████  ██ ██ ██  ██ ██   ███
+  //  ██      ██   ██ ██    ██    ██    ██ ██   ██        ██       ██    ██      ██ ██  ██ ██ ██    ██
+  //  ███████ ██████  ██    ██     ██████  ██   ██        ██       ██    ██      ██ ██   ████  ██████
+  // //  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  //  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  //  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   // react to changes from user editing yaml
   const editorChanged = useCallback(
@@ -845,6 +894,7 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
           mock={mock}
           diffEditorHasFocus={diffEditorHasFocus}
           onDiffEditorFocusChange={setDiffEditorHasFocus}
+          onDiffEditorInstanceChange={onDiffEditorInstanceChange}
           resizeRootRef={pageRef}
           onChange={syncEditorDiffOnChange}
         />
