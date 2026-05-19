@@ -3,7 +3,6 @@ import { HTMLProps, ReactNode, useRef, useEffect, useState, useCallback, useMemo
 import useResizeObserver from '@react-hook/resize-observer'
 import { CodeEditor, Language } from '@patternfly/react-code-editor'
 import { debounce, isEqual, cloneDeep } from 'lodash'
-import YAML from 'yaml'
 import { processForm, processUser, ProcessedType } from './process'
 import { SyncEditorDiff, SyncEditorDiffHandle, normalizeBaseline } from './SyncEditorDiff'
 import { SyncEditorToolbar, readShowChangesPreference } from './SyncEditorToolbar'
@@ -225,83 +224,69 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
     if (editor && monaco) {
       // if user is pasting a certificate, fix the indent
       const domNode = editor.getDomNode()
-      const onPaste = (event: ClipboardEvent) => {
-        const selection = editor.getSelection()
-        const pasteText = event.clipboardData?.getData('text/plain').trim()
+      domNode?.addEventListener(
+        'paste',
+        (event: ClipboardEvent) => {
+          const selection = editor.getSelection()
+          const pasteText = event.clipboardData?.getData('text/plain').trim()
 
-        if (selection && pasteText) {
-          const model = editor.getModel()
-          const lines = pasteText?.split(/\r?\n/)
-          if (selection.selectionStartLineNumber - 1 > 0 && pasteText?.startsWith('-----BEGIN')) {
-            event.stopPropagation()
-            event.preventDefault()
-            const lines = pasteText.split(/\r?\n/)
-            const spaces = (model?.getLineContent(selection.selectionStartLineNumber - 1)?.search(/\S/) ?? 0) + 2
-            const leadSpaces = spaces - selection.selectionStartColumn + 1
-            const lead = ' '.repeat(leadSpaces < 0 ? spaces : leadSpaces)
-            const spacer = ' '.repeat(spaces)
-            const joint = `\r\n${spacer}`
-            const text = `${lead}${lines.map((line: string) => line.trim()).join(joint)}\r\n`
-            editor.executeEdits('my-source', [{ range: selection, text: text, forceMoveMarkers: true }])
-          }
-
-          // when user is pasting in a complete yaml, do we need to make sure the resource has a namespace
-          if (
-            autoCreateNs && // make sure resource has namespace
-            selection?.startColumn === 1 &&
-            selection?.endLineNumber === model?.getLineCount()
-          ) {
-            let nameInx
-            let hasMetadata = false
-            let hasNamespace = false
-            for (let i = 0; i < lines.length; i++) {
-              if (lines[i].startsWith('metadata:')) {
-                hasMetadata = true
-              }
-              if (hasMetadata) {
-                if (lines[i].includes(' name:')) {
-                  nameInx = i
-                }
-                if (lines[i].includes(' namespace:')) {
-                  hasNamespace = true
-                }
-              }
-              if (hasNamespace || lines[i].startsWith('spec:')) {
-                break
-              }
-            }
-            if (nameInx && !hasNamespace) {
-              // add missing namespace
+          if (selection && pasteText) {
+            const model = editor.getModel()
+            const lines = pasteText?.split(/\r?\n/)
+            if (selection.selectionStartLineNumber - 1 > 0 && pasteText?.startsWith('-----BEGIN')) {
               event.stopPropagation()
               event.preventDefault()
-              lines.splice(nameInx + 1, 0, '  namespace: ""')
-              const text = lines.join('\r\n')
+              const lines = pasteText.split(/\r?\n/)
+              const spaces = (model?.getLineContent(selection.selectionStartLineNumber - 1)?.search(/\S/) ?? 0) + 2
+              const leadSpaces = spaces - selection.selectionStartColumn + 1
+              const lead = ' '.repeat(leadSpaces < 0 ? spaces : leadSpaces)
+              const spacer = ' '.repeat(spaces)
+              const joint = `\r\n${spacer}`
+              const text = `${lead}${lines.map((line: string) => line.trim()).join(joint)}\r\n`
               editor.executeEdits('my-source', [{ range: selection, text: text, forceMoveMarkers: true }])
             }
-          }
 
-          if (model && pasteText && selection?.startColumn === 1 && selection?.endLineNumber === model.getLineCount()) {
-            try {
-              const documents = YAML.parseAllDocuments(pasteText, { prettyErrors: true, keepCstNodes: true })
-              const parsedResources = documents
-                .filter((d) => !d.errors?.length)
-                .map((d) => d.toJSON())
-                .filter(Boolean)
-              if (parsedResources.length > 0) {
-                currentBaseline.current = parsedResources.length === 1 ? parsedResources[0] : parsedResources
-                setBaselineSyncKey((k) => k + 1)
+            // when user is pasting in a complete yaml, do we need to make sure the resource has a namespace
+            if (
+              autoCreateNs && // make sure resource has namespace
+              selection?.startColumn === 1 &&
+              selection?.endLineNumber === model?.getLineCount()
+            ) {
+              let nameInx
+              let hasMetadata = false
+              let hasNamespace = false
+              for (let i = 0; i < lines.length; i++) {
+                if (lines[i].startsWith('metadata:')) {
+                  hasMetadata = true
+                }
+                if (hasMetadata) {
+                  if (lines[i].includes(' name:')) {
+                    nameInx = i
+                  }
+                  if (lines[i].includes(' namespace:')) {
+                    hasNamespace = true
+                  }
+                }
+                if (hasNamespace || lines[i].startsWith('spec:')) {
+                  break
+                }
               }
-            } catch {
-              /* ignore invalid yaml */
+              if (nameInx && !hasNamespace) {
+                // add missing namespace
+                event.stopPropagation()
+                event.preventDefault()
+                lines.splice(nameInx + 1, 0, '  namespace: ""')
+                const text = lines.join('\r\n')
+                editor.executeEdits('my-source', [{ range: selection, text: text, forceMoveMarkers: true }])
+              }
             }
           }
-        }
-      }
-      domNode?.addEventListener('paste', onPaste, true)
+        },
+        true
+      )
       // clear our the getEditorValue method
       return () => {
         window.getEditorValue = undefined
-        domNode?.removeEventListener('paste', onPaste, true)
       }
     }
   }, [autoCreateNs, editor, monaco])
