@@ -81,6 +81,8 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
   const [baselineSyncKey, setBaselineSyncKey] = useState(0)
   const [editor, setEditor] = useState<editorTypes.IStandaloneCodeEditor | null>(null)
   const [monaco, setMonaco] = useState<Monaco | null>(null)
+  const [activeEditor, setActiveEditor] = useState<editorTypes.IStandaloneCodeEditor | null>(null)
+  const [activeMonaco, setActiveMonaco] = useState<Monaco | null>(null)
   if (mock) {
     if (!monaco) {
       setMonaco({
@@ -139,18 +141,6 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
   const [showChanges, setShowChanges] = useState<boolean>(readShowChangesPreference)
   const [diffEditorInstanceEpoch, setDiffEditorInstanceEpoch] = useState(0)
   const onDiffEditorInstanceChange = useCallback(() => setDiffEditorInstanceEpoch((n) => n + 1), [])
-
-  useEffect(() => {
-    if (editorHighlightPath) {
-      setShowChanges(false)
-    }
-  }, [editorHighlightPath])
-
-  useEffect(() => {
-    if (showChanges) {
-      setEditorHighlightPath('')
-    }
-  }, [showChanges])
 
   useEffect(() => {
     if (!(showChanges && baselineSyncKey > 0 && !mock)) {
@@ -221,17 +211,17 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
   }
 
   useEffect(() => {
-    if (editor && monaco) {
+    if (activeEditor && activeMonaco) {
       // if user is pasting a certificate, fix the indent
-      const domNode = editor.getDomNode()
+      const domNode = activeEditor.getDomNode()
       domNode?.addEventListener(
         'paste',
         (event: ClipboardEvent) => {
-          const selection = editor.getSelection()
+          const selection = activeEditor.getSelection()
           const pasteText = event.clipboardData?.getData('text/plain').trim()
 
           if (selection && pasteText) {
-            const model = editor.getModel()
+            const model = activeEditor.getModel()
             const lines = pasteText?.split(/\r?\n/)
             if (selection.selectionStartLineNumber - 1 > 0 && pasteText?.startsWith('-----BEGIN')) {
               event.stopPropagation()
@@ -243,7 +233,7 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
               const spacer = ' '.repeat(spaces)
               const joint = `\r\n${spacer}`
               const text = `${lead}${lines.map((line: string) => line.trim()).join(joint)}\r\n`
-              editor.executeEdits('my-source', [{ range: selection, text: text, forceMoveMarkers: true }])
+              activeEditor.executeEdits('my-source', [{ range: selection, text: text, forceMoveMarkers: true }])
             }
 
             // when user is pasting in a complete yaml, do we need to make sure the resource has a namespace
@@ -277,7 +267,7 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
                 event.preventDefault()
                 lines.splice(nameInx + 1, 0, '  namespace: ""')
                 const text = lines.join('\r\n')
-                editor.executeEdits('my-source', [{ range: selection, text: text, forceMoveMarkers: true }])
+                activeEditor.executeEdits('my-source', [{ range: selection, text: text, forceMoveMarkers: true }])
               }
             }
           }
@@ -289,7 +279,7 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
         window.getEditorValue = undefined
       }
     }
-  }, [autoCreateNs, editor, monaco])
+  }, [autoCreateNs, activeEditor, activeMonaco])
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const onMouseDown = useCallback(
@@ -308,18 +298,18 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
     [filteredRows, showFiltered]
   )
   useEffect(() => {
-    if (editor) {
-      const handle = editor.onMouseDown(onMouseDown)
+    if (activeEditor) {
+      const handle = activeEditor.onMouseDown(onMouseDown)
       return () => {
         handle?.dispose()
       }
     }
-  }, [filteredRows, showFiltered, editor, onMouseDown])
+  }, [filteredRows, showFiltered, activeEditor, onMouseDown])
 
   // show tooltips over errors
   useEffect(() => {
-    if (monaco) {
-      const handle = monaco.languages.registerHoverProvider('yaml', {
+    if (activeMonaco) {
+      const handle = activeMonaco.languages.registerHoverProvider('yaml', {
         provideHover: (_model: any, position: any) => {
           return new Promise((resolve) => {
             squigglyTooltips.forEach((tip: { range: { containsPosition: (arg0: any) => any }; message: string }) => {
@@ -335,12 +325,12 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
         handle?.dispose()
       }
     }
-  }, [squigglyTooltips, monaco])
+  }, [squigglyTooltips, activeMonaco])
 
   // prevent user from changing protected text
   useEffect(() => {
-    if (editor) {
-      const handle = editor.onKeyDown(
+    if (activeEditor) {
+      const handle = activeEditor.onKeyDown(
         (e: {
           code: string
           ctrlKey: boolean
@@ -348,8 +338,8 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
           stopPropagation: () => void
           preventDefault: () => void
         }) => {
-          const selections = editor.getSelections()
-          const model = editor.getModel()
+          const selections = activeEditor.getSelections()
+          const model = activeEditor.getModel()
           const isAllSelected =
             selections?.length === 1 &&
             selections[0].startColumn === 1 &&
@@ -357,7 +347,7 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
           // if user presses enter, add new key: below this line
           let endOfLineEnter = false
           if (e.code === 'Enter') {
-            const pos = editor.getPosition()
+            const pos = activeEditor.getPosition()
             if (model && pos) {
               const thisLine = model.getLineContent(pos.lineNumber)
               endOfLineEnter = thisLine.length < pos.column
@@ -385,12 +375,12 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
         handle?.dispose()
       }
     }
-  }, [prohibited, editor])
+  }, [prohibited, activeEditor])
 
   // if editor loses focus, do form changes immediately
   useEffect(() => {
-    if (editor) {
-      editor.onDidBlurEditorWidget(() => {
+    if (activeEditor) {
+      activeEditor.onDidBlurEditorWidget(() => {
         const editorHasFocus = !!document.querySelector('.monaco-editor.focused')
         const activeId = document.activeElement?.id as string
         if (
@@ -404,7 +394,7 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
         }
       })
     }
-  }, [editor, setClickedOnFilteredLine, setEditorHasFocus])
+  }, [activeEditor, setClickedOnFilteredLine, setEditorHasFocus])
 
   //  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   //  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -427,11 +417,7 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
       // if editor loses focus, update form immediately
       // otherwise if form already had focus, no need to call formChange
 
-      const diffViewActive = showChanges && baselineSyncKey > 0 && !mock
-      const preferModifiedPane = diffEditorHasFocus || diffViewActive
-      const modifiedEditor = preferModifiedPane ? syncEditorDiffRef.current?.getModifiedEditor() ?? null : null
-      const activeEditor = preferModifiedPane ? modifiedEditor : editor
-      const model = activeEditor?.getModel() ?? null
+      const activeModel = activeEditor?.getModel() ?? null
 
       // If focus just moved into the main editor or the diff, skip this run so we do not fight the caret.
       // When neither surface has focus, always allow the effect (e.g. form/resources changed after blur).
@@ -439,13 +425,9 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
         (!editorHadFocus.current && editorHasFocus) || (!diffHadFocus.current && diffEditorHasFocus)
       if ((editorHasFocus || diffEditorHasFocus) && focusJustEnteredEditorOrDiff) {
         // ignore
-      } else if (activeEditor && monaco && model) {
+      } else if (activeEditor && activeMonaco && activeModel) {
         // debounce changes from form
         const formChange = () => {
-          const diffViewActiveNow = showChanges && baselineSyncKey > 0 && !mock
-          const preferModified = diffEditorHasFocus || diffViewActiveNow
-          const syncEditor = preferModified ? syncEditorDiffRef.current?.getModifiedEditor() ?? null : editor
-          const syncModel = syncEditor?.getModel() ?? null
           if (editorHasErrors) {
             return
           }
@@ -453,7 +435,7 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
           if (!diffEditorHasFocus && editorHasFocus) {
             return
           }
-          if (!syncEditor || !syncModel) {
+          if (!activeEditor || !activeModel) {
             return
           }
           // parse/validate/secrets
@@ -467,7 +449,7 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
             unredactedChange,
             xreferences,
           } = processForm(
-            monaco,
+            activeMonaco,
             code,
             resources,
             changeStack,
@@ -478,7 +460,7 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
             readonly === true,
             userEdits,
             validationRef.current,
-            syncModel.getValue() ?? '',
+            activeModel.getValue() ?? '',
             editableUidSiblings
           )
           setProhibited(protectedRanges)
@@ -498,22 +480,20 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
 
           // update yaml in editor
           //model.resources = cloneDeep(change.resources)
-          const saveDecorations = getResourceEditorDecorations(syncEditor, false)
-          const viewState = syncEditor.saveViewState()
-          const diffModifiedEditor = syncEditorDiffRef.current?.getModifiedEditor()
-          const isDiffModifiedPane = Boolean(diffModifiedEditor && syncEditor === diffModifiedEditor)
+          const saveDecorations = getResourceEditorDecorations(activeEditor, false)
+          const viewState = activeEditor.saveViewState()
           // Diff compare: never dispose/replace the modified model — SyncEditorDiff keeps refs and push-YAML effects use that model.
           // Standalone editor: recreate the model when createModel exists (tests may omit it).
-          if (typeof monaco.editor.createModel === 'function' && !isDiffModifiedPane) {
-            syncEditor.getModel()?.dispose?.()
-            syncEditor.setModel(monaco.editor.createModel(yaml, 'yaml'))
+          if (typeof activeMonaco.editor.createModel === 'function') {
+            activeEditor.getModel()?.dispose?.()
+            activeEditor.setModel(activeMonaco.editor.createModel(yaml, 'yaml'))
           } else {
-            syncModel.setValue(yaml)
+            activeModel.setValue(yaml)
           }
           if (viewState) {
-            syncEditor.restoreViewState(viewState)
+            activeEditor.restoreViewState(viewState)
           }
-          syncEditor.deltaDecorations([], saveDecorations)
+          activeEditor.deltaDecorations([], saveDecorations)
           setHasRedo(false)
           setHasUndo(false)
 
@@ -527,8 +507,8 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
           const squigglyTooltips = decorate(
             false,
             editorHasFocus || diffEditorHasFocus,
-            syncEditor,
-            monaco,
+            activeEditor,
+            activeMonaco,
             [...allErrors, ...customValidationErrors],
             yamlChanges,
             change,
@@ -567,8 +547,8 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
       diffEditorHasFocus,
       clickedOnFilteredLine,
       changeStack,
-      editor,
-      monaco,
+      activeEditor,
+      activeMonaco,
       editorHighlightPath,
       showChanges,
       mock,
@@ -610,14 +590,13 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
   // react to changes from user editing yaml
   const editorChanged = useCallback(
     (value: string, e: editorTypes.IModelContentChangedEvent) => {
-      const activeEditor = syncEditorDiffRef.current?.getModifiedEditor() ?? editor
-      if (activeEditor && monaco) {
+      const activeModel = activeEditor?.getModel() ?? null
+      if (activeEditor && activeMonaco) {
         if (!e.isFlush) {
-          const modelForChange = activeEditor.getModel()
           // Large paste/replace: if this edit replaced most of the *previous* model (by UTF-16 length), tell the form to reset its default snapshot.
           let resetDefaultSnapshot = false
-          if (modelForChange && e.changes.length > 0) {
-            let oldValueLength = modelForChange.getValueLength()
+          if (activeModel && e.changes.length > 0) {
+            let oldValueLength = activeModel.getValueLength()
             for (let i = e.changes.length - 1; i >= 0; i--) {
               const ch = e.changes[i]
               oldValueLength = oldValueLength - ch.text.length + ch.rangeLength
@@ -636,7 +615,7 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
             change,
             unredactedChange,
           } = processUser(
-            monaco,
+            activeMonaco,
             value,
             showSecrets ? undefined : secrets,
             lastUnredactedChange?.hiddenSecretsValues,
@@ -681,7 +660,7 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
             true,
             editorHasFocus,
             activeEditor,
-            monaco,
+            activeMonaco,
             [...allErrors, ...customErrors],
             [],
             change,
@@ -704,10 +683,9 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
           }
 
           // undo/redo enable
-          const model = activeEditor.getModel()
-          if (model) {
-            setHasRedo((model as any).canRedo())
-            setHasUndo((model as any).canUndo())
+          if (activeModel) {
+            setHasRedo((activeModel as any).canRedo())
+            setHasUndo((activeModel as any).canUndo())
           }
         }
       }
@@ -715,7 +693,8 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
     [
       changeStack?.baseResources,
       editableUidSiblings,
-      editor,
+      activeEditor,
+      activeMonaco,
       editorHasFocus,
       filters,
       immutables,
@@ -723,7 +702,6 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
       lastUnredactedChange?.hiddenFilteredValues,
       lastUnredactedChange?.hiddenSecretsValues,
       lastUserEdits,
-      monaco,
       readonly,
       reportResourceChanges,
       secrets,
@@ -814,7 +792,7 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
   ])
 
   useResizeObserver(pageRef, () => {
-    layoutEditor(editor)
+    layoutEditor(activeEditor)
   })
 
   const layoutEditor = useCallback(
@@ -840,6 +818,23 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
     },
     [editorHasErrors, variant]
   )
+
+  // if showChanges is true, set activeEditor,activeMonaco to DiffEditor
+  // else set the actives to the regular editor/monanco
+  const syncActiveInstances = useCallback(() => {
+    const showDiffView = showChanges && baselineSyncKey > 0 && !mock
+    if (showDiffView) {
+      setActiveEditor(syncEditorDiffRef.current?.getModifiedEditor() ?? null)
+      setActiveMonaco(syncEditorDiffRef.current?.getDiffEditorMonaco() ?? null)
+    } else {
+      setActiveEditor(editor)
+      setActiveMonaco(monaco)
+    }
+  }, [showChanges, baselineSyncKey, mock, editor, monaco])
+
+  useEffect(() => {
+    syncActiveInstances()
+  }, [syncActiveInstances, diffEditorInstanceEpoch])
 
   return (
     <div ref={pageRef} className="sync-editor__container">
@@ -880,6 +875,7 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
           diffEditorHasFocus={diffEditorHasFocus}
           onDiffEditorFocusChange={setDiffEditorHasFocus}
           onDiffEditorInstanceChange={onDiffEditorInstanceChange}
+          onActiveInstancesChange={syncActiveInstances}
           resizeRootRef={pageRef}
           onChange={syncEditorDiffOnChange}
         />
