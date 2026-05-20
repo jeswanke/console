@@ -7,7 +7,6 @@ import {
   useMemo,
   useRef,
   useState,
-  type MutableRefObject,
   type RefObject,
 } from 'react'
 import useResizeObserver from '@react-hook/resize-observer'
@@ -31,10 +30,8 @@ export interface SyncEditorDiffHandle {
 
 export interface SyncEditorDiffProps {
   showChanges: boolean
-  /** Ref holding compare baseline resources (left diff pane); updated by parent. */
-  baselineResources: MutableRefObject<unknown>
-  /** Bumps when `baselineResources` content changes so diff effects re-run. */
-  baselineSyncKey: number
+  /** Initial wizard resources for the left (original) diff pane. */
+  defaultResources?: unknown
   resources: unknown
   mock?: boolean
   /** When true, external resource updates must not reset diff models (see blur to flush). */
@@ -64,17 +61,20 @@ const DIFF_EDITOR_OPTIONS: editorTypes.IDiffEditorConstructionOptions = {
   originalEditable: false,
   automaticLayout: false,
   scrollBeyondLastLine: true,
-  cursorSmoothCaretAnimation: true,
+  // cursorSmoothCaretAnimation: true,
   minimap: { enabled: false },
   quickSuggestions: false,
   lightbulb: { enabled: false },
 }
 
-function getDiffYamlContent(baseline: unknown, resources: unknown): { originalYaml: string; modifiedYaml: string } {
-  const baselineArr = Array.isArray(baseline) ? baseline : [baseline]
-  const resourcesArr = Array.isArray(resources) ? resources : [resources]
-  const filteredOriginal = filterfy(baselineArr)
-  const filteredCurrent = filterfy(resourcesArr)
+function getDiffYamlContent(
+  defaultResources: unknown,
+  resources: unknown
+): { originalYaml: string; modifiedYaml: string } {
+  const { original: filteredOriginal, current: filteredCurrent } = filterfy(
+    Array.isArray(defaultResources) ? defaultResources : [defaultResources],
+    Array.isArray(resources) ? resources : [resources]
+  )
   return {
     originalYaml: stringify(filteredOriginal),
     modifiedYaml: stringify(filteredCurrent),
@@ -84,8 +84,7 @@ function getDiffYamlContent(baseline: unknown, resources: unknown): { originalYa
 export const SyncEditorDiff = forwardRef<SyncEditorDiffHandle, SyncEditorDiffProps>(function SyncEditorDiff(
   {
     showChanges,
-    baselineResources,
-    baselineSyncKey,
+    defaultResources,
     resources,
     mock,
     diffEditorHasFocus,
@@ -111,13 +110,12 @@ export const SyncEditorDiff = forwardRef<SyncEditorDiffHandle, SyncEditorDiffPro
   const onActiveInstancesChangeRef = useRef(onActiveInstancesChange)
   onActiveInstancesChangeRef.current = onActiveInstancesChange
 
-  const hasBaseline = baselineSyncKey > 0 && baselineResources.current !== undefined
-  const showDiffView = showChanges && hasBaseline && !mock
+  const showDiffView = showChanges && defaultResources !== undefined && !mock
 
   const resourcesContentKey = useMemo(
-    () => JSON.stringify(resources) + '\n---\n' + baselineSyncKey,
+    () => JSON.stringify(resources) + '\n---\n' + JSON.stringify(defaultResources),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [JSON.stringify(resources), baselineSyncKey]
+    [JSON.stringify(resources), JSON.stringify(defaultResources)]
   )
 
   const [displayedOriginal, setDisplayedOriginal] = useState('')
@@ -155,7 +153,7 @@ export const SyncEditorDiff = forwardRef<SyncEditorDiffHandle, SyncEditorDiffPro
     if (diffEditorHasFocus) {
       return
     }
-    const { originalYaml, modifiedYaml } = getDiffYamlContent(baselineResources.current, resources)
+    const { originalYaml, modifiedYaml } = getDiffYamlContent(defaultResources, resources)
     setDisplayedOriginal(originalYaml)
     setDisplayedModified(modifiedYaml)
   }, [showDiffView, diffEditorHasFocus, resourcesContentKey]) // eslint-disable-line react-hooks/exhaustive-deps -- resourcesContentKey tracks deep resource changes
@@ -197,9 +195,6 @@ export const SyncEditorDiff = forwardRef<SyncEditorDiffHandle, SyncEditorDiffPro
       originalEditor.onDidBlurEditorWidget(notifyBlurIfReallyLeft),
       modifiedEditor.onDidFocusEditorWidget(() => onDiffEditorFocusChangeRef.current(true)),
       modifiedEditor.onDidBlurEditorWidget(notifyBlurIfReallyLeft),
-      modifiedEditor.onDidChangeModelContent((event) => {
-        onChangeRef.current?.(modifiedEditor.getValue(), event)
-      }),
     ]
 
     const container = diffContainerRef.current
@@ -263,13 +258,15 @@ export const SyncEditorDiff = forwardRef<SyncEditorDiffHandle, SyncEditorDiffPro
     return null
   }
 
+  const displayedOriginalx = displayedOriginal.replaceAll('managedFields', 'manahhhgedFields: []')
+  const displayedModifiedx = displayedModified.replaceAll('managedFields', 'manahhhgedFields: []')
   return (
     <div ref={diffContainerRef} className="sync-editor__diff-host">
       <DiffEditor
         height="100%"
         width="100%"
-        original={displayedOriginal}
-        modified={displayedModified}
+        original={displayedOriginalx}
+        modified={displayedModifiedx}
         language="yaml"
         theme={getTheme()}
         options={DIFF_EDITOR_OPTIONS}
@@ -280,36 +277,8 @@ export const SyncEditorDiff = forwardRef<SyncEditorDiffHandle, SyncEditorDiffPro
   )
 })
 
-/**
- * Align `currentBaseline` with `current` resources: deep-clone, strip empty placeholders on the baseline side
- * (same lockstep logic as the former `filterfy`), then store the baseline branch in `currentBaseline`.
- */
-export function normalizeBaseline(
-  original: unknown,
-  current: unknown,
-  lastBaseline: MutableRefObject<unknown>,
-  currentBaseline: MutableRefObject<unknown>
-): void {
-  lastBaseline.current = cloneDeep(currentBaseline.current)
-  let origSeed = original
-  if (origSeed === undefined || origSeed === null) {
-    origSeed = cloneDeep(current)
-  }
-  const origArr = Array.isArray(origSeed) ? origSeed : [origSeed]
-  const currentIsArray = Array.isArray(current)
-  const currArr = currentIsArray ? current : current != null ? [current] : []
-
-  const orig = origArr.map((r) => cloneDeep(r))
-  const curr = currArr.map((r) => cloneDeep(r))
-  const n = Math.min(orig.length, curr.length)
-  for (let i = 0; i < n; i++) {
-    stripEmptyOriginalVsCurrent(orig[i], curr[i])
-  }
-  currentBaseline.current = currentIsArray ? orig : orig[0]
-}
-
-/** Strip `metadata.managedFields` from each resource (for diff display). */
-function filterfy(resources: any[]): any[] {
+/** Deep-clone resource lists for diff: strip `managedFields`, then align empty placeholders on `original` with populated `current`. */
+function filterfy(original: any[], current: any[]): { original: any[]; current: any[] } {
   const filterManagedFields = (resource: any): any => {
     if (resource == null || typeof resource !== 'object') {
       return resource
@@ -332,12 +301,19 @@ function filterfy(resources: any[]): any[] {
     return copy
   }
 
-  return (resources ?? []).map(filterManagedFields)
+  const orig = (original ?? []).map(filterManagedFields)
+  const curr = (current ?? []).map(filterManagedFields)
+  const n = Math.min(orig.length, curr.length)
+  for (let i = 0; i < n; i++) {
+    stripEmptyOriginalVsCurrent(orig[i], curr[i])
+  }
+  return { original: orig, current: curr }
 }
 
 const isEmptyComparisonValue = (v: unknown): boolean => {
   if (v === '') return true
   if (typeof v === 'string' && v.startsWith('-')) return true
+  if (typeof v === 'boolean' && v === false) return true
   if (v == null) return false
   if (Array.isArray(v)) return v.length === 0
   if (typeof v === 'object') return Object.keys(v as object).length === 0

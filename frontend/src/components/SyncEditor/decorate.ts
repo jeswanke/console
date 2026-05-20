@@ -8,6 +8,8 @@ const startCase = (str: string) => {
   return str.charAt(0).toUpperCase() + str.slice(1)
 }
 
+const LINE_DECORATION_CLASS_NAMES = ['insertLineDecoration', 'customLineDecoration'] as const
+
 export const decorate = (
   isCustomEdit: boolean,
   editorHasFocus: boolean,
@@ -23,7 +25,8 @@ export const decorate = (
   preservedUserEdits: any[],
   protectedRanges: any[],
   filteredRows: number[],
-  highlightEditorPath: string
+  highlightEditorPath: string,
+  showChanges: boolean
 ) => {
   const decorations: any[] = []
   const squigglyTooltips: any[] = []
@@ -32,11 +35,11 @@ export const decorate = (
   addErrorDecorations(monaco, errors, decorations, squigglyTooltips)
 
   // add change decorations
-  addChangeDecorations(isCustomEdit, monaco, changes, change, decorations)
+  addChangeDecorations(isCustomEdit, showChanges, monaco, changes, change, decorations)
 
   // if form is making changes, layer any editor changes decorations on top of form changes
   if (preservedUserEdits.length) {
-    addChangeDecorations(true, monaco, preservedUserEdits, change, decorations)
+    addChangeDecorations(true, showChanges, monaco, preservedUserEdits, change, decorations)
   }
 
   // add protected decorations
@@ -175,6 +178,7 @@ const addHighlightDecorations = (
 
 const addChangeDecorations = (
   isCustomEdit: boolean,
+  showChanges: boolean,
   monaco: Monaco,
   changes: any[],
   change: {
@@ -183,6 +187,11 @@ const addChangeDecorations = (
   },
   decorations: any[]
 ) => {
+  void isCustomEdit
+  void showChanges
+
+  // const insertedClassName = showChanges ? 'insertedLineDecorationShowChanges' : 'insertedLineDecoration'
+  // const customClassName = showChanges ? 'customLineDecorationShowChanges' : 'customLineDecoration'
   changes.forEach((chng) => {
     const { $t, $a, $f } = chng
     const obj: any = get(change.mappings, $a)
@@ -190,10 +199,8 @@ const addChangeDecorations = (
       decorations.push({
         range: new monaco.Range(obj.$r, 0, obj.$r + ($t === 'N' ? obj.$l - 1 : 0), 0),
         options: {
+          className: isCustomEdit ? 'customLineDecoration' : 'insertLineDecoration',
           isWholeLine: true,
-          linesDecorationsClassName: isCustomEdit ? 'customLineDecoration' : 'insertedLineDecoration',
-          overviewRuler: isCustomEdit ? { color: '#0000ff', position: 1 } : {},
-          minimap: { color: isCustomEdit ? '#0000ff' : '#c0c0ff', position: 2 },
           description: 'resource-editor',
         },
       })
@@ -220,7 +227,7 @@ export const getResourceEditorDecorations = (editor: editorTypes.IStandaloneCode
     return (
       options?.className?.startsWith('squiggly-') ||
       options?.className === 'syncEditorYamlHighlight' ||
-      ['customLineDecoration', 'insertedLineDecoration'].includes(options?.linesDecorationsClassName ?? '') ||
+      LINE_DECORATION_CLASS_NAMES.includes(options?.className as (typeof LINE_DECORATION_CLASS_NAMES)[number]) ||
       (!!options?.glyphMarginClassName && (options?.inlineClassName !== 'protectedDecoration' || !hasErrors))
     )
   })
@@ -247,15 +254,10 @@ const scrollToChangeDecoration = (editor: editorTypes.IStandaloneCodeEditor, err
         })
       } else {
         // if visible range doesn't show any inserted-line decorations, scroll to the first one
-        const insertedLineDecorations = decorations.filter(
-          (decoration) => decoration.options.linesDecorationsClassName === 'insertedLineDecoration'
+        const insertedLineDecorations = decorations.filter((decoration) =>
+          ['insertLineDecoration', 'insertLineDecorationShowChanges'].includes(decoration.options.className ?? '')
         )
-        if (
-          insertedLineDecorations.length &&
-          !insertedLineDecorations.some((decoration) => {
-            return visibleRange.containsPosition(decoration?.range.getStartPosition())
-          })
-        ) {
+        if (insertedLineDecorations.length) {
           setTimeout(() => {
             editor.revealLineInCenter(insertedLineDecorations[0]?.range.getStartPosition()?.lineNumber)
           })
