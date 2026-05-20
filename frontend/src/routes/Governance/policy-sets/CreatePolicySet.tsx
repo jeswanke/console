@@ -2,6 +2,7 @@
 import {
   EditorValidationStatus,
   useData,
+  useDefaultItem,
   useEditorValidationStatus,
   useHighlightEditorPath,
   useItem,
@@ -22,6 +23,7 @@ import { localeCompare } from '../../../utils/localeCompare'
 
 export function WizardSyncEditor() {
   const resources = useItem() // Wizard framework sets this context
+  const defaultItem = useDefaultItem()
   const { update } = useData() // Wizard framework sets this context
   const { setEditorValidationStatus } = useEditorValidationStatus()
   const { highlightEditorPath } = useHighlightEditorPath()
@@ -31,6 +33,7 @@ export function WizardSyncEditor() {
       editorTitle={t('Policy set YAML')}
       variant="toolbar"
       resources={resources}
+      defaultResources={defaultItem}
       schema={schema}
       highlightEditorPath={highlightEditorPath}
       onEditorChange={(changes, resetDefaultSnapshot): void => {
