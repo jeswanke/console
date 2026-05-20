@@ -44,6 +44,50 @@ export class GovernancePage extends BasePage {
     await this.waitForLoad();
   }
 
+  /**
+   * Navigate to the discovered policy clusters tab without waitForLoad.
+   * Designed for use inside toPass() retry loops where the caller
+   * controls when to assert load state.
+   */
+  async navigateToDiscoveredPolicyClusters(
+    apiGroup: string,
+    apiVersion: string,
+    kind: string,
+    policyName: string,
+  ): Promise<void> {
+    const consoleUrl = await this.oc.getConsoleUrl();
+    const route = GOV_ROUTES.discoveredByCluster(
+      apiGroup,
+      apiVersion,
+      kind,
+      policyName,
+    );
+    await this.page.goto(`${consoleUrl}${route}`).catch(() => {});
+  }
+
+  async gotoPolicyTemplateDetails(
+    namespace: string,
+    name: string,
+    clusterName: string,
+    apiGroup: string,
+    apiVersion: string,
+    kind: string,
+    templateName: string,
+  ): Promise<void> {
+    const consoleUrl = await this.oc.getConsoleUrl();
+    const route = GOV_ROUTES.policyTemplateDetails(
+      namespace,
+      name,
+      clusterName,
+      apiGroup,
+      apiVersion,
+      kind,
+      templateName,
+    );
+    await this.page.goto(`${consoleUrl}${route}`);
+    await this.waitForLoad();
+  }
+
   // ----- Tab / secondary nav -----
 
   async clickClustersTab(): Promise<void> {
@@ -75,11 +119,39 @@ export class GovernancePage extends BasePage {
   }
 
   /**
-   * Labels is the 2nd column (index 1) in the Clusters tab table.
-   * Column order: Cluster | Labels | Response action | Severity | Violations | Source
+   * Resolve a table cell by column header text within a data row.
+   * Finds the column index from the header row at call time, then
+   * returns the td at that index. Resilient to column reordering.
    */
-  getClusterLabelsCell(clusterName: string): Locator {
-    return this.getClusterRow(clusterName).locator('td').nth(1);
+  async getCellByColumnHeader(
+    row: Locator,
+    columnName: string,
+  ): Promise<Locator> {
+    const headers = this.page
+      .getByRole('grid')
+      .getByRole('columnheader');
+    const count = await headers.count();
+    let colIndex = -1;
+    for (let i = 0; i < count; i++) {
+      const text = await headers.nth(i).textContent();
+      if (text?.trim() === columnName) {
+        colIndex = i;
+        break;
+      }
+    }
+    if (colIndex < 0) {
+      throw new Error(
+        `Column "${columnName}" not found in table headers`,
+      );
+    }
+    return row.locator('td').nth(colIndex);
+  }
+
+  async getClusterLabelsCell(
+    clusterName: string,
+  ): Promise<Locator> {
+    const row = this.getClusterRow(clusterName);
+    return this.getCellByColumnHeader(row, 'Labels');
   }
 
   getClusterLink(clusterName: string): Locator {
@@ -111,8 +183,6 @@ export class GovernancePage extends BasePage {
   }
 
   async selectLabelFilterValue(label: string): Promise<void> {
-    // PF filter renders options as menuitems with checkboxes.
-    // Click the checkbox, NOT the text (to avoid toggling =/!= mode).
     const option = this.page
       .getByRole('menuitem')
       .filter({ hasText: label });
@@ -120,8 +190,6 @@ export class GovernancePage extends BasePage {
   }
 
   async toggleLabelFilterInequality(label: string): Promise<void> {
-    // PF inequality toggle is a button showing "=" inside each menuitem.
-    // Clicking it switches the filter mode to "!=" (inequality).
     const option = this.page
       .getByRole('menuitem')
       .filter({ hasText: label });

@@ -16,22 +16,19 @@
 
 import { test, expect } from '@fixtures/governance-test';
 import { OcCliService } from '@services/OcCliService';
-import { GOV_ROUTES, GOV_LABELS } from '@constants/governance';
-
-const TEST_POLICY = 'acm-backup-phase-validation';
-const POLICY_API_GROUP = 'policy.open-cluster-management.io';
-const POLICY_API_VERSION = 'v1';
-const POLICY_KIND = 'ConfigurationPolicy';
-const CLUSTER_NAME = 'local-cluster';
+import { PolicyService } from '@services/domains/PolicyService';
+import {
+  GOV_LABELS,
+  GOV_POLICY_API,
+  GOV_CLUSTER_BACKUP,
+} from '@constants/governance';
 
 const TEST_LABELS = {
   environment: 'production',
   team: 'platform',
 } as const;
 
-const MANAGED_POLICY_NS = 'open-cluster-management-backup';
-const MANAGED_POLICY_NAME = 'backup-restore-enabled';
-const MANAGED_TEMPLATE_NAME = 'acm-backup-pod-running';
+const { clusterName } = GOV_CLUSTER_BACKUP;
 
 test.describe(
   'Governance - Labels on Individual Policy Details Page',
@@ -43,21 +40,19 @@ test.describe(
     let hasClusterBackup = false;
 
     test.beforeAll(async () => {
-      const oc = new OcCliService();
-      hasClusterBackup = await oc
-        .run(
-          `oc get configurationpolicy ${TEST_POLICY} -n ${CLUSTER_NAME} --no-headers 2>/dev/null`,
-        )
-        .then(() => true)
-        .catch(() => false);
+      const svc = new PolicyService(new OcCliService());
+      hasClusterBackup = await svc.exists(
+        GOV_CLUSTER_BACKUP.discoveredPolicy,
+        clusterName,
+      );
 
       if (!hasClusterBackup) return;
 
-      await oc
-        .run(
-          `oc label configurationpolicy ${TEST_POLICY} -n ${CLUSTER_NAME} ${labelKeys.map((k) => `${k}-`).join(' ')} 2>/dev/null || true`,
-        )
-        .catch(() => {});
+      await svc.removeLabels(
+        GOV_CLUSTER_BACKUP.discoveredPolicy,
+        clusterName,
+        labelKeys,
+      );
     });
 
     test.beforeEach(() => {
@@ -69,19 +64,18 @@ test.describe(
 
     test.afterAll(async () => {
       if (!hasClusterBackup) return;
-      const oc = new OcCliService();
-      await oc
-        .run(
-          `oc label configurationpolicy ${TEST_POLICY} -n ${CLUSTER_NAME} ${labelKeys.map((k) => `${k}-`).join(' ')} 2>/dev/null || true`,
-        )
-        .catch(() => {});
+      const svc = new PolicyService(new OcCliService());
+      await svc.removeLabels(
+        GOV_CLUSTER_BACKUP.discoveredPolicy,
+        clusterName,
+        labelKeys,
+      );
     });
 
     test('RHACM4K-63381: Labels on discovered and managed policy template details', async ({
       governancePage,
       policyTemplateDetailsPage,
       policyService,
-      oc,
       page,
     }) => {
       await test.step(
@@ -89,7 +83,9 @@ test.describe(
         async () => {
           await governancePage.gotoDiscoveredPolicies();
 
-          const policyLink = governancePage.getPolicyLink(TEST_POLICY);
+          const policyLink = governancePage.getPolicyLink(
+            GOV_CLUSTER_BACKUP.discoveredPolicy,
+          );
           await expect(policyLink).toBeVisible({ timeout: 30_000 });
           await policyLink.click();
           await governancePage.waitForLoad();
@@ -101,22 +97,18 @@ test.describe(
         async () => {
           await governancePage.clickClustersTab();
 
-          // Poll until search index reflects unlabeled state
-          // (handles re-runs where previous labels are still indexed)
-          const consoleUrl = await oc.getConsoleUrl();
-          const clustersRoute = GOV_ROUTES.discoveredByCluster(
-            POLICY_API_GROUP,
-            POLICY_API_VERSION,
-            POLICY_KIND,
-            TEST_POLICY,
-          );
           await expect(async () => {
-            await page
-              .goto(`${consoleUrl}${clustersRoute}`)
-              .catch(() => {});
+            await governancePage.navigateToDiscoveredPolicyClusters(
+              GOV_POLICY_API.group,
+              GOV_POLICY_API.version,
+              GOV_POLICY_API.kind,
+              GOV_CLUSTER_BACKUP.discoveredPolicy,
+            );
             await governancePage.waitForLoad();
             const labelsCell =
-              governancePage.getClusterLabelsCell(CLUSTER_NAME);
+              await governancePage.getClusterLabelsCell(
+                clusterName,
+              );
             await expect(labelsCell).toHaveText(
               GOV_LABELS.noLabels,
             );
@@ -130,7 +122,9 @@ test.describe(
       await test.step(
         '3: Verify Labels shows dash on policy template details',
         async () => {
-          await governancePage.getClusterLink(CLUSTER_NAME).click();
+          await governancePage
+            .getClusterLink(clusterName)
+            .click();
           await policyTemplateDetailsPage.waitForLoad();
 
           const labelsValue =
@@ -144,14 +138,14 @@ test.describe(
         '4: Add user-defined labels via CLI',
         async () => {
           await policyService.addLabels(
-            TEST_POLICY,
-            CLUSTER_NAME,
+            GOV_CLUSTER_BACKUP.discoveredPolicy,
+            clusterName,
             TEST_LABELS,
           );
 
           const output = await policyService.getLabels(
-            TEST_POLICY,
-            CLUSTER_NAME,
+            GOV_CLUSTER_BACKUP.discoveredPolicy,
+            clusterName,
           );
           expect(output).toContain('environment');
           expect(output).toContain('team');
@@ -161,22 +155,18 @@ test.describe(
       await test.step(
         '5: Verify Labels column shows labels after adding',
         async () => {
-          const consoleUrl = await oc.getConsoleUrl();
-          const route = GOV_ROUTES.discoveredByCluster(
-            POLICY_API_GROUP,
-            POLICY_API_VERSION,
-            POLICY_KIND,
-            TEST_POLICY,
-          );
-
-          // Poll until search collector re-indexes (up to 4 minutes)
           await expect(async () => {
-            await page
-              .goto(`${consoleUrl}${route}`)
-              .catch(() => {});
+            await governancePage.navigateToDiscoveredPolicyClusters(
+              GOV_POLICY_API.group,
+              GOV_POLICY_API.version,
+              GOV_POLICY_API.kind,
+              GOV_CLUSTER_BACKUP.discoveredPolicy,
+            );
             await governancePage.waitForLoad();
             const labelsCell =
-              governancePage.getClusterLabelsCell(CLUSTER_NAME);
+              await governancePage.getClusterLabelsCell(
+                clusterName,
+              );
             await expect(labelsCell).not.toHaveText(
               GOV_LABELS.noLabels,
             );
@@ -185,14 +175,13 @@ test.describe(
             timeout: 240_000,
           });
 
-          // Verify label count is shown (compact: "N labels" button)
           const labelsCell =
-            governancePage.getClusterLabelsCell(CLUSTER_NAME);
-          const labelButton =
-            labelsCell.getByRole('button');
+            await governancePage.getClusterLabelsCell(
+              clusterName,
+            );
+          const labelButton = labelsCell.getByRole('button');
           await expect(labelButton).toContainText(/\d+ labels?/);
 
-          // Click label count button to open popover
           await labelButton.click();
           const popover = governancePage.getLabelsPopover();
           await expect(popover).toBeVisible();
@@ -204,7 +193,6 @@ test.describe(
             `team=${TEST_LABELS.team}`,
           );
 
-          // Verify system labels are NOT shown in popover
           await expect(popover).not.toContainText('cluster-name=');
           await expect(popover).not.toContainText(
             'cluster-namespace=',
@@ -213,7 +201,6 @@ test.describe(
             'policy.open-cluster-management.io/',
           );
 
-          // Close popover by pressing Escape
           await page.keyboard.press('Escape');
         },
       );
@@ -222,12 +209,14 @@ test.describe(
         '6: Verify Labels display on policy template details after adding',
         async () => {
           await governancePage.gotoDiscoveredPolicyClusters(
-            POLICY_API_GROUP,
-            POLICY_API_VERSION,
-            POLICY_KIND,
-            TEST_POLICY,
+            GOV_POLICY_API.group,
+            GOV_POLICY_API.version,
+            GOV_POLICY_API.kind,
+            GOV_CLUSTER_BACKUP.discoveredPolicy,
           );
-          await governancePage.getClusterLink(CLUSTER_NAME).click();
+          await governancePage
+            .getClusterLink(clusterName)
+            .click();
           await policyTemplateDetailsPage.waitForLoad();
 
           const labelsValue =
@@ -248,24 +237,19 @@ test.describe(
       await test.step(
         '7: Verify Labels on managed policy template details',
         async () => {
-          // Navigate directly to managed policy template details
-          const consoleUrl = await oc.getConsoleUrl();
-          const route = GOV_ROUTES.policyTemplateDetails(
-            MANAGED_POLICY_NS,
-            MANAGED_POLICY_NAME,
-            CLUSTER_NAME,
-            POLICY_API_GROUP,
-            POLICY_API_VERSION,
-            POLICY_KIND,
-            MANAGED_TEMPLATE_NAME,
+          await governancePage.gotoPolicyTemplateDetails(
+            GOV_CLUSTER_BACKUP.managedPolicyNs,
+            GOV_CLUSTER_BACKUP.managedPolicyName,
+            clusterName,
+            GOV_POLICY_API.group,
+            GOV_POLICY_API.version,
+            GOV_POLICY_API.kind,
+            GOV_CLUSTER_BACKUP.managedTemplateName,
           );
-          await page.goto(`${consoleUrl}${route}`);
-          await policyTemplateDetailsPage.waitForLoad();
 
           const labelsValue =
             policyTemplateDetailsPage.getLabelsFieldValue();
           await expect(labelsValue).toBeVisible();
-          // Managed policy template has only system labels → shows dash
           await expect(labelsValue).toHaveText(GOV_LABELS.noLabels);
         },
       );
@@ -274,10 +258,10 @@ test.describe(
         '8: Verify Label filter on Clusters tab',
         async () => {
           await governancePage.gotoDiscoveredPolicyClusters(
-            POLICY_API_GROUP,
-            POLICY_API_VERSION,
-            POLICY_KIND,
-            TEST_POLICY,
+            GOV_POLICY_API.group,
+            GOV_POLICY_API.version,
+            GOV_POLICY_API.kind,
+            GOV_CLUSTER_BACKUP.discoveredPolicy,
           );
 
           const labelFilterBtn =
@@ -286,7 +270,6 @@ test.describe(
             timeout: 30_000,
           });
 
-          // Equality filter: select environment=production
           await governancePage.openLabelFilter();
           await governancePage.selectLabelFilterValue(
             `environment=${TEST_LABELS.environment}`,
@@ -294,14 +277,12 @@ test.describe(
           await governancePage.waitForLoad();
 
           const clusterRow =
-            governancePage.getClusterRow(CLUSTER_NAME);
+            governancePage.getClusterRow(clusterName);
           await expect(clusterRow).toBeVisible();
 
-          // Clear and verify full list restores
           await governancePage.clearAllFilters();
           await expect(clusterRow).toBeVisible();
 
-          // Inequality filter: toggle to != mode (also applies filter)
           await governancePage.openLabelFilter();
           await governancePage.toggleLabelFilterInequality(
             `environment=${TEST_LABELS.environment}`,

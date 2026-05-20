@@ -46,13 +46,6 @@ export const GOV_ROUTES = {
 // Page structure
 // =============================================================================
 
-export const GOV_PAGE = {
-  tabs: {
-    policies: 'Policies',
-    discoveredPolicies: 'Discovered policies',
-  },
-} as const;
-
 export const GOV_DISCOVERED_DETAILS = {
   tabs: {
     relatedResources: 'Related resources',
@@ -73,14 +66,25 @@ export const GOV_TEMPLATE_DETAILS = {
   },
 } as const;
 
-export const GOV_POLICY_DETAILS = {
-  tabs: {
-    details: 'Details',
-    results: 'Results',
-  },
-} as const;
-
 export const GOV_LABELS = {
   filterButtonName: 'Label',
   noLabels: '-',
+} as const;
+
+// =============================================================================
+// Domain constants
+// =============================================================================
+
+export const GOV_POLICY_API = {
+  group: 'policy.open-cluster-management.io',
+  version: 'v1',
+  kind: 'ConfigurationPolicy',
+} as const;
+
+export const GOV_CLUSTER_BACKUP = {
+  clusterName: 'local-cluster',
+  discoveredPolicy: 'acm-backup-phase-validation',
+  managedPolicyNs: 'open-cluster-management-backup',
+  managedPolicyName: 'backup-restore-enabled',
+  managedTemplateName: 'acm-backup-pod-running',
 } as const;

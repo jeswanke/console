@@ -9,6 +9,18 @@ import { OcCliService } from '@services/OcCliService';
 export class PolicyService {
   constructor(private readonly oc: OcCliService) {}
 
+  async exists(
+    policyName: string,
+    namespace: string,
+  ): Promise<boolean> {
+    return this.oc
+      .run(
+        `oc get configurationpolicy ${policyName} -n ${namespace} --no-headers 2>/dev/null`,
+      )
+      .then(() => true)
+      .catch(() => false);
+  }
+
   async addLabels(
     policyName: string,
     namespace: string,
@@ -20,6 +32,19 @@ export class PolicyService {
     await this.oc.run(
       `oc label configurationpolicy ${policyName} -n ${namespace} ${labelArgs}`,
     );
+  }
+
+  async removeLabels(
+    policyName: string,
+    namespace: string,
+    labelKeys: string[],
+  ): Promise<void> {
+    const removeArgs = labelKeys.map((k) => `${k}-`).join(' ');
+    await this.oc
+      .run(
+        `oc label configurationpolicy ${policyName} -n ${namespace} ${removeArgs} 2>/dev/null || true`,
+      )
+      .catch(() => {});
   }
 
   async getLabels(
