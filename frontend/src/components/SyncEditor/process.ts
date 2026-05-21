@@ -392,11 +392,14 @@ function getMappingItems(
 // sort name/namespace to top
 const sort = ['name', 'namespace']
 const sortMapEntries = (a: { key: { value: string } }, b: { key: { value: string } }) => {
-  let ai = sort.indexOf(a.key.value)
-  if (ai < 0) ai = 5
-  let bi = sort.indexOf(b.key.value)
-  if (bi < 0) bi = 5
-  return ai - bi
+  const ai = sort.indexOf(a.key.value)
+  const bi = sort.indexOf(b.key.value)
+  const aInSort = ai >= 0
+  const bInSort = bi >= 0
+  if (aInSort && bInSort) return ai - bi
+  if (aInSort) return -1
+  if (bInSort) return 1
+  return a.key.value.localeCompare(b.key.value)
 }
 
 export const stringify = (resources: any[]) => {
@@ -413,7 +416,7 @@ export const stringify = (resources: any[]) => {
 }
 
 /** Deep-clone resource lists for diff: strip `managedFields`, then align empty placeholders on `original` with populated `current`. */
-export function filterfy(original: any[], current: any[]): { original: any[]; current: any[] } {
+export function normalize(original: any[], current: any[]): { original: any[]; current: any[] } {
   const filterManagedFields = (resource: any): any => {
     if (resource == null || typeof resource !== 'object') {
       return resource
@@ -450,23 +453,29 @@ const isEmptyComparisonValue = (v: unknown): boolean => {
   if (typeof v === 'string' && v.startsWith('-')) return true
   if (typeof v === 'boolean' && v === false) return true
   if (v == null) return false
-  if (Array.isArray(v)) return v.length === 0
+  if (Array.isArray(v)) {
+    return v.length === 0 || (v.length === 1 && isEmptyComparisonValue(v[0]))
+  }
   if (typeof v === 'object') return Object.keys(v as object).length === 0
   return false
 }
 
-/** When `original` has an empty string, a `-`-prefixed string, an empty object / array, and `current` does not, drop that slot from `original` only; recurse in lockstep. After stripping children, remove parents that became empty the same way. */
+/** Drop empty placeholders from `original` when `current` has content; when both are empty, copy `current` onto `original`. Recurse in lockstep. */
 function stripEmptyOriginalVsCurrent(original: any, current: any): void {
   if (original == null || current == null) return
   if (Array.isArray(original) && Array.isArray(current)) {
     for (let i = original.length - 1; i >= 0; i--) {
       const o = original[i]
       const c = current[i]
-      if (isEmptyComparisonValue(o) && !isEmptyComparisonValue(c)) {
+      if (isEmptyComparisonValue(o) && isEmptyComparisonValue(c)) {
+        original[i] = c
+      } else if (isEmptyComparisonValue(o) && !isEmptyComparisonValue(c)) {
         original.splice(i, 1)
       } else if (typeof o === 'object' && typeof c === 'object' && o !== null && c !== null) {
         stripEmptyOriginalVsCurrent(o, c)
-        if (isEmptyComparisonValue(o) && !isEmptyComparisonValue(c)) {
+        if (isEmptyComparisonValue(o) && isEmptyComparisonValue(c)) {
+          original[i] = c
+        } else if (isEmptyComparisonValue(o) && !isEmptyComparisonValue(c)) {
           original.splice(i, 1)
         }
       }
@@ -478,11 +487,15 @@ function stripEmptyOriginalVsCurrent(original: any, current: any): void {
   for (const key of Object.keys(original)) {
     const o = original[key]
     const c = current[key]
-    if (isEmptyComparisonValue(o) && !isEmptyComparisonValue(c)) {
+    if (isEmptyComparisonValue(o) && isEmptyComparisonValue(c)) {
+      original[key] = c
+    } else if (isEmptyComparisonValue(o) && !isEmptyComparisonValue(c)) {
       delete original[key]
     } else if (typeof o === 'object' && typeof c === 'object' && o !== null && c !== null) {
       stripEmptyOriginalVsCurrent(o, c)
-      if (isEmptyComparisonValue(o) && !isEmptyComparisonValue(c)) {
+      if (isEmptyComparisonValue(o) && isEmptyComparisonValue(c)) {
+        original[key] = c
+      } else if (isEmptyComparisonValue(o) && !isEmptyComparisonValue(c)) {
         delete original[key]
       }
     }

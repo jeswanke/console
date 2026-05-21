@@ -3,7 +3,7 @@ import { HTMLProps, ReactNode, useRef, useEffect, useState, useCallback, useMemo
 import useResizeObserver from '@react-hook/resize-observer'
 import { CodeEditor, Language } from '@patternfly/react-code-editor'
 import { debounce, isEqual, cloneDeep } from 'lodash'
-import { processForm, processUser, ProcessedType, stringify, filterfy } from './process'
+import { processForm, processUser, ProcessedType, stringify, normalize } from './process'
 import { SyncEditorDiff, SyncEditorDiffHandle } from './SyncEditorDiff'
 import { SyncEditorToolbar, readShowChangesPreference } from './SyncEditorToolbar'
 import { compileAjvSchemas } from './validation'
@@ -437,7 +437,7 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
           let comparedResources: any[] | undefined
           const showDiffView = showChanges && defaultResources !== undefined && !mock
           if (showDiffView) {
-            const { original, current } = filterfy(
+            const { original, current } = normalize(
               Array.isArray(defaultResources) ? defaultResources : [defaultResources],
               Array.isArray(resources) ? resources : [resources]
             )
