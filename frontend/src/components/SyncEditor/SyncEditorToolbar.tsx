@@ -90,10 +90,10 @@ export function SyncEditorToolbar(props: SyncEditorToolbarProps): JSX.Element {
       <div className="sy-c-code-editor__title">{editorTitle || 'YAML'}</div>
       <div className="sy-toolbar-buttons">
         {showCompareButton && (
-          <>
+          <div className="sy-toolbar-compare-group">
             <div className="sy-toolbar-separator" role="separator" aria-orientation="vertical" />
             {showChanges && (
-              <>
+              <div className="sy-toolbar-diff-nav">
                 <CodeEditorControl
                   id="diff-prev-button"
                   icon={<ArrowUpIcon />}
@@ -112,7 +112,7 @@ export function SyncEditorToolbar(props: SyncEditorToolbarProps): JSX.Element {
                     onDiffNext?.()
                   }}
                 />
-              </>
+              </div>
             )}
             <div className="sy-toolbar-checkbox-wrap">
               <Checkbox
@@ -130,7 +130,7 @@ export function SyncEditorToolbar(props: SyncEditorToolbarProps): JSX.Element {
               />
             </div>
             <div className="sy-toolbar-separator" role="separator" aria-orientation="vertical" />
-          </>
+          </div>
         )}
         {/* undo */}
         {!readonly && (

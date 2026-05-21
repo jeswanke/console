@@ -98,10 +98,59 @@
   background-color: var(--pf-t--global--border--color--default, var(--pf-v5-global--BorderColor--200, #c7c7c7));
 }
 
+/* Compare controls: diff nav, checkbox label, and separators on one baseline. */
+.sync-editor__container .sy-toolbar-compare-group {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 0;
+}
+
+.sync-editor__container .sy-toolbar-compare-group .sy-toolbar-separator {
+  align-self: baseline;
+  min-height: 1lh;
+  height: 1lh;
+  margin-block: 0.125em 0;
+}
+
+.sync-editor__container .sy-toolbar-diff-nav {
+  display: inline-flex;
+  align-items: baseline;
+  column-gap: 0;
+}
+
+.sync-editor__container .sy-toolbar-diff-nav > * {
+  display: inline-flex;
+  align-items: baseline;
+}
+
+.sync-editor__container .sy-toolbar-diff-nav .pf-v6-c-button.pf-m-plain {
+  align-self: baseline;
+  min-height: 0;
+  line-height: var(--pf-v6-global--LineHeight--md, 1.5);
+}
+
 .sync-editor__container .sy-toolbar-buttons .sy-toolbar-checkbox-wrap {
   display: inline-flex;
   align-items: baseline;
   padding-inline: var(--pf-t--global--spacer--xs);
+}
+
+.sync-editor__container .sy-toolbar-checkbox-wrap .pf-v6-c-check {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--pf-t--global--spacer--gap--text-to-element--default);
+  margin: 0;
+  line-height: var(--pf-v6-global--LineHeight--md, 1.5);
+}
+
+.sync-editor__container .sy-toolbar-checkbox-wrap .pf-v6-c-check__input {
+  align-self: baseline;
+  transform: none;
+}
+
+.sync-editor__container .sy-toolbar-checkbox-wrap .pf-v6-c-check__label {
+  line-height: inherit;
 }
 
 .sync-editor__container .sy-toolbar-buttons .pf-v6-c-button.pf-m-plain,
