@@ -171,6 +171,7 @@ const addHighlightDecorations = (
     options: {
       className: 'syncEditorYamlHighlight',
       isWholeLine: range.startLineNumber !== range.endLineNumber,
+      stackOrder: 3,
     },
   })
 }
@@ -195,6 +196,7 @@ const addChangeDecorations = (
           className: isCustomEdit ? 'customLineDecoration' : 'insertLineDecoration',
           isWholeLine: true,
           description: 'resource-editor',
+          zIndex: 100,
         },
       })
       if ($f != null && $f.toString().length < 132 && !obj.$s) {
@@ -209,6 +211,10 @@ const addChangeDecorations = (
     }
   })
 }
+
+export const toModelDeltaDecorations = (
+  decorations: Pick<editorTypes.IModelDecoration, 'range' | 'options'>[]
+): editorTypes.IModelDeltaDecoration[] => decorations.map(({ range, options }) => ({ range, options }))
 
 export const getResourceEditorDecorations = (editor: editorTypes.IStandaloneCodeEditor, hasErrors: boolean) => {
   // clear resource-editor decorations

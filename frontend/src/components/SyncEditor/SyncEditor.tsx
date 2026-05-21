@@ -3,12 +3,12 @@ import { HTMLProps, ReactNode, useRef, useEffect, useState, useCallback, useMemo
 import useResizeObserver from '@react-hook/resize-observer'
 import { CodeEditor, Language } from '@patternfly/react-code-editor'
 import { debounce, isEqual, cloneDeep } from 'lodash'
-import { processForm, processUser, ProcessedType } from './process'
+import { processForm, processUser, ProcessedType, stringify, filterfy } from './process'
 import { SyncEditorDiff, SyncEditorDiffHandle } from './SyncEditorDiff'
 import { SyncEditorToolbar, readShowChangesPreference } from './SyncEditorToolbar'
 import { compileAjvSchemas } from './validation'
 import { getFormChanges, getUserChanges } from './changes'
-import { decorate, getResourceEditorDecorations } from './decorate'
+import { decorate, toModelDeltaDecorations } from './decorate'
 import { setFormValues, updateReferences } from './synchronize'
 import './SyncEditor.css'
 import { useTranslation } from '../../lib/acm-i18next'
@@ -433,6 +433,18 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
           if (!activeEditor || !activeModel) {
             return
           }
+          let activeResources: unknown = resources
+          let comparedResources: any[] | undefined
+          const showDiffView = showChanges && defaultResources !== undefined && !mock
+          if (showDiffView) {
+            const { original, current } = filterfy(
+              Array.isArray(defaultResources) ? defaultResources : [defaultResources],
+              Array.isArray(resources) ? resources : [resources]
+            )
+            activeResources = current
+            comparedResources = original
+          }
+          const cmpYaml = comparedResources !== undefined ? stringify(comparedResources) : undefined
           // parse/validate/secrets
           const {
             yaml,
@@ -446,7 +458,7 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
           } = processForm(
             activeMonaco,
             code,
-            resources,
+            activeResources,
             changeStack,
             showSecrets ? undefined : secrets,
             showFiltered,
@@ -473,22 +485,7 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
             lastFormComparison
           )
 
-          // update yaml in editor
-          //model.resources = cloneDeep(change.resources)
-          const saveDecorations = getResourceEditorDecorations(activeEditor, false)
-          const viewState = activeEditor.saveViewState()
-          // Diff compare: never dispose/replace the modified model — SyncEditorDiff keeps refs and push-YAML effects use that model.
-          // Standalone editor: recreate the model when createModel exists (tests may omit it).
-          if (typeof activeMonaco.editor.createModel === 'function') {
-            activeEditor.getModel()?.dispose?.()
-            activeEditor.setModel(activeMonaco.editor.createModel(yaml, 'yaml'))
-          } else {
-            activeModel.setValue(yaml)
-          }
-          if (viewState) {
-            activeEditor.restoreViewState(viewState)
-          }
-          activeEditor.deltaDecorations([], saveDecorations)
+          refreshModels(yaml, showDiffView, cmpYaml)
           setHasRedo(false)
           setHasUndo(false)
 
@@ -547,10 +544,75 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
       editorHighlightPath,
       mock,
       diffEditorInstanceEpoch,
+      showChanges,
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      JSON.stringify(defaultResources),
       // eslint-disable-next-line react-hooks/exhaustive-deps
       JSON.stringify(immutables),
     ]
   )
+
+  const refreshModels = (yaml: string, showDiffView: boolean, cmpYaml: string | undefined) => {
+    const diffEditor = showDiffView && cmpYaml !== undefined ? syncEditorDiffRef.current?.getDiffEditor() ?? null : null
+    const modifiedEditor = diffEditor?.getModifiedEditor() ?? activeEditor
+    if (!modifiedEditor || !activeMonaco) {
+      return
+    }
+    const originalEditor = diffEditor?.getOriginalEditor() ?? null
+    const modifiedModel = modifiedEditor.getModel()
+    const savedModifiedDecorations = toModelDeltaDecorations(modifiedModel ? modifiedModel.getAllDecorations() : [])
+    const modifiedViewState = modifiedEditor.saveViewState()
+    if (typeof activeMonaco.editor.createModel === 'function') {
+      modifiedEditor.getModel()?.dispose?.()
+      modifiedEditor.setModel(activeMonaco.editor.createModel(yaml, 'yaml'))
+      if (originalEditor && cmpYaml !== undefined) {
+        originalEditor.getModel()?.dispose?.()
+        originalEditor.setModel(activeMonaco.editor.createModel(cmpYaml, 'yaml'))
+      }
+      if (modifiedViewState) {
+        modifiedEditor.restoreViewState(modifiedViewState)
+      }
+      if (savedModifiedDecorations.length) {
+        modifiedEditor.deltaDecorations([], savedModifiedDecorations)
+      }
+    } else {
+      // test version (no createModel)
+      modifiedEditor.getModel()?.setValue(yaml)
+      if (originalEditor && cmpYaml !== undefined) {
+        originalEditor.getModel()?.setValue(cmpYaml)
+      }
+      if (modifiedViewState) {
+        modifiedEditor.restoreViewState(modifiedViewState)
+      }
+    }
+    if (showDiffView && diffEditor) {
+      refreshDiffEditorDecorations(diffEditor, () => {
+        if (modifiedViewState) {
+          modifiedEditor.restoreViewState(modifiedViewState)
+        }
+        if (savedModifiedDecorations.length) {
+          modifiedEditor.deltaDecorations([], savedModifiedDecorations)
+        }
+      })
+    }
+  }
+
+  /** Recompute diff line decorations after child editor models change (e.g. form sync). */
+  function refreshDiffEditorDecorations(
+    diffEditor: editorTypes.IStandaloneDiffEditor,
+    afterSetModelFallback?: () => void
+  ): void {
+    const internal = diffEditor as editorTypes.IStandaloneDiffEditor & { _beginUpdateDecorationsSoon?: () => void }
+    if (typeof internal._beginUpdateDecorationsSoon === 'function') {
+      internal._beginUpdateDecorationsSoon()
+      return
+    }
+    const model = diffEditor.getModel()
+    if (model?.original && model?.modified) {
+      diffEditor.setModel({ original: model.original, modified: model.modified })
+      afterSetModelFallback?.()
+    }
+  }
 
   // report resource changes to form
   const reportResourceChanges = useCallback(

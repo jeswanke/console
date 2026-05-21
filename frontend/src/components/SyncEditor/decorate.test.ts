@@ -1,6 +1,6 @@
 /* Copyright Contributors to the Open Cluster Management project */
 
-import { decorate, getResourceEditorDecorations, rangeForHighlightPath } from './decorate'
+import { decorate, getResourceEditorDecorations, rangeForHighlightPath, toModelDeltaDecorations } from './decorate'
 import { ErrorType } from './validation'
 import type { Monaco } from '@monaco-editor/react'
 import type { editor as editorTypes } from 'monaco-editor'
@@ -128,6 +128,14 @@ describe('rangeForHighlightPath', () => {
     const mappings = { Z: [{}] }
     const paths = { 'Z.0': {} }
     expect(rangeForHighlightPath(monaco, paths as never, mappings as never, 'Z')).toBeNull()
+  })
+})
+
+describe('toModelDeltaDecorations', () => {
+  it('maps saved decorations to range and options for deltaDecorations', () => {
+    const range = { startLineNumber: 1, startColumn: 1, endLineNumber: 1, endColumn: 5 }
+    const options = { className: 'insertLineDecoration' }
+    expect(toModelDeltaDecorations([{ id: 'a', ownerId: 0, range, options } as never])).toEqual([{ range, options }])
   })
 })
 

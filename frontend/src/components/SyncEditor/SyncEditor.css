@@ -216,6 +216,11 @@
 .monaco-diff-editor .line-insert {
   background-color: #ebf2e8 !important;
 }
+
+.monaco-diff-editor .line-delete,
+.monaco-diff-editor .char-delete {
+  background-color: #fde2e2 !important;
+}
 .insertLineDecoration {
   background-color: rgba(159, 255, 223, 0.4) !important;
 }
