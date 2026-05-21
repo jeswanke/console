@@ -141,7 +141,7 @@ describe('getResourceEditorDecorations', () => {
     const decorations = [
       { options: { className: 'squiggly-error' } },
       { options: { className: 'syncEditorYamlHighlight' } },
-      { options: { className: 'insertedLineDecoration' } },
+      { options: { className: 'insertLineDecoration' } },
       { options: { className: 'customLineDecoration' } },
       { options: { glyphMarginClassName: 'errorDecoration', inlineClassName: 'other' } },
       { options: { inlineClassName: 'protectedDecoration' } },
@@ -189,7 +189,7 @@ describe('decorate', () => {
         errorType: ErrorType.error,
       },
     ]
-    const squiggly = decorate(false, true, editor, monaco, errors, [], baseChange, [], [], [], '', false)
+    const squiggly = decorate(false, true, editor, monaco, errors, [], baseChange, [], [], [], '')
     expect(deltaDecorations).toHaveBeenCalled()
     expect(squiggly.length).toBeGreaterThan(0)
     expect(squiggly[0].message).toContain('Bad')
@@ -214,8 +214,7 @@ describe('decorate', () => {
       [],
       [],
       [],
-      '',
-      false
+      ''
     )
     const applied = deltaDecorations.mock.calls[0][1] as { options: { glyphMarginClassName?: string } }[]
     expect(applied.some((d) => d.options.glyphMarginClassName === 'warningDecoration')).toBe(true)
@@ -240,8 +239,7 @@ describe('decorate', () => {
       [],
       [],
       [],
-      '',
-      false
+      ''
     )
     const applied = deltaDecorations.mock.calls[0][1] as { options: { glyphMarginClassName?: string } }[]
     expect(applied.some((d) => d.options.glyphMarginClassName === 'infoDecoration')).toBe(true)
@@ -253,20 +251,9 @@ describe('decorate', () => {
       parsed: {},
       mappings: { 'metadata.name': { $r: 4, $l: 1, $s: false } },
     } as unknown as DecorateChangeArg
-    decorate(false, true, editor, monaco, [], [{ $t: 'C', $a: 'metadata.name', $f: 'short' }], change, [], [], [], '', false)
+    decorate(false, true, editor, monaco, [], [{ $t: 'C', $a: 'metadata.name', $f: 'short' }], change, [], [], [], '')
     const applied = deltaDecorations.mock.calls[0][1] as { options: { className?: string } }[]
-    expect(applied.some((d) => d.options.className === 'insertedLineDecoration')).toBe(true)
-  })
-
-  it('uses show-changes line decoration classes when showChanges is true', () => {
-    const { editor, deltaDecorations } = createEditor()
-    const change = {
-      parsed: {},
-      mappings: { k: { $r: 3, $l: 1 } },
-    } as unknown as DecorateChangeArg
-    decorate(false, true, editor, monaco, [], [{ $t: 'C', $a: 'k', $f: null }], change, [], [], [], '', true)
-    const applied = deltaDecorations.mock.calls[0][1] as { options: { className?: string } }[]
-    expect(applied.some((d) => d.options.className === 'insertedLineDecorationShowChanges')).toBe(true)
+    expect(applied.some((d) => d.options.className === 'insertLineDecoration')).toBe(true)
   })
 
   it('adds preserved user edits as custom line decorations', () => {
@@ -275,14 +262,14 @@ describe('decorate', () => {
       parsed: {},
       mappings: { x: { $r: 2, $l: 1 } },
     } as unknown as DecorateChangeArg
-    decorate(false, true, editor, monaco, [], [], change, [{ $t: 'N', $a: 'x', $f: null }], [], [], '', false)
+    decorate(false, true, editor, monaco, [], [], change, [{ $t: 'N', $a: 'x', $f: null }], [], [], '')
     const applied = deltaDecorations.mock.calls[0][1] as { options: { className?: string } }[]
     expect(applied.some((d) => d.options.className === 'customLineDecoration')).toBe(true)
   })
 
   it('adds protected and filtered row decorations', () => {
     const { editor, deltaDecorations } = createEditor()
-    decorate(false, true, editor, monaco, [], [], baseChange, [], [{ startLineNumber: 2, endLineNumber: 4 }], [7], '', false)
+    decorate(false, true, editor, monaco, [], [], baseChange, [], [{ startLineNumber: 2, endLineNumber: 4 }], [7], '')
     const applied = deltaDecorations.mock.calls[0][1] as { options: { inlineClassName?: string; after?: unknown } }[]
     expect(applied.some((d) => d.options.inlineClassName === 'protectedDecoration')).toBe(true)
     expect(applied.some((d) => d.options.after)).toBe(true)
@@ -295,7 +282,7 @@ describe('decorate', () => {
       mappings: { CM: [{ $r: 10, $l: 1 }] },
       paths: { 'CM.0': { $r: 10, $l: 1 } },
     }
-    decorate(false, true, editor, monaco, [], [], change, [], [], [], 'CM', false)
+    decorate(false, true, editor, monaco, [], [], change, [], [], [], 'CM')
     const applied = deltaDecorations.mock.calls[0][1] as { options: { className?: string } }[]
     expect(applied.some((d) => d.options.className === 'syncEditorYamlHighlight')).toBe(true)
   })
@@ -307,12 +294,12 @@ describe('decorate', () => {
       mappings: { CM: [{ $r: 10, $l: 1 }] },
       paths: { 'CM.0': { $r: 10, $l: 1 } },
     }
-    decorate(true, true, editor, monaco, [], [], change, [], [], [], 'CM', false)
+    decorate(true, true, editor, monaco, [], [], change, [], [], [], 'CM')
     let applied = deltaDecorations.mock.calls[0][1] as { options: { className?: string } }[]
     expect(applied.some((d) => d.options.className === 'syncEditorYamlHighlight')).toBe(false)
 
     deltaDecorations.mockClear()
-    decorate(false, true, editor, monaco, [], [{ $t: 'C', $a: 'x' }], change, [], [], [], 'CM', false)
+    decorate(false, true, editor, monaco, [], [{ $t: 'C', $a: 'x' }], change, [], [], [], 'CM')
     applied = deltaDecorations.mock.calls[0][1] as { options: { className?: string } }[]
     expect(applied.some((d) => d.options.className === 'syncEditorYamlHighlight')).toBe(false)
   })
@@ -324,7 +311,7 @@ describe('decorate', () => {
       parsed: {},
       mappings: { k: { $r: 8, $l: 1 } },
     } as unknown as DecorateChangeArg
-    decorate(false, false, editor, monaco, [], [{ $t: 'C', $a: 'k', $f: null }], change, [], [], [], '', false)
+    decorate(false, false, editor, monaco, [], [{ $t: 'C', $a: 'k', $f: null }], change, [], [], [], '')
     jest.runAllTimers()
     expect(revealLineInCenter).toHaveBeenCalledWith(8)
   })

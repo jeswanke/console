@@ -510,8 +510,7 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
             remainingEdits,
             protectedRanges,
             filteredRows,
-            editorHighlightPath,
-            showChanges
+            editorHighlightPath
           )
           setSquigglyTooltips(squigglyTooltips)
           setLastFormComparison(formComparison)
@@ -546,7 +545,6 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
       activeEditor,
       activeMonaco,
       editorHighlightPath,
-      showChanges,
       mock,
       diffEditorInstanceEpoch,
       // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -654,8 +652,7 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
             lastUserEdits,
             protectedRanges,
             filteredRows,
-            editorHighlightPath,
-            showChanges
+            editorHighlightPath
           )
           setSquigglyTooltips(squigglyTooltips)
           setUserEdits(changes)
@@ -696,7 +693,6 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
       onStatusChange,
       editorHasFocus,
       editorHighlightPath,
-      showChanges,
       reportResourceChanges,
       syncs,
       changeStack?.baseResources,

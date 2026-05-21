@@ -25,8 +25,7 @@ export const decorate = (
   preservedUserEdits: any[],
   protectedRanges: any[],
   filteredRows: number[],
-  highlightEditorPath: string,
-  showChanges: boolean
+  highlightEditorPath: string
 ) => {
   const decorations: any[] = []
   const squigglyTooltips: any[] = []
@@ -35,11 +34,11 @@ export const decorate = (
   addErrorDecorations(monaco, errors, decorations, squigglyTooltips)
 
   // add change decorations
-  addChangeDecorations(isCustomEdit, showChanges, monaco, changes, change, decorations)
+  addChangeDecorations(isCustomEdit, monaco, changes, change, decorations)
 
   // if form is making changes, layer any editor changes decorations on top of form changes
   if (preservedUserEdits.length) {
-    addChangeDecorations(true, showChanges, monaco, preservedUserEdits, change, decorations)
+    addChangeDecorations(true, monaco, preservedUserEdits, change, decorations)
   }
 
   // add protected decorations
@@ -178,7 +177,6 @@ const addHighlightDecorations = (
 
 const addChangeDecorations = (
   isCustomEdit: boolean,
-  showChanges: boolean,
   monaco: Monaco,
   changes: any[],
   change: {
@@ -187,11 +185,6 @@ const addChangeDecorations = (
   },
   decorations: any[]
 ) => {
-  void isCustomEdit
-  void showChanges
-
-  // const insertedClassName = showChanges ? 'insertedLineDecorationShowChanges' : 'insertedLineDecoration'
-  // const customClassName = showChanges ? 'customLineDecorationShowChanges' : 'customLineDecoration'
   changes.forEach((chng) => {
     const { $t, $a, $f } = chng
     const obj: any = get(change.mappings, $a)
@@ -254,8 +247,8 @@ const scrollToChangeDecoration = (editor: editorTypes.IStandaloneCodeEditor, err
         })
       } else {
         // if visible range doesn't show any inserted-line decorations, scroll to the first one
-        const insertedLineDecorations = decorations.filter((decoration) =>
-          ['insertLineDecoration', 'insertLineDecorationShowChanges'].includes(decoration.options.className ?? '')
+        const insertedLineDecorations = decorations.filter(
+          (decoration) => decoration.options.className === 'insertLineDecoration'
         )
         if (insertedLineDecorations.length) {
           setTimeout(() => {
