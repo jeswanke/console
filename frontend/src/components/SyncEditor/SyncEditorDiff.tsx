@@ -1,5 +1,14 @@
 /* Copyright Contributors to the Open Cluster Management project */
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, type RefObject } from 'react'
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+  type RefObject,
+} from 'react'
 import useResizeObserver from '@react-hook/resize-observer'
 import { editor as editorTypes } from 'monaco-editor'
 import { DiffEditor, Monaco } from '@monaco-editor/react'
@@ -47,12 +56,14 @@ const TOOLBAR_IDS_SKIP_DIFF_BLUR = [
   'diff-next-button',
 ] as const
 
+const SIDE_BY_SIDE_BREAKPOINT_PX = 800
+
 const DIFF_EDITOR_OPTIONS: editorTypes.IDiffEditorConstructionOptions = {
-  renderSideBySide: false,
   originalEditable: false,
   automaticLayout: false,
   scrollBeyondLastLine: true,
-  // cursorSmoothCaretAnimation: true,
+  renderIndicators: false,
+  diffCodeLens: true,
   minimap: { enabled: false },
   quickSuggestions: false,
   lightbulb: { enabled: false },
@@ -86,6 +97,33 @@ export const SyncEditorDiff = forwardRef<SyncEditorDiffHandle, SyncEditorDiffPro
   onActiveInstancesChangeRef.current = onActiveInstancesChange
 
   const showDiffView = showChanges && defaultResources !== undefined && !mock
+  const [renderSideBySide, setRenderSideBySide] = useState(false)
+
+  const diffEditorOptions = useMemo(
+    () => ({
+      ...DIFF_EDITOR_OPTIONS,
+      renderSideBySide,
+    }),
+    [renderSideBySide]
+  )
+
+  const applyDiffLayoutFromContainer = useCallback(() => {
+    if (!diffContainerRef.current) return
+    const { width, height } = diffContainerRef.current.getBoundingClientRect()
+    if (width <= 0 || height <= 0) return
+
+    const sideBySide = width > SIDE_BY_SIDE_BREAKPOINT_PX
+    setRenderSideBySide((prev) => {
+      if (prev !== sideBySide) {
+        diffEditorRef.current?.updateOptions({ renderSideBySide: sideBySide })
+      }
+      return sideBySide
+    })
+
+    if (diffEditorRef.current) {
+      diffEditorRef.current.layout({ width, height })
+    }
+  }, [])
 
   useImperativeHandle(
     ref,
@@ -115,94 +153,90 @@ export const SyncEditorDiff = forwardRef<SyncEditorDiffHandle, SyncEditorDiffPro
     mountTheme('se')
   }, [])
 
-  const handleDiffMount = useCallback((diffEditor: editorTypes.IStandaloneDiffEditor, monaco: Monaco) => {
-    mountDisposablesRef.current.forEach((d) => d.dispose())
-    mountDisposablesRef.current = []
+  const handleDiffMount = useCallback(
+    (diffEditor: editorTypes.IStandaloneDiffEditor, monaco: Monaco) => {
+      mountDisposablesRef.current.forEach((d) => d.dispose())
+      mountDisposablesRef.current = []
 
-    diffEditorRef.current = diffEditor
-    diffMonacoRef.current = monaco
-    onActiveInstancesChangeRef.current?.()
-    monaco.editor.setTheme(getTheme())
+      diffEditorRef.current = diffEditor
+      diffMonacoRef.current = monaco
+      onActiveInstancesChangeRef.current?.()
+      monaco.editor.setTheme(getTheme())
 
-    const originalEditor = diffEditor.getOriginalEditor()
-    const modifiedEditor = diffEditor.getModifiedEditor()
+      const originalEditor = diffEditor.getOriginalEditor()
+      const modifiedEditor = diffEditor.getModifiedEditor()
 
-    const notifyModifiedEditorChange = (event: editorTypes.IModelContentChangedEvent) => {
-      const model = modifiedEditor.getModel()
-      if (model) {
-        onChangeRef.current?.(model.getValue(), event)
-      }
-    }
-
-    const notifyBlurIfReallyLeft = () => {
-      requestAnimationFrame(() => {
-        const de = diffEditorRef.current
-        if (!de) return
-        if (de.getOriginalEditor().hasTextFocus() || de.getModifiedEditor().hasTextFocus()) {
-          return
-        }
-        const activeId = document.activeElement?.id as string
-        if (TOOLBAR_IDS_SKIP_DIFF_BLUR.indexOf(activeId as (typeof TOOLBAR_IDS_SKIP_DIFF_BLUR)[number]) !== -1) {
-          return
-        }
-        onDiffEditorFocusChangeRef.current(false)
-      })
-    }
-
-    mountDisposablesRef.current = [
-      originalEditor.onDidFocusEditorWidget(() => onDiffEditorFocusChangeRef.current(true)),
-      originalEditor.onDidBlurEditorWidget(notifyBlurIfReallyLeft),
-      modifiedEditor.onDidFocusEditorWidget(() => onDiffEditorFocusChangeRef.current(true)),
-      modifiedEditor.onDidBlurEditorWidget(notifyBlurIfReallyLeft),
-      modifiedEditor.onDidChangeModelContent(notifyModifiedEditorChange),
-      modifiedEditor.onDidChangeModel(() => {
+      const notifyModifiedEditorChange = (event: editorTypes.IModelContentChangedEvent) => {
         const model = modifiedEditor.getModel()
-        if (!model) {
-          return
+        if (model) {
+          onChangeRef.current?.(model.getValue(), event)
         }
-        notifyModifiedEditorChange({
-          changes: [],
-          eol: model.getEOL(),
-          versionId: model.getVersionId(),
-          isUndoing: false,
-          isRedoing: false,
-          isFlush: true,
+      }
+
+      const notifyBlurIfReallyLeft = () => {
+        requestAnimationFrame(() => {
+          const de = diffEditorRef.current
+          if (!de) return
+          if (de.getOriginalEditor().hasTextFocus() || de.getModifiedEditor().hasTextFocus()) {
+            return
+          }
+          const activeId = document.activeElement?.id as string
+          if (TOOLBAR_IDS_SKIP_DIFF_BLUR.indexOf(activeId as (typeof TOOLBAR_IDS_SKIP_DIFF_BLUR)[number]) !== -1) {
+            return
+          }
+          onDiffEditorFocusChangeRef.current(false)
         })
-      }),
-    ]
-
-    const container = diffContainerRef.current
-    const onContainerMouseDown = () => {
-      const focusedEl = document.querySelector('.monaco-editor.focused')
-      if (focusedEl && diffContainerRef.current?.contains(focusedEl)) {
-        onDiffEditorFocusChangeRef.current(true)
       }
-    }
-    if (container) {
-      container.addEventListener('mousedown', onContainerMouseDown)
-      mountDisposablesRef.current.push({
-        dispose: () => container.removeEventListener('mousedown', onContainerMouseDown),
+
+      mountDisposablesRef.current = [
+        originalEditor.onDidFocusEditorWidget(() => onDiffEditorFocusChangeRef.current(true)),
+        originalEditor.onDidBlurEditorWidget(notifyBlurIfReallyLeft),
+        modifiedEditor.onDidFocusEditorWidget(() => onDiffEditorFocusChangeRef.current(true)),
+        modifiedEditor.onDidBlurEditorWidget(notifyBlurIfReallyLeft),
+        modifiedEditor.onDidChangeModelContent(notifyModifiedEditorChange),
+        modifiedEditor.onDidChangeModel(() => {
+          const model = modifiedEditor.getModel()
+          if (!model) {
+            return
+          }
+          notifyModifiedEditorChange({
+            changes: [],
+            eol: model.getEOL(),
+            versionId: model.getVersionId(),
+            isUndoing: false,
+            isRedoing: false,
+            isFlush: true,
+          })
+        }),
+      ]
+
+      const container = diffContainerRef.current
+      const onContainerMouseDown = () => {
+        const focusedEl = document.querySelector('.monaco-editor.focused')
+        if (focusedEl && diffContainerRef.current?.contains(focusedEl)) {
+          onDiffEditorFocusChangeRef.current(true)
+        }
+      }
+      if (container) {
+        container.addEventListener('mousedown', onContainerMouseDown)
+        mountDisposablesRef.current.push({
+          dispose: () => container.removeEventListener('mousedown', onContainerMouseDown),
+        })
+      }
+
+      diffNavigatorRef.current?.dispose()
+      diffNavigatorRef.current = monaco.editor.createDiffNavigator(diffEditor, {
+        followsCaret: true,
+        ignoreCharChanges: true,
+        alwaysRevealFirst: false,
       })
-    }
 
-    diffNavigatorRef.current?.dispose()
-    diffNavigatorRef.current = monaco.editor.createDiffNavigator(diffEditor, {
-      followsCaret: true,
-      ignoreCharChanges: true,
-      alwaysRevealFirst: false,
-    })
+      requestAnimationFrame(applyDiffLayoutFromContainer)
 
-    const layoutDiff = () => {
-      if (!diffContainerRef.current || !diffEditorRef.current) return
-      const { width, height } = diffContainerRef.current.getBoundingClientRect()
-      if (width > 0 && height > 0) {
-        diffEditorRef.current.layout({ width, height })
-      }
-    }
-    requestAnimationFrame(layoutDiff)
-
-    onDiffEditorInstanceChangeRef.current?.()
-  }, [])
+      onDiffEditorInstanceChangeRef.current?.()
+    },
+    [applyDiffLayoutFromContainer]
+  )
 
   useEffect(() => {
     return () => {
@@ -222,11 +256,8 @@ export const SyncEditorDiff = forwardRef<SyncEditorDiffHandle, SyncEditorDiffPro
   }, [showDiffView])
 
   useResizeObserver(resizeRootRef, () => {
-    if (!diffEditorRef.current || !diffContainerRef.current) return
-    const { width, height } = diffContainerRef.current.getBoundingClientRect()
-    if (width > 0 && height > 0) {
-      diffEditorRef.current.layout({ width, height })
-    }
+    if (!diffEditorRef.current) return
+    applyDiffLayoutFromContainer()
   })
 
   if (!showDiffView) {
@@ -240,7 +271,7 @@ export const SyncEditorDiff = forwardRef<SyncEditorDiffHandle, SyncEditorDiffPro
         width="100%"
         language="yaml"
         theme={getTheme()}
-        options={DIFF_EDITOR_OPTIONS}
+        options={diffEditorOptions}
         beforeMount={handleBeforeMount}
         onMount={handleDiffMount}
       />

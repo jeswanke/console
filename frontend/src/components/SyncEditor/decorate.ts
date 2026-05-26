@@ -196,7 +196,7 @@ const addChangeDecorations = (
           className: isCustomEdit ? 'customLineDecoration' : 'insertLineDecoration',
           isWholeLine: true,
           description: 'resource-editor',
-          zIndex: 100,
+          zIndex: 500,
         },
       })
       if ($f != null && $f.toString().length < 132 && !obj.$s) {

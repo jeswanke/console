@@ -214,17 +214,48 @@
 }
 
 .monaco-diff-editor .line-insert {
-  background-color: #ebf2e8 !important;
+  background-color: #eef3e2 !important;
 }
 
-.monaco-diff-editor .line-delete,
+.monaco-diff-editor .char-insert {
+  background-color: #ddeeb8 !important;
+}
+
+:root:where(.pf-v5-theme-dark, .pf-v6-theme-dark) .monaco-diff-editor .line-insert {
+  background-color: rgba(86, 91, 74, 0.41) !important;
+}
+
+:root:where(.pf-v5-theme-dark, .pf-v6-theme-dark) .monaco-diff-editor .char-insert {
+  background-color: rgba(86, 94, 67, 0.41) !important;
+}
+
+.monaco-diff-editor .line-delete {
+  background-color: #ffd9d9 !important;
+}
+
 .monaco-diff-editor .char-delete {
-  background-color: #fde2e2 !important;
+  background-color: #ffc5c5 !important;
+}
+
+:root:where(.pf-v5-theme-dark, .pf-v6-theme-dark) .monaco-diff-editor .line-delete {
+  background-color: rgba(121, 82, 82, 0.41) !important;
+}
+
+:root:where(.pf-v5-theme-dark, .pf-v6-theme-dark) .monaco-diff-editor .char-delete {
+  background-color: rgba(154, 78, 78, 0.41) !important;
 }
 .insertLineDecoration {
-  background-color: rgba(159, 255, 223, 0.4) !important;
+  background-color: rgba(159, 255, 223, 0.6) !important;
+}
+
+:root:where(.pf-v5-theme-dark, .pf-v6-theme-dark) .insertLineDecoration {
+  background-color: rgba(107, 139, 123, 0.55) !important;
 }
 
 .customLineDecoration {
   background-color: rgba(135, 212, 236, 0.35) !important;
+}
+
+:root:where(.pf-v5-theme-dark, .pf-v6-theme-dark) .customLineDecoration {
+  background-color: rgba(65, 100, 120, 0.45) !important;
 }

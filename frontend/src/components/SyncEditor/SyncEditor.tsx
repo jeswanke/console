@@ -600,17 +600,12 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
   /** Recompute diff line decorations after child editor models change (e.g. form sync). */
   function refreshDiffEditorDecorations(
     diffEditor: editorTypes.IStandaloneDiffEditor,
-    afterSetModelFallback?: () => void
+    afterSetModel?: () => void
   ): void {
-    const internal = diffEditor as editorTypes.IStandaloneDiffEditor & { _beginUpdateDecorationsSoon?: () => void }
-    if (typeof internal._beginUpdateDecorationsSoon === 'function') {
-      internal._beginUpdateDecorationsSoon()
-      return
-    }
     const model = diffEditor.getModel()
     if (model?.original && model?.modified) {
       diffEditor.setModel({ original: model.original, modified: model.modified })
-      afterSetModelFallback?.()
+      afterSetModel?.()
     }
   }
 
