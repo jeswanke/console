@@ -232,35 +232,33 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
           }
 
           // when user is pasting in a complete yaml, do we need to make sure the resource has a namespace
-          if (
-            autoCreateNs && // make sure resource has namespace
-            selection?.startColumn === 1 &&
-            selection?.endLineNumber === model?.getLineCount()
-          ) {
-            let nameInx
-            let hasMetadata = false
-            let hasNamespace = false
-            event.stopPropagation()
-            event.preventDefault()
-            for (let i = 0; i < lines.length; i++) {
-              if (lines[i].startsWith('metadata:')) {
-                hasMetadata = true
-              }
-              if (hasMetadata) {
-                if (lines[i].includes(' name:')) {
-                  nameInx = i
+          if (selection?.startColumn === 1 && selection?.endLineNumber === model?.getLineCount()) {
+            if (autoCreateNs) {
+              let nameInx
+              let hasMetadata = false
+              let hasNamespace = false
+              event.stopPropagation()
+              event.preventDefault()
+              for (let i = 0; i < lines.length; i++) {
+                if (lines[i].startsWith('metadata:')) {
+                  hasMetadata = true
                 }
-                if (lines[i].includes(' namespace:')) {
-                  hasNamespace = true
+                if (hasMetadata) {
+                  if (lines[i].includes(' name:')) {
+                    nameInx = i
+                  }
+                  if (lines[i].includes(' namespace:')) {
+                    hasNamespace = true
+                  }
+                }
+                if (hasNamespace || lines[i].startsWith('spec:')) {
+                  break
                 }
               }
-              if (hasNamespace || lines[i].startsWith('spec:')) {
-                break
+              if (nameInx && !hasNamespace) {
+                // add missing namespace
+                lines.splice(nameInx + 1, 0, '  namespace: ""')
               }
-            }
-            if (nameInx && !hasNamespace) {
-              // add missing namespace
-              lines.splice(nameInx + 1, 0, '  namespace: ""')
             }
             const text = lines.join('\r\n')
             resetDefaultSnapshotOnNextReportRef.current = true
@@ -693,6 +691,8 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
           }
           if (resetDefaultSnapshot) {
             resetDefaultSnapshotOnNextReportRef.current = false
+            const showDiffView = showChanges && defaultResources !== undefined && !mock
+            refreshModels(value, showDiffView, value)
           }
           setEditorHasErrors(editorHasErrors)
           onStatusChange?.(allErrors.length === 0 ? ValidationStatus.success : ValidationStatus.failure)
@@ -732,6 +732,7 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
         }
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- refreshModels is defined in this component body
     [
       activeEditor,
       activeMonaco,
@@ -753,6 +754,9 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
       reportResourceChanges,
       syncs,
       changeStack?.baseResources,
+      showChanges,
+      defaultResources,
+      mock,
     ]
   )
 

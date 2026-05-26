@@ -62,8 +62,6 @@ const DIFF_EDITOR_OPTIONS: editorTypes.IDiffEditorConstructionOptions = {
   originalEditable: false,
   automaticLayout: false,
   scrollBeyondLastLine: true,
-  renderIndicators: false,
-  diffCodeLens: true,
   minimap: { enabled: false },
   quickSuggestions: false,
   lightbulb: { enabled: false },
