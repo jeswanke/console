@@ -1,5 +1,5 @@
 # Shared subscription e2e fragments (merged before `subscription.yaml`; load order is sorted filenames).
-# Sample Git URL: anchor `&stolostron-app-lifecycle-samples-git` below (same string as `constants/sampleRepos.ts`).
+# Sample Git URLs: anchors below (public + private lifecycle samples repos).
 # Scenarios reference fragments via `blocks[].use`; `perBlock` / `clusterResources` merge by index across layers.
 # Wizard fields: top-level `repositories` and `perBlock`. Post-create checks: `specDomains.applicationExpectations.clusterResources`.
 
@@ -57,6 +57,26 @@ fragments:
           channelDisplaySubstring: stolostron-application-lifecycle-samples
           channelRepositoryUrl: *stolostron-app-lifecycle-samples-git
 
+  # RHACM4K-10668: `crd/` path deploys Secret + CustomResourceDefinition (console topology: secret + other icons).
+  git_crd:
+    repositories:
+      - kind: git
+        url: *stolostron-app-lifecycle-samples-git
+        branch: main
+        path: crd
+        disableAutoReconcile: true
+    specDomains:
+      applicationExpectations:
+        clusterResources:
+          - - kind: Secret
+              name: foo
+            - kind: CustomResourceDefinition
+              name: foos.stable.example.com
+        # No detailsClustersSummary: vendor/OpenShift fleet size varies; RHACM4K-10668 asserts topology status.
+        advancedConfiguration:
+          channelDisplaySubstring: stolostron-application-lifecycle-samples
+          channelRepositoryUrl: *stolostron-app-lifecycle-samples-git
+
   # Same naming pattern as `git_helloworld`: `kind` + `path` for this stream’s repo + expectations.
   git_mortgage:
     # Wizard / subscription-create
@@ -81,6 +101,29 @@ fragments:
         advancedConfiguration:
           channelDisplaySubstring: stolostron-application-lifecycle-samples
           channelRepositoryUrl: *stolostron-app-lifecycle-samples-git
+
+  # Private Git repo (RHACM4K-1071): URL in YAML; username/token from env/alc.local.env at test runtime.
+  git_private_mortgage:
+    repositories:
+      - kind: git
+        url: &stolostron-app-lifecycle-samples-private-git https://github.com/stolostron/application-lifecycle-samples-private.git
+        branch: main
+        path: mortgage
+        disableAutoReconcile: true
+    specDomains:
+      applicationExpectations:
+        clusterResources:
+          - - kind: Deployment
+              name: mortgage-app-deploy
+            - kind: Service
+              name: mortgage-app-svc
+            - kind: ReplicaSet
+              name: mortgage-app-deploy
+            - kind: Pod
+              name: mortgage-app-deploy
+        advancedConfiguration:
+          channelDisplaySubstring: stolostron-application-lifecycle-samples-private
+          channelRepositoryUrl: *stolostron-app-lifecycle-samples-private-git
 
   # Three wizard modes: `default` (no schedule), `active` (deploy in windows), `blocked` (suppress in windows).
   timewindow_default:
@@ -118,11 +161,44 @@ fragments:
             - start: '09:00 AM'
               end: '05:00 PM'
 
-  # Ansible credential filter (single-slot `perBlock[0]`; reusable in any `blocks[].use`).
-  automation_ansible:
+  # Leave **Configure automation** empty (do not type Ansible credential / filter). Marker only — no `perBlock` payload.
+  skip_automation_ansible: {}
+
+  # RHACM4K-39666: Git URL contains underscore (`app_samples`); helloworld manifests (Route/Service/ReplicaSet).
+  git_underscore:
+    repositories:
+      - kind: git
+        url: https://github.com/ruici-h/app_samples
+        branch: main
+        path: helloworld
+        reconcileOption: merge
+        reconcileRate: medium
+    specDomains:
+      applicationExpectations:
+        clusterResources:
+          - - kind: Route
+              name: helloworld-app-route
+            - kind: Service
+              name: helloworld-app-svc
+            - kind: ReplicaSet
+              name: helloworld-app-deploy
+        detailsClustersSummary:
+          variant: remoteOnly
+          remoteCount: 1
+        advancedConfiguration:
+          channelDisplaySubstring: app_samples
+          channelRepositoryUrl: https://github.com/ruici-h/app_samples
+
+  # Cypress `selectClusterDeployment` when `deployment.online: true` — label selector + global + vendor/OpenShift (no separate "online" checkbox in that mode).
+  placement_online_vendor_openshift:
     perBlock:
-      - automation:
-          credentialTypeFilter: Ansible
+      - clusterDeployment:
+          useExistingPlacementRule: false
+          useClusterLabelSelector: true
+          clusterSet: global
+          labelSelectorRows:
+            - labelName: vendor
+              labelValue: OpenShift
 
   # Label-based placement to local-cluster (reusable in any `blocks[].use`; single `perBlock[0]` slice).
   placement_label_local:

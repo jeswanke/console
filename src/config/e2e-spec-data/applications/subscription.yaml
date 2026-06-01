@@ -32,7 +32,7 @@ scenarios:
           - repo_samples_default
           - placement_label_local
           - timewindow_workweek_toronto
-          - automation_ansible
+          - skip_automation_ansible
     extends:
       - subscription_full_wizard
       - subscription_dry_run
@@ -50,7 +50,7 @@ scenarios:
           - repo_samples_default
           - placement_label_local
           - timewindow_workweek_toronto
-          - automation_ansible
+          - skip_automation_ansible
     extends:
       - subscription_full_wizard
       - subscription_dry_run
@@ -68,7 +68,7 @@ scenarios:
     blocks:
       - use:
           - git_helloworld
-          - automation_ansible
+          - skip_automation_ansible
           - placement_label_local
           - timewindow_default
     extends:
@@ -78,6 +78,60 @@ scenarios:
         applicationName: auto-git-helloworld
         namespace: auto-git-helloworld-ns
 
+  # RHACM4K-39232: helloworld + label placement (local-cluster); Cypress git-local app/namespace names.
+  auto_git_placement_topology:
+    enabled: true
+    tests:
+      - RHACM4K-39232
+    blocks:
+      - use:
+          - git_helloworld
+          - skip_automation_ansible
+          - placement_label_local
+          - timewindow_default
+    extends:
+      - subscription_submit
+    specDomains:
+      subscription:
+        applicationName: api-git-local
+        namespace: api-git-local-ns
+
+  # RHACM4K-39666: Git repo URL with underscore (`ruici-h/app_samples`); online placement (Cypress parity).
+  auto_git_underscore:
+    enabled: true
+    tests:
+      - RHACM4K-39666
+    blocks:
+      - use:
+          - git_underscore
+          - skip_automation_ansible
+          - placement_online_vendor_openshift
+          - timewindow_default
+    extends:
+      - subscription_submit
+    specDomains:
+      subscription:
+        applicationName: auto-git-underscore
+        namespace: auto-git-underscore-ns
+
+  # RHACM4K-1071: private Git (mortgage path), local placement; credentials merged from env at runtime.
+  auto_git_private_local:
+    enabled: true
+    tests:
+      - RHACM4K-1071
+    blocks:
+      - use:
+          - git_private_mortgage
+          - skip_automation_ansible
+          - placement_label_local
+          - timewindow_default
+    extends:
+      - subscription_submit
+    specDomains:
+      subscription:
+        applicationName: auto-git-private
+        namespace: auto-git-private-ns
+
   # Baseline for RHACM4K-1427: same app/namespace as edit scenario, but **helloworld** repo (create wizard).
   # The test then edits block 0 to **mortgage** via `auto_git_mortgage_edit_local` payload.
   auto_git_mortgage_edit_base:
@@ -85,7 +139,7 @@ scenarios:
     blocks:
       - use:
           - git_helloworld
-          - automation_ansible
+          - skip_automation_ansible
           - placement_label_local
           - timewindow_default
     extends:
@@ -103,7 +157,7 @@ scenarios:
     blocks:
       - use:
           - git_mortgage
-          - automation_ansible
+          - skip_automation_ansible
           - placement_label_local
           - timewindow_default
     extends:
@@ -119,7 +173,7 @@ scenarios:
     blocks:
       - use:
           - git_helloworld
-          - automation_ansible
+          - skip_automation_ansible
           - placement_label_local
           - timewindow_default
     extends:
@@ -137,7 +191,7 @@ scenarios:
     blocks:
       - use:
           - git_mortgage
-          - automation_ansible
+          - skip_automation_ansible
           - placement_label_local
           - timewindow_default
     extends:
@@ -155,12 +209,12 @@ scenarios:
     blocks:
       - use:
           - git_helloworld
-          - automation_ansible
+          - skip_automation_ansible
           - placement_label_local
           - timewindow_default
       - use:
           - git_mortgage
-          - automation_ansible
+          - skip_automation_ansible
           - placement_label_local
           - timewindow_default
     extends:
@@ -180,12 +234,12 @@ scenarios:
     blocks:
       - use:
           - git_helloworld
-          - automation_ansible
+          - skip_automation_ansible
           - placement_label_local
           - timewindow_default
       - use:
           - git_mortgage
-          - automation_ansible
+          - skip_automation_ansible
           - placement_label_local
           - timewindow_default
     extends:
@@ -194,3 +248,43 @@ scenarios:
       subscription:
         applicationName: auto-git-multi
         namespace: auto-git-multi-ns
+
+  # RHACM4K-1558: delete Application CR only (subscriptions/channels remain in Advanced; Placement CRs via oc).
+  auto_git_multi_delete:
+    enabled: true
+    tests:
+      - RHACM4K-1558
+    blocks:
+      - use:
+          - git_helloworld
+          - skip_automation_ansible
+          - placement_online_vendor_openshift
+          - timewindow_default
+      - use:
+          - git_mortgage
+          - skip_automation_ansible
+          - placement_label_local
+          - timewindow_default
+    extends:
+      - subscription_submit
+    specDomains:
+      subscription:
+        applicationName: auto-git-multi-delete
+        namespace: auto-git-multi-delete-ns
+
+  auto_git_crd:
+    enabled: true
+    tests:
+      - RHACM4K-10668
+    blocks:
+      - use:
+          - git_crd
+          - skip_automation_ansible
+          - placement_online_vendor_openshift
+          - timewindow_default
+    extends:
+      - subscription_submit
+    specDomains:
+      subscription:
+        applicationName: auto-git-crd
+        namespace: auto-git-crd-ns
