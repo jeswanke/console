@@ -1,6 +1,11 @@
 import fs from 'fs';
 import path from 'path';
 
+/** Minimal `test` shape for `test.skip()` in ALC specs (avoids coupling to Playwright generics). */
+export type PlaywrightTestSkip = {
+  skip(condition: boolean, description?: string): void;
+};
+
 /** One entry from {@link ManagedClusterContextFile.managedClusters} (hub / QE script shape). */
 export interface ManagedClusterEntry {
   name: string;
@@ -59,4 +64,21 @@ export function getPrimaryManagedCluster(
   ctx: ManagedClusterContextFile | undefined
 ): ManagedClusterEntry | undefined {
   return ctx?.managedClusters?.[0];
+}
+
+/** `test.skip()` when `.auth/managedClusters.json` has no clusters; returns the primary entry when present. */
+export function skipUnlessPrimaryManagedCluster(
+  test: PlaywrightTestSkip,
+  ctx: ManagedClusterContextFile | undefined,
+  contextLabel = 'Managed cluster ALC test'
+): ManagedClusterEntry | undefined {
+  const entry = getPrimaryManagedCluster(ctx);
+  if (!entry?.name?.trim()) {
+    test.skip(
+      true,
+      `${contextLabel}: no managed cluster in managedClusters.json (run globalSetup cluster prep or set MANAGED_CLUSTER_CONTEXT_PATH)`
+    );
+    return undefined;
+  }
+  return entry;
 }

@@ -1,8 +1,36 @@
-import { exec, execFile } from 'child_process';
+import { exec, execFile, spawn } from 'child_process';
 import { promisify } from 'util';
 
 const execPromise = promisify(exec);
 const execFilePromise = promisify(execFile);
+
+type PlacementJson = {
+  spec?: {
+    clusterSets?: string[];
+    predicates?: {
+      requiredClusterSelector?: {
+        labelSelector?: {
+          matchExpressions?: { key?: string; operator?: string; values?: string[] }[];
+        };
+      };
+    }[];
+  };
+};
+
+type PlacementDecisionJson = {
+  status?: {
+    numberOfClusters?: number;
+    decisions?: unknown[];
+  };
+};
+
+type SubscriptionJson = {
+  spec?: {
+    placement?: {
+      placementRef?: { kind?: string; name?: string };
+    };
+  };
+};
 
 /** Minimal validation so `applicationName` / `namespace` are safe as `oc` argv (no shell). */
 function assertSafeOcSingleArg(value: string, field: string): void {
@@ -121,5 +149,139 @@ export class OcCliService {
       { encoding: 'utf8', maxBuffer: 1024 * 1024 }
     );
     return stdout.trim();
+  }
+
+  /**
+   * Idempotent **ManagedClusterSetBinding** (Cypress `git-local.yaml`) so PlacementDecision can match clusters
+   * in the application namespace when using `clusterSets: [global]`.
+   */
+  async ensureManagedClusterSetBinding(namespace: string, clusterSet: string): Promise<void> {
+    assertSafeOcSingleArg(namespace, 'namespace');
+    const set = clusterSet.trim();
+    if (!set || set.length > 63 || !/^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/.test(set)) {
+      throw new Error(`OcCliService: invalid clusterSet (${JSON.stringify(clusterSet)})`);
+    }
+    const manifest = [
+      'apiVersion: cluster.open-cluster-management.io/v1beta2',
+      'kind: ManagedClusterSetBinding',
+      'metadata:',
+      `  name: ${set}`,
+      `  namespace: ${namespace}`,
+      'spec:',
+      `  clusterSet: ${set}`,
+      '',
+    ].join('\n');
+    await this.applyManifestFromStdin(manifest);
+  }
+
+  private applyManifestFromStdin(manifest: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const child = spawn('oc', ['apply', '-f', '-'], { stdio: ['pipe', 'pipe', 'pipe'] });
+      let stderr = '';
+      child.stderr.setEncoding('utf8');
+      child.stderr.on('data', (chunk: string) => {
+        stderr += chunk;
+      });
+      child.on('error', reject);
+      child.on('close', (code) => {
+        if (code === 0) {
+          resolve();
+          return;
+        }
+        reject(new Error(stderr.trim() || `oc apply -f - exited with code ${code}`));
+      });
+      child.stdin.write(manifest);
+      child.stdin.end();
+    });
+  }
+
+  /** `spec.clusterSets` on a **Placement** CR. */
+  async getPlacementClusterSets(namespace: string, placementName: string): Promise<string[]> {
+    const placement = await this.getPlacementJson(namespace, placementName);
+    return placement.spec?.clusterSets ?? [];
+  }
+
+  /**
+   * Label selector **values** for `labelKey` from the first predicate's `matchExpressions` entry.
+   */
+  async getPlacementLabelSelectorValues(
+    namespace: string,
+    placementName: string,
+    labelKey: string
+  ): Promise<string[]> {
+    const placement = await this.getPlacementJson(namespace, placementName);
+    const expressions =
+      placement.spec?.predicates?.[0]?.requiredClusterSelector?.labelSelector?.matchExpressions ?? [];
+    const match = expressions.find((e) => e.key === labelKey);
+    return match?.values ?? [];
+  }
+
+  /**
+   * **Placement** name from `subscription.spec.placement.placementRef` (wizard edit may create `placement-3`, etc.).
+   */
+  async getSubscriptionPlacementRefName(
+    namespace: string,
+    subscriptionName: string
+  ): Promise<string | undefined> {
+    assertSafeOcSingleArg(namespace, 'namespace');
+    assertSafeOcSingleArg(subscriptionName, 'subscriptionName');
+    try {
+      const { stdout } = await execFilePromise(
+        'oc',
+        ['get', 'subscription', subscriptionName, '-n', namespace, '-o', 'json'],
+        { encoding: 'utf8', maxBuffer: 1024 * 1024 }
+      );
+      const parsed = JSON.parse(stdout) as SubscriptionJson;
+      return parsed.spec?.placement?.placementRef?.name?.trim() || undefined;
+    } catch (err: unknown) {
+      const stderr =
+        err && typeof err === 'object' && 'stderr' in err ? String((err as { stderr?: unknown }).stderr) : '';
+      if (/NotFound|not found/i.test(stderr)) {
+        return undefined;
+      }
+      throw err;
+    }
+  }
+
+  /**
+   * Matched cluster count from **PlacementDecision** status (`{placementName}-decision-1`).
+   */
+  async getPlacementDecisionClusterCount(
+    namespace: string,
+    placementName: string
+  ): Promise<number> {
+    assertSafeOcSingleArg(namespace, 'namespace');
+    assertSafeOcSingleArg(placementName, 'placementName');
+    const decisionName = `${placementName}-decision-1`;
+    try {
+      const { stdout } = await execFilePromise(
+        'oc',
+        ['get', 'placementdecision', decisionName, '-n', namespace, '-o', 'json'],
+        { encoding: 'utf8', maxBuffer: 1024 * 1024 }
+      );
+      const parsed = JSON.parse(stdout) as PlacementDecisionJson;
+      if (typeof parsed.status?.numberOfClusters === 'number') {
+        return parsed.status.numberOfClusters;
+      }
+      return parsed.status?.decisions?.length ?? 0;
+    } catch (err: unknown) {
+      const stderr =
+        err && typeof err === 'object' && 'stderr' in err ? String((err as { stderr?: unknown }).stderr) : '';
+      if (/NotFound|not found/i.test(stderr)) {
+        return 0;
+      }
+      throw err;
+    }
+  }
+
+  private async getPlacementJson(namespace: string, placementName: string): Promise<PlacementJson> {
+    assertSafeOcSingleArg(namespace, 'namespace');
+    assertSafeOcSingleArg(placementName, 'placementName');
+    const { stdout } = await execFilePromise(
+      'oc',
+      ['get', 'placement', placementName, '-n', namespace, '-o', 'json'],
+      { encoding: 'utf8', maxBuffer: 1024 * 1024 }
+    );
+    return JSON.parse(stdout) as PlacementJson;
   }
 }
