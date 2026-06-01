@@ -217,4 +217,3 @@ fragments:
         # Details tab **Clusters** line for label placement to `local-cluster` (console-e2e Details verifier).
         detailsClustersSummary:
           variant: localOnly
-

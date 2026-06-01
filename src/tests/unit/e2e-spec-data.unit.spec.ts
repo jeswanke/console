@@ -4,7 +4,6 @@
 import path from 'path';
 import { expect, test } from '@playwright/test';
 import {
-  buildResolvedAppScenario,
   clearE2eSpecDataCache,
   findScenarioIdsByTestId,
   loadE2eSpecData,

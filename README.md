@@ -42,7 +42,7 @@ npx playwright install chromium
 | **`setup`**    | Auth (`auth.setup.ts`) → **`.auth/user.json`**                                     |
 | **`alc`**      | **Application Lifecycle** — `src/tests/app/**/*.spec.ts` (use **`--project alc`**) |
 | **`chromium`** | Other UI tests (e.g. **`src/tests/cluster/**`**) — excludes **`app/**`**           |
-| **`unit`**     | YAML / loader tests — `src/tests/unit/**/*.unit.spec.ts` (no hub)                |
+| **`unit`**     | YAML / loader tests — `src/tests/unit/**/*.unit.spec.ts` (no hub)                  |
 
 **GitOps prep** in **`src/global-setup/gitOpsPrep.ts`** runs only when **`E2E_GITOPS_PREP`** is enabled (**`1/true/yes`**, set to `1` by default in **`./start.sh alc`**) **and** **`--project`** includes **`alc`** (and the run is not unit-only). Use **`E2E_GITOPS_PREP=0`** to disable. Non-ALC runs (e.g. **`--project chromium`**) skip GitOps even if the env is set.
 
