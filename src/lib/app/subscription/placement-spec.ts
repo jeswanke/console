@@ -11,9 +11,7 @@ export type ClusterLabelDeploymentParams = {
   useExistingPlacementRule?: boolean;
 };
 
-/**
- * Label-selector placement block for the subscription wizard (Cypress cluster deployment section).
- */
+/** Label-selector placement block for the subscription wizard. */
 export function buildClusterLabelDeployment(
   params: ClusterLabelDeploymentParams
 ): ClusterDeploymentSpec {
@@ -39,9 +37,7 @@ export function buildLocalClusterLabelDeployment(): ClusterDeploymentSpec {
   });
 }
 
-/**
- * **Global** cluster set + `name` label selecting `local-cluster` and a managed cluster (Cypress `editDeployOnAll`).
- */
+/** Global cluster set + `name` label for local-cluster and a managed cluster. */
 export function buildGlobalClusterLabelDeployment(managedClusterName: string): ClusterDeploymentSpec {
   return buildClusterLabelDeployment({
     clusterSet: 'global',

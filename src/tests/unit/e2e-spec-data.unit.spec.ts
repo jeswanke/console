@@ -236,7 +236,7 @@ test.describe('e2e-spec-data YAML processing', () => {
     });
   });
 
-  test('auto_git_placement_topology: helloworld + local placement (RHACM4K-39232 / Cypress git-local names)', () => {
+  test('auto_git_placement_topology: helloworld + local placement (RHACM4K-39232)', () => {
     const spec = loadE2eSpecData(E2E_SPEC_DATA_DIR);
     expect(spec.scenarios.auto_git_placement_topology?.blocks?.[0]?.use).toContain('placement_label_local');
 

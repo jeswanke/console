@@ -4,10 +4,7 @@
 import { expect, type Page } from '@playwright/test';
 
 
-/**
- * Reads the value for a **labeled** field in a visible topology drawer panel (Cypress `span.label` + sibling).
- * Returns `undefined` when no visible panel contains the label.
- */
+/** Labeled field value from a visible topology drawer panel. */
 export async function readTopologyDrawerLabeledField(
   page: Page,
   label: string | RegExp,

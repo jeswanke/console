@@ -152,7 +152,7 @@ export class OcCliService {
   }
 
   /**
-   * Idempotent **ManagedClusterSetBinding** (Cypress `git-local.yaml`) so PlacementDecision can match clusters
+   * Idempotent **ManagedClusterSetBinding** so PlacementDecision can match clusters
    * in the application namespace when using `clusterSets: [global]`.
    */
   async ensureManagedClusterSetBinding(namespace: string, clusterSet: string): Promise<void> {

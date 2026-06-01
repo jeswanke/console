@@ -22,18 +22,7 @@ function escapeRegExp(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-/**
- * Applications list page (Application Lifecycle).
- *
- * Route: /multicloud/applications
- * Contains: page title, Overview / Advanced configuration tabs, toolbar, applications table.
- *
- * For **Create application → Subscription** wizard locators, see **`SubscriptionApplicationCreateWizardPage`**
- * (`src/pages/app/SubscriptionApplicationCreateWizardPage.ts`).
- *
- * For **single application** Topology / Details, see **`ApplicationDetailsPage`**
- * (`src/pages/app/ApplicationDetailsPage.ts`).
- */
+/** Applications list (`/multicloud/applications`). Wizard: {@link SubscriptionApplicationCreateWizardPage}. */
 export class ApplicationListPage extends BasePage {
   readonly applicationsTable: ApplicationsTable;
 
@@ -45,15 +34,8 @@ export class ApplicationListPage extends BasePage {
     this.applicationsTable = new ApplicationsTable(page);
   }
 
-  /**
-   * List view can keep transient spinners (table refresh, health) while the page is usable.
-   * Wait for stable, user-facing readiness instead of global `.pf-v6-c-spinner` count 0.
-   *
-   * **Advanced configuration** does not mount the Overview toolbar — `#application-create` is absent; readiness is
-   * heading + skeleton only (empty state uses a **Create application** link, not the toolbar control).
-   */
   private async waitForApplicationsListReady(options?: {
-    /** When `false`, do not wait for `#application-create` (Advanced tab). Default `true` (Overview). */
+    /** Default true (Overview). Set false on Advanced tab. */
     requireOverviewCreateToolbar?: boolean;
   }): Promise<void> {
     const requireToolbar = options?.requireOverviewCreateToolbar !== false;

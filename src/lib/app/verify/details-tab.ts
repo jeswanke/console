@@ -1,7 +1,4 @@
-/**
- * **Details** tab verification for a subscription application. Callers must show **Details** first
- * (e.g. {@link ApplicationDetailsPage.navigateToApplicationTab}).
- */
+/** Subscription app **Details** tab assertions (caller must open Details first). */
 
 import { expect, type Locator, type Page } from '@playwright/test';
 
@@ -10,12 +7,7 @@ import type { ApplicationDetailsPage } from '@pages/app/ApplicationDetailsPage';
 
 import { expectApplicationDetailsUrl, expectOpenShiftShellTitle } from '../topology/graph-ids';
 
-/**
- * Expected **Clusters** DescriptionList value on subscription app **Details** (hub wording):
- * - **Local only** (placement only local cluster): `Local`
- * - **Remote only**: `{n} Remote`
- * - **Local + remotes**: `{n} Remote, 1 Local`
- */
+/** Details **Clusters** value patterns: `Local`, `{n} Remote`, or `{n} Remote, 1 Local`. */
 export type SubscriptionDetailsClustersSummary =
   | { variant: 'localOnly' }
   | { variant: 'remoteOnly'; remoteCount: number }
@@ -65,10 +57,7 @@ export function subscriptionDetailsClusterResourceTotalPattern(expectedCount: nu
   return new RegExp(`^\\s*${expectedCount}\\s*$`);
 }
 
-/**
- * Cypress `validateTopology` / `successNumber`: on **Details**, at least one green status label shows a count
- * ≥ `minCount` (PF5 `.pf-m-green` or PF6 `AcmInlineStatusGroup` listitems). Call while **Details** tab is active.
- */
+/** Details **Cluster resource status** green label count ≥ `minCount`. */
 export async function expectApplicationDetailsMinSuccessResourceCount(
   detailsPage: ApplicationDetailsPage,
   minCount: number,
@@ -94,7 +83,7 @@ export async function expectApplicationDetailsMinSuccessResourceCount(
 async function largestNumericLabelInClusterResourceStatus(statusValue: Locator): Promise<number> {
   let max = 0;
 
-  // Cypress: `.pf-m-green` → `[class*="c-label__content"]` (PF6 uses `pf-v6-c-label__text` in the same node).
+  // PF6: `.pf-m-green` → `c-label__text` or `c-label__content`.
   const greenLabels = statusValue.locator(
     '.pf-m-green [class*="c-label__content"], .pf-m-green [class*="c-label__text"]'
   );
@@ -231,33 +220,14 @@ export type VerifySubscriptionAppDetailsTabParams = {
   detailsPage: ApplicationDetailsPage;
   applicationName: string;
   namespace: string;
-  /**
-   * Expected **Clusters** cell copy. Prefer **`applicationExpectations.detailsClustersSummary`** from e2e-spec-data;
-   * pass this only to override config for a one-off test.
-   */
+  /** Override e2e-spec `detailsClustersSummary`. */
   clustersSummary?: SubscriptionDetailsClustersSummary;
-  /**
-   * Resolved **`applicationExpectations`** domain hints (currently `detailsClustersSummary`) for Details-tab checks.
-   */
   applicationExpectations?: ApplicationExpectationsDetailsHints;
-  /**
-   * Optional explicit Repository assertions. When set, URLs (and optional kind labels) are checked by exact count.
-   * When omitted, only generic non-empty repository content is asserted.
-   */
   expectedRepositories?: SubscriptionDetailsRepositoryExpectation[];
-  /**
-   * Optional source repositories from subscription options (`url` + `kind`); converted internally to expected
-   * repository assertions. Ignored when {@link expectedRepositories} is provided.
-   */
   repositories?: ReadonlyArray<SubscriptionDetailsRepositorySource>;
-  /** Wait for post–Create redirect to **Details** (default 120s). */
   detailsUrlTimeout?: number;
-  /** Wait for eventually-populated Details values (Clusters / Cluster resource status). */
   detailsValuesTimeout?: number;
-  /**
-   * When set, **Cluster resource status** value must match (multi-subscription Details reflects **`#comboChannel`**).
-   * Default is any positive integer substring via {@link subscriptionDetailsClusterResourceStatusAnyPattern}.
-   */
+  /** Multi-subscription CRS reflects `#comboChannel`; default any digit. */
   clusterResourceStatusPattern?: RegExp;
 };
 
@@ -270,11 +240,7 @@ function resolveDetailsClustersSummary(
   return undefined;
 }
 
-/**
- * Asserts URL, shell title, **Details** tab selection, `h1`, and DescriptionList fields (including **Clusters**,
- * **Cluster resource status**, **Created**, **Last sync requested**). Does not navigate — caller must already be on
- * **Details** (e.g. after {@link ApplicationDetailsPage.navigateToApplicationTab}).
- */
+/** Asserts Details URL, tab, h1, and DescriptionList fields. Does not navigate. */
 export async function verifySubscriptionAppDetailsTab(
   params: VerifySubscriptionAppDetailsTabParams
 ): Promise<void> {

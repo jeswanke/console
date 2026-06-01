@@ -1,10 +1,4 @@
-/**
- * ACM subscription-app **topology** graph: stable `data-id` values on `g[data-kind=node]` inside
- * `[data-test-id="topology"]` (PF topology surface). Captured with **Playwriter** against a live hub
- * (`auto-git-multi` / `auto-git-multi-ns`).
- *
- * @see {@link APP_APPLICATION_TOPOLOGY.graphSurfaceTestId}
- */
+/** Topology graph `data-id` builders for subscription apps. */
 
 import { expect, type Locator, type Page } from '@playwright/test';
 

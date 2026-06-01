@@ -37,26 +37,8 @@ export default defineConfig({
   },
 
   /*
-   * Projects — each test project uses testMatch to own its directories.
-   *
-   * Auth setup:
-   *   setup       — admin login (always runs)
-   *   rbac-setup  — RBAC user login (only runs when a dependent project has matching tests)
-   *
-   * Test projects (admin only):
-   *   cluster     — src/tests/cluster/
-   *   alc         — src/tests/app/** (Application Lifecycle; `./start.sh alc`)
-   *
-   * Test projects (admin + RBAC users):
-   *   fg-rbac     — src/tests/fg-rbac/
-   *
-   *   unit        — src/tests/unit/** (no hub login)
-   *
-   * CLI examples:
-   *   npx playwright test --project=cluster           → setup → cluster tests
-   *   npx playwright test --project=alc               → setup → app ALC tests
-   *   npx playwright test --project=fg-rbac           → setup + rbac-setup → fg-rbac tests
-   *   RBAC_DOMAIN=fg-rbac npx playwright test         → rbac-setup only authenticates fg-rbac users
+   * Projects: setup → admin auth; rbac-setup → RBAC users; cluster / alc / fg-rbac / unit by testMatch.
+   * ALC: `./start.sh alc` (--project alc).
    */
   projects: [
     {

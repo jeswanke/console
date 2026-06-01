@@ -12,13 +12,7 @@ import { expectTopologyGraphContainsNodeDataIds } from '@lib/app/topology/graph-
 import { expectVisibleTopologyDrawerContains } from '@lib/app/topology/drawer';
 import { normalizeConsolePathname, pageUrlPathnameEquals } from '@utils/console-navigation';
 
-/**
- * ACM **single application** console view: Topology / Details (and other tab slugs on the same route family).
- *
- * **Route:** `/multicloud/applications/details/{namespace}/{name}/{tabSlug}` (e.g. `…/details` after Create).
- * Constants in {@link APP_APPLICATION_DETAILS} / {@link APP_APPLICATION_TOPOLOGY} were captured from a live hub
- * (Playwriter) — subscription app Topology + Details, en.
- */
+/** Subscription app Details / Topology page (`/multicloud/applications/details/{ns}/{name}/{tab}`). */
 export class ApplicationDetailsPage extends BasePage {
   constructor(
     page: Page,
@@ -27,18 +21,12 @@ export class ApplicationDetailsPage extends BasePage {
     super(page);
   }
 
-  /**
-   * Whether the browser URL path is already this application’s tab (`pathname` match, query ignored).
-   */
   isOnApplicationTab(namespace: string, name: string, tab: AppApplicationDetailsTabKey): boolean {
     const slug = APP_APPLICATION_DETAILS.tabs[tab].slug;
     return pageUrlPathnameEquals(this.page, APP_ROUTES.detailsTab(namespace, name, slug));
   }
 
-  /**
-   * Whether the URL is already this subscription app’s **Details / Topology** route (any tab under
-   * {@link APP_ROUTES.details}).
-   */
+  /** Any tab under this app’s details route (pathname prefix). */
   isOnApplicationShell(namespace: string, name: string): boolean {
     try {
       const current = normalizeConsolePathname(new URL(this.page.url()).pathname);
@@ -49,10 +37,7 @@ export class ApplicationDetailsPage extends BasePage {
     }
   }
 
-  /**
-   * Shows **Details** or **Topology**: uses {@link openDetailTab} when already on this app’s shell; otherwise
-   * {@link goto} (full URL). Then waits for the secondary tablist — URL can match while the shell is still **Loading**.
-   */
+  /** Open tab via URL, in-shell tab click, or wait if already on tab; then wait for tablist chrome. */
   async navigateToApplicationTab(
     namespace: string,
     name: string,
@@ -68,10 +53,6 @@ export class ApplicationDetailsPage extends BasePage {
     await this.waitForApplicationDetailsTabChrome();
   }
 
-  /**
-   * Open application details at a given tab (`details` default — post–Create redirect target in observed flow).
-   * Skips `page.goto` when already on that tab’s URL, then still waits for load.
-   */
   async goto(
     namespace: string,
     name: string,
@@ -92,10 +73,7 @@ export class ApplicationDetailsPage extends BasePage {
     return this.page.getByRole('heading', { level: 1 });
   }
 
-  /**
-   * Tablist that contains **Topology** / **Details** (scoped by tab labels — avoids unrelated page tablists).
-   * Uses the Topology tab label in the filter only (not {@link getDetailTab}) to avoid circular resolution.
-   */
+  /** Tablist containing Topology / Details (filtered by Topology tab label). */
   getApplicationDetailsTablist(): Locator {
     return this.page.getByRole('tablist').filter({
       has: this.page.getByRole('tab', { name: APP_APPLICATION_DETAILS.tabs.topology.label }),
@@ -109,10 +87,7 @@ export class ApplicationDetailsPage extends BasePage {
     });
   }
 
-  /**
-   * Subscription app secondary nav mounts after route + async work; {@link BasePage.waitForLoad} alone can pass
-   * while a hub **Loading** progress UI still hides the tablist.
-   */
+  /** Waits for secondary nav tablist (URL can match before shell finishes loading). */
   async waitForApplicationDetailsTabChrome(options?: { timeout?: number }): Promise<void> {
     const timeout = options?.timeout ?? 120_000;
     await expect(this.getApplicationDetailsTablist()).toBeVisible({ timeout });
@@ -169,10 +144,7 @@ export class ApplicationDetailsPage extends BasePage {
     });
   }
 
-  /**
-   * **Topology** tab panel — PF may omit `role="tabpanel"` on some hubs; prefer {@link getTopologySurface} for graph
-   * `data-id` / SVG queries.
-   */
+  /** Prefer {@link getTopologySurface} for graph queries — tabpanel role may be absent. */
   getTopologyTabPanel(): Locator {
     return this.page.getByRole('tabpanel', {
       name: APP_APPLICATION_DETAILS.tabs.topology.label,
@@ -180,12 +152,10 @@ export class ApplicationDetailsPage extends BasePage {
     });
   }
 
-  /** PF topology **`data-test-id`** wrapper around the `svg` graph (`g[data-kind=node][data-id=…]`). */
   getTopologySurface(): Locator {
     return this.page.locator(`[data-test-id="${APP_APPLICATION_TOPOLOGY.graphSurfaceTestId}"]`);
   }
 
-  /** Graph **node** group (`g`) with ACM `data-id` (Playwriter — subscription app topology). */
   getTopologyGraphNodeByDataId(dataId: string): Locator {
     return this.getTopologySurface().locator(
       `g[data-kind=node][data-type=node][data-id="${dataId}"]`
@@ -216,26 +186,16 @@ export class ApplicationDetailsPage extends BasePage {
     await expectVisibleTopologyDrawerContains(this.page, pattern, options);
   }
 
-  /**
-   * A topology graph **node** implemented as a `button` (channel / subscription combo, legend, toolbar).
-   * Scoped to **`main`** because `role="tabpanel"` may be absent on some hubs.
-   */
+  /** Topology node `button` (scoped to `main` when tabpanel is missing). */
   getTopologyNodeButtonByName(name: string | RegExp): Locator {
     return this.page.getByRole('main').getByRole('button', { name });
   }
 
-  /**
-   * Channel / subscription **combo** (`#comboChannel`) — only when **multiple** subscriptions/repos; lives next to
-   * the SVG surface, not always inside `role="tabpanel"`.
-   */
+  /** Multi-subscription scope menu (`#comboChannel`). */
   getTopologyChannelComboNode(): Locator {
     return this.page.locator(`#${APP_APPLICATION_TOPOLOGY.graphElementIds.channelCombo}`);
   }
 
-  /**
-   * PF6 **MenuToggle** for topology **subscription scope** (`All Subscriptions` vs each Subscription CR name).
-   * Same element as {@link getTopologyChannelComboNode} (`#comboChannel`).
-   */
   getTopologySubscriptionScopeToggle(): Locator {
     return this.getTopologyChannelComboNode();
   }
@@ -259,10 +219,7 @@ export class ApplicationDetailsPage extends BasePage {
     await expect(toggle).toHaveAttribute('aria-label', subscriptionCrName);
   }
 
-  /**
-   * Subscription app **Details** DescriptionList (`dl` after the page `h1`). Scopes `dt`/`dd` lookups so
-   * page-level `dt.first()` never resolves to **Name** when another list is absent or still loading.
-   */
+  /** Details DescriptionList (`dl` after `h1`) — avoids page-level `dt.first()` mismatches. */
   getDetailsDescriptionList(): Locator {
     return this.getApplicationHeading().locator('xpath=following::dl[1]');
   }
@@ -277,9 +234,6 @@ export class ApplicationDetailsPage extends BasePage {
     return byRole.or(byDt).first();
   }
 
-  /**
-   * Value cell beside a term (`dd`) — first following sibling in the DescriptionList pair.
-   */
   getDescriptionValue(term: keyof typeof APP_APPLICATION_DETAILS.descriptionTerms): Locator {
     return this.getDescriptionTerm(term).locator('xpath=following-sibling::dd[1]');
   }
@@ -318,9 +272,7 @@ export class ApplicationDetailsPage extends BasePage {
       .toBe(true);
   }
 
-  /**
-   * Clicks **Sync** on Details and confirms **Synchronize** in the modal. Caller should already be on **Details**.
-   */
+  /** Clicks Sync on Details and confirms the modal. Caller must already be on Details. */
   async syncApplication(options?: { timeout?: number }): Promise<void> {
     const enableTimeout = options?.timeout ?? 60_000;
     await this.waitForSyncApplicationLinkEnabled({ timeout: enableTimeout });

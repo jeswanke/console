@@ -1,7 +1,4 @@
-/**
- * Hub **SLI** checks via `oc get`: waits until names from e2e-spec **`applicationExpectations`**
- * (`clusterResources`) and default Subscription / Placement CR names appear in the app namespace.
- */
+/** Poll `oc get` until e2e-spec clusterResources (+ optional Subscription/Placement) exist. */
 
 import type { ApplicationExpectationsPayload } from '@config/e2e-spec-loader/domains/application-expectations/applicationExpectationsSchema';
 import type { OcCliService } from '@services/OcCliService';
@@ -159,8 +156,7 @@ export type ExpectOrphanedAlcResourcesAfterApplicationDeleteViaOcParams = {
 };
 
 /**
- * After UI **Delete application** without **Remove application related resources**: Application CR is gone;
- * Subscription (and Placement, when applicable) CRs remain on the hub. Channels are asserted via Advanced UI.
+ * After delete-without-related-resources: Application gone; Subscription/Placement CRs remain.
  */
 export async function expectOrphanedAlcResourcesAfterApplicationDeleteViaOc(
   params: ExpectOrphanedAlcResourcesAfterApplicationDeleteViaOcParams

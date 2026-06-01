@@ -78,7 +78,7 @@ scenarios:
         applicationName: auto-git-helloworld
         namespace: auto-git-helloworld-ns
 
-  # RHACM4K-39232: helloworld + label placement (local-cluster); Cypress git-local app/namespace names.
+  # RHACM4K-39232: helloworld + label placement (local-cluster).
   auto_git_placement_topology:
     enabled: true
     tests:
@@ -96,7 +96,7 @@ scenarios:
         applicationName: api-git-local
         namespace: api-git-local-ns
 
-  # RHACM4K-39666: Git repo URL with underscore (`ruici-h/app_samples`); online placement (Cypress parity).
+  # RHACM4K-39666: Git repo URL with underscore (`ruici-h/app_samples`); online placement.
   auto_git_underscore:
     enabled: true
     tests:

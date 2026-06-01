@@ -4,7 +4,7 @@ import type { OcCliService } from '@services/OcCliService';
 
 /**
  * Polls until `oc get <resource> -n <namespace>` stdout contains the expected substring.
- * Use from tests after UI changes when workload rollout may lag (mirrors Cypress `cy.exec` + wait patterns).
+ * Use after UI changes when workload rollout may lag.
  */
 export async function expectOcGetListContains(
   oc: OcCliService,

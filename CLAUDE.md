@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-This is a **Playwright-based E2E test framework** for **Red Hat Advanced Cluster Management (ACM)** console. It replaces the legacy Cypress framework at `/Users/dhuynh/projects/clc-ui-e2e`. The framework uses a **Hybrid Testing Architecture** — UI interactions for testing the UI, CLI/API operations for test data setup and teardown.
+This is a **Playwright-based E2E test framework** for **Red Hat Advanced Cluster Management (ACM)** console. It replaces the legacy Cypress framework at `clc-ui-e2e` / `application-ui-test`. The framework uses a **Hybrid Testing Architecture** — UI interactions for testing the UI, CLI/API operations for test data setup and teardown.
 
 **Stack:** TypeScript, Playwright, PatternFly 6, OpenShift CLI (`oc`)
 
@@ -92,36 +92,30 @@ test('admin creates, viewer verifies', async ({ page, asUser }) => {
 4. **Locators:** Prefer `getByRole()`, `getByText()`, or stable `data-testid` attributes. Avoid raw CSS classes unless wrapped in a Component. Use element IDs for menu items (e.g., `#hibernate-cluster`).
 5. **No `testIsolation: false` patterns:** Each test should be independent. Use `test.describe.serial()` only for genuinely sequential workflows. Use API setup/teardown instead of relying on previous test state.
 
-## Cypress Reference
+## Cypress reference (migration)
 
-The original Cypress tests are at `/Users/dhuynh/projects/clc-ui-e2e`. Reference when migrating:
+Legacy tests live in **`application-ui-test`** / **`clc-ui-e2e`**. Use when porting coverage:
 
-- `cypress/views/` — Selector patterns and page interaction methods
-- `cypress/tests/` — Test logic and workflows to replicate
-- `cypress/apis/` — Backend API patterns (translate to OcCliService or k8s API calls)
-- `PF6_MIGRATION_GUIDE.md` — PatternFly 6 selector patterns (also copied to this repo)
+- `cypress/views/` — selector patterns and page interaction methods
+- `cypress/tests/` — workflows to replicate in Playwright
+- `cypress/apis/` — backend patterns → `OcCliService` or k8s API calls
+- `PF6_MIGRATION_GUIDE.md` — PatternFly 5 → 6 selector changes
 
-### Key Selector Mappings (Cypress → Playwright)
+### Cypress → Playwright (common mappings)
 
-| Cypress Pattern                                            | Playwright Equivalent                                    |
-| ---------------------------------------------------------- | -------------------------------------------------------- |
-| `cy.get('#hibernate-cluster').click()`                     | `page.locator('#hibernate-cluster').click()`             |
-| `cy.findByRole('menuitem', { name: /Resume/i })`           | `page.getByRole('menuitem', { name: /Resume/i })`        |
-| `cy.get('button.pf-v6-c-tabs__link').contains('Overview')` | `page.getByRole('tab', { name: 'Overview' })`            |
-| `cy.get('.pf-v6-c-chip__text, .pf-v6-c-label__text')`      | `page.locator('.pf-v6-c-label__text')` (PF6 uses Labels) |
-| `cy.waitUntil(() => ...)`                                  | `await expect(locator).toBeVisible({ timeout: 30000 })`  |
-| `cy.get('button').contains(text).click()`                  | `page.getByRole('button', { name: text }).click()`       |
+| Cypress | Playwright |
+| ------- | ---------- |
+| `cy.get('#hibernate-cluster').click()` | `page.locator('#hibernate-cluster').click()` |
+| `cy.findByRole('menuitem', { name: /Resume/i })` | `page.getByRole('menuitem', { name: /Resume/i })` |
+| `cy.get('button.pf-v6-c-tabs__link').contains('Overview')` | `page.getByRole('tab', { name: 'Overview' })` |
+| `cy.waitUntil(() => …)` | `await expect(locator).toBeVisible({ timeout })` |
 
-### Patterns to Avoid from Cypress
+### Patterns to avoid (from the Cypress repo)
 
-These caused significant issues in the Cypress repo:
-
-- **Broad selectors:** `cy.get('button').contains(text)` matched wrong elements (Lightspeed AI popover). Always scope with IDs or roles.
-- **`a[text="..."]` selectors:** Invalid HTML attribute selectors that broke in PF6. Use element IDs or ARIA roles.
-- **2400-line monolith files:** `managedCluster.js` mixed selectors, methods, and constants. Keep page objects focused and small.
-- **Shared test state:** `testIsolation: false` caused cascade failures (hibernate test fails → resume test starts from wrong state → bulk test fails). Playwright's default isolation prevents this.
-- **Custom `buttonShouldClickable` workarounds:** Cypress needed manual wait-until-clickable. Playwright's `click()` auto-waits for actionability.
-- **Hardcoded `cy.wait(5000)`:** Replace with proper assertions or Playwright auto-waiting.
+- Broad `cy.get('button').contains(text)` — Lightspeed popover collisions; use IDs/roles.
+- `a[text="…"]` — invalid in PF6; use IDs or ARIA.
+- Shared test state / `testIsolation: false` — prefer isolated tests + API setup.
+- Hardcoded `cy.wait(5000)` — use assertions or Playwright auto-wait.
 
 ## PatternFly 6 Selectors
 
@@ -146,6 +140,6 @@ See `PF6_MIGRATION_GUIDE.md` for the complete reference. Key points:
 ### Environment
 
 - Hub cluster must be logged in via `oc login` before tests run
-- `CYPRESS_SPOKE_CLUSTER` / spoke cluster env vars identify managed clusters for E2E tests
+- `CYPRESS_SPOKE_CLUSTER` (legacy Cypress env) / spoke names from `.auth/managedClusters.json` for managed-cluster tests
 - Clusters take 8+ minutes to hibernate/resume — tests must account for this
 - Lightspeed AI plugin adds popover buttons that can interfere with UI selectors

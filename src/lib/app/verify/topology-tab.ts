@@ -1,12 +1,4 @@
-/**
- * **Topology** tab verification for a subscription application: graph `data-id`s, scope menu, drawer checks.
- * Composes {@link topology/graph-ids} builders with {@link ApplicationDetailsPage}.
- * Multi-subscription: pass {@link VerifySubscriptionAppTopologyTabParams.mergedSubscriptionBlocks} (≥2 blocks),
- * {@link VerifySubscriptionAppTopologyTabParams.subscriptionScope} (`initial` / `all` / CR name), and optional
- * {@link VerifySubscriptionAppTopologyTabParams.topologyMergeBlockIndices} to assert a single subscription’s graph.
- *
- * @see {@link verifySubscriptionAppDetailsTab} — callers navigate to **Topology** before this helper.
- */
+/** Topology tab: graph nodes, `#comboChannel` scope, drawer checks. Caller opens Topology first. */
 
 import { expect, type Locator, type Page } from '@playwright/test';
 
@@ -70,12 +62,7 @@ export type TopologyDrawerSpotCheck = {
 
 export type TopologySubscriptionScopeParam =
   | 'all'
-  /**
-   * Multi-subscription only: leave **`#comboChannel`** on the hub default (first subscription). Use for the first
-   * Topology pass after Create when the graph should match subscription block 1 only.
-   */
-  | 'initial'
-  /** Subscription CR name (e.g. `app-subscription-1`) — must match `menuitem` label. */
+  | 'initial' // multi-sub: leave `#comboChannel` on first subscription
   | { subscriptionCrName: string };
 
 export type VerifySubscriptionAppTopologyTabParams = {
@@ -83,39 +70,17 @@ export type VerifySubscriptionAppTopologyTabParams = {
   detailsPage: ApplicationDetailsPage;
   applicationName: string;
   namespace: string;
-  /**
-   * Single block (default): `clusterResources[blockIndex - 1]` shape.
-   * Omit when {@link mergedSubscriptionBlocks} is set.
-   */
   blockIndex?: number;
   clusterResourceRows?: TopologyClusterResourceRef[];
-  /**
-   * Multi-repo / multi-subscription: defines every subscription block (enables **`#comboChannel`** when length ≥ 2).
-   * Graph node ids / drawers use {@link topologyMergeBlockIndices} when set, otherwise all blocks merged.
-   */
   mergedSubscriptionBlocks?: { blockIndex: number; clusterResourceRows: TopologyClusterResourceRef[] }[];
-  /**
-   * With {@link mergedSubscriptionBlocks}, restrict expected graph **`data-id`**s to these **1-based** block indices
-   * (e.g. `[1]` = first subscription only, `[2]` = second, omit = merged graph for every block).
-   */
+  /** 1-based block indices for multi-sub graph scope. */
   topologyMergeBlockIndices?: number[];
-  /**
-   * Topology **`#comboChannel`** PF6 MenuToggle — only when **more than one** subscription exists.
-   * **`'initial'`** (default when omitted): do not open the menu — first subscription stays selected.
-   * **`'all'`** or **`{ subscriptionCrName }`**: apply that scope before polling the graph.
-   */
   subscriptionScope?: TopologySubscriptionScopeParam;
-  /** Poll until all graph node `data-id`s exist (default 120s). */
   nodeHydrationTimeout?: number;
-  /** Optional: click nodes and assert side-panel content (defaults to full block / merged builder when omitted). */
   drawerSpotChecks?: TopologyDrawerSpotCheck[];
 };
 
-/**
- * Asserts URL / title / graph chrome (caller must already be on **Topology**, e.g. after
- * {@link ApplicationDetailsPage.navigateToApplicationTab}), **`#comboChannel`** only when multi-repo merged blocks,
- * polls until expected **node** `data-id`s exist, then runs **drawer** spot checks.
- */
+/** Asserts Topology URL, graph nodes, optional `#comboChannel`, and drawer spot checks. */
 export async function verifySubscriptionAppTopologyTab(
   params: VerifySubscriptionAppTopologyTabParams
 ): Promise<void> {
@@ -237,7 +202,7 @@ export type VerifyPlacementDecisionTopologyDrawerParams = {
 };
 
 /**
- * Asserts **PlacementDecision** topology drawer fields (Cypress `validatePlacementTopology`).
+ * Asserts **PlacementDecision** topology drawer fields.
  * Caller should navigate to **Topology** first, or pass a page already on the topology tab.
  */
 export async function verifyPlacementDecisionTopologyDrawer(
@@ -326,7 +291,7 @@ export async function verifyPlacementDecisionTopologyDrawer(
         throw new Error('labelSelector UI assertion failed and no `oc` was provided for fallback');
       }
       const actual = await oc.getPlacementLabelSelectorValues(namespace, placementCrName, key);
-      // Cypress `.should('contain', value)` — subset match, not exact label list.
+      // Subset match on label values, not exact list equality.
       expect(actual).toEqual(expect.arrayContaining(values));
     } else {
       await expectTopologyDrawerLabeledField(page, new RegExp(drawerLabels.labelSelector), key, {
@@ -336,7 +301,7 @@ export async function verifyPlacementDecisionTopologyDrawer(
   }
 }
 
-/** RHACM4K-10668 / Cypress `validateDeployables`: icon shape + grouped node label. */
+/** RHACM4K-10668: deployable icon shape + grouped node label. */
 export type TopologyDeployableAssertion = {
   iconShapes: string[];
   label: RegExp;
@@ -370,7 +335,7 @@ export async function expectTopologyShowsDeployableTypes(
   }
 }
 
-/** Cypress `resources: ["secret","other"]` for RHACM4K-10668 (`other` → CRD icon). */
+/** RHACM4K-10668: Secret + CRD deployables (`other` icon → CRD). */
 const GIT_CRD_TOPOLOGY_DEPLOYABLES: TopologyDeployableAssertion[] = [
   { iconShapes: ['secret'], label: /^Secret$/i },
   { iconShapes: ['other', 'customresource'], label: /customresourcedefinition/i },
@@ -382,10 +347,7 @@ export type VerifyCrdGitApplicationTopologyStatusParams = {
   namespace: string;
 };
 
-/**
- * RHACM4K-10668: app/subscription graph nodes + Secret/CRD deployables on **Topology**.
- * Success counts: {@link expectApplicationDetailsMinSuccessResourceCount} on **Details**.
- */
+/** RHACM4K-10668: graph nodes + Secret/CRD deployables (success count on Details). */
 export async function verifyCrdGitApplicationTopologyStatus(
   params: VerifyCrdGitApplicationTopologyStatusParams
 ): Promise<void> {

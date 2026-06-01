@@ -1,10 +1,4 @@
-/**
- * Application Lifecycle (ALC) constants.
- *
- * Routes, toolbar IDs, table column labels, and UI strings for the
- * Applications list, **application details** (Topology / Details), and related UI. Sourced from live hub DOM /
- * Playwriter snapshots (`multicloud/applications`, `multicloud/applications/details/...`).
- */
+/** ALC routes and UI strings (from live hub / Playwriter snapshots). */
 
 // =============================================================================
 // Routes
@@ -14,15 +8,9 @@ export const APP_ROUTES = {
   list: '/multicloud/applications',
   /** Advanced configuration tab (secondary nav) */
   advanced: '/multicloud/applications/advanced',
-  /**
-   * Application details **base** path (no trailing tab segment). Overview name links may use this or a tabbed URL.
-   */
+  /** Base details path (no tab segment). */
   details: (namespace: string, name: string) =>
     `/multicloud/applications/details/${namespace}/${name}`,
-  /**
-   * Application details with **tab** path segment (`topology`, `details`, …). Post–Create redirect observed:
-   * `/multicloud/applications/details/{namespace}/{name}/details` (qe6 hub, subscription app).
-   */
   detailsTab: (namespace: string, name: string, tabSlug: AppApplicationDetailsTabSlug) =>
     `/multicloud/applications/details/${namespace}/${name}/${tabSlug}`,
 } as const;
@@ -31,10 +19,7 @@ export const APP_ROUTES = {
 export type AppApplicationDetailsTabSlug =
   (typeof APP_APPLICATION_DETAILS.tabs)[keyof typeof APP_APPLICATION_DETAILS.tabs]['slug'];
 
-/**
- * Single-application console view (`/multicloud/applications/details/...`).
- * Tab labels, description-list terms, and slugs captured via Playwriter (subscription app **test** / **test-ns**, en).
- */
+/** Subscription app details tabs and DescriptionList terms. */
 export const APP_APPLICATION_DETAILS = {
   tabs: {
     topology: { label: 'Topology', slug: 'topology' as const },
@@ -122,7 +107,7 @@ export const APP_APPLICATION_TOPOLOGY = {
   /** `menuitem` label when opening {@link APP_APPLICATION_TOPOLOGY.graphElementIds.channelCombo}. */
   subscriptionScopeMenuItemAll: 'All Subscriptions',
   /**
-   * **PlacementDecision** topology drawer field labels (Cypress `validatePlacementTopology` parity).
+   * **PlacementDecision** topology drawer field labels.
    * @see {@link expectTopologyDrawerLabeledField}
    */
   placementDrawer: {

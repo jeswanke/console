@@ -189,7 +189,7 @@ fragments:
           channelDisplaySubstring: app_samples
           channelRepositoryUrl: https://github.com/ruici-h/app_samples
 
-  # Cypress `selectClusterDeployment` when `deployment.online: true` — label selector + global + vendor/OpenShift (no separate "online" checkbox in that mode).
+  # Online placement: label selector + global + vendor/OpenShift clusters.
   placement_online_vendor_openshift:
     perBlock:
       - clusterDeployment:

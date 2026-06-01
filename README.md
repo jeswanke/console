@@ -51,7 +51,7 @@ npx playwright install chromium
 By default, **`globalSetup`** runs managed-cluster prep for any non-unit run:
 
 - **`scripts/cluster/generate-managed-cluster-data.py`** writes **`.auth/managedClusters.json`**
-- **`scripts/cluster/setup-managed-cluster-kubeconfig.sh`** writes **`.auth/MC_MERGED_kubeconfig`** and prepares spoke contexts named like `ManagedCluster` resources (same pattern used in application-ui-test)
+- **`scripts/cluster/setup-managed-cluster-kubeconfig.sh`** writes **`.auth/MC_MERGED_kubeconfig`** and prepares spoke contexts named like `ManagedCluster` resources (same pattern as application-ui-test)
 
 Managed-cluster prep is **skipped** when you run **only** the **`unit`** project (e.g. **`--project=unit`**) or when **`E2E_SKIP_MANAGED_CLUSTER_PREP=1`**.
 

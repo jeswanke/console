@@ -11,28 +11,8 @@ import { applyPerBlockOptions, fillRepositoryBlockBySpec } from './wizard-fill';
 
 
 /**
- * Fills the subscription **create** wizard using {@link SubscriptionApplicationCreateWizardPage} building blocks.
- *
- * Covers for each repository block:
- * - **Channel:** Git / Helm / object storage (`data-testid` fields)
- * - **Cluster deployment / time window / automation** — only from {@link CreateSubscriptionOptions.perBlock} (e2e-spec-data YAML).
- * - **Settings: Specify application behavior** / time window (timezone **Choose a location**, weekdays, ranges)
- * - **Configure automation for prehook and posthook**
- *
- * Placement **Cluster sets** / label **Label** and **Value** use menu picks ({@link SubscriptionApplicationCreateWizardPage.pickOpenMenuItemByExactLabel}).
- *
- * **Before** the wizard, runs {@link OcCliService.applicationsAppK8sIoExists}: if the Application exists and
- * {@link CreateSubscriptionOptions.applicationExistsError} is **false** (default), skips the wizard and navigates to
- * **Details** for that app (so callers can run the same post-create checks). If it exists and **applicationExistsError**
- * is **true**, throws. If it does not exist, opens the wizard via
- * {@link SubscriptionApplicationCreateWizardPage.openFromApplicationsList} then fills and optionally submits.
- *
- * Callers should open the hub **Applications** list first (e.g. `await applicationListPage.goto()`), then call this
- * function. When the app is absent, {@link SubscriptionApplicationCreateWizardPage.openFromApplicationsList} runs
- * (it navigates to the list again before **Create application → Subscription**).
- *
- * After **Create**, waits until the **Application** CR exists (and for a hub **Details** redirect when it
- * happens) before returning — callers can safely open Details / Topology.
+ * Fills and submits the subscription create wizard from e2e-spec options.
+ * Skips wizard when the Application already exists (opens Details unless `applicationExistsError`).
  */
 export async function createSubscription(
   applicationListPage: ApplicationListPage,

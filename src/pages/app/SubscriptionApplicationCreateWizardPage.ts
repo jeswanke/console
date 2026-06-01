@@ -1197,7 +1197,7 @@ export class SubscriptionApplicationCreateWizardPage extends BasePage {
   }
 
   /**
-   * Multi-select **Value** menu entries in one session (Cypress `editDeployOnAll` — do not toggle off selected).
+   * Multi-select **Value** menu entries in one session (do not toggle off already-selected items).
    */
   async pickClusterPlacementLabelValuesMenuForRepositoryBlockRow(
     blockIndex: number,

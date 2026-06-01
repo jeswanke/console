@@ -80,8 +80,7 @@ export interface ClusterLabelSelectorRowSpec {
    */
   labelValue?: string;
   /**
-   * **Values** — multi-select in one menu session (Cypress `editDeployOnAll`). When set, takes precedence over
-   * {@link labelValue}.
+   * **Values** — multi-select in one menu session. When set, takes precedence over {@link labelValue}.
    */
   labelValues?: string[];
 }

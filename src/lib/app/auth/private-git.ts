@@ -1,7 +1,7 @@
 /**
  * ALC private Git: credentials from `env/alc.local.env`, repository URL from e2e-spec-data.
  *
- * @see env/alc.env.example — `GITHUB_USER` / `GITHUB_TOKEN` (base64, legacy Cypress `atob`).
+ * @see env/alc.env.example — `GITHUB_USER` / `GITHUB_TOKEN` (base64).
  */
 
 import type { PlaywrightTestSkip } from '@lib/cluster/managedClusterContext';

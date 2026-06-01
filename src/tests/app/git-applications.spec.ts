@@ -1,13 +1,4 @@
-/**
- * Git **Application** flows (ALC): create from e2e-spec-data; **RHACM4K-7484** uses backend `oc` checks, then **Details**, then **Topology**; **RHACM4K-7556** walks Details ↔ Topology per
- * **`#comboChannel`** scope (sub 1 → sub 2 → All). List search and **Advanced configuration** (Subscription ↔ Channel columns).
- * Includes single-repo (`auto_git_helloworld_local` via Polarion ids), **private Git** (`RHACM4K-1071`),
- * **edit** + **Sync** (`RHACM4K-1427`), **placement topology drawer** (`RHACM4K-39232`),
- * **add/delete-subscription** (`RHACM4K-7554`, `RHACM4K-7555`), **underscore Git URL** (`RHACM4K-39666`),
- * **CRD deploy + console status** (`RHACM4K-10668`), **delete without related resources** (`RHACM4K-1558`),
- * and **multi-subscription** (`auto_git_multi`: RHACM4K-7556, RHACM4K-7557 delete).
- * @see {@link verifySubscriptionAppDetailsTab}, {@link verifySubscriptionAppTopologyTab}
- */
+/** Git ALC Playwright suite. Polarion ids in file tags; helpers in `@lib/app/verify`. */
 import {
   clearE2eSpecDataCache,
   resolveScenarioByTestId,
@@ -47,7 +38,7 @@ import {
 } from '@lib/app/verify/topology-tab';
 import { expect, test } from '@fixtures/app-test';
 
-/** Suite + per-test tags aligned with Cypress `Git_Application_Test_Suite.cy.js` for grep/filter in CI. */
+/** Polarion-aligned tags for `--grep` in CI. */
 test.describe('Git Applications', {
   tag: ['@ALC', '@git', '@fresh-install', '@placement', '@git-apps', '@alc', '@app'],
 }, () => {

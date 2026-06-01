@@ -1,8 +1,6 @@
-/**
- * **PlacementDecision** topology drawer expectations (Cypress `validatePlacementTopology`).
- */
+/** **PlacementDecision** topology drawer expectations. */
 
-/** Cypress `validatePlacementTopology` — fields asserted on the **PlacementDecision** drawer. */
+/** Fields asserted on the **PlacementDecision** drawer. */
 export type PlacementDecisionDrawerExpectation = {
   matchedClusterCount: number;
   clusterSet?: string;
@@ -21,9 +19,7 @@ export function localClusterPlacementDrawerExpectation(): PlacementDecisionDrawe
   };
 }
 
-/**
- * Global cluster set placement drawer (subset label value checks, Cypress `.should('contain', value)`).
- */
+/** Global cluster set drawer — label values checked as subset (contain), not exact list. */
 export function globalClusterPlacementDrawerExpectation(params: {
   matchedClusterCount: number;
   labelValues: string[];
@@ -40,7 +36,7 @@ export function globalClusterPlacementDrawerExpectation(params: {
   };
 }
 
-/** Second pass after `editDeployOnAll` — Cypress checks managed cluster name only in the drawer. */
+/** After editDeployOnAll — drawer shows managed cluster name only among label values. */
 export function managedClusterOnlyPlacementDrawerExpectation(
   managedClusterName: string,
   matchedClusterCount = 2

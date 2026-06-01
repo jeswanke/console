@@ -15,7 +15,7 @@ test.describe('placement drawer expectations', () => {
     });
   });
 
-  test('managedClusterOnlyPlacementDrawerExpectation matches Cypress second pass', () => {
+  test('managedClusterOnlyPlacementDrawerExpectation matches post-editDeployOnAll drawer', () => {
     expect(managedClusterOnlyPlacementDrawerExpectation('managed-1')).toEqual({
       matchedClusterCount: 2,
       clusterSet: 'global',
