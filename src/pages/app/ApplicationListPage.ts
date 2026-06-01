@@ -14,8 +14,9 @@ import {
   APP_FILTER,
 } from '@constants/app';
 import type { ApplicationExpectationsPayload } from '@config/e2e-spec-loader/domains/application-expectations/applicationExpectationsSchema';
-import { defaultSubscriptionCrName } from '@lib/app/topology-graph';
+import { defaultSubscriptionCrName } from '@lib/app/topology/graph-ids';
 import { acmToolbarSearchLocator } from '@utils/acm-locators';
+import { pageUrlPathnameEquals } from '@utils/console-navigation';
 
 function escapeRegExp(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -63,8 +64,12 @@ export class ApplicationListPage extends BasePage {
     }
   }
 
-  /** Navigate to the Applications list */
+  /** Navigate to the Applications list (skips `goto` when already on the list pathname). */
   async goto(): Promise<void> {
+    if (pageUrlPathnameEquals(this.page, APP_ROUTES.list)) {
+      await this.waitForApplicationsListReady();
+      return;
+    }
     const consoleUrl = await this.oc.getConsoleUrl();
     await this.page.goto(`${consoleUrl}${APP_ROUTES.list}`);
     await this.waitForApplicationsListReady();
@@ -348,6 +353,27 @@ export class ApplicationListPage extends BasePage {
   }
 
   /**
+   * After UI **Delete application** with related resources **unchecked**, **Subscriptions** and **Channels**
+   * remain on Applications → Advanced configuration (RHACM4K-1558). Placements were removed from that tab;
+   * assert Placement CRs via {@link expectOrphanedAlcResourcesAfterApplicationDeleteViaOc} instead.
+   */
+  async expectAdvancedConfigRelatedResourcesPersistAfterApplicationDelete(params: {
+    applicationName: string;
+    applicationExpectations: ApplicationExpectationsPayload;
+    blockCount: number;
+  }): Promise<void> {
+    const { applicationName, applicationExpectations, blockCount } = params;
+
+    for (let blockIndex = 1; blockIndex <= blockCount; blockIndex++) {
+      await this.expectAdvancedConfigShowsSubscriptionAndChannelForBlock({
+        applicationName,
+        applicationExpectations,
+        blockIndex,
+      });
+    }
+  }
+
+  /**
    * **Overview** list: toolbar search by `applicationName`, row **Actions** → **Edit application**.
    * Lands on subscription edit route (`/multicloud/applications/edit/subscription/...`).
    */
@@ -367,17 +393,23 @@ export class ApplicationListPage extends BasePage {
   /**
    * **Overview** list: toolbar search by `applicationName`, row **Actions** → **Delete application**,
    * then confirm modal (optionally `#remove-app-resources` before **Delete**). Asserts the row is gone, then runs
-   * {@link OcCliService.deleteNamespace} so the app namespace is removed from the cluster (e2e cleanup).
-   * Includes explicit namespace teardown after UI delete.
+   * Optionally {@link OcCliService.deleteNamespace} after UI delete (default `true` for e2e cleanup).
    */
   async deleteApplicationFromOverviewViaSearch(params: {
     applicationName: string;
-    /** Hub namespace for the Application CR; deleted via `oc` after the UI delete succeeds. */
+    /** Hub namespace for the Application CR; deleted via `oc` when {@link deleteNamespaceAfterUiDelete} is true. */
     namespace: string;
     /** Default `true`: enable removing application-related resources in the modal when the control exists. */
     removeRelatedResources?: boolean;
+    /** Default `true`: `oc delete namespace` after the Application row disappears (RHACM4K-1558 sets `false`). */
+    deleteNamespaceAfterUiDelete?: boolean;
   }): Promise<void> {
-    const { applicationName, namespace, removeRelatedResources = true } = params;
+    const {
+      applicationName,
+      namespace,
+      removeRelatedResources = true,
+      deleteNamespaceAfterUiDelete = true,
+    } = params;
     await this.goto();
     await this.waitForLoad();
     const table = this.applicationsTable;
@@ -388,6 +420,8 @@ export class ApplicationListPage extends BasePage {
     await table.deleteApplicationByRow(row, { removeRelatedResources });
     await this.waitForLoad();
     await expect(table.getRowByName(applicationName)).toHaveCount(0, { timeout: 120_000 });
-    await this.oc.deleteNamespace(namespace);
+    if (deleteNamespaceAfterUiDelete) {
+      await this.oc.deleteNamespace(namespace);
+    }
   }
 }

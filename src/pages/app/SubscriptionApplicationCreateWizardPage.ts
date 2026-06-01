@@ -24,6 +24,7 @@ import {
   type SubscriptionWizardRepositoryCardKind,
 } from '@constants/app';
 import type { ApplicationListPage } from '@pages/app/ApplicationListPage';
+import { pageUrlPathnameEquals } from '@utils/console-navigation';
 
 /**
  * Subscription application **create** wizard (Application Lifecycle).
@@ -83,7 +84,23 @@ export class SubscriptionApplicationCreateWizardPage extends BasePage {
     await this.waitForLoad();
   }
 
-  /** Git control in repository block `blockIndex` (`0` = first) — suffixed `data-testid` (e.g. `combo-githubURLgrp1`). */
+  /**
+   * PatternFly typeahead combobox (Git/Helm/Object **URL**, branch, path, etc.).
+   * On edit, channel values may load with an empty `inputValue` and only a `placeholder`; plain `fill()` can
+   * leave the control invalid. Click, set the value when it differs, and **Enter** to commit React state.
+   */
+  async fillTypeaheadCombobox(comboboxLocator: Locator, value: string): Promise<void> {
+    const trimmed = value.trim();
+    await comboboxLocator.waitFor({ state: 'visible', timeout: 30_000 });
+    await comboboxLocator.click();
+    if ((await comboboxLocator.inputValue()).trim() !== trimmed) {
+      await comboboxLocator.fill(trimmed);
+      await comboboxLocator.press('Enter');
+    }
+    await expect(comboboxLocator).toHaveValue(trimmed, { timeout: 30_000 });
+  }
+
+  /** Git control in repository block `blockIndex` (`0` = first) — suffixed `data-testid` (e.g. `githubURLgrp1`). */
   private gitFieldInRepositoryBlock(
     testIdKey: keyof typeof APP_SUBSCRIPTION_CREATE_WIZARD.testIds.git,
     blockIndex: number
@@ -91,7 +108,7 @@ export class SubscriptionApplicationCreateWizardPage extends BasePage {
     return this.byTestId(subscriptionWizardGitTestId(testIdKey, blockIndex));
   }
 
-  /** Helm control in repository block `blockIndex` (e.g. `combo-helmURLgrp1`). */
+  /** Helm control in repository block `blockIndex` (e.g. `helmURLgrp1`). */
   private helmFieldInRepositoryBlock(
     testIdKey: keyof typeof APP_SUBSCRIPTION_CREATE_WIZARD.testIds.helm,
     blockIndex: number
@@ -99,7 +116,7 @@ export class SubscriptionApplicationCreateWizardPage extends BasePage {
     return this.byTestId(subscriptionWizardHelmTestId(testIdKey, blockIndex));
   }
 
-  /** Object storage control in repository block `blockIndex` (e.g. `combo-objectstoreURLgrp1`). */
+  /** Object storage control in repository block `blockIndex` (e.g. `objectstoreURLgrp1`). */
   private objectStorageFieldInRepositoryBlock(
     testIdKey: keyof typeof APP_SUBSCRIPTION_CREATE_WIZARD.testIds.objectStorage,
     blockIndex: number
@@ -156,6 +173,10 @@ export class SubscriptionApplicationCreateWizardPage extends BasePage {
 
   /** Deep-link into the wizard (same view as after choosing Subscription from the menu). */
   async goto(): Promise<void> {
+    if (pageUrlPathnameEquals(this.page, APP_SUBSCRIPTION_CREATE_WIZARD.routePath)) {
+      await this.waitForLoad();
+      return;
+    }
     const consoleUrl = await this.oc.getConsoleUrl();
     await this.page.goto(`${consoleUrl}${APP_SUBSCRIPTION_CREATE_WIZARD.routePath}`);
     await this.waitForLoad();
@@ -171,6 +192,10 @@ export class SubscriptionApplicationCreateWizardPage extends BasePage {
       applicationName,
       APP_APPLICATION_DETAILS.tabs.details.slug
     );
+    if (pageUrlPathnameEquals(this.page, detailsPath)) {
+      await this.waitForLoad();
+      return;
+    }
     await this.page.goto(new URL(detailsPath, this.page.url()).toString());
     await this.waitForLoad();
   }
@@ -414,7 +439,7 @@ export class SubscriptionApplicationCreateWizardPage extends BasePage {
     return this.byTestId(APP_SUBSCRIPTION_CREATE_WIZARD.testIds.general.applicationNameText);
   }
 
-  /** Namespace **combobox** (`combo-emanspace`). */
+  /** Namespace **combobox** filter input — {@link APP_SUBSCRIPTION_CREATE_WIZARD.testIds.general.namespaceCombo}. */
   getNamespaceInput(): Locator {
     return this.byTestId(APP_SUBSCRIPTION_CREATE_WIZARD.testIds.general.namespaceCombo);
   }
@@ -448,7 +473,7 @@ export class SubscriptionApplicationCreateWizardPage extends BasePage {
   }
 
   /**
-   * Expand **Repository types** for `blockIndex` so channel tiles / `combo-githubURL` (etc.) are available.
+   * Expand **Repository types** for `blockIndex` so channel tiles / Git URL (`githubURL`, etc.) are available.
    * Idempotent — skips the click if the section is already open (`collapsed` class on the title toggle).
    * Pair with {@link selectRepositoryTypeInBlock} or {@link getRepositoryGitCardInBlock} /
    * {@link getRepositoryHelmCardInBlock} / {@link getRepositoryObjectStorageCardInBlock}.
@@ -1026,6 +1051,14 @@ export class SubscriptionApplicationCreateWizardPage extends BasePage {
     return this.getClusterSetsCombobox().nth(blockIndex);
   }
 
+  /**
+   * **Cluster sets** PF Select input (`#cluster-sets`) scoped to repository block — preferred for opening the menu.
+   */
+  getClusterSetsInputForRepositoryBlock(blockIndex: number): Locator {
+    const id = APP_SUBSCRIPTION_CREATE_WIZARD.clusterDeployment.clusterSetsInputId;
+    return this.getRepositoryBlockContainer(blockIndex).locator(`#${id}`);
+  }
+
   getClusterPlacementLabelNameCombobox(): Locator {
     return this.clusterPlacementLabelCombobox('labelName');
   }
@@ -1131,7 +1164,12 @@ export class SubscriptionApplicationCreateWizardPage extends BasePage {
    * Opens **Cluster sets** for `blockIndex` and selects a menu entry (e.g. `global`) — matches console PF Select behavior.
    */
   async pickClusterSetMenuOptionForRepositoryBlock(blockIndex: number, optionText: string): Promise<void> {
-    await this.getClusterSetsComboboxForRepositoryBlock(blockIndex).click();
+    const input = this.getClusterSetsInputForRepositoryBlock(blockIndex);
+    if ((await input.count()) > 0) {
+      await input.click();
+    } else {
+      await this.getClusterSetsComboboxForRepositoryBlock(blockIndex).click();
+    }
     await this.pickOpenMenuItemByExactLabel(optionText);
     await this.waitForLoad();
   }
@@ -1155,6 +1193,35 @@ export class SubscriptionApplicationCreateWizardPage extends BasePage {
   ): Promise<void> {
     await this.getClusterPlacementLabelValueComboboxForRowInRepositoryBlock(blockIndex, rowIndex).click();
     await this.pickOpenMenuItemByExactLabel(optionText);
+    await this.waitForLoad();
+  }
+
+  /**
+   * Multi-select **Value** menu entries in one session (Cypress `editDeployOnAll` — do not toggle off selected).
+   */
+  async pickClusterPlacementLabelValuesMenuForRepositoryBlockRow(
+    blockIndex: number,
+    rowIndex: number,
+    values: string[]
+  ): Promise<void> {
+    const valueCombo = this.getClusterPlacementLabelValueComboboxForRowInRepositoryBlock(
+      blockIndex,
+      rowIndex
+    );
+    const valueMenuScope = this.getClusterSelectorLabelValueDomControl(rowIndex, blockIndex);
+    await valueCombo.click();
+    for (const value of values) {
+      let option = valueMenuScope.getByLabel(value, { exact: true });
+      if ((await option.count()) === 0) {
+        option = this.page.getByLabel(value, { exact: true });
+      }
+      const selected = await option.getAttribute('aria-selected').catch(() => null);
+      if (selected === 'true') {
+        continue;
+      }
+      await option.click({ timeout: 7_000 });
+    }
+    await this.page.keyboard.press('Escape').catch(() => undefined);
     await this.waitForLoad();
   }
 
@@ -1323,31 +1390,30 @@ export class SubscriptionApplicationCreateWizardPage extends BasePage {
   }
 
   /**
-   * PF **Select** inner combobox to filter credential type (`Type to filter`). Parent toggle uses
-   * **dynamic** `pf-select-toggle-id-*` — use this or {@link getAnsibleCredentialTypeFilterComboboxScoped}
-   * instead of raw ids.
+   * Ansible credential **Type to filter** input in repository block `blockIndex`.
+   * Chains {@link APP_SUBSCRIPTION_CREATE_WIZARD.automation.ansibleCredentialLabelText} outer **combobox** then the
+   * inner **Type to filter** control — many Git / placement comboboxes share that inner name alone (strict mode).
    */
-  getAnsibleCredentialTypeFilterCombobox(): Locator {
-    const n =
+  getAnsibleCredentialTypeFilterComboboxInRepositoryBlock(blockIndex: number): Locator {
+    const filterName =
       APP_SUBSCRIPTION_CREATE_WIZARD.automation.credentialTypeFilterComboboxAccessibleName;
-    return this.page.getByRole('combobox', { name: n });
+    return this.getRepositoryBlockContainer(blockIndex)
+      .getByRole('combobox', {
+        name: new RegExp(
+          APP_SUBSCRIPTION_CREATE_WIZARD.automation.ansibleCredentialLabelText.replace(
+            /[.*+?^${}()|[\]\\]/g,
+            '\\$&'
+          ),
+          'i'
+        ),
+      })
+      .getByRole('combobox', { name: filterName });
   }
 
   /**
-   * **Type to filter** combobox near the Ansible **connection** help control (when several
-   * `Type to filter` comboboxes exist, prefer this over {@link getAnsibleCredentialTypeFilterCombobox}).
+   * Menu toggle on the Ansible credential PF Select (pair with
+   * {@link getAnsibleCredentialTypeFilterComboboxInRepositoryBlock} for the typeahead).
    */
-  getAnsibleCredentialTypeFilterComboboxScoped(): Locator {
-    return this.getAnsibleConnectionLabelHelpButton()
-      .locator('..')
-      .locator('..')
-      .getByRole('combobox', {
-        name: APP_SUBSCRIPTION_CREATE_WIZARD.automation.credentialTypeFilterComboboxAccessibleName,
-      })
-      .first();
-  }
-
-  /** Menu toggle on the Ansible credential PF Select (pair with {@link getAnsibleCredentialTypeFilterCombobox}). */
   getAnsibleCredentialTypeMenuToggleButton(): Locator {
     return this.page.getByRole('button', {
       name: APP_SUBSCRIPTION_CREATE_WIZARD.automation.credentialTypeMenuToggleAccessibleName,
@@ -1366,7 +1432,7 @@ export class SubscriptionApplicationCreateWizardPage extends BasePage {
   /**
    * Opens the **Add credential** wizard modal. **Visibility:** on a live hub this button was
    * **not** present until after credential-type selection in some flows; use
-   * {@link getAnsibleCredentialTypeFilterCombobox} first if the button is missing.
+   * {@link getAnsibleCredentialTypeFilterComboboxInRepositoryBlock} first if the button is missing.
    */
   getAddCredentialButton(): Locator {
     return this.page.getByRole('button', {

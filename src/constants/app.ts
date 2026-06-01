@@ -72,6 +72,16 @@ export const APP_APPLICATION_DETAILS = {
 export type AppApplicationDetailsTabKey = keyof typeof APP_APPLICATION_DETAILS.tabs;
 
 /**
+ * Subscription app **Sync** from Details → **Last sync requested** (`#sync-app` → confirm modal).
+ * Modal container id is shared with delete flows on the hub (`#remove-resource-modal`).
+ */
+export const APP_APPLICATION_SYNC = {
+  modalSelector: '#remove-resource-modal',
+  modalTitle: 'Sync application',
+  confirmButtonLabel: 'Synchronize',
+} as const;
+
+/**
  * Application **Topology** tab: graph chrome (zoom / fit / reset), legend help, secondary tabs wrapper.
  * Captured from live hub (`…/details/{namespace}/{name}/topology`, en).
  *
@@ -83,7 +93,7 @@ export type AppApplicationDetailsTabKey = keyof typeof APP_APPLICATION_DETAILS.t
 export const APP_APPLICATION_TOPOLOGY = {
   /**
    * **`data-test-id`** on the PF topology visualization surface wrapping the `svg` graph (`g[data-kind=node]`,
-   * `data-id` values — see `src/lib/app/topology-graph.ts` / Playwriter hub capture).
+   * `data-id` values — see `src/lib/app/topology/graph-ids.ts` / Playwriter hub capture).
    */
   graphSurfaceTestId: 'topology',
   /** Topology / Details tab list lives in this labelled region (PF). */
@@ -111,6 +121,15 @@ export const APP_APPLICATION_TOPOLOGY = {
   },
   /** `menuitem` label when opening {@link APP_APPLICATION_TOPOLOGY.graphElementIds.channelCombo}. */
   subscriptionScopeMenuItemAll: 'All Subscriptions',
+  /**
+   * **PlacementDecision** topology drawer field labels (Cypress `validatePlacementTopology` parity).
+   * @see {@link expectTopologyDrawerLabeledField}
+   */
+  placementDrawer: {
+    matchedClusters: 'Matched Clusters',
+    clusterSet: 'ClusterSet',
+    labelSelector: 'LabelSelector',
+  },
 } as const;
 
 // =============================================================================
@@ -477,6 +496,8 @@ export const APP_SUBSCRIPTION_CREATE_WIZARD = {
      * Additional subscriptions: {@link subscriptionWizardClusterSelectorCheckboxId}.
      */
     clusterSelectorCheckboxId: 'clusterSelector-checkbox-clusterSelector',
+    /** PF **Cluster sets** Select input (`#cluster-sets`) — prefer over label wrapper for menu open. */
+    clusterSetsInputId: 'cluster-sets',
     /**
      * Accessible names for PF comboboxes in the cluster / label placement area — use when `#…` ids are
      * unstable between builds.
@@ -551,8 +572,9 @@ export const APP_SUBSCRIPTION_CREATE_WIZARD = {
     /** Help popover beside the Ansible credential label (stable id in current console). */
     connectionLabelHelpButtonId: 'connection-label-help-button',
     /**
-     * Inner PF combobox used to filter / choose the credential category (**dynamic** parent `id`).
-     * Snapshot: `role=combobox[name="Type to filter"]` under the Ansible label.
+     * Inner PF typeahead on the Ansible credential **Select** (`aria-label`). **Not unique** inside a repository
+     * block — chain from the outer Ansible credential combobox via
+     * {@link SubscriptionApplicationCreateWizardPage.getAnsibleCredentialTypeFilterComboboxInRepositoryBlock}.
      */
     credentialTypeFilterComboboxAccessibleName: 'Type to filter',
     /** `Menu toggle` on the same PF Select (opens the credential type menu). */
@@ -629,8 +651,11 @@ export const APP_SUBSCRIPTION_CREATE_WIZARD = {
   testIds: {
     general: {
       applicationNameText: 'text-eman',
-      /** Namespace is a combobox in current console — not a plain `#emanspace` text field */
-      namespaceCombo: 'combo-emanspace',
+      /**
+       * Namespace combobox filter input (`role="combobox"`). Matches control id **`emanspace`** after TemplateEditor’s
+       * `name`→`eman` substitution inside **`namespace`** (same as DOM **`id`** on current console builds).
+       */
+      namespaceCombo: 'emanspace',
     },
     /** Repository type tiles (select Git vs Helm vs Object storage) */
     repositoryCard: {
@@ -639,33 +664,33 @@ export const APP_SUBSCRIPTION_CREATE_WIZARD = {
       objectStorage: 'card-objectstore',
     },
     git: {
-      urlCombo: 'combo-githubURL',
+      urlCombo: 'githubURL',
       usernameText: 'text-githubUser',
       tokenText: 'text-githubAccessId',
-      branchCombo: 'combo-githubBranch',
-      pathCombo: 'combo-githubPath',
+      branchCombo: 'githubBranch',
+      pathCombo: 'githubPath',
       commitText: 'text-gitDesiredCommit',
       tagText: 'text-gitTag',
-      reconcileOptionCombo: 'combo-gitReconcileOption',
-      reconcileRateCombo: 'combo-gitReconcileRate',
+      reconcileOptionCombo: 'gitReconcileOption',
+      reconcileRateCombo: 'gitReconcileRate',
       disableAutoReconcileCheckbox: 'checkbox-gitSubReconcileRate',
       insecureSkipVerifyCheckbox: 'checkbox-gitInsecureSkipVerify',
     },
     /** Helm channel */
     helm: {
-      urlCombo: 'combo-helmURL',
+      urlCombo: 'helmURL',
       usernameText: 'text-helmUser',
       passwordText: 'text-helmPassword',
       chartNameText: 'text-helmChartName',
       packageAliasText: 'text-helmPackageAlias',
       packageVersionText: 'text-helmPackageVersion',
       insecureSkipVerifyCheckbox: 'checkbox-helmInsecureSkipVerify',
-      reconcileRateCombo: 'combo-helmReconcileRate',
+      reconcileRateCombo: 'helmReconcileRate',
       disableAutoReconcileCheckbox: 'checkbox-helmSubReconcileRate',
     },
     /** Object storage channel */
     objectStorage: {
-      urlCombo: 'combo-objectstoreURL',
+      urlCombo: 'objectstoreURL',
       accessKeyText: 'text-accessKey',
       secretKeyText: 'text-secretKey',
       regionText: 'text-region',
@@ -837,7 +862,7 @@ export function subscriptionAutomationPrePostSectionToggleId(blockIndex: number)
 
 /**
  * `data-testid` suffix for repository blocks after the first.
- * Example: 2nd block `combo-githubURL` → `combo-githubURLgrp1`.
+ * Example: 2nd block `githubURL` → `githubURLgrp1`.
  */
 export function subscriptionRepositoryBlockTestIdSuffix(blockIndex: number): string {
   if (blockIndex <= 0) return '';
