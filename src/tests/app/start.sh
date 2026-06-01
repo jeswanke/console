@@ -21,7 +21,8 @@ source "${CONSOLE_E2E_ROOT}/scripts/lib/alc-env.sh"
 cd "${CONSOLE_E2E_ROOT}"
 
 # Same variable names as login.sh "alc" / "alc-pw" blocks, without CYPRESS_ on console/cluster/store.
-# ANSIBLE_* comes from repo-root .env (loaded by parent start.sh); this sources env/alc.local.env for OBJECTSTORE_* only.
+# ANSIBLE_* comes from repo-root .env (loaded by parent start.sh).
+# This sources env/alc.local.env for ALC-only vars (GITHUB_USER/TOKEN, OBJECTSTORE_*).
 console_e2e_export_alc_env
 
 # Enable GitOps / addon prep in globalSetup only for ALC runs (see src/global-setup/gitOpsPrep.ts).

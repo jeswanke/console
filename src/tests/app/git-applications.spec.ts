@@ -1,49 +1,86 @@
 /**
- * Git **Application** flows (ALC): create from e2e-spec-data, then **Details** + **Topology**, list search, and
- * **Advanced configuration** (Subscription ↔ Channel columns). Includes single-repo (`auto_git_helloworld_local` via
- * Polarion ids), **edit** flow (`RHACM4K-1427`), **add/delete-subscription** edit flows (`RHACM4K-7554`, `RHACM4K-7555`), and
- * **multi-subscription** (`auto_git_multi`: RHACM4K-7556 create, RHACM4K-7557 delete).
+ * Git **Application** flows (ALC): create from e2e-spec-data; **RHACM4K-7484** uses backend `oc` checks, then **Details**, then **Topology**; **RHACM4K-7556** walks Details ↔ Topology per
+ * **`#comboChannel`** scope (sub 1 → sub 2 → All). List search and **Advanced configuration** (Subscription ↔ Channel columns).
+ * Includes single-repo (`auto_git_helloworld_local` via Polarion ids), **private Git** (`RHACM4K-1071`),
+ * **edit** + **Sync** (`RHACM4K-1427`), **placement topology drawer** (`RHACM4K-39232`),
+ * **add/delete-subscription** (`RHACM4K-7554`, `RHACM4K-7555`), **underscore Git URL** (`RHACM4K-39666`),
+ * **CRD deploy + console status** (`RHACM4K-10668`), **delete without related resources** (`RHACM4K-1558`),
+ * and **multi-subscription** (`auto_git_multi`: RHACM4K-7556, RHACM4K-7557 delete).
  * @see {@link verifySubscriptionAppDetailsTab}, {@link verifySubscriptionAppTopologyTab}
  */
-import path from 'path';
 import {
   clearE2eSpecDataCache,
-  getE2eScenario,
-  getApplicationExpectationsPayload,
-  getSubscriptionDomainPayload,
-  getTestDataForE2e,
+  resolveScenarioByTestId,
+  resolveScenarioPair,
 } from '@config';
 import {
   addSubscriptionToExistingApplication,
+  buildGlobalClusterLabelDeployment,
   createSubscription,
   deleteSubscriptionFromExistingApplication,
   editSubscriptionInExistingApplication,
-} from '@lib/app/subscription-create';
-import { expectOcGetListContains } from '@lib/assertions/oc-resource-list';
-import { verifySubscriptionAppDetailsTab } from '@lib/app/verify-subscription-details';
-import { verifySubscriptionAppTopologyTab } from '@lib/app/verify-subscription-topology';
+  syncSubscriptionApplication,
+} from '@lib/app/subscription';
+import {
+  localClusterPlacementDrawerExpectation,
+  managedClusterOnlyPlacementDrawerExpectation,
+} from '@lib/app/topology/placement-drawer-expectations';
+import {
+  expectOrphanedAlcResourcesAfterApplicationDeleteViaOc,
+  expectSubscriptionAppResourcesViaOc,
+} from '@lib/app/verify/resources-oc';
+import {
+  applyPrivateGitAuthToSubscriptionOptions,
+  skipUnlessPrivateGitAuthConfigured,
+} from '@lib/app/auth/private-git';
+import { defaultSubscriptionCrName } from '@lib/app/topology/graph-ids';
+import { skipUnlessPrimaryManagedCluster } from '@lib/cluster/managedClusterContext';
+import {
+  expectApplicationDetailsMinSuccessResourceCount,
+  subscriptionDetailsClusterResourceTotalPattern,
+  verifySubscriptionAppDetailsTab,
+} from '@lib/app/verify/details-tab';
+import {
+  verifyCrdGitApplicationTopologyStatus,
+  verifyPlacementDecisionTopologyDrawer,
+  verifySubscriptionAppTopologyTab,
+} from '@lib/app/verify/topology-tab';
 import { expect, test } from '@fixtures/app-test';
 
-const E2E_SPEC_DATA_DIR = path.join(process.cwd(), 'src/config/e2e-spec-data');
-
-test.describe('Git Applications', { tag: ['@alc', '@app'] }, () => {
+/** Suite + per-test tags aligned with Cypress `Git_Application_Test_Suite.cy.js` for grep/filter in CI. */
+test.describe('Git Applications', {
+  tag: ['@ALC', '@git', '@fresh-install', '@placement', '@git-apps', '@alc', '@app'],
+}, () => {
   test.describe.configure({ mode: 'serial' });
 
   test.beforeEach(() => {
     clearE2eSpecDataCache();
   });
 
-  test('RHACM4K-7484: ALC: Create a Git Application deployed on a Local Cluster', async ({
+  test(
+    'RHACM4K-7484: ALC: Create a Git Application deployed on a Local Cluster',
+    {
+      tag: [
+        '@e2e-common',
+        '@RHACM4K-7484',
+        '@create',
+        '@post-release',
+        '@ocpInterop',
+        '@UI',
+        '@pre-upgrade',
+        '@post-upgrade',
+      ],
+    },
+    async ({
     page,
+    oc,
     applicationListPage,
     applicationDetailsPage,
     subscriptionApplicationCreateWizardPage,
   }) => {
     test.setTimeout(180_000);
-    const matched = getTestDataForE2e('RHACM4K-7484', E2E_SPEC_DATA_DIR);
-    const resolved = matched[0]!;
-    const options = getSubscriptionDomainPayload(resolved);
-    const expectations = getApplicationExpectationsPayload(resolved);
+    const { subscription: options, applicationExpectations: expectations } =
+      resolveScenarioByTestId('RHACM4K-7484');
 
     await applicationListPage.goto();
     await createSubscription(applicationListPage, subscriptionApplicationCreateWizardPage, options);
@@ -51,6 +88,14 @@ test.describe('Git Applications', { tag: ['@alc', '@app'] }, () => {
     const { applicationName, namespace } = options;
     const clusterResourceRows = expectations.topologyClusterResourceBlocks[0]!;
 
+    await expectSubscriptionAppResourcesViaOc({
+      oc,
+      applicationName,
+      namespace,
+      applicationExpectations: expectations,
+    });
+
+    await applicationDetailsPage.navigateToApplicationTab(namespace, applicationName, 'details');
     await verifySubscriptionAppDetailsTab({
       page,
       detailsPage: applicationDetailsPage,
@@ -60,6 +105,7 @@ test.describe('Git Applications', { tag: ['@alc', '@app'] }, () => {
       repositories: options.repositories,
     });
 
+    await applicationDetailsPage.navigateToApplicationTab(namespace, applicationName, 'topology');
     await verifySubscriptionAppTopologyTab({
       page,
       detailsPage: applicationDetailsPage,
@@ -79,17 +125,86 @@ test.describe('Git Applications', { tag: ['@alc', '@app'] }, () => {
     });
   });
 
-  test('RHACM4K-7556: ALC: Create a Git Application with Multiple Subscriptions', async ({
+  test(
+    'RHACM4K-1071: ALC: Create a private git application and its resources via application wizard',
+    { tag: ['@e2e-common', '@RHACM4K-1071', '@create', '@UI'] },
+    async ({
+    page,
+    oc,
+    applicationListPage,
+    applicationDetailsPage,
+    subscriptionApplicationCreateWizardPage,
+  }) => {
+    test.setTimeout(300_000);
+    const auth = skipUnlessPrivateGitAuthConfigured(test, 'RHACM4K-1071');
+    if (!auth) return;
+
+    const { subscription: baseOptions, applicationExpectations: expectations } =
+      resolveScenarioByTestId('RHACM4K-1071');
+    const options = applyPrivateGitAuthToSubscriptionOptions(baseOptions, auth);
+    const { applicationName, namespace } = options;
+    const clusterResourceRows = expectations.topologyClusterResourceBlocks[0]!;
+
+    await oc.deleteNamespace(namespace);
+    await applicationListPage.goto();
+    await createSubscription(applicationListPage, subscriptionApplicationCreateWizardPage, options);
+
+    await expectSubscriptionAppResourcesViaOc({
+      oc,
+      applicationName,
+      namespace,
+      applicationExpectations: expectations,
+    });
+
+    await applicationDetailsPage.navigateToApplicationTab(namespace, applicationName, 'details');
+    await verifySubscriptionAppDetailsTab({
+      page,
+      detailsPage: applicationDetailsPage,
+      applicationName,
+      namespace,
+      applicationExpectations: expectations,
+      repositories: options.repositories,
+      detailsValuesTimeout: 180_000,
+    });
+
+    await applicationDetailsPage.navigateToApplicationTab(namespace, applicationName, 'topology');
+    await verifySubscriptionAppTopologyTab({
+      page,
+      detailsPage: applicationDetailsPage,
+      applicationName,
+      namespace,
+      blockIndex: 1,
+      clusterResourceRows,
+    });
+
+    await applicationListPage.goto();
+    await applicationListPage.expectApplicationDiscoverableViaSearchAndTypeFilter(applicationName);
+
+    await applicationListPage.expectAdvancedConfigShowsSubscriptionAndChannelForBlock({
+      applicationName,
+      applicationExpectations: expectations,
+      blockIndex: 1,
+    });
+
+    await applicationListPage.deleteApplicationFromOverviewViaSearch({
+      applicationName,
+      namespace,
+      removeRelatedResources: true,
+    });
+  });
+
+  test(
+    'RHACM4K-7556: ALC: Create a Git Application with Multiple Subscriptions',
+    { tag: ['@e2e-common', '@RHACM4K-7556', '@create', '@ocpInterop', '@UI', '@post-upgrade'] },
+    async ({
     page,
     applicationListPage,
     applicationDetailsPage,
     subscriptionApplicationCreateWizardPage,
   }) => {
-    test.setTimeout(180_000);
-    const matched = getTestDataForE2e('RHACM4K-7556', E2E_SPEC_DATA_DIR);
-    const resolved = matched[0]!;
-    const options = getSubscriptionDomainPayload(resolved);
-    const expectations = getApplicationExpectationsPayload(resolved);
+    test.setTimeout(300_000);
+    const { subscription: options, applicationExpectations: expectations } =
+      resolveScenarioByTestId('RHACM4K-7556');
     expect(options.submit).toBe(true);
     expect(options.repositories).toHaveLength(2);
 
@@ -101,6 +216,11 @@ test.describe('Git Applications', { tag: ['@alc', '@app'] }, () => {
       { blockIndex: 1, clusterResourceRows: expectations.topologyClusterResourceBlocks[0]! },
       { blockIndex: 2, clusterResourceRows: expectations.topologyClusterResourceBlocks[1]! },
     ];
+    const crsSub1 = subscriptionDetailsClusterResourceTotalPattern(expectations.clusterResources[0]!.length);
+    const crsSub2 = subscriptionDetailsClusterResourceTotalPattern(expectations.clusterResources[1]!.length);
+    const crsAll = subscriptionDetailsClusterResourceTotalPattern(
+      expectations.clusterResources[0]!.length + expectations.clusterResources[1]!.length
+    );
 
     await verifySubscriptionAppDetailsTab({
       page,
@@ -109,19 +229,74 @@ test.describe('Git Applications', { tag: ['@alc', '@app'] }, () => {
       namespace,
       applicationExpectations: expectations,
       repositories: options.repositories,
+      clusterResourceStatusPattern: crsSub1,
     });
 
+    await applicationDetailsPage.navigateToApplicationTab(namespace, applicationName, 'topology');
     await verifySubscriptionAppTopologyTab({
       page,
       detailsPage: applicationDetailsPage,
       applicationName,
       namespace,
-      subscriptionScope: 'all',
       mergedSubscriptionBlocks,
+      subscriptionScope: 'initial',
+      topologyMergeBlockIndices: [1],
+    });
+
+    await applicationDetailsPage.chooseTopologySubscriptionScopeByCrName(
+      defaultSubscriptionCrName(applicationName, 2)
+    );
+
+    await applicationDetailsPage.navigateToApplicationTab(namespace, applicationName, 'details');
+    await verifySubscriptionAppDetailsTab({
+      page,
+      detailsPage: applicationDetailsPage,
+      applicationName,
+      namespace,
+      applicationExpectations: expectations,
+      repositories: options.repositories,
+      clusterResourceStatusPattern: crsSub2,
+    });
+
+    await applicationDetailsPage.navigateToApplicationTab(namespace, applicationName, 'topology');
+    await verifySubscriptionAppTopologyTab({
+      page,
+      detailsPage: applicationDetailsPage,
+      applicationName,
+      namespace,
+      mergedSubscriptionBlocks,
+      subscriptionScope: { subscriptionCrName: defaultSubscriptionCrName(applicationName, 2) },
+      topologyMergeBlockIndices: [2],
+    });
+
+    await applicationDetailsPage.chooseTopologySubscriptionScopeAll();
+
+    await applicationDetailsPage.navigateToApplicationTab(namespace, applicationName, 'details');
+    await verifySubscriptionAppDetailsTab({
+      page,
+      detailsPage: applicationDetailsPage,
+      applicationName,
+      namespace,
+      applicationExpectations: expectations,
+      repositories: options.repositories,
+      clusterResourceStatusPattern: crsAll,
+    });
+
+    await applicationDetailsPage.navigateToApplicationTab(namespace, applicationName, 'topology');
+    await verifySubscriptionAppTopologyTab({
+      page,
+      detailsPage: applicationDetailsPage,
+      applicationName,
+      namespace,
+      mergedSubscriptionBlocks,
+      subscriptionScope: 'all',
     });
   });
 
-  test('RHACM4K-7554: ALC: Add A Git Subscription to An Existing Git Application', async ({
+  test(
+    'RHACM4K-7554: ALC: Add A Git Subscription to An Existing Git Application',
+    { tag: ['@e2e-common', '@RHACM4K-7554', '@edit', '@UI', '@post-upgrade'] },
+    async ({
     page,
     oc,
     applicationListPage,
@@ -129,14 +304,14 @@ test.describe('Git Applications', { tag: ['@alc', '@app'] }, () => {
     subscriptionApplicationCreateWizardPage,
   }) => {
     test.setTimeout(240_000);
-    const baseResolved = getE2eScenario('auto_git_add_subscription_base', E2E_SPEC_DATA_DIR);
-    const baseOptions = getSubscriptionDomainPayload(baseResolved);
-    const baseExpectations = getApplicationExpectationsPayload(baseResolved);
-
-    const addMatched = getTestDataForE2e('RHACM4K-7554', E2E_SPEC_DATA_DIR);
-    const addResolved = addMatched[0]!;
-    const addOptions = getSubscriptionDomainPayload(addResolved);
-    const addExpectations = getApplicationExpectationsPayload(addResolved);
+    const { base, delta } = resolveScenarioPair({
+      baseScenarioId: 'auto_git_add_subscription_base',
+      testId: 'RHACM4K-7554',
+    });
+    const baseOptions = base.subscription;
+    const baseExpectations = base.applicationExpectations;
+    const addOptions = delta.subscription;
+    const addExpectations = delta.applicationExpectations;
     expect(addOptions.repositories).toHaveLength(1);
 
     await oc.deleteNamespace(baseOptions.namespace);
@@ -160,6 +335,11 @@ test.describe('Git Applications', { tag: ['@alc', '@app'] }, () => {
       }
     );
 
+    await applicationDetailsPage.navigateToApplicationTab(
+      addOptions.namespace,
+      addOptions.applicationName,
+      'details'
+    );
     await verifySubscriptionAppDetailsTab({
       page,
       detailsPage: applicationDetailsPage,
@@ -170,6 +350,11 @@ test.describe('Git Applications', { tag: ['@alc', '@app'] }, () => {
       detailsValuesTimeout: 180_000,
     });
 
+    await applicationDetailsPage.navigateToApplicationTab(
+      addOptions.namespace,
+      addOptions.applicationName,
+      'topology'
+    );
     await verifySubscriptionAppTopologyTab({
       page,
       detailsPage: applicationDetailsPage,
@@ -183,7 +368,10 @@ test.describe('Git Applications', { tag: ['@alc', '@app'] }, () => {
     });
   });
 
-  test('RHACM4K-1427: ALC: Edit an existing Git application', async ({
+  test(
+    'RHACM4K-1427: ALC: Edit an existing Git application',
+    { tag: ['@e2e-common', '@RHACM4K-1427', '@edit', '@UI'] },
+    async ({
     page,
     oc,
     applicationListPage,
@@ -191,14 +379,14 @@ test.describe('Git Applications', { tag: ['@alc', '@app'] }, () => {
     subscriptionApplicationCreateWizardPage,
   }) => {
     test.setTimeout(300_000);
-    const baseResolved = getE2eScenario('auto_git_mortgage_edit_base', E2E_SPEC_DATA_DIR);
-    const baseOptions = getSubscriptionDomainPayload(baseResolved);
-    const baseExpectations = getApplicationExpectationsPayload(baseResolved);
-
-    const editMatched = getTestDataForE2e('RHACM4K-1427', E2E_SPEC_DATA_DIR);
-    const editResolved = editMatched[0]!;
-    const editOptions = getSubscriptionDomainPayload(editResolved);
-    const editExpectations = getApplicationExpectationsPayload(editResolved);
+    const { base, delta } = resolveScenarioPair({
+      baseScenarioId: 'auto_git_mortgage_edit_base',
+      testId: 'RHACM4K-1427',
+    });
+    const baseOptions = base.subscription;
+    const baseExpectations = base.applicationExpectations;
+    const editOptions = delta.subscription;
+    const editExpectations = delta.applicationExpectations;
     expect(editOptions.repositories).toHaveLength(1);
 
     await oc.deleteNamespace(baseOptions.namespace);
@@ -223,6 +411,11 @@ test.describe('Git Applications', { tag: ['@alc', '@app'] }, () => {
       }
     );
 
+    await applicationDetailsPage.navigateToApplicationTab(
+      editOptions.namespace,
+      editOptions.applicationName,
+      'details'
+    );
     await verifySubscriptionAppDetailsTab({
       page,
       detailsPage: applicationDetailsPage,
@@ -233,6 +426,11 @@ test.describe('Git Applications', { tag: ['@alc', '@app'] }, () => {
       detailsValuesTimeout: 180_000,
     });
 
+    await syncSubscriptionApplication({
+      detailsPage: applicationDetailsPage,
+      timeout: 60_000,
+    });
+
     await applicationListPage.goto();
     await applicationListPage.expectAdvancedConfigShowsSubscriptionAndChannelForBlock({
       applicationName: editOptions.applicationName,
@@ -240,40 +438,11 @@ test.describe('Git Applications', { tag: ['@alc', '@app'] }, () => {
       blockIndex: 1,
     });
 
-    await expectOcGetListContains(oc, {
-      resource: 'applications.app',
+    await expectSubscriptionAppResourcesViaOc({
+      oc,
+      applicationName: editOptions.applicationName,
       namespace: editOptions.namespace,
-      expectedSubstring: editOptions.applicationName,
-    });
-    await expectOcGetListContains(oc, {
-      resource: 'subscription',
-      namespace: editOptions.namespace,
-      expectedSubstring: `${editOptions.applicationName}-subscription-1`,
-    });
-    await expectOcGetListContains(oc, {
-      resource: 'placement',
-      namespace: editOptions.namespace,
-      expectedSubstring: `${editOptions.applicationName}-placement-1`,
-    });
-    await expectOcGetListContains(oc, {
-      resource: 'service',
-      namespace: editOptions.namespace,
-      expectedSubstring: 'mortgage-app-svc',
-    });
-    await expectOcGetListContains(oc, {
-      resource: 'deployment',
-      namespace: editOptions.namespace,
-      expectedSubstring: 'mortgage-app-deploy',
-    });
-    await expectOcGetListContains(oc, {
-      resource: 'replicaset',
-      namespace: editOptions.namespace,
-      expectedSubstring: 'mortgage-app-deploy',
-    });
-    await expectOcGetListContains(oc, {
-      resource: 'pod',
-      namespace: editOptions.namespace,
-      expectedSubstring: 'mortgage-app-deploy',
+      applicationExpectations: editExpectations,
     });
 
     await applicationListPage.goto();
@@ -284,7 +453,10 @@ test.describe('Git Applications', { tag: ['@alc', '@app'] }, () => {
     });
   });
 
-  test('RHACM4K-7555: ALC: Delete A Git Subscription from an Existing Multi-Subscription Git Application', async ({
+  test(
+    'RHACM4K-7555: ALC: Delete A Git Subscription from an Existing Multi-Subscription Git Application',
+    { tag: ['@e2e-common', '@RHACM4K-7555', '@edit', '@UI', '@post-upgrade'] },
+    async ({
     page,
     oc,
     applicationListPage,
@@ -292,10 +464,8 @@ test.describe('Git Applications', { tag: ['@alc', '@app'] }, () => {
     subscriptionApplicationCreateWizardPage,
   }) => {
     test.setTimeout(240_000);
-    const matched = getTestDataForE2e('RHACM4K-7555', E2E_SPEC_DATA_DIR);
-    const resolved = matched[0]!;
-    const options = getSubscriptionDomainPayload(resolved);
-    const expectations = getApplicationExpectationsPayload(resolved);
+    const { subscription: options, applicationExpectations: expectations } =
+      resolveScenarioByTestId('RHACM4K-7555');
     expect(options.repositories).toHaveLength(2);
 
     await oc.deleteNamespace(options.namespace);
@@ -321,6 +491,7 @@ test.describe('Git Applications', { tag: ['@alc', '@app'] }, () => {
       }
     );
 
+    await applicationDetailsPage.navigateToApplicationTab(options.namespace, options.applicationName, 'details');
     await verifySubscriptionAppDetailsTab({
       page,
       detailsPage: applicationDetailsPage,
@@ -330,6 +501,7 @@ test.describe('Git Applications', { tag: ['@alc', '@app'] }, () => {
       repositories: [options.repositories[0]!],
     });
 
+    await applicationDetailsPage.navigateToApplicationTab(options.namespace, options.applicationName, 'topology');
     await verifySubscriptionAppTopologyTab({
       page,
       detailsPage: applicationDetailsPage,
@@ -340,14 +512,15 @@ test.describe('Git Applications', { tag: ['@alc', '@app'] }, () => {
     });
   });
 
-  test('RHACM4K-7557: ALC: Delete a Git Application with Multiple Subscriptions', async ({
+  test(
+    'RHACM4K-7557: ALC: Delete a Git Application with Multiple Subscriptions',
+    { tag: ['@e2e-common', '@RHACM4K-7557', '@destroy', '@ocpInterop', '@UI', '@post-upgrade'] },
+    async ({
     applicationListPage,
     subscriptionApplicationCreateWizardPage,
   }) => {
     test.setTimeout(240_000);
-    const matched = getTestDataForE2e('RHACM4K-7557', E2E_SPEC_DATA_DIR);
-    const resolved = matched[0]!;
-    const options = getSubscriptionDomainPayload(resolved);
+    const { subscription: options } = resolveScenarioByTestId('RHACM4K-7557');
     expect(options.repositories).toHaveLength(2);
 
     await applicationListPage.goto();
@@ -360,14 +533,114 @@ test.describe('Git Applications', { tag: ['@alc', '@app'] }, () => {
     });
   });
 
-  test('RHACM4K-7487: ALC: Delete a Git Application deployed on a Local Cluster', async ({
+  test(
+    'RHACM4K-39232: ALC: Display more placement info for the topology node details tab',
+    { tag: ['@e2e-common', '@RHACM4K-39232', '@create', '@UI'] },
+    async ({
+    page,
+    oc,
+    managedClusterContext,
+    applicationListPage,
+    applicationDetailsPage,
+    subscriptionApplicationCreateWizardPage,
+  }) => {
+    test.setTimeout(480_000);
+    const managedCluster = skipUnlessPrimaryManagedCluster(test, managedClusterContext, 'RHACM4K-39232');
+    if (!managedCluster) return;
+
+    const { subscription: options } = resolveScenarioByTestId('RHACM4K-39232');
+    const { applicationName, namespace } = options;
+
+    await oc.deleteNamespace(namespace);
+    await applicationListPage.goto();
+    await createSubscription(applicationListPage, subscriptionApplicationCreateWizardPage, options);
+    await oc.ensureManagedClusterSetBinding(namespace, 'global');
+
+    await applicationDetailsPage.navigateToApplicationTab(namespace, applicationName, 'topology');
+    await verifyPlacementDecisionTopologyDrawer({
+      page,
+      detailsPage: applicationDetailsPage,
+      applicationName,
+      namespace,
+      oc,
+      expectation: localClusterPlacementDrawerExpectation(),
+    });
+
+    await editSubscriptionInExistingApplication(
+      applicationListPage,
+      subscriptionApplicationCreateWizardPage,
+      {
+        ...options,
+        entry: 'details',
+        perBlock: [{ clusterDeployment: buildGlobalClusterLabelDeployment(managedCluster.name) }],
+      }
+    );
+
+    await applicationDetailsPage.navigateToApplicationTab(namespace, applicationName, 'details');
+    await syncSubscriptionApplication({
+      detailsPage: applicationDetailsPage,
+      timeout: 120_000,
+    });
+
+    await applicationDetailsPage.navigateToApplicationTab(namespace, applicationName, 'topology');
+    await verifyPlacementDecisionTopologyDrawer({
+      page,
+      detailsPage: applicationDetailsPage,
+      applicationName,
+      namespace,
+      oc,
+      expectation: managedClusterOnlyPlacementDrawerExpectation(managedCluster.name),
+    });
+
+    await applicationListPage.goto();
+    await applicationListPage.deleteApplicationFromOverviewViaSearch({
+      applicationName,
+      namespace,
+      removeRelatedResources: true,
+    });
+  });
+
+  test(
+    'RHACM4K-39666: ALC: Create an appsub with repo urls contains underscore',
+    { tag: ['@e2e-common', '@RHACM4K-39666', '@create', '@UI'] },
+    async ({
+    oc,
+    applicationListPage,
+    subscriptionApplicationCreateWizardPage,
+  }) => {
+    test.setTimeout(300_000);
+    const { subscription: options, applicationExpectations: expectations } =
+      resolveScenarioByTestId('RHACM4K-39666');
+
+    await oc.deleteNamespace(options.namespace);
+    await applicationListPage.goto();
+    await createSubscription(applicationListPage, subscriptionApplicationCreateWizardPage, options);
+    await oc.ensureManagedClusterSetBinding(options.namespace, 'global');
+
+    await expectSubscriptionAppResourcesViaOc({
+      oc,
+      applicationName: options.applicationName,
+      namespace: options.namespace,
+      applicationExpectations: expectations,
+    });
+
+    await applicationListPage.goto();
+    await applicationListPage.deleteApplicationFromOverviewViaSearch({
+      applicationName: options.applicationName,
+      namespace: options.namespace,
+      removeRelatedResources: true,
+    });
+  });
+
+  test(
+    'RHACM4K-7487: ALC: Delete a Git Application deployed on a Local Cluster',
+    { tag: ['@e2e-common', '@RHACM4K-7487', '@destroy', '@ocpInterop', '@UI'] },
+    async ({
     applicationListPage,
     subscriptionApplicationCreateWizardPage,
   }) => {
     test.setTimeout(240_000);
-    const matched = getTestDataForE2e('RHACM4K-7487', E2E_SPEC_DATA_DIR);
-    const resolved = matched[0]!;
-    const options = getSubscriptionDomainPayload(resolved);
+    const { subscription: options } = resolveScenarioByTestId('RHACM4K-7487');
 
     await applicationListPage.goto();
     await createSubscription(applicationListPage, subscriptionApplicationCreateWizardPage, options);
@@ -377,5 +650,122 @@ test.describe('Git Applications', { tag: ['@alc', '@app'] }, () => {
       namespace: options.namespace,
       removeRelatedResources: true,
     });
+  });
+
+  test(
+    'RHACM4K-10668: ALC: Deploying CRD via Application should update status in ACM console',
+    { tag: ['@e2e-common', '@RHACM4K-10668', '@create', '@UI'] },
+    async ({
+    page,
+    oc,
+    managedClusterContext,
+    applicationListPage,
+    applicationDetailsPage,
+    subscriptionApplicationCreateWizardPage,
+  }) => {
+    test.setTimeout(360_000);
+    const managedCluster = skipUnlessPrimaryManagedCluster(test, managedClusterContext, 'RHACM4K-10668');
+    if (!managedCluster) return;
+
+    const { subscription: options, applicationExpectations: expectations } =
+      resolveScenarioByTestId('RHACM4K-10668');
+    const { applicationName, namespace } = options;
+
+    if (!(await oc.applicationsAppK8sIoExists(namespace, applicationName))) {
+      await oc.deleteNamespace(namespace);
+    }
+
+    await applicationListPage.goto();
+    await createSubscription(
+      applicationListPage,
+      subscriptionApplicationCreateWizardPage,
+      options
+    );
+    await oc.ensureManagedClusterSetBinding(namespace, 'global');
+
+    await expectSubscriptionAppResourcesViaOc({
+      oc,
+      applicationName,
+      namespace,
+      applicationExpectations: expectations,
+      includeClusterResourceRows: false,
+    });
+
+    await applicationDetailsPage.navigateToApplicationTab(namespace, applicationName, 'details');
+    await verifySubscriptionAppDetailsTab({
+      page,
+      detailsPage: applicationDetailsPage,
+      applicationName,
+      namespace,
+      applicationExpectations: expectations,
+      repositories: options.repositories,
+      detailsValuesTimeout: 120_000,
+    });
+    await expectApplicationDetailsMinSuccessResourceCount(applicationDetailsPage, 2);
+
+    await applicationDetailsPage.navigateToApplicationTab(namespace, applicationName, 'topology');
+    await verifyCrdGitApplicationTopologyStatus({
+      detailsPage: applicationDetailsPage,
+      applicationName,
+      namespace,
+    });
+
+    await applicationListPage.deleteApplicationFromOverviewViaSearch({
+      applicationName,
+      namespace,
+      removeRelatedResources: true,
+    });
+  });
+
+  test(
+    'RHACM4K-1558: ALC: Delete an existing application without removing its related resources',
+    { tag: ['@RHACM4K-1558', '@destroy'] },
+    async ({
+    oc,
+    applicationListPage,
+    subscriptionApplicationCreateWizardPage,
+  }) => {
+    test.setTimeout(300_000);
+    const { subscription: options, applicationExpectations: expectations } =
+      resolveScenarioByTestId('RHACM4K-1558');
+    const { applicationName, namespace } = options;
+    expect(options.repositories).toHaveLength(2);
+
+    try {
+      if (!(await oc.applicationsAppK8sIoExists(namespace, applicationName))) {
+        await oc.deleteNamespace(namespace);
+      }
+
+      await applicationListPage.goto();
+      await createSubscription(
+        applicationListPage,
+        subscriptionApplicationCreateWizardPage,
+        options
+      );
+      await oc.ensureManagedClusterSetBinding(namespace, 'global');
+
+      await applicationListPage.deleteApplicationFromOverviewViaSearch({
+        applicationName,
+        namespace,
+        removeRelatedResources: false,
+        deleteNamespaceAfterUiDelete: false,
+      });
+
+      await applicationListPage.expectAdvancedConfigRelatedResourcesPersistAfterApplicationDelete({
+        applicationName,
+        applicationExpectations: expectations,
+        blockCount: options.repositories!.length,
+      });
+
+      await expectOrphanedAlcResourcesAfterApplicationDeleteViaOc({
+        oc,
+        applicationName,
+        namespace,
+        subscriptionBlockIndices: [1, 2],
+        placementBlockIndices: [1],
+      });
+    } finally {
+      await oc.deleteNamespace(namespace);
+    }
   });
 });
