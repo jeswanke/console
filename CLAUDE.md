@@ -103,12 +103,12 @@ Legacy tests live in **`application-ui-test`** / **`clc-ui-e2e`**. Use when port
 
 ### Cypress → Playwright (common mappings)
 
-| Cypress | Playwright |
-| ------- | ---------- |
-| `cy.get('#hibernate-cluster').click()` | `page.locator('#hibernate-cluster').click()` |
-| `cy.findByRole('menuitem', { name: /Resume/i })` | `page.getByRole('menuitem', { name: /Resume/i })` |
-| `cy.get('button.pf-v6-c-tabs__link').contains('Overview')` | `page.getByRole('tab', { name: 'Overview' })` |
-| `cy.waitUntil(() => …)` | `await expect(locator).toBeVisible({ timeout })` |
+| Cypress                                                    | Playwright                                        |
+| ---------------------------------------------------------- | ------------------------------------------------- |
+| `cy.get('#hibernate-cluster').click()`                     | `page.locator('#hibernate-cluster').click()`      |
+| `cy.findByRole('menuitem', { name: /Resume/i })`           | `page.getByRole('menuitem', { name: /Resume/i })` |
+| `cy.get('button.pf-v6-c-tabs__link').contains('Overview')` | `page.getByRole('tab', { name: 'Overview' })`     |
+| `cy.waitUntil(() => …)`                                    | `await expect(locator).toBeVisible({ timeout })`  |
 
 ### Patterns to avoid (from the Cypress repo)
 
