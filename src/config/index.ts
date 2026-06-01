@@ -6,8 +6,9 @@
 import fs from 'fs';
 import path from 'path';
 import dotenv from 'dotenv';
-import type { HubAuthConfig, TestConfig } from './schema';
-import { hubAuthPresets } from './presets';
+import type { HubAuthConfig, TestConfig, RbacUser } from './schema';
+export type { RbacUser } from './schema';
+import { hubAuthPresets, rbacPresets } from './presets';
 
 const repoRoot = process.cwd();
 
@@ -39,6 +40,21 @@ export function getHubAuth(): HubAuthConfig {
     hubPassword,
     hubIdp: process.env.CONSOLE_IDP ?? hubAuthPresets.hubIdp,
   };
+}
+
+export function getRbacUsers(domain?: string): RbacUser[] {
+  const password = process.env.RBAC_TEST_PASSWORD ?? '';
+  const idp = process.env.RBAC_IDP ?? rbacPresets.idp;
+
+  return rbacPresets.users
+    .filter((u) => !domain || (u.domains as readonly string[]).includes(domain))
+    .map((u) => ({
+      role: u.role,
+      username: u.username,
+      password,
+      idp,
+      domains: u.domains,
+    }));
 }
 
 export function getTestConfig(): TestConfig {

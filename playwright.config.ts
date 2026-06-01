@@ -36,28 +36,55 @@ export default defineConfig({
     ignoreHTTPSErrors: true,
   },
 
-  /* Configure projects */
+  /*
+   * Projects — each test project uses testMatch to own its directories.
+   *
+   * Auth setup:
+   *   setup       — admin login (always runs)
+   *   rbac-setup  — RBAC user login (only runs when a dependent project has matching tests)
+   *
+   * Test projects (admin only):
+   *   cluster     — src/tests/cluster/
+   *   alc         — src/tests/app/** (Application Lifecycle; `./start.sh alc`)
+   *
+   * Test projects (admin + RBAC users):
+   *   fg-rbac     — src/tests/fg-rbac/
+   *
+   *   unit        — src/tests/unit/** (no hub login)
+   *
+   * CLI examples:
+   *   npx playwright test --project=cluster           → setup → cluster tests
+   *   npx playwright test --project=alc               → setup → app ALC tests
+   *   npx playwright test --project=fg-rbac           → setup + rbac-setup → fg-rbac tests
+   *   RBAC_DOMAIN=fg-rbac npx playwright test         → rbac-setup only authenticates fg-rbac users
+   */
   projects: [
-    // Setup project - authenticates once and saves state
-    { 
-      name: 'setup', 
-      testMatch: /.*\.setup\.ts/,
+    {
+      name: 'setup',
+      testMatch: /\/auth\.setup\.ts/,
+      timeout: 120_000,
     },
 
-    // Non–Application Lifecycle UI (e.g. cluster list); excludes `src/tests/app/**` (see `alc`).
     {
-      name: 'chromium',
-      testIgnore: ['unit/**', 'app/**/*.spec.ts'],
+      name: 'rbac-setup',
+      testMatch: /rbac-auth\.setup\.ts/,
+      timeout: 120_000,
+    },
+
+    // -- Admin-only test projects --
+
+    {
+      name: 'cluster',
       use: {
         ...devices['Desktop Chrome'],
         viewport: { width: 1920, height: 1080 },
-        // Use the authenticated state saved by setup
-        storageState: '.auth/user.json',
+        storageState: '.auth/admin.json',
       },
       dependencies: ['setup'],
+      testMatch: /cluster/,
     },
 
-    // Application Lifecycle (ALC) — `src/tests/app/**`; `./start.sh alc` sets E2E_GITOPS_PREP (GitOps prep runs with `--project alc`).
+    // Application Lifecycle (ALC) — `src/tests/app/**`; `./start.sh alc` sets E2E_GITOPS_PREP.
     {
       name: 'alc',
       testMatch: 'app/**/*.spec.ts',
@@ -65,9 +92,22 @@ export default defineConfig({
       use: {
         ...devices['Desktop Chrome'],
         viewport: { width: 1920, height: 1080 },
-        storageState: '.auth/user.json',
+        storageState: '.auth/admin.json',
       },
       dependencies: ['setup'],
+    },
+
+    // -- RBAC test projects --
+
+    {
+      name: 'fg-rbac',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1920, height: 1080 },
+        storageState: '.auth/admin.json',
+      },
+      dependencies: ['setup', 'rbac-setup'],
+      testMatch: /fg-rbac/,
     },
 
     // Config / YAML unit tests (no hub login) — `src/tests/unit/**`

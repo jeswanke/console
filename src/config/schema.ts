@@ -9,6 +9,14 @@ export interface HubAuthConfig {
   readonly hubIdp: string;
 }
 
+export interface RbacUser {
+  readonly role: string;
+  readonly username: string;
+  readonly password: string;
+  readonly idp: string;
+  readonly domains: readonly string[];
+}
+
 export interface TestConfig {
   readonly hub: HubAuthConfig;
 }
