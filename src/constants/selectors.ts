@@ -61,7 +61,7 @@ export const SELECTORS = {
   },
 
   /** Governance/Policy domain */
-  policy: {
+  governance: {
     // Add as needed
   },
 

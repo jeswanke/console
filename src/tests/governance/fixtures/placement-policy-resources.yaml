@@ -1,0 +1,81 @@
+apiVersion: cluster.open-cluster-management.io/v1beta1
+kind: Placement
+metadata:
+  name: e2e-lifecycle-placement
+  namespace: open-cluster-management-global-set
+spec:
+  clusterSets: ['global']
+  predicates:
+    - requiredClusterSelector:
+        labelSelector:
+          matchExpressions:
+            - key: vendor
+              operator: In
+              values: ['OpenShift']
+  tolerations:
+    - key: cluster.open-cluster-management.io/unreachable
+      operator: Exists
+    - key: cluster.open-cluster-management.io/unavailable
+      operator: Exists
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: Policy
+metadata:
+  name: e2e-test-policy
+  namespace: open-cluster-management-global-set
+spec:
+  remediationAction: inform
+  disabled: false
+  policy-templates:
+    - objectDefinition:
+        apiVersion: policy.open-cluster-management.io/v1
+        kind: ConfigurationPolicy
+        metadata:
+          name: e2e-test-config
+        spec:
+          remediationAction: inform
+          severity: low
+          object-templates:
+            - complianceType: musthave
+              objectDefinition:
+                apiVersion: v1
+                kind: Namespace
+                metadata:
+                  name: default
+---
+apiVersion: policy.open-cluster-management.io/v1beta1
+kind: PolicySet
+metadata:
+  name: e2e-test-policyset
+  namespace: open-cluster-management-global-set
+spec:
+  description: 'E2E test policyset'
+  policies: ['e2e-test-policy']
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: PlacementBinding
+metadata:
+  name: e2e-test-binding
+  namespace: open-cluster-management-global-set
+placementRef:
+  name: e2e-lifecycle-placement
+  apiGroup: cluster.open-cluster-management.io
+  kind: Placement
+subjects:
+  - name: e2e-test-policy
+    apiGroup: policy.open-cluster-management.io
+    kind: Policy
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: PlacementBinding
+metadata:
+  name: e2e-test-policyset-binding
+  namespace: open-cluster-management-global-set
+placementRef:
+  name: e2e-lifecycle-placement
+  apiGroup: cluster.open-cluster-management.io
+  kind: Placement
+subjects:
+  - name: e2e-test-policyset
+    apiGroup: policy.open-cluster-management.io
+    kind: PolicySet
