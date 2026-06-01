@@ -1,5 +1,6 @@
 /**
- * **Details** tab verification for a subscription application (post–Create redirect, or any visit).
+ * **Details** tab verification for a subscription application. Callers must show **Details** first
+ * (e.g. {@link ApplicationDetailsPage.navigateToApplicationTab}).
  */
 
 import { expect, type Locator, type Page } from '@playwright/test';
@@ -7,7 +8,7 @@ import { expect, type Locator, type Page } from '@playwright/test';
 import { APP_APPLICATION_DETAILS } from '@constants/app';
 import type { ApplicationDetailsPage } from '@pages/app/ApplicationDetailsPage';
 
-import { expectApplicationDetailsUrl, expectOpenShiftShellTitle } from './topology-graph';
+import { expectApplicationDetailsUrl, expectOpenShiftShellTitle } from '../topology/graph-ids';
 
 /**
  * Expected **Clusters** DescriptionList value on subscription app **Details** (hub wording):
@@ -22,7 +23,7 @@ export type SubscriptionDetailsClustersSummary =
 
 /** One expected row under the Details tab **Repository** value block. */
 export type SubscriptionDetailsRepositoryExpectation = {
-  /** Full repository URL string shown in Details (exact text). */
+  /** Repository URL from spec data; Details may omit a trailing `.git`. */
   url: string;
   /** Optional repository type badge/button label (for example: `Git`, `Helm`). */
   kindLabel?: string;
@@ -54,6 +55,70 @@ function buildExpectedDetailsRepositories(
   }));
 }
 
+/** Any non-empty digit run in **Cluster resource status** (single-subscription default). */
+export function subscriptionDetailsClusterResourceStatusAnyPattern(): RegExp {
+  return /\d+/;
+}
+
+/** Exact total for **Cluster resource status** when the UI shows a single aggregate count (trimmed). */
+export function subscriptionDetailsClusterResourceTotalPattern(expectedCount: number): RegExp {
+  return new RegExp(`^\\s*${expectedCount}\\s*$`);
+}
+
+/**
+ * Cypress `validateTopology` / `successNumber`: on **Details**, at least one green status label shows a count
+ * ≥ `minCount` (PF5 `.pf-m-green` or PF6 `AcmInlineStatusGroup` listitems). Call while **Details** tab is active.
+ */
+export async function expectApplicationDetailsMinSuccessResourceCount(
+  detailsPage: ApplicationDetailsPage,
+  minCount: number,
+  options?: { timeout?: number }
+): Promise<void> {
+  const timeout = options?.timeout ?? 300_000;
+  await detailsPage.expectDetailTabSelected('details', { timeout });
+  const statusValue = detailsPage.getDescriptionValue('clusterResourceStatus');
+  await expect(statusValue).toBeVisible({ timeout });
+
+  await expect
+    .poll(
+      async () => largestNumericLabelInClusterResourceStatus(statusValue),
+      {
+        timeout,
+        intervals: [5_000, 10_000, 15_000],
+        message: `Cluster resource status success count ≥ ${minCount}`,
+      }
+    )
+    .toBeGreaterThanOrEqual(minCount);
+}
+
+async function largestNumericLabelInClusterResourceStatus(statusValue: Locator): Promise<number> {
+  let max = 0;
+
+  // Cypress: `.pf-m-green` → `[class*="c-label__content"]` (PF6 uses `pf-v6-c-label__text` in the same node).
+  const greenLabels = statusValue.locator(
+    '.pf-m-green [class*="c-label__content"], .pf-m-green [class*="c-label__text"]'
+  );
+  for (const el of await greenLabels.all()) {
+    max = Math.max(max, parseStatusLabelCount(await el.innerText()));
+  }
+
+  for (const item of await statusValue.getByRole('listitem').all()) {
+    max = Math.max(max, parseStatusLabelCount(await item.innerText()));
+  }
+
+  const cellText = await statusValue.innerText().catch(() => '');
+  for (const match of cellText.match(/\d+/g) ?? []) {
+    max = Math.max(max, parseInt(match, 10));
+  }
+
+  return max;
+}
+
+function parseStatusLabelCount(text: string): number {
+  const n = parseInt(text.trim(), 10);
+  return Number.isNaN(n) ? 0 : n;
+}
+
 /** Playwright `toHaveText` matcher for {@link SubscriptionDetailsClustersSummary} (allows minor whitespace). */
 export function subscriptionDetailsClustersValuePattern(
   summary: SubscriptionDetailsClustersSummary
@@ -79,6 +144,41 @@ function countByText(values: string[]): Map<string, number> {
   return counts;
 }
 
+/** Console Details often omits a trailing `.git` on Git repository URLs. */
+export function normalizeSubscriptionDetailsRepositoryUrl(url: string): string {
+  return url.trim().replace(/\.git$/i, '');
+}
+
+function repositoryUrlDisplayedPattern(url: string): RegExp {
+  const normalized = normalizeSubscriptionDetailsRepositoryUrl(url);
+  const escaped = normalized.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(escaped);
+}
+
+async function waitForRepositoryUrlOccurrences(
+  repositoryValue: Locator,
+  url: string,
+  expectedCount: number,
+  options: { timeout?: number }
+): Promise<void> {
+  const pattern = repositoryUrlDisplayedPattern(url);
+  const timeout = options.timeout ?? 30_000;
+  await expect
+    .poll(
+      async () => {
+        const text = await repositoryValue.innerText().catch(() => '');
+        const matches = text.match(new RegExp(pattern.source, 'g'));
+        return (matches?.length ?? 0) === expectedCount;
+      },
+      {
+        timeout,
+        intervals: [1_000, 2_000, 3_000, 5_000],
+        message: `Expected Repository value to show URL ${url} × ${expectedCount}`,
+      }
+    )
+    .toBe(true);
+}
+
 async function waitForLocatorTextMatch(
   locator: Locator,
   matcher: RegExp,
@@ -102,8 +202,10 @@ async function waitForLocatorTextMatch(
 
 async function assertRepositoryValue(
   repositoryValue: Locator,
-  expectedRepositories: SubscriptionDetailsRepositoryExpectation[] | undefined
+  expectedRepositories: SubscriptionDetailsRepositoryExpectation[] | undefined,
+  options?: { timeout?: number }
 ): Promise<void> {
+  const timeout = options?.timeout;
   await expect(repositoryValue).toBeVisible();
   await expect(repositoryValue).toHaveText(NON_EMPTY_TEXT_RE);
 
@@ -111,16 +213,16 @@ async function assertRepositoryValue(
 
   const urlCounts = countByText(expectedRepositories.map((r) => r.url));
   for (const [url, count] of urlCounts) {
-    await expect(repositoryValue.getByText(url, { exact: true })).toHaveCount(count);
+    await waitForRepositoryUrlOccurrences(repositoryValue, url, count, { timeout });
   }
 
   const kindCounts = countByText(
     expectedRepositories.flatMap((r) => (r.kindLabel ? [r.kindLabel] : []))
   );
   for (const [kindLabel, count] of kindCounts) {
-    await expect(repositoryValue.getByRole('button', { name: kindLabel, exact: true })).toHaveCount(
-      count
-    );
+    await expect(repositoryValue.getByRole('button', { name: kindLabel, exact: true })).toHaveCount(count, {
+      timeout,
+    });
   }
 }
 
@@ -152,6 +254,11 @@ export type VerifySubscriptionAppDetailsTabParams = {
   detailsUrlTimeout?: number;
   /** Wait for eventually-populated Details values (Clusters / Cluster resource status). */
   detailsValuesTimeout?: number;
+  /**
+   * When set, **Cluster resource status** value must match (multi-subscription Details reflects **`#comboChannel`**).
+   * Default is any positive integer substring via {@link subscriptionDetailsClusterResourceStatusAnyPattern}.
+   */
+  clusterResourceStatusPattern?: RegExp;
 };
 
 function resolveDetailsClustersSummary(
@@ -164,9 +271,9 @@ function resolveDetailsClustersSummary(
 }
 
 /**
- * After **Create**, the console redirects to the application **Details** tab. Asserts URL, shell title,
- * **Details** tab selection, `h1`, and DescriptionList fields (including **Clusters**, **Cluster resource status**,
- * **Created**, **Last sync requested**) before callers open **Topology**.
+ * Asserts URL, shell title, **Details** tab selection, `h1`, and DescriptionList fields (including **Clusters**,
+ * **Cluster resource status**, **Created**, **Last sync requested**). Does not navigate — caller must already be on
+ * **Details** (e.g. after {@link ApplicationDetailsPage.navigateToApplicationTab}).
  */
 export async function verifySubscriptionAppDetailsTab(
   params: VerifySubscriptionAppDetailsTabParams
@@ -180,6 +287,7 @@ export async function verifySubscriptionAppDetailsTab(
     repositories,
     detailsUrlTimeout = 120_000,
     detailsValuesTimeout = 120_000,
+    clusterResourceStatusPattern,
   } = params;
   const clustersSummary = resolveDetailsClustersSummary(params);
   const expectedRepositoriesResolved =
@@ -189,7 +297,7 @@ export async function verifySubscriptionAppDetailsTab(
   await expectApplicationDetailsUrl(page, namespace, applicationName, {
     timeout: detailsUrlTimeout,
   });
-  await detailsPage.expectDetailTabSelected('details');
+  await detailsPage.expectDetailTabSelected('details', { timeout: detailsUrlTimeout });
   await expect(detailsPage.getApplicationHeading()).toHaveText(applicationName);
   await expect(detailsPage.getDescriptionValue('name')).toHaveText(applicationName);
   await expect(detailsPage.getDescriptionValue('namespace')).toHaveText(namespace);
@@ -197,7 +305,9 @@ export async function verifySubscriptionAppDetailsTab(
     APP_APPLICATION_DETAILS.typeValues.subscription
   );
   const repositoryValue = detailsPage.getDescriptionValue('repository');
-  await assertRepositoryValue(repositoryValue, expectedRepositoriesResolved);
+  await assertRepositoryValue(repositoryValue, expectedRepositoriesResolved, {
+    timeout: detailsValuesTimeout,
+  });
 
   await expect(detailsPage.getDescriptionTerm('clusters')).toBeVisible();
   const clustersValue = detailsPage.getDescriptionValue('clusters');
@@ -215,7 +325,9 @@ export async function verifySubscriptionAppDetailsTab(
 
   await expect(detailsPage.getDescriptionTerm('clusterResourceStatus')).toBeVisible();
   const clusterResourceStatusValue = detailsPage.getDescriptionValue('clusterResourceStatus');
-  await waitForLocatorTextMatch(clusterResourceStatusValue, /\d+/, {
+  const crsPattern =
+    clusterResourceStatusPattern ?? subscriptionDetailsClusterResourceStatusAnyPattern();
+  await waitForLocatorTextMatch(clusterResourceStatusValue, crsPattern, {
     timeout: detailsValuesTimeout,
     label: 'Cluster resource status',
   });

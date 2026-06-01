@@ -9,7 +9,6 @@
 import { expect, type Locator, type Page } from '@playwright/test';
 
 import { APP_APPLICATION_DETAILS, APP_APPLICATION_TOPOLOGY } from '@constants/app';
-
 /** Re-export for callers that need the raw test id string. */
 export const TOPOLOGY_GRAPH_SURFACE_TEST_ID = APP_APPLICATION_TOPOLOGY.graphSurfaceTestId;
 
@@ -46,6 +45,21 @@ export function topologyPlacementDecisionDataId(
 ): string {
   return `member--rules--${namespace}--${placementCrName}-decision-1--0`;
 }
+
+/** Stable **PlacementDecision** graph node `data-id` for subscription block *i* (default block `1`). */
+export function buildPlacementDecisionNodeDataId(params: {
+  applicationName: string;
+  namespace: string;
+  blockIndex?: number;
+  /** From subscription `placementRef` when the wizard created a new Placement (e.g. `…-placement-3`). */
+  placementCrName?: string;
+}): string {
+  const blockIndex = params.blockIndex ?? 1;
+  const placementName =
+    params.placementCrName ?? defaultPlacementCrName(params.applicationName, blockIndex);
+  return topologyPlacementDecisionDataId(params.namespace, placementName);
+}
+
 
 export function topologyClusterHubDataId(clusterName: string, subscriptionCrName: string): string {
   return `member--clusters--${clusterName}--${subscriptionCrName}`;
@@ -336,33 +350,4 @@ export async function expectTopologyGraphContainsNodeDataIds(
       { timeout, intervals: options?.intervals ?? [2_000, 3_000, 5_000] }
     )
     .toEqual([]);
-}
-
-/**
- * Asserts some **visible** `drawer__panel` contains the given text (resource side panel after a graph node click).
- */
-export async function expectVisibleTopologyDrawerContains(
-  page: Page,
-  pattern: string | RegExp,
-  options?: { timeout?: number }
-): Promise<void> {
-  const timeout = options?.timeout ?? 30_000;
-  await expect
-    .poll(
-      async () => {
-        const panels = page.locator('[class*="drawer__panel"]');
-        const n = await panels.count();
-        for (let i = 0; i < n; i++) {
-          const panel = panels.nth(i);
-          if (!(await panel.isVisible().catch(() => false))) continue;
-          const text = await panel.innerText().catch(() => '');
-          const ok =
-            typeof pattern === 'string' ? text.includes(pattern) : pattern.test(text);
-          if (ok) return true;
-        }
-        return false;
-      },
-      { timeout, message: 'Expected a visible topology drawer panel with matching text' }
-    )
-    .toBe(true);
 }

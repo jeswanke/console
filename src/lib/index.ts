@@ -1,80 +1,35 @@
 /**
  * Shared test logic: assertions, factories, and other non-page, non-service code.
- * Add modules under `assertions/`, `factories/`, etc. as the suite grows.
  *
- * @see docs/architecture-overview.md — §5 `/src/lib` (application helpers under `./app/`)
+ * @see docs/architecture-overview.md — §5 `/src/lib`
  */
 
 export { expectOcGetListContains } from './assertions/oc-resource-list';
 
-export { deleteHubApplicationIfExists } from './app/application-test-setup';
-
+export * from './app/subscription';
+export * from './app/topology';
+export { resolvePlacementCrNameForSubscriptionBlock } from './app/placement/resolve';
 export {
-  addSubscriptionToExistingApplication,
-  createSubscription,
-  deleteSubscriptionFromExistingApplication,
-  editSubscriptionInExistingApplication,
-  type AddSubscriptionToExistingApplicationOptions,
-  type AutomationSpec,
-  type ClusterDeploymentSpec,
-  type ClusterLabelSelectorRowSpec,
-  type CreateSubscriptionOptions,
-  type DeleteSubscriptionFromExistingApplicationOptions,
-  type EditSubscriptionInExistingApplicationOptions,
-  type GitSubscriptionRepositoryFields,
-  type HelmSubscriptionRepositoryFields,
-  type ObjectStorageSubscriptionRepositoryFields,
-  type PerBlockSubscriptionSpec,
-  type SubscriptionRepositorySpec,
-  type TimeWindowSpec,
-} from './app/subscription-create';
+  pollTopologyDrawerLabeledFieldUntil,
+  waitForPlacementDecisionClusterCount,
+  TOPOLOGY_DRAWER_POLL_INTERVALS,
+} from './app/topology/drawer-poll';
+export {
+  buildClusterLabelDeployment,
+  buildLocalClusterLabelDeployment,
+  buildGlobalClusterLabelDeployment,
+} from './app/subscription/placement-spec';
+
+export * from './app/verify';
+export * from './app/auth/private-git';
+export { deleteHubApplicationIfExists } from './app/setup/application-test-setup';
 
 export {
   getManagedClusterContextPath,
   getPrimaryManagedCluster,
   loadManagedClusterContext,
+  skipUnlessPrimaryManagedCluster,
   type ManagedClusterContextFile,
   type ManagedClusterEntry,
+  type PlaywrightTestSkip,
 } from './cluster/managedClusterContext';
-
-export {
-  buildMergedTopologyDrawerSpotChecksForSubscriptionBlocks,
-  buildMergedTopologyNodeDataIdsForSubscriptionBlocks,
-  buildTopologyDrawerSpotChecksForSubscriptionBlock,
-  buildTopologyNodeDataIdsForSubscriptionBlock,
-  dedupeTopologyNodeDataIds,
-  defaultChannelCrName,
-  defaultPlacementCrName,
-  defaultSubscriptionCrName,
-  expectedTopologyDrawerContains,
-  expectApplicationDetailsUrl,
-  expectApplicationTopologyUrl,
-  expectOpenShiftShellTitle,
-  expectTopologyGraphContainsNodeDataIds,
-  expectVisibleTopologyDrawerContains,
-  topologyApplicationDataId,
-  topologyClusterHubDataId,
-  topologyDeployedDeploymentDataId,
-  topologyDeployedPodDataId,
-  topologyDeployedReplicaSetDataId,
-  topologyDeployedRouteDataId,
-  topologyDeployedServiceDataId,
-  topologyPlacementDecisionDataId,
-  topologySubscriptionDataId,
-  TOPOLOGY_GRAPH_SURFACE_TEST_ID,
-  type TopologyClusterResourceRef,
-} from './app/topology-graph';
-
-export {
-  subscriptionDetailsClustersValuePattern,
-  verifySubscriptionAppDetailsTab,
-  type SubscriptionDetailsClustersSummary,
-  type SubscriptionDetailsRepositoryExpectation,
-  type VerifySubscriptionAppDetailsTabParams,
-} from './app/verify-subscription-details';
-export {
-  verifySubscriptionAppTopologyTab,
-  type TopologyDrawerSpotCheck,
-  type TopologySubscriptionScopeParam,
-  type VerifySubscriptionAppTopologyTabParams,
-} from './app/verify-subscription-topology';
