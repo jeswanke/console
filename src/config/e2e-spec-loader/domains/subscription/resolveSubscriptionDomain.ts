@@ -1,4 +1,4 @@
-import type { CreateSubscriptionOptions } from '@lib/app/subscription-create';
+import type { CreateSubscriptionOptions } from '@lib/app/subscription/types';
 import type { E2eSpecData, ScenarioEntry } from '../../schema';
 import { mergeSubscriptionLayers } from './subscriptionMerge';
 import { subscriptionDomainPayloadSchema } from './subscriptionSchema';
