@@ -17,7 +17,9 @@ npx playwright install chromium
 
 **Recommended:** keep **universal** values in a repo-root **`.env`** (copy from **`.env.example`**). It is gitignored. **`./start.sh`** loads `.env` before `oc login`, and Playwright loads it via `src/config/index.ts`. Use **`HUB_PASSWORD`** for both `oc login` and the console UI step in **`auth.setup.ts`** (no separate console password).
 
-**Ansible (AAP):** Prefer **`ANSIBLE_URL`** + **`ANSIBLE_TOWER_PASSWORD`** in repo-root **`.env`** (see **`.env.example`**). On non-unit runs, `globalSetup` runs `scripts/ansible/setup-ansible-template.sh` unless **`E2E_SKIP_ANSIBLE_PREP=1`**. If `ANSIBLE_TOKEN` is not provided, the prep script mints it from URL/password; if URL/password are not provided, it discovers route/password/token from cluster secrets in `AAP_NAMESPACE` (default `aap`). The script ensures `default/alc-ansible-secret` and can bootstrap AWX templates (disable with `E2E_ANSIBLE_AWX_BOOTSTRAP=0`). **Object store** (S3) for ALC stays in **`env/alc.local.env`** — see **`env/alc.env.example`**.
+**Ansible (AAP):** Prefer **`ANSIBLE_URL`** + **`ANSIBLE_TOWER_PASSWORD`** in repo-root **`.env`** (see **`.env.example`**). On non-unit runs, `globalSetup` runs `scripts/ansible/setup-ansible-template.sh` unless **`E2E_SKIP_ANSIBLE_PREP=1`**. If `ANSIBLE_TOKEN` is not provided, the prep script mints it from URL/password; if URL/password are not provided, it discovers route/password/token from cluster secrets in `AAP_NAMESPACE` (default `aap`). The script ensures `default/alc-ansible-secret` and can bootstrap AWX templates (disable with `E2E_ANSIBLE_AWX_BOOTSTRAP=0`).
+
+**ALC-only (`env/alc.local.env`):** Copy **`env/alc.env.example`** → **`env/alc.local.env`** (gitignored). Used for **private Git auth** (**`GITHUB_USER`**, **`GITHUB_TOKEN`** — base64-encoded; repo URL in **e2e-spec-data**) and **object store** (`OBJECTSTORE_*`). Loaded by **`./start.sh alc`** and **`loadAlcLocalEnvFile()`** in `src/config/index.ts`. Tests use **`@lib/app/auth/private-git`** (`getPrivateGitAuthFromEnv`, `applyPrivateGitAuthToSubscriptionOptions`).
 
 ---
 
@@ -40,7 +42,7 @@ npx playwright install chromium
 | **`setup`**    | Auth (`auth.setup.ts`) → **`.auth/user.json`**                                     |
 | **`alc`**      | **Application Lifecycle** — `src/tests/app/**/*.spec.ts` (use **`--project alc`**) |
 | **`chromium`** | Other UI tests (e.g. **`src/tests/cluster/**`**) — excludes **`app/**`**           |
-| **`unit`**     | YAML / loader tests — no hub                                                       |
+| **`unit`**     | YAML / loader tests — `src/tests/unit/**/*.unit.spec.ts` (no hub)                |
 
 **GitOps prep** in **`src/global-setup/gitOpsPrep.ts`** runs only when **`E2E_GITOPS_PREP`** is enabled (**`1/true/yes`**, set to `1` by default in **`./start.sh alc`**) **and** **`--project`** includes **`alc`** (and the run is not unit-only). Use **`E2E_GITOPS_PREP=0`** to disable. Non-ALC runs (e.g. **`--project chromium`**) skip GitOps even if the env is set.
 
@@ -110,7 +112,7 @@ export HUB_PASSWORD='<kubeadmin-password>'
 | `OC_CLUSTER_URL` / `OC_CLUSTER_USER` / `OC_CLUSTER_PASS` | Default from `HUB_URL`, `kubeadmin`, `HUB_PASSWORD` (override via env if needed) |
 | `PLAYWRIGHT_TEST_MODE`                                   | Default `e2e`, or from `TEST_MODE` / explicit `PLAYWRIGHT_TEST_MODE`             |
 
-**ALC-only file:** `./start.sh alc` also loads **`env/alc.local.env`** (gitignored) for **`OBJECTSTORE_*`** integrations (see `env/alc.env.example`). **`ANSIBLE_*`** is read from repo-root **`.env`** with everything else.
+**ALC-only file:** `./start.sh alc` also loads **`env/alc.local.env`** (gitignored) for **`GITHUB_USER`** / **`GITHUB_TOKEN`** (private Git auth) and **`OBJECTSTORE_*`** (see `env/alc.env.example`). **`ANSIBLE_*`** is read from repo-root **`.env`** with everything else.
 
 Add more components later by extending the `case` in `start.sh` and adding e.g. `src/tests/<area>/start.sh`. Shared logic lives in `scripts/lib/common.sh`.
 
@@ -164,8 +166,9 @@ console-e2e/
 │   ├── global-setup/        # clusterPrep, gitOpsPrep, projectArgv, logPrefix
 │   ├── tests/
 │   │   ├── auth.setup.ts
-│   │   ├── app/
-│   │   └── cluster/
+│   │   ├── app/             # ALC UI (`--project alc`)
+│   │   ├── cluster/         # Other UI (`--project chromium`)
+│   │   └── unit/            # Config / lib unit tests (`--project unit`)
 │   └── utils/
 ├── .auth/                   # Auth state (gitignored)
 ├── playwright.config.ts

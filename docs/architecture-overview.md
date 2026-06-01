@@ -186,10 +186,15 @@ getClusterRow(name: string) {
 
 **Purpose:** Helper classes that contain "Business Logic" for testing, but aren't strictly UI or Backend.
 
-- **`/assertions`**: Reusable assertion logic.
-  - Example: `FileAssertions.ts` has a function `expectValidCsv(download)` that checks if a downloaded file is valid.
-- **`UserFactory.ts`**: Handles the complexity of RBAC (Role-Based Access Control). It dynamically spins up API contexts for "Editor", "Viewer", or "Admin" roles.
-- **`UiUserFactory.ts`**: Similar to above, but spins up isolated Browser Contexts (Incognito windows) for testing multiple users in the UI simultaneously.
+- **`/assertions`**: Reusable assertion logic (e.g. `oc-resource-list.ts`).
+- **`/cluster`**: Hub fleet context (`managedClusterContext.ts`).
+- **`/app`**:
+  - **`subscription/`** — wizard types + create/edit flows + placement spec builders.
+  - **`verify/`** — full Details / Topology tab checks and OC resource expectations.
+  - **`topology/`** — graph `data-id` builders and drawer DOM helpers (no `oc`).
+  - **`placement/`** — placement CR resolution via `OcCliService`.
+  - **`auth/`**, **`setup/`** — private Git env, test teardown helpers; **`subscription/sync.ts`** — Details **Sync**.
+- **`index.ts`**: Barrel re-exports for convenience; tests may import `@lib/app/<domain>/...` directly.
 
 ### 6. `/src/utils` (Pure Functions)
 
@@ -271,10 +276,10 @@ console-e2e/
 ├── playwright.config.ts        # Imports ./src/config/index (loads .env), projects, reporters
 ├── package.json                # `npm run test`, `npm run test:alc` → ./start.sh alc
 ├── env/
-│   └── alc.env.example         # ALC object-store template → copy to env/alc.local.env (gitignored)
+│   └── alc.env.example         # ALC template (GITHUB_USER/TOKEN, OBJECTSTORE_*) → env/alc.local.env (gitignored)
 ├── scripts/
 │   ├── lib/common.sh           # Login, npm; exports CONSOLE_USERNAME/CONSOLE_IDP before login; after login universal env (BASE_URL, OC_CLUSTER_*, PLAYWRIGHT_TEST_MODE)
-│   ├── lib/alc-env.sh          # Sources env/alc.local.env (object store only; ANSIBLE_* in .env)
+│   ├── lib/alc-env.sh          # Sources env/alc.local.env (GITHUB_USER/TOKEN, OBJECTSTORE_*; ANSIBLE_* in .env)
 │   ├── cluster/
 │   │   ├── generate-managed-cluster-data.py
 │   │   └── setup-managed-cluster-kubeconfig.sh
@@ -287,7 +292,7 @@ console-e2e/
     ├── config/                 # §1 — loader + types
     │   ├── schema.ts
     │   ├── presets.ts
-    │   └── index.ts            # dotenv + getHubAuth() / getTestConfig()
+    │   └── index.ts            # dotenv + loadAlcLocalEnvFile() + getHubAuth() / getTestConfig()
     ├── constants/              # §2 — selectors, app copy
     │   ├── selectors.ts
     │   └── app.ts              # APP_ROUTES, APP_CREATE_MENU, APP_SUBSCRIPTION_CREATE_WIZARD, …

@@ -2,7 +2,8 @@
 # Copyright (c) 2025 Red Hat, Inc.
 # Copyright Contributors to the Open Cluster Management project
 #
-# ALC-only env: optional env/alc.local.env (object store). Ansible: repo-root .env (ANSIBLE_*).
+# ALC-only env: optional env/alc.local.env (private Git GITHUB_USER/TOKEN, object store OBJECTSTORE_*).
+# Ansible: repo-root .env (ANSIBLE_*).
 # Universal vars (HUB_*, CONSOLE_*, BASE_URL, OC_CLUSTER_*, PLAYWRIGHT_TEST_MODE)
 # are set by root start.sh via scripts/lib/common.sh after hub login.
 

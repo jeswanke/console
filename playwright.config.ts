@@ -47,7 +47,7 @@ export default defineConfig({
     // Non–Application Lifecycle UI (e.g. cluster list); excludes `src/tests/app/**` (see `alc`).
     {
       name: 'chromium',
-      testIgnore: [/.*\.unit\.spec\.ts$/, 'app/**/*.spec.ts'],
+      testIgnore: ['unit/**', 'app/**/*.spec.ts'],
       use: {
         ...devices['Desktop Chrome'],
         viewport: { width: 1920, height: 1080 },
@@ -61,7 +61,7 @@ export default defineConfig({
     {
       name: 'alc',
       testMatch: 'app/**/*.spec.ts',
-      testIgnore: /.*\.unit\.spec\.ts$/,
+      testIgnore: 'unit/**',
       use: {
         ...devices['Desktop Chrome'],
         viewport: { width: 1920, height: 1080 },
@@ -70,10 +70,10 @@ export default defineConfig({
       dependencies: ['setup'],
     },
 
-    // Config / YAML unit tests (no hub login)
+    // Config / YAML unit tests (no hub login) — `src/tests/unit/**`
     {
       name: 'unit',
-      testMatch: /.*\.unit\.spec\.ts$/,
+      testMatch: 'unit/**/*.unit.spec.ts',
       use: {
         ...devices['Desktop Chrome'],
       },
