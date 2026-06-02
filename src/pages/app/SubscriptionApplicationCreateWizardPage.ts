@@ -24,7 +24,7 @@ import {
   type SubscriptionWizardRepositoryCardKind,
 } from '@constants/app';
 import type { ApplicationListPage } from '@pages/app/ApplicationListPage';
-import { pageUrlPathnameEquals } from '@utils/console-navigation';
+import { pageUrlPathnameEquals } from '@lib/navigation';
 
 /**
  * Subscription application **create** wizard (Application Lifecycle).

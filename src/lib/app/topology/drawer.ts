@@ -3,52 +3,52 @@
  */
 import { expect, type Page } from '@playwright/test';
 
+function toLabelRegex(label: string | RegExp): RegExp {
+  return typeof label === 'string'
+    ? new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i')
+    : label;
+}
 
-/** Labeled field value from a visible topology drawer panel. */
+/** Single snapshot read of a labeled field from a visible topology drawer panel. */
 export async function readTopologyDrawerLabeledField(
   page: Page,
-  label: string | RegExp,
-  options?: { timeout?: number }
+  label: string | RegExp
 ): Promise<string | undefined> {
-  const timeout = options?.timeout ?? 5_000;
-  const deadline = Date.now() + timeout;
-  const labelRe = typeof label === 'string' ? new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') : label;
+  const labelRe = toLabelRegex(label);
+  const panels = page.locator('[class*="drawer__panel"]');
+  const n = await panels.count();
 
-  while (Date.now() < deadline) {
-    const panels = page.locator('[class*="drawer__panel"]');
-    const n = await panels.count();
-    for (let i = 0; i < n; i++) {
-      const panel = panels.nth(i);
-      if (!(await panel.isVisible().catch(() => false))) continue;
-      const text = await panel.innerText().catch(() => '');
-      if (!labelRe.test(text)) continue;
+  for (let i = 0; i < n; i++) {
+    const panel = panels.nth(i);
+    if (!(await panel.isVisible().catch(() => false))) continue;
+    const text = await panel.innerText().catch(() => '');
+    if (!labelRe.test(text)) continue;
 
-      const valueFromDom = await panel
-        .locator('span.label')
-        .filter({ hasText: labelRe })
-        .first()
-        .evaluate((labelEl) => {
-          const row = labelEl.closest('div');
-          const valueEl = row?.querySelector('span:not(.label)');
-          return valueEl?.textContent?.trim() ?? '';
-        })
-        .catch(() => '');
+    const valueFromDom = await panel
+      .locator('span.label')
+      .filter({ hasText: labelRe })
+      .first()
+      .evaluate((labelEl) => {
+        const row = labelEl.closest('div');
+        const valueEl = row?.querySelector('span:not(.label)');
+        return valueEl?.textContent?.trim() ?? '';
+      })
+      .catch(() => '');
 
-      if (valueFromDom) {
-        return valueFromDom;
-      }
-
-      const line = text
-        .split('\n')
-        .map((l) => l.trim())
-        .find((l) => labelRe.test(l));
-      if (line) {
-        const afterColon = line.split(':').slice(1).join(':').trim();
-        if (afterColon) return afterColon;
-      }
+    if (valueFromDom) {
+      return valueFromDom;
     }
-    await page.waitForTimeout(250);
+
+    const line = text
+      .split('\n')
+      .map((l) => l.trim())
+      .find((l) => labelRe.test(l));
+    if (line) {
+      const afterColon = line.split(':').slice(1).join(':').trim();
+      if (afterColon) return afterColon;
+    }
   }
+
   return undefined;
 }
 
@@ -63,7 +63,7 @@ export async function expectTopologyDrawerLabeledField(
   await expect
     .poll(
       async () => {
-        const value = await readTopologyDrawerLabeledField(page, label, { timeout: 2_000 });
+        const value = await readTopologyDrawerLabeledField(page, label);
         if (value === undefined) return false;
         return typeof expected === 'string' ? value.includes(expected) : expected.test(value);
       },

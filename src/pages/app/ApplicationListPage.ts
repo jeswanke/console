@@ -15,8 +15,8 @@ import {
 } from '@constants/app';
 import type { ApplicationExpectationsPayload } from '@config/e2e-spec-loader/domains/application-expectations/applicationExpectationsSchema';
 import { defaultSubscriptionCrName } from '@lib/app/topology/graph-ids';
-import { acmToolbarSearchLocator } from '@utils/acm-locators';
-import { pageUrlPathnameEquals } from '@utils/console-navigation';
+import { acmToolbarSearchLocator } from '@components/patternfly/AcmSearchInput';
+import { pageUrlPathnameEquals } from '@lib/navigation';
 
 function escapeRegExp(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');

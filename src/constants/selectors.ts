@@ -31,7 +31,7 @@ export const PF_TABLE = `.${PF}-table`;
 export const SELECTORS = {
   /** Common selectors used across multiple domains */
   common: {
-    /** Prefer `acmToolbarSearchLocator(page)` — PF/AcmSearchInput markup can vary by release. */
+    /** Prefer {@link acmToolbarSearchLocator} from `@components/patternfly/AcmSearchInput`. */
     searchInput: '[aria-label="Search input"]',
     /** Masthead user menu (toggle); live console uses `user-dropdown-toggle` */
     userDropdown: '[data-test="user-dropdown-toggle"], [data-test="user-dropdown"]',

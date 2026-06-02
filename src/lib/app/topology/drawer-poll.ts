@@ -44,9 +44,7 @@ export async function pollTopologyDrawerLabeledFieldUntil(
     .poll(
       async () => {
         await detailsPage.clickTopologyGraphNodeByDataId(nodeDataId);
-        const value = await readTopologyDrawerLabeledField(page, fieldLabel, {
-          timeout: 3_000,
-        });
+        const value = await readTopologyDrawerLabeledField(page, fieldLabel);
         if (value === undefined) return false;
         return typeof expected === 'string' ? value.includes(expected) : expected.test(value);
       },

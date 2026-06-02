@@ -10,7 +10,7 @@ import {
 } from '@constants/app';
 import { expectTopologyGraphContainsNodeDataIds } from '@lib/app/topology/graph-ids';
 import { expectVisibleTopologyDrawerContains } from '@lib/app/topology/drawer';
-import { normalizeConsolePathname, pageUrlPathnameEquals } from '@utils/console-navigation';
+import { normalizeConsolePathname, pageUrlPathnameEquals } from '@lib/navigation';
 
 /** Subscription app Details / Topology page (`/multicloud/applications/details/{ns}/{name}/{tab}`). */
 export class ApplicationDetailsPage extends BasePage {

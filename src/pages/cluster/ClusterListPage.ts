@@ -1,12 +1,14 @@
 import { Page, Locator } from '@playwright/test';
 import { BasePage } from '../BasePage';
 import { AcmTable } from '@components/patternfly/AcmTable';
+import { ManageColumnsDialog } from '@components/patternfly/ManageColumnsDialog';
 import { OcCliService } from '@services/OcCliService';
 import { SELECTORS } from '@constants/selectors';
-import { pageUrlPathnameEquals } from '@utils/console-navigation';
+import { pageUrlPathnameEquals } from '@lib/navigation';
 
 export class ClusterListPage extends BasePage {
   readonly table: AcmTable;
+  readonly manageColumns: ManageColumnsDialog;
   private readonly createButton: Locator;
   private readonly importButton: Locator;
 
@@ -16,6 +18,7 @@ export class ClusterListPage extends BasePage {
   ) {
     super(page);
     this.table = new AcmTable(page);
+    this.manageColumns = new ManageColumnsDialog(page);
     this.createButton = page.locator(SELECTORS.cluster.createButton);
     this.importButton = page.locator(SELECTORS.cluster.importButton);
   }

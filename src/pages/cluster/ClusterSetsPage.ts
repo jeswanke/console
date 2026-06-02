@@ -2,7 +2,7 @@ import { Page, Locator } from '@playwright/test';
 import { BasePage } from '../BasePage';
 import { AcmTable } from '@components/patternfly/AcmTable';
 import { OcCliService } from '@services/OcCliService';
-import { pageUrlPathnameEquals } from '@utils/console-navigation';
+import { pageUrlPathnameEquals } from '@lib/navigation';
 
 /**
  * Cluster Sets page — reuses {@link AcmTable}.
