@@ -1,8 +1,9 @@
 import type { E2eSpecData, ScenarioEntry } from '../schema';
 import { resolveApplicationExpectationsDomain } from './application-expectations/resolveApplicationExpectationsDomain';
+import { resolveArgoPushDomain } from './argo-push/resolveArgoPushDomain';
 import { resolveSubscriptionDomain } from './subscription/resolveSubscriptionDomain';
 
-/** Resolves `subscription` and `applicationExpectations` into `specDomains`. */
+/** Resolves `subscription`, `applicationExpectations`, and `argoPush` into `specDomains`. */
 export function resolveScenarioDomains(
   spec: E2eSpecData,
   scenarioId: string,
@@ -18,6 +19,11 @@ export function resolveScenarioDomains(
   const applicationExpectations = resolveApplicationExpectationsDomain(spec, scenarioId, scenarioEntry);
   if (applicationExpectations !== undefined) {
     specDomains.applicationExpectations = applicationExpectations;
+  }
+
+  const argoPush = resolveArgoPushDomain(spec, scenarioId, scenarioEntry);
+  if (argoPush !== undefined) {
+    specDomains.argoPush = argoPush;
   }
 
   return specDomains;

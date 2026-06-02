@@ -7,6 +7,7 @@ import { OcCliService } from '@services/OcCliService';
 import { ApplicationListPage } from '@pages/app/ApplicationListPage';
 import { ApplicationDetailsPage } from '@pages/app/ApplicationDetailsPage';
 import { SubscriptionApplicationCreateWizardPage } from '@pages/app/SubscriptionApplicationCreateWizardPage';
+import { ArgoPushApplicationCreateWizardPage } from '@pages/app/ArgoPushApplicationCreateWizardPage';
 
 type AppFixtures = {
   oc: OcCliService;
@@ -15,6 +16,7 @@ type AppFixtures = {
   applicationListPage: ApplicationListPage;
   applicationDetailsPage: ApplicationDetailsPage;
   subscriptionApplicationCreateWizardPage: SubscriptionApplicationCreateWizardPage;
+  argoPushApplicationCreateWizardPage: ArgoPushApplicationCreateWizardPage;
 };
 
 export const test = base.extend<AppFixtures>({
@@ -36,6 +38,10 @@ export const test = base.extend<AppFixtures>({
 
   subscriptionApplicationCreateWizardPage: async ({ page, oc }, use) => {
     await use(new SubscriptionApplicationCreateWizardPage(page, oc));
+  },
+
+  argoPushApplicationCreateWizardPage: async ({ page, oc }, use) => {
+    await use(new ArgoPushApplicationCreateWizardPage(page, oc));
   },
 });
 

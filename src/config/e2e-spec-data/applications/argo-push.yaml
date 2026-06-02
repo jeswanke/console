@@ -1,0 +1,33 @@
+# Argo CD ApplicationSet **push model** wizard scenarios (`specDomains.argoPush`).
+
+version: 1
+
+fragments:
+  # Git helloworld repo + GitOps cluster set (mirrors subscription `git_helloworld` path).
+  argo_push_git_helloworld:
+    git:
+      url: https://github.com/stolostron/application-lifecycle-samples.git
+      branch: main
+      path: helloworld
+    clusterSet: auto-gitops-cluster-set
+
+profiles:
+  argo_push_submit:
+    submit: true
+    collapseYamlPanel: true
+
+scenarios:
+  auto_git_push_helloworld:
+    enabled: true
+    tests:
+      - RHACM4K-PUSH-GIT-HELLOWORLD
+    blocks:
+      - use:
+          - argo_push_git_helloworld
+    extends:
+      - argo_push_submit
+    specDomains:
+      argoPush:
+        applicationName: auto-git-push-helloworld
+        argoServerLabel: openshift-gitops
+        destinationNamespace: auto-git-push-helloworld-ns

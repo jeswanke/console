@@ -3,7 +3,7 @@
  */
 import path from 'path';
 import { expect, test } from '@playwright/test';
-import { clearE2eSpecDataCache, resolveScenarioById, resolveScenarioByTestId } from '@config';
+import { clearE2eSpecDataCache, resolveSubscriptionScenarioById, resolveSubscriptionScenarioByTestId } from '@config';
 import {
   applyPrivateGitAuthToSubscriptionOptions,
   getPrivateGitAuthFromEnv,
@@ -64,7 +64,7 @@ test.describe('private-git', () => {
     delete process.env.GITHUB_USER;
     delete process.env.GITHUB_TOKEN;
 
-    const resolved = resolveScenarioById('auto_git_private_local', E2E_SPEC_DATA_DIR);
+    const resolved = resolveSubscriptionScenarioById('auto_git_private_local', E2E_SPEC_DATA_DIR);
     const withoutAuth = applyPrivateGitAuthToSubscriptionOptions(resolved.subscription);
     expect(withoutAuth.repositories[0]).toMatchObject({
       kind: 'git',
@@ -91,7 +91,7 @@ test.describe('private-git', () => {
   });
 
   test('auto_git_private_local scenario resolves RHACM4K-1071 from YAML', () => {
-    const resolved = resolveScenarioByTestId('RHACM4K-1071', E2E_SPEC_DATA_DIR);
+    const resolved = resolveSubscriptionScenarioByTestId('RHACM4K-1071', E2E_SPEC_DATA_DIR);
     expect(resolved.scenarioId).toBe('auto_git_private_local');
 
     const sub = resolved.subscription;

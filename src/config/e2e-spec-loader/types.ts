@@ -1,12 +1,26 @@
 import type { ApplicationExpectationsPayload } from './domains/application-expectations/applicationExpectationsSchema';
 import type { CreateSubscriptionOptions } from '@lib/app/subscription/types';
+import type { CreateArgoPushApplicationOptions } from '@lib/app/argo-push/types';
 
-/** Fully resolved application e2e scenario (subscription wizard + post-create expectations). */
-export type ResolvedAppScenario = {
+type ResolvedAppScenarioBase = {
   readonly scenarioId: string;
   readonly enabled: boolean;
   /** Polarion ids from `scenario.tests` plus `matrix` entries targeting this scenario. */
   readonly testIds: string[];
+};
+
+/** Subscription wizard + post-create expectations. */
+export type ResolvedSubscriptionAppScenario = ResolvedAppScenarioBase & {
+  readonly domain: 'subscription';
   readonly subscription: CreateSubscriptionOptions;
   readonly applicationExpectations: ApplicationExpectationsPayload;
 };
+
+/** Push-model ApplicationSet wizard payload. */
+export type ResolvedArgoPushAppScenario = ResolvedAppScenarioBase & {
+  readonly domain: 'argoPush';
+  readonly argoPush: CreateArgoPushApplicationOptions;
+};
+
+/** Fully resolved application e2e scenario (subscription or push-model ApplicationSet). */
+export type ResolvedAppScenario = ResolvedSubscriptionAppScenario | ResolvedArgoPushAppScenario;

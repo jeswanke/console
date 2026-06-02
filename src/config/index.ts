@@ -65,8 +65,14 @@ export function getTestConfig(): TestConfig {
 
 export {
   clearE2eSpecDataCache,
+  resolveArgoPushScenarioById,
   resolveScenarioById,
   resolveScenarioByTestId,
   resolveScenarioPair,
+  resolveSubscriptionScenarioById,
+  resolveSubscriptionScenarioByTestId,
+  resolveSubscriptionScenarioPair,
   type ResolvedAppScenario,
+  type ResolvedArgoPushAppScenario,
+  type ResolvedSubscriptionAppScenario,
 } from './e2e-spec-loader';

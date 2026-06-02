@@ -40,6 +40,14 @@ function assertSafeOcSingleArg(value: string, field: string): void {
   }
 }
 
+/** `oc config use-context` names (ManagedCluster names from merged kubeconfig). */
+function assertSafeOcContextName(value: string, field: string): void {
+  const v = value.trim();
+  if (!v || v.length > 253 || !/^[a-zA-Z0-9._-]+$/.test(v)) {
+    throw new Error(`OcCliService: invalid ${field} for oc context (${JSON.stringify(value)})`);
+  }
+}
+
 /** Short resource kinds / API groups for `oc get <resource> -n …` (no shell metacharacters). */
 function assertSafeOcResourceKind(value: string, field: string): void {
   const v = value.trim();
@@ -123,6 +131,99 @@ export class OcCliService {
     }
   }
 
+  /** Whether an **ApplicationSet** exists in the Argo server namespace (push / pull model create). */
+  async applicationSetExists(namespace: string, applicationSetName: string): Promise<boolean> {
+    assertSafeOcSingleArg(namespace, 'namespace');
+    assertSafeOcSingleArg(applicationSetName, 'applicationSetName');
+    try {
+      const { stdout } = await execFilePromise(
+        'oc',
+        [
+          'get',
+          'applicationset.argoproj.io',
+          applicationSetName,
+          '-n',
+          namespace,
+          '--ignore-not-found',
+          '-o',
+          'name',
+        ],
+        { encoding: 'utf8', maxBuffer: 1024 * 1024 }
+      );
+      return stdout.trim().length > 0;
+    } catch (err: unknown) {
+      const stderr =
+        err && typeof err === 'object' && 'stderr' in err ? String((err as { stderr?: unknown }).stderr) : '';
+      if (/NotFound|not found/i.test(stderr)) {
+        return false;
+      }
+      throw err;
+    }
+  }
+
+  async deleteApplicationSet(namespace: string, applicationSetName: string): Promise<void> {
+    assertSafeOcSingleArg(namespace, 'namespace');
+    assertSafeOcSingleArg(applicationSetName, 'applicationSetName');
+    await execFilePromise(
+      'oc',
+      ['delete', 'applicationset.argoproj.io', applicationSetName, '-n', namespace, '--ignore-not-found'],
+      { encoding: 'utf8', maxBuffer: 1024 * 1024 }
+    );
+  }
+
+  private async deleteNamespacedResource(
+    resource: string,
+    namespace: string,
+    name: string
+  ): Promise<void> {
+    assertSafeOcResourceKind(resource, 'resource');
+    assertSafeOcSingleArg(namespace, 'namespace');
+    assertSafeOcSingleArg(name, 'name');
+    await execFilePromise(
+      'oc',
+      ['delete', resource, name, '-n', namespace, '--ignore-not-found'],
+      { encoding: 'utf8', maxBuffer: 1024 * 1024 }
+    );
+  }
+
+  private async listNamespacedResourceNames(resource: string, namespace: string): Promise<string[]> {
+    assertSafeOcResourceKind(resource, 'resource');
+    assertSafeOcSingleArg(namespace, 'namespace');
+    try {
+      const { stdout } = await execFilePromise(
+        'oc',
+        ['get', resource, '-n', namespace, '-o', 'jsonpath={.items[*].metadata.name}'],
+        { encoding: 'utf8', maxBuffer: 1024 * 1024 }
+      );
+      return stdout.trim().split(/\s+/).filter(Boolean);
+    } catch (err: unknown) {
+      const stderr =
+        err && typeof err === 'object' && 'stderr' in err ? String((err as { stderr?: unknown }).stderr) : '';
+      if (/NotFound|not found|No resources found/i.test(stderr)) {
+        return [];
+      }
+      throw err;
+    }
+  }
+
+  /**
+   * Push-model / subscription **Placement** CRs for an app live in the Argo server namespace on the hub
+   * (e.g. `openshift-gitops`), not on managed clusters. Skips shared prep placements such as `gitops-placement`.
+   */
+  async deleteApplicationPlacementsInNamespace(
+    namespace: string,
+    applicationName: string
+  ): Promise<void> {
+    const placementPrefix = `${applicationName}-placement`;
+    const placementNames = (await this.listNamespacedResourceNames('placement', namespace)).filter(
+      (name) => name === applicationName || name.startsWith(placementPrefix)
+    );
+    for (const placementName of placementNames) {
+      await this.deleteNamespacedResource('placementdecision', namespace, `${placementName}-decision-1`);
+      await this.deleteNamespacedResource('placement', namespace, placementName);
+    }
+  }
+
   /**
    * `oc delete namespace` on the hub — use after UI **Delete application** when e2e should drop the app namespace
    * entirely (`--ignore-not-found`, `--wait=true`).
@@ -134,6 +235,74 @@ export class OcCliService {
       ['delete', 'namespace', namespace, '--ignore-not-found', '--wait=true'],
       { encoding: 'utf8', maxBuffer: 1024 * 1024, timeout: 600_000 }
     );
+  }
+
+  async getCurrentContext(): Promise<string> {
+    const { stdout } = await execFilePromise(
+      'oc',
+      ['config', 'current-context'],
+      { encoding: 'utf8', maxBuffer: 64 * 1024 }
+    );
+    return stdout.trim();
+  }
+
+  async useContext(context: string): Promise<void> {
+    assertSafeOcContextName(context, 'context');
+    await execFilePromise(
+      'oc',
+      ['config', 'use-context', context],
+      { encoding: 'utf8', maxBuffer: 64 * 1024 }
+    );
+  }
+
+  /** Managed cluster names labeled with `cluster.open-cluster-management.io/clusterset=<clusterSet>`. */
+  async listManagedClusterNamesInClusterSet(clusterSet: string): Promise<string[]> {
+    const set = clusterSet.trim();
+    if (!set || set.length > 63 || !/^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/.test(set)) {
+      throw new Error(`OcCliService: invalid clusterSet (${JSON.stringify(clusterSet)})`);
+    }
+    const { stdout } = await execFilePromise(
+      'oc',
+      [
+        'get',
+        'managedclusters',
+        '-l',
+        `cluster.open-cluster-management.io/clusterset=${set}`,
+        '-o',
+        'jsonpath={.items[*].metadata.name}',
+      ],
+      { encoding: 'utf8', maxBuffer: 1024 * 1024 }
+    );
+    return stdout.trim().split(/\s+/).filter(Boolean);
+  }
+
+  /**
+   * Deletes a namespace on each spoke (`oc config use-context` per cluster), then restores the prior context.
+   * Requires merged kubeconfig from cluster prep (context names match ManagedCluster names).
+   */
+  async deleteNamespaceOnManagedClusters(
+    namespace: string,
+    managedClusterNames: string[]
+  ): Promise<void> {
+    if (managedClusterNames.length === 0) {
+      return;
+    }
+    const priorContext = await this.getCurrentContext();
+    try {
+      for (const clusterName of managedClusterNames) {
+        try {
+          await this.useContext(clusterName);
+          await this.deleteNamespace(namespace);
+        } catch (err) {
+          console.warn(
+            `OcCliService: skip delete namespace "${namespace}" on managed cluster "${clusterName}":`,
+            err
+          );
+        }
+      }
+    } finally {
+      await this.useContext(priorContext);
+    }
   }
 
   /**

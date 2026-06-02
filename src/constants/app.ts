@@ -8,11 +8,16 @@ export const APP_ROUTES = {
   list: '/multicloud/applications',
   /** Advanced configuration tab (secondary nav) */
   advanced: '/multicloud/applications/advanced',
+  /** Create application → Argo CD ApplicationSet - Push model */
+  createArgoPush: '/multicloud/applications/create/argo',
   /** Base details path (no tab segment). */
   details: (namespace: string, name: string) =>
     `/multicloud/applications/details/${namespace}/${name}`,
   detailsTab: (namespace: string, name: string, tabSlug: AppApplicationDetailsTabSlug) =>
     `/multicloud/applications/details/${namespace}/${name}/${tabSlug}`,
+  /** Post–create push-model ApplicationSet details (hub default: Topology tab). */
+  argoPushTopology: (argoServerNamespace: string, applicationSetName: string) =>
+    `${APP_ROUTES.detailsTab(argoServerNamespace, applicationSetName, APP_APPLICATION_DETAILS.tabs.topology.slug)}?apiVersion=applicationset.argoproj.io`,
 } as const;
 
 /** URL path segment for {@link APP_ROUTES.detailsTab} (lowercase, matches console router). */
@@ -411,6 +416,79 @@ export const APP_ADVANCED_TABLE_COLUMNS_CHANNELS = {
   clusters: 'Clusters',
   created: 'Created',
 } as const;
+
+// =============================================================================
+// Argo CD ApplicationSet **push model** create wizard (Create application → Push model)
+// =============================================================================
+//
+// Full URL: `{consoleOrigin}/multicloud/applications/create/argo`
+// Entry: `#application-create` → `#create-argo` (see {@link APP_CREATE_MENU}).
+// **Live hub (Playwriter):** PF Form Wizard — 6 steps, split YAML panel; field ids are path-based
+// (`ApplicationSet.metadata.name;id=name`) — prefer placeholders / combobox accessible names.
+// =============================================================================
+
+export const APP_ARGO_PUSH_CREATE_WIZARD = {
+  routePath: '/multicloud/applications/create/argo',
+  pageTitle: 'Create application set - push model',
+  /** Side nav `nav[aria-label="Argo application steps"]` button ids. */
+  steps: {
+    general: 'general',
+    generators: 'generators',
+    template: 'repository',
+    syncPolicy: 'sync-policy',
+    placement: 'placement',
+    review: 'review-step',
+  } as const,
+  stepLabels: {
+    general: 'General',
+    generators: 'Generators',
+    template: 'Template',
+    syncPolicy: 'Sync policy',
+    placement: 'Placement',
+    review: 'Review',
+  } as const,
+  navAccessibleName: 'Argo application steps',
+  footer: {
+    next: 'Next',
+    back: 'Back',
+    cancel: 'Cancel',
+    submit: 'Submit',
+  },
+  yamlSwitchId: 'yaml-switch',
+  /** Stable suffix on path-based checkbox ids (`…;id=prune-last`). */
+  syncCheckboxSuffixIds: {
+    pruneLast: 'prune-last',
+    replace: 'replace',
+    applyOutOfSyncOnly: 'apply-out-of-sync-only',
+    createNamespace: 'create-namespace',
+    validate: 'validate',
+    propagationPolicy: 'propagation-policy',
+  },
+  general: {
+    nameInputIdSuffix: ';id=name',
+    namePlaceholder: 'Enter the application set name',
+    argoServerComboboxLabel: 'Select the Argo server',
+    requeueTimeComboboxLabel: 'Select the requeue time',
+  },
+  template: {
+    gitRepositoryTypeCardText: 'Git',
+    helmRepositoryTypeCardText: 'Helm',
+    gitUrlComboboxLabel: 'Enter or select a Git URL',
+    gitRevisionComboboxLabel: 'Enter or select a tracking revision',
+    gitPathComboboxLabel: 'Enter or select a repository path',
+    destinationNamespacePlaceholder: 'Enter the destination namespace',
+    destinationInputIdSuffix: ';id=destination',
+  },
+  placement: {
+    clusterSetsComboboxLabel: 'Select the cluster sets',
+    newPlacementButtonLabel: 'New placement',
+    existingPlacementButtonLabel: 'Existing placement',
+  },
+  postSubmitOverviewQuery: 'apiVersion=applicationset.argoproj.io',
+} as const;
+
+export type AppArgoPushCreateWizardStepId =
+  (typeof APP_ARGO_PUSH_CREATE_WIZARD.steps)[keyof typeof APP_ARGO_PUSH_CREATE_WIZARD.steps];
 
 // =============================================================================
 // Subscription application create wizard (Create application → Subscription)
