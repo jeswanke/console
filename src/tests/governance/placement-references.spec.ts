@@ -19,8 +19,8 @@ import {
   GOV_TEST_RESOURCES,
 } from '@constants/governance';
 
-const FIXTURES_DIR = path.resolve(__dirname, 'fixtures');
-const RESOURCES_YAML = path.join(FIXTURES_DIR, 'placement-policy-resources.yaml');
+const TEMPLATES_DIR = path.resolve(__dirname, '../../templates/governance');
+const RESOURCES_YAML = path.join(TEMPLATES_DIR, 'placement-policy-resources.yaml');
 
 test.describe.serial(
   'Placement references in policy and policy set details',
@@ -38,7 +38,7 @@ test.describe.serial(
     });
 
     // Polarion steps 1-2: Policy visible in list
-    test('policy appears on the policies list', async ({ governancePage }) => {
+    test('RHACM4K-64165: policy appears on the policies list', async ({ governancePage }) => {
       await governancePage.goto();
       await governancePage.openPoliciesTab();
       await governancePage.searchPolicies(GOV_TEST_RESOURCES.policy);
@@ -48,7 +48,7 @@ test.describe.serial(
     });
 
     // Polarion steps 3-4: Policy details show placement reference
-    test('policy details page shows placement reference', async ({
+    test('RHACM4K-64165: policy details page shows placement reference', async ({
       policyDetailsPage,
     }) => {
       await policyDetailsPage.goto(ns, GOV_TEST_RESOURCES.policy);
@@ -63,7 +63,7 @@ test.describe.serial(
     });
 
     // Polarion steps 5-7: Click placement → navigate → verify governance references
-    test('clicking placement navigates to placement details with governance references', async ({
+    test('RHACM4K-64165: clicking placement navigates to placement details with governance references', async ({
       policyDetailsPage,
       placementDetailsPage,
       page,
@@ -98,7 +98,7 @@ test.describe.serial(
     });
 
     // Polarion steps 8-9: Policy set visible in list
-    test('policy set appears on the policy sets list', async ({
+    test('RHACM4K-64165: policy set appears on the policy sets list', async ({
       governancePage,
     }) => {
       await governancePage.goto();
@@ -109,7 +109,7 @@ test.describe.serial(
     });
 
     // Polarion steps 10-12: Policy set panel shows placement, click navigates
-    test('policy set details panel shows placement and navigates to placement details', async ({
+    test('RHACM4K-64165: policy set details panel shows placement and navigates to placement details', async ({
       governancePage,
       policySetDetailsPage,
       page,

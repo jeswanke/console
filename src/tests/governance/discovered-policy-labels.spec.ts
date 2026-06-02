@@ -17,8 +17,8 @@ import {
   GOV_DISCOVERED_TEST_RESOURCES,
 } from '@constants/governance';
 
-const FIXTURES_DIR = path.resolve(__dirname, 'fixtures');
-const RESOURCES_YAML = path.join(FIXTURES_DIR, 'discovered-policy-resources.yaml');
+const TEMPLATES_DIR = path.resolve(__dirname, '../../templates/governance');
+const RESOURCES_YAML = path.join(TEMPLATES_DIR, 'discovered-policy-resources.yaml');
 
 async function waitForPolicyPropagation(
   oc: OcCliService,
@@ -72,7 +72,7 @@ test.describe.serial(
     });
 
     // Polarion steps 1-3: Navigate to parent policy, verify Results tab
-    test('parent policy Results tab shows propagated templates', async ({
+    test('RHACM4K-64205: parent policy Results tab shows propagated templates', async ({
       governancePage,
       policyDetailsPage,
       page,
@@ -100,7 +100,7 @@ test.describe.serial(
     });
 
     // Polarion steps 4-5: Both child ConfigurationPolicies on Discovered policies tab
-    test('both child ConfigurationPolicies appear on Discovered policies tab', async ({
+    test('RHACM4K-64205: both child ConfigurationPolicies appear on Discovered policies tab', async ({
       governancePage,
     }) => {
       test.slow();
@@ -117,7 +117,7 @@ test.describe.serial(
     });
 
     // Polarion steps 6-9: Labels column, tag click, popover content
-    test('labeled policy Clusters tab shows label tag and popover with details', async ({
+    test('RHACM4K-64205: labeled policy Clusters tab shows label tag and popover with details', async ({
       governancePage,
       discoveredPolicyDetailsPage,
     }) => {
@@ -141,7 +141,7 @@ test.describe.serial(
     });
 
     // Polarion steps 10-12: Label filter select, verify, clear
-    test('Label filter filters clusters by label and clears', async ({
+    test('RHACM4K-64205: Label filter filters clusters by label and clears', async ({
       governancePage,
       discoveredPolicyDetailsPage,
       page,
@@ -174,7 +174,7 @@ test.describe.serial(
     });
 
     // Polarion steps 13-17: Unlabeled policy shows dash, no filter button
-    test('unlabeled policy Clusters tab shows dash and no label filter', async ({
+    test('RHACM4K-64205: unlabeled policy Clusters tab shows dash and no label filter', async ({
       governancePage,
       discoveredPolicyDetailsPage,
     }) => {
