@@ -46,4 +46,29 @@ export class AcmTable {
   async clickRow(ouiaId: string): Promise<void> {
     await this.getRow(ouiaId).click();
   }
+
+  async verifyColumnHeaderVisible(columnName: string): Promise<void> {
+    await expect(this.page.getByRole('columnheader', { name: columnName, exact: false })).toBeVisible();
+  }
+
+  async verifyColumnHeaderNotVisible(columnName: string): Promise<void> {
+    await expect(this.page.getByRole('columnheader', { name: columnName, exact: false })).toBeHidden();
+  }
+
+  async verifyColumnOrder(expectedOrder: string[]): Promise<void> {
+    const headers = await this.page.locator('thead th').allTextContents();
+
+    const indices: number[] = [];
+    for (const column of expectedOrder) {
+      const index = headers.findIndex(h => h.includes(column));
+      if (index === -1) {
+        throw new Error(`Column "${column}" not found in table headers: ${headers.join(', ')}`);
+      }
+      indices.push(index);
+    }
+
+    for (let i = 1; i < indices.length; i++) {
+      expect(indices[i]).toBeGreaterThan(indices[i - 1]);
+    }
+  }
 }
