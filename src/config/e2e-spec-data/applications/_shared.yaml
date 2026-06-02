@@ -1,0 +1,219 @@
+# Shared subscription e2e fragments (merged before `subscription.yaml`; load order is sorted filenames).
+# Sample Git URLs: anchors below (public + private lifecycle samples repos).
+# Scenarios reference fragments via `blocks[].use`; `perBlock` / `clusterResources` merge by index across layers.
+# Wizard fields: top-level `repositories` and `perBlock`. Post-create checks: `specDomains.applicationExpectations.clusterResources`.
+
+version: 1
+
+fragments:
+  repo_samples_default:
+    repositories:
+      - kind: git
+        url: &stolostron-app-lifecycle-samples-git https://github.com/stolostron/application-lifecycle-samples.git
+        branch: main
+        path: helloworld
+
+  # Both sample-repo paths in one blob (e.g. anchor tests). Paths align with `git_helloworld` + `git_mortgage`.
+  repo_samples_dual:
+    repositories:
+      - kind: git
+        url: *stolostron-app-lifecycle-samples-git
+        branch: main
+        path: helloworld
+        reconcileOption: merge
+        reconcileRate: medium
+      - kind: git
+        url: *stolostron-app-lifecycle-samples-git
+        branch: main
+        path: mortgage
+
+  # `kind` + `path` for the sole Git repo in this blob — wizard payload + verification in one fragment.
+  git_helloworld:
+    # Wizard / subscription-create (CreateSubscriptionOptions–shaped)
+    repositories:
+      - kind: git
+        url: *stolostron-app-lifecycle-samples-git
+        branch: main
+        path: helloworld
+        reconcileOption: merge
+        reconcileRate: medium
+    # Post-create cluster inventory (Details / topology assertions)
+    specDomains:
+      applicationExpectations:
+        clusterResources:
+          - # Route/Service/Deployment names from helloworld/ manifests. RS/Pod: stable deployment stem (suffixes from `oc get` vary per rollout).
+            - kind: Route
+              name: helloworld-app-route
+            - kind: Deployment
+              name: helloworld-app-deploy
+            - kind: Service
+              name: helloworld-app-svc
+            - kind: ReplicaSet
+              name: helloworld-app-deploy
+            - kind: Pod
+              name: helloworld-app-deploy
+        # Advanced configuration → Subscriptions **Channel** / Channels **Name** (console Git-URL slug, not CR name).
+        advancedConfiguration:
+          channelDisplaySubstring: stolostron-application-lifecycle-samples
+          channelRepositoryUrl: *stolostron-app-lifecycle-samples-git
+
+  # RHACM4K-10668: `crd/` path deploys Secret + CustomResourceDefinition (console topology: secret + other icons).
+  git_crd:
+    repositories:
+      - kind: git
+        url: *stolostron-app-lifecycle-samples-git
+        branch: main
+        path: crd
+        disableAutoReconcile: true
+    specDomains:
+      applicationExpectations:
+        clusterResources:
+          - - kind: Secret
+              name: foo
+            - kind: CustomResourceDefinition
+              name: foos.stable.example.com
+        # No detailsClustersSummary: vendor/OpenShift fleet size varies; RHACM4K-10668 asserts topology status.
+        advancedConfiguration:
+          channelDisplaySubstring: stolostron-application-lifecycle-samples
+          channelRepositoryUrl: *stolostron-app-lifecycle-samples-git
+
+  # Same naming pattern as `git_helloworld`: `kind` + `path` for this stream’s repo + expectations.
+  git_mortgage:
+    # Wizard / subscription-create
+    repositories:
+      - kind: git
+        url: *stolostron-app-lifecycle-samples-git
+        branch: main
+        path: mortgage
+    # Post-create cluster inventory
+    specDomains:
+      applicationExpectations:
+        clusterResources:
+          - # Deployment/Service from mortgage/ manifests. RS/Pod: deployment stem only (rollout suffixes omitted).
+            - kind: Deployment
+              name: mortgage-app-deploy
+            - kind: Service
+              name: mortgage-app-svc
+            - kind: ReplicaSet
+              name: mortgage-app-deploy
+            - kind: Pod
+              name: mortgage-app-deploy
+        advancedConfiguration:
+          channelDisplaySubstring: stolostron-application-lifecycle-samples
+          channelRepositoryUrl: *stolostron-app-lifecycle-samples-git
+
+  # Private Git repo (RHACM4K-1071): URL in YAML; username/token from env/alc.local.env at test runtime.
+  git_private_mortgage:
+    repositories:
+      - kind: git
+        url: &stolostron-app-lifecycle-samples-private-git https://github.com/stolostron/application-lifecycle-samples-private.git
+        branch: main
+        path: mortgage
+        disableAutoReconcile: true
+    specDomains:
+      applicationExpectations:
+        clusterResources:
+          - - kind: Deployment
+              name: mortgage-app-deploy
+            - kind: Service
+              name: mortgage-app-svc
+            - kind: ReplicaSet
+              name: mortgage-app-deploy
+            - kind: Pod
+              name: mortgage-app-deploy
+        advancedConfiguration:
+          channelDisplaySubstring: stolostron-application-lifecycle-samples-private
+          channelRepositoryUrl: *stolostron-app-lifecycle-samples-private-git
+
+  # Three wizard modes: `default` (no schedule), `active` (deploy in windows), `blocked` (suppress in windows).
+  timewindow_default:
+    perBlock:
+      - timeWindow:
+          mode: default
+
+  timewindow_workweek_toronto:
+    perBlock:
+      - timeWindow:
+          mode: active
+          timezone: America/Toronto
+          weekdays:
+            Monday: true
+            Tuesday: true
+            Wednesday: true
+            Thursday: true
+            Friday: true
+          ranges:
+            - start: '09:00 AM'
+              end: '05:00 PM'
+
+  timewindow_blocked_workweek_toronto:
+    perBlock:
+      - timeWindow:
+          mode: blocked
+          timezone: America/Toronto
+          weekdays:
+            Monday: true
+            Tuesday: true
+            Wednesday: true
+            Thursday: true
+            Friday: true
+          ranges:
+            - start: '09:00 AM'
+              end: '05:00 PM'
+
+  # Leave **Configure automation** empty (do not type Ansible credential / filter). Marker only — no `perBlock` payload.
+  skip_automation_ansible: {}
+
+  # RHACM4K-39666: Git URL contains underscore (`app_samples`); helloworld manifests (Route/Service/ReplicaSet).
+  git_underscore:
+    repositories:
+      - kind: git
+        url: https://github.com/ruici-h/app_samples
+        branch: main
+        path: helloworld
+        reconcileOption: merge
+        reconcileRate: medium
+    specDomains:
+      applicationExpectations:
+        clusterResources:
+          - - kind: Route
+              name: helloworld-app-route
+            - kind: Service
+              name: helloworld-app-svc
+            - kind: ReplicaSet
+              name: helloworld-app-deploy
+        detailsClustersSummary:
+          variant: remoteOnly
+          remoteCount: 1
+        advancedConfiguration:
+          channelDisplaySubstring: app_samples
+          channelRepositoryUrl: https://github.com/ruici-h/app_samples
+
+  # Online placement: label selector + global + vendor/OpenShift clusters.
+  placement_online_vendor_openshift:
+    perBlock:
+      - clusterDeployment:
+          useExistingPlacementRule: false
+          useClusterLabelSelector: true
+          clusterSet: global
+          labelSelectorRows:
+            - labelName: vendor
+              labelValue: OpenShift
+
+  # Label-based placement to local-cluster (reusable in any `blocks[].use`; single `perBlock[0]` slice).
+  placement_label_local:
+    perBlock:
+      - clusterDeployment:
+          useExistingPlacementRule: false
+          useClusterLabelSelector: true
+          clusterSet: global
+          labelSelectorRows:
+            - labelName: name
+              labelValue: local-cluster
+          localClusterOnly: false
+          onlineClustersOnly: false
+    specDomains:
+      applicationExpectations:
+        # Details tab **Clusters** line for label placement to `local-cluster` (console-e2e Details verifier).
+        detailsClustersSummary:
+          variant: localOnly

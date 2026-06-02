@@ -2,6 +2,8 @@
 
 _(Diagram: add `docs/images/architecture-overview.png` if you have the asset.)_
 
+**Subscription create wizard (UI map):** `APP_SUBSCRIPTION_CREATE_WIZARD` in `src/constants/app.ts` and locators on **`SubscriptionApplicationCreateWizardPage`** (`src/pages/app/SubscriptionApplicationCreateWizardPage.ts`) — same pattern as **ApplicationListPage** / Advanced configuration getters. Entry: Applications → **Create application** → **Subscription** → `/multicloud/applications/create/subscription`. Optional PNG under `docs/images/` if you keep a visual reference.
+
 This project follows a **Domain-Driven, Hybrid Testing Architecture**. We separate **"Test Intent"** (what we want to verify) from **"Implementation Details"** (how we click buttons or run CLI commands).
 
 ## 📂 Directory Structure Overview
@@ -184,10 +186,15 @@ getClusterRow(name: string) {
 
 **Purpose:** Helper classes that contain "Business Logic" for testing, but aren't strictly UI or Backend.
 
-- **`/assertions`**: Reusable assertion logic.
-  - Example: `FileAssertions.ts` has a function `expectValidCsv(download)` that checks if a downloaded file is valid.
-- **`UserFactory.ts`**: Handles the complexity of RBAC (Role-Based Access Control). It dynamically spins up API contexts for "Editor", "Viewer", or "Admin" roles.
-- **`UiUserFactory.ts`**: Similar to above, but spins up isolated Browser Contexts (Incognito windows) for testing multiple users in the UI simultaneously.
+- **`/assertions`**: Reusable assertion logic (e.g. `oc-resource-list.ts`).
+- **`/cluster`**: Hub fleet context (`managedClusterContext.ts`).
+- **`/app`**:
+  - **`subscription/`** — wizard types + create/edit flows + placement spec builders.
+  - **`verify/`** — full Details / Topology tab checks and OC resource expectations.
+  - **`topology/`** — graph `data-id` builders and drawer DOM helpers (no `oc`).
+  - **`placement/`** — placement CR resolution via `OcCliService`.
+  - **`auth/`**, **`setup/`** — private Git env, test teardown helpers; **`subscription/sync.ts`** — Details **Sync**.
+- **`index.ts`**: Barrel re-exports for convenience; tests may import `@lib/app/<domain>/...` directly.
 
 ### 6. `/src/utils` (Pure Functions)
 
@@ -260,27 +267,35 @@ export function generateClusterName(prefix: string): string {
 
 ## `console-e2e` — layout in _this_ repository
 
-The tree below is what **this** repo implements today (aligned with the layers above). Bash entrypoints live **outside** `/src` (`start.sh`, `scripts/lib/`). Env templates live in **`env/`** at the repo root.
+The tree below is what **this** repo implements today (aligned with the layers above). Bash entrypoints live **outside** `/src` (`start.sh`, `scripts/*`). Env templates live in **`env/`** at the repo root.
 
 ```text
 console-e2e/
 ├── start.sh                    # Main dispatcher → component scripts
-├── .env / .env.example         # Universal vars (HUB_* for API+UI password, optional CONSOLE_USERNAME/CONSOLE_IDP, TEST_MODE); start.sh sources .env before oc login
+├── .env / .env.example         # Universal vars (HUB_*, optional ANSIBLE_* for AAP, CONSOLE_*, TEST_MODE); start.sh sources .env before oc login
 ├── playwright.config.ts        # Imports ./src/config/index (loads .env), projects, reporters
 ├── package.json                # `npm run test`, `npm run test:alc` → ./start.sh alc
 ├── env/
-│   └── alc.env.example         # ALC template → copy to env/alc.local.env (gitignored)
+│   └── alc.env.example         # ALC template (GITHUB_USER/TOKEN, OBJECTSTORE_*) → env/alc.local.env (gitignored)
 ├── scripts/
 │   ├── lib/common.sh           # Login, npm; exports CONSOLE_USERNAME/CONSOLE_IDP before login; after login universal env (BASE_URL, OC_CLUSTER_*, PLAYWRIGHT_TEST_MODE)
-│   └── lib/alc-env.sh          # Sources env/alc.local.env (ALC integrations only)
+│   ├── lib/alc-env.sh          # Sources env/alc.local.env (GITHUB_USER/TOKEN, OBJECTSTORE_*; ANSIBLE_* in .env)
+│   ├── cluster/
+│   │   ├── generate-managed-cluster-data.py
+│   │   └── setup-managed-cluster-kubeconfig.sh
+│   └── gitops/
+│       ├── argocd-integration.sh
+│       └── templates/
+│           ├── argocd_yaml/
+│           └── operators_yaml/
 └── src/
     ├── config/                 # §1 — loader + types
     │   ├── schema.ts
     │   ├── presets.ts
-    │   └── index.ts            # dotenv + getHubAuth() / getTestConfig()
+    │   └── index.ts            # dotenv + loadAlcLocalEnvFile() + getHubAuth() / getTestConfig()
     ├── constants/              # §2 — selectors, app copy
     │   ├── selectors.ts
-    │   └── app.ts
+    │   └── app.ts              # APP_ROUTES, APP_CREATE_MENU, APP_SUBSCRIPTION_CREATE_WIZARD, …
     ├── services/               # §2 — OcCliService (AuthService / domains: add as needed)
     │   └── OcCliService.ts
     ├── utils/                  # §6
@@ -293,16 +308,26 @@ console-e2e/
     ├── pages/                  # §4
     │   ├── BasePage.ts
     │   ├── app/
-    │   │   └── ApplicationListPage.ts
+    │   │   ├── ApplicationListPage.ts
+    │   │   └── SubscriptionApplicationCreateWizardPage.ts  # Create application → Subscription wizard locators
     │   └── cluster/
     │       ├── ClusterListPage.ts
     │       └── ClusterSetsPage.ts
     ├── lib/                    # §5 — assertions, factories (expand here)
+    │   ├── assertions/         # Playwright `expect.poll` + services (e.g. oc list assertions)
+    │   │   └── oc-resource-list.ts
+    │   ├── app/                # ALC orchestration + verification helpers
     │   └── index.ts
     ├── fixtures/               # §7
     │   ├── acm-test.ts
     │   └── app-test.ts
-    ├── global-setup.ts         # Playwright global setup (not in diagram; standard hook)
+    ├── global-setup.ts         # Playwright global setup entrypoint
+    ├── global-setup/           # Setup modules
+    │   ├── clusterPrep.ts
+    │   ├── gitOpsPrep.ts
+    │   ├── projectArgv.ts
+    │   ├── logPrefix.ts
+    │   └── repoRoot.ts
     └── tests/                  # §8
         ├── auth.setup.ts       # Uses getHubAuth() from @config (not raw process.env)
         ├── app/
@@ -316,4 +341,5 @@ console-e2e/
 - Prefer **`getHubAuth()` / `getTestConfig()`** from `@config` over **`process.env` in specs and setup** (see `auth.setup.ts`).
 - **Cluster** page objects live under **`pages/cluster/`**; **app** pages under **`pages/app/`**.
 - **`AcmTable`** lives under **`components/patternfly/`** as the shared PF-oriented table primitive.
+- Keep setup orchestration in **`src/global-setup.ts`** and setup implementation details in **`src/global-setup/*`**.
 - Optional **`templates/`**, **`services/domains/`**, and **`constants/routes.ts`** can be added when needed without changing the overall model.

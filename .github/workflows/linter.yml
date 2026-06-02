@@ -1,4 +1,4 @@
-# Runs ESLint + Prettier; posts a PR comment when lint fails (same pattern as clc-ui-e2e).
+# Runs ESLint + Prettier; posts a PR comment when lint fails.
 #
 # Uses pull_request_target so GITHUB_TOKEN can comment on PRs from forks. The workflow
 # definition always comes from the base branch; we checkout the PR head (including forks).
