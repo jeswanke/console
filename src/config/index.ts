@@ -3,13 +3,26 @@
  * Per architecture doc: prefer `getHubAuth()` / `getTestConfig()` over `process.env` in specs.
  * Password for auth.setup: HUB_PASSWORD only (same as oc login). Optional: CONSOLE_USERNAME, CONSOLE_IDP.
  */
+import fs from 'fs';
 import path from 'path';
 import dotenv from 'dotenv';
 import type { HubAuthConfig, TestConfig, RbacUser } from './schema';
 export type { RbacUser } from './schema';
 import { hubAuthPresets, rbacPresets } from './presets';
 
-dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+const repoRoot = process.cwd();
+
+dotenv.config({ path: path.resolve(repoRoot, '.env') });
+
+/** ALC-only secrets and integrations (`env/alc.local.env`). Does not override vars already set in the shell. */
+export function loadAlcLocalEnvFile(): void {
+  const alcLocal = path.resolve(repoRoot, 'env/alc.local.env');
+  if (fs.existsSync(alcLocal)) {
+    dotenv.config({ path: alcLocal, override: false });
+  }
+}
+
+loadAlcLocalEnvFile();
 
 /**
  * Hub console login credentials (used by auth.setup and fixtures).
@@ -49,3 +62,11 @@ export function getTestConfig(): TestConfig {
     hub: getHubAuth(),
   };
 }
+
+export {
+  clearE2eSpecDataCache,
+  resolveScenarioById,
+  resolveScenarioByTestId,
+  resolveScenarioPair,
+  type ResolvedAppScenario,
+} from './e2e-spec-loader';

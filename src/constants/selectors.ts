@@ -31,15 +31,18 @@ export const PF_TABLE = `.${PF}-table`;
 export const SELECTORS = {
   /** Common selectors used across multiple domains */
   common: {
+    /** Prefer {@link acmToolbarSearchLocator} from `@components/patternfly/AcmSearchInput`. */
     searchInput: '[aria-label="Search input"]',
-    userDropdown: '[data-test="user-dropdown"]',
+    /** Masthead user menu (toggle); live console uses `user-dropdown-toggle` */
+    userDropdown: '[data-test="user-dropdown-toggle"], [data-test="user-dropdown"]',
     tableRow: (ouiaId: string) => `tr[data-ouia-component-id="${ouiaId}"]`,
   },
 
   /** Cluster lifecycle domain */
   cluster: {
-    createButton: '[data-test="create-cluster"]',
-    importButton: '[data-test="import-cluster"]',
+    /** Live console uses button ids; keep data-test for older builds */
+    createButton: '#createCluster, [data-test="create-cluster"]',
+    importButton: '#importCluster, [data-test="import-cluster"]',
     row: (name: string) => `tr[data-ouia-component-id="${name}"]`,
   },
 
@@ -55,8 +58,17 @@ export const SELECTORS = {
     resourceToggle: {
       subscriptions: '#subscriptions',
       channels: '#channels',
-      placements: '#placements',
-      placementRules: '#placementrules',
+    },
+    /** Application details → Topology tab toolbar (zoom / pan); ids from ACM console topology view */
+    topologyToolbar: {
+      zoomIn: '#zoom-in',
+      zoomOut: '#zoom-out',
+      fitToScreen: '#fit-to-screen',
+      resetView: '#reset-view',
+    },
+    /** Topology graph: example channel node `id` when console emits it (see `APP_APPLICATION_TOPOLOGY.graphElementIds`). */
+    topologyGraph: {
+      channelCombo: '#comboChannel',
     },
   },
 

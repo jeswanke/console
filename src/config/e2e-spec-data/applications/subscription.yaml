@@ -1,0 +1,290 @@
+# Subscription application create wizard. Scenario subscription fields live under `specDomains.subscription`.
+
+profiles:
+  # Wizard fill driven by merged `perBlock` from `blocks[].use` (no TS defaults for these sections).
+  subscription_full_wizard:
+    fillEntireWizard: true
+
+  # Wizard exercises without submitting (typical console e2e).
+  subscription_dry_run:
+    submit: false
+    ensureFormMode: true
+
+  # Submit + same wizard defaults as `subscription_explicit_channels` (omit explicit_channels when you only need this).
+  subscription_submit:
+    fillEntireWizard: false
+    submit: true
+    ensureFormMode: true
+
+  # Multi-repo flows: only fill what `blocks[].use` + perBlock define (same `perBlock`-only apply as full wizard).
+  subscription_explicit_channels:
+    fillEntireWizard: false
+    submit: false
+    ensureFormMode: true
+
+scenarios:
+  smoke_subscription:
+    enabled: true
+    tests:
+      - RHACM4K-SMOKE-SUBSCRIPTION
+    blocks:
+      - use:
+          - repo_samples_default
+          - placement_label_local
+          - timewindow_workweek_toronto
+          - skip_automation_ansible
+    extends:
+      - subscription_full_wizard
+      - subscription_dry_run
+    specDomains:
+      subscription:
+        applicationName: e2e-spec-data-smoke-app
+        namespace: e2e-spec-data-smoke-ns
+
+  matrix_example_subscription:
+    enabled: true
+    tests:
+      - RHACM4K-MATRIX-0001
+    blocks:
+      - use:
+          - repo_samples_default
+          - placement_label_local
+          - timewindow_workweek_toronto
+          - skip_automation_ansible
+    extends:
+      - subscription_full_wizard
+      - subscription_dry_run
+    specDomains:
+      subscription:
+        applicationName: e2e-matrix-app
+        namespace: e2e-matrix-ns
+
+  # Single Git repo (helloworld path) + label placement to local-cluster; submit + Details/Topology e2e.
+  auto_git_helloworld_local:
+    enabled: true
+    tests:
+      - RHACM4K-7484
+      - RHACM4K-7487
+    blocks:
+      - use:
+          - git_helloworld
+          - skip_automation_ansible
+          - placement_label_local
+          - timewindow_default
+    extends:
+      - subscription_submit
+    specDomains:
+      subscription:
+        applicationName: auto-git-helloworld
+        namespace: auto-git-helloworld-ns
+
+  # RHACM4K-39232: helloworld + label placement (local-cluster).
+  auto_git_placement_topology:
+    enabled: true
+    tests:
+      - RHACM4K-39232
+    blocks:
+      - use:
+          - git_helloworld
+          - skip_automation_ansible
+          - placement_label_local
+          - timewindow_default
+    extends:
+      - subscription_submit
+    specDomains:
+      subscription:
+        applicationName: api-git-local
+        namespace: api-git-local-ns
+
+  # RHACM4K-39666: Git repo URL with underscore (`ruici-h/app_samples`); online placement.
+  auto_git_underscore:
+    enabled: true
+    tests:
+      - RHACM4K-39666
+    blocks:
+      - use:
+          - git_underscore
+          - skip_automation_ansible
+          - placement_online_vendor_openshift
+          - timewindow_default
+    extends:
+      - subscription_submit
+    specDomains:
+      subscription:
+        applicationName: auto-git-underscore
+        namespace: auto-git-underscore-ns
+
+  # RHACM4K-1071: private Git (mortgage path), local placement; credentials merged from env at runtime.
+  auto_git_private_local:
+    enabled: true
+    tests:
+      - RHACM4K-1071
+    blocks:
+      - use:
+          - git_private_mortgage
+          - skip_automation_ansible
+          - placement_label_local
+          - timewindow_default
+    extends:
+      - subscription_submit
+    specDomains:
+      subscription:
+        applicationName: auto-git-private
+        namespace: auto-git-private-ns
+
+  # Baseline for RHACM4K-1427: same app/namespace as edit scenario, but **helloworld** repo (create wizard).
+  # The test then edits block 0 to **mortgage** via `auto_git_mortgage_edit_local` payload.
+  auto_git_mortgage_edit_base:
+    enabled: true
+    blocks:
+      - use:
+          - git_helloworld
+          - skip_automation_ansible
+          - placement_label_local
+          - timewindow_default
+    extends:
+      - subscription_submit
+    specDomains:
+      subscription:
+        applicationName: auto-git-mortgage
+        namespace: auto-git-mortgage-ns
+
+  # RHACM4K-1427: subscription payload + expectations **after** edit (mortgage path, mortgage topology).
+  auto_git_mortgage_edit_local:
+    enabled: true
+    tests:
+      - RHACM4K-1427
+    blocks:
+      - use:
+          - git_mortgage
+          - skip_automation_ansible
+          - placement_label_local
+          - timewindow_default
+    extends:
+      - subscription_submit
+    specDomains:
+      subscription:
+        applicationName: auto-git-mortgage
+        namespace: auto-git-mortgage-ns
+
+  # Isolated baseline app for RHACM4K-7554 add-subscription edit flow (single existing subscription).
+  auto_git_add_subscription_base:
+    enabled: true
+    blocks:
+      - use:
+          - git_helloworld
+          - skip_automation_ansible
+          - placement_label_local
+          - timewindow_default
+    extends:
+      - subscription_submit
+    specDomains:
+      subscription:
+        applicationName: auto-git-add-sub
+        namespace: auto-git-add-sub-ns
+
+  # Add one Git subscription (mortgage) to an existing helloworld app via edit flow.
+  auto_git_add_second_subscription:
+    enabled: true
+    tests:
+      - RHACM4K-7554
+    blocks:
+      - use:
+          - git_mortgage
+          - skip_automation_ansible
+          - placement_label_local
+          - timewindow_default
+    extends:
+      - subscription_submit
+    specDomains:
+      subscription:
+        applicationName: auto-git-add-sub
+        namespace: auto-git-add-sub-ns
+
+  # Isolated two-subscription app for RHACM4K-7555 delete-subscription edit flow.
+  auto_git_delete_subscription_multi:
+    enabled: true
+    tests:
+      - RHACM4K-7555
+    blocks:
+      - use:
+          - git_helloworld
+          - skip_automation_ansible
+          - placement_label_local
+          - timewindow_default
+      - use:
+          - git_mortgage
+          - skip_automation_ansible
+          - placement_label_local
+          - timewindow_default
+    extends:
+      - subscription_submit
+    specDomains:
+      subscription:
+        applicationName: auto-git-delete-sub
+        namespace: auto-git-delete-sub-ns
+
+  auto_git_multi:
+    enabled: true
+    tests:
+      - RHACM4K-7556
+      - RHACM4K-7557
+      - RHACM4K-6903
+      - RHACM4K-6902
+    blocks:
+      - use:
+          - git_helloworld
+          - skip_automation_ansible
+          - placement_label_local
+          - timewindow_default
+      - use:
+          - git_mortgage
+          - skip_automation_ansible
+          - placement_label_local
+          - timewindow_default
+    extends:
+      - subscription_submit
+    specDomains:
+      subscription:
+        applicationName: auto-git-multi
+        namespace: auto-git-multi-ns
+
+  # RHACM4K-1558: delete Application CR only (subscriptions/channels remain in Advanced; Placement CRs via oc).
+  auto_git_multi_delete:
+    enabled: true
+    tests:
+      - RHACM4K-1558
+    blocks:
+      - use:
+          - git_helloworld
+          - skip_automation_ansible
+          - placement_online_vendor_openshift
+          - timewindow_default
+      - use:
+          - git_mortgage
+          - skip_automation_ansible
+          - placement_label_local
+          - timewindow_default
+    extends:
+      - subscription_submit
+    specDomains:
+      subscription:
+        applicationName: auto-git-multi-delete
+        namespace: auto-git-multi-delete-ns
+
+  auto_git_crd:
+    enabled: true
+    tests:
+      - RHACM4K-10668
+    blocks:
+      - use:
+          - git_crd
+          - skip_automation_ansible
+          - placement_online_vendor_openshift
+          - timewindow_default
+    extends:
+      - subscription_submit
+    specDomains:
+      subscription:
+        applicationName: auto-git-crd
+        namespace: auto-git-crd-ns

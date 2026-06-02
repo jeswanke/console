@@ -17,7 +17,9 @@ npx playwright install chromium
 
 **Recommended:** keep **universal** values in a repo-root **`.env`** (copy from **`.env.example`**). It is gitignored. **`./start.sh`** loads `.env` before `oc login`, and Playwright loads it via `src/config/index.ts`. Use **`HUB_PASSWORD`** for both `oc login` and the console UI step in **`auth.setup.ts`** (no separate console password).
 
-**ALC integrations** (object store, Ansible) stay in **`env/alc.local.env`** — see **`env/alc.env.example`**.
+**Ansible (AAP):** Prefer **`ANSIBLE_URL`** + **`ANSIBLE_TOWER_PASSWORD`** in repo-root **`.env`** (see **`.env.example`**). On non-unit runs, `globalSetup` runs `scripts/ansible/setup-ansible-template.sh` unless **`E2E_SKIP_ANSIBLE_PREP=1`**. If `ANSIBLE_TOKEN` is not provided, the prep script mints it from URL/password; if URL/password are not provided, it discovers route/password/token from cluster secrets in `AAP_NAMESPACE` (default `aap`). The script ensures `default/alc-ansible-secret` and can bootstrap AWX templates (disable with `E2E_ANSIBLE_AWX_BOOTSTRAP=0`).
+
+**ALC-only (`env/alc.local.env`):** Copy **`env/alc.env.example`** → **`env/alc.local.env`** (gitignored). Used for **private Git auth** (**`GITHUB_USER`**, **`GITHUB_TOKEN`** — base64-encoded; repo URL in **e2e-spec-data**) and **object store** (`OBJECTSTORE_*`). Loaded by **`./start.sh alc`** and **`loadAlcLocalEnvFile()`** in `src/config/index.ts`. Tests use **`@lib/app/auth/private-git`** (`getPrivateGitAuthFromEnv`, `applyPrivateGitAuthToSubscriptionOptions`).
 
 ---
 
@@ -32,6 +34,30 @@ npx playwright install chromium
 | `CONSOLE_IDP`      | No       | `kube:admin` | Identity provider link text on the login page |
 
 > **Typical kubeadmin:** `.env` with `HUB_URL` + `HUB_PASSWORD` only.
+
+### Playwright projects
+
+| Project        | Scope                                                                              |
+| -------------- | ---------------------------------------------------------------------------------- |
+| **`setup`**    | Auth (`auth.setup.ts`) → **`.auth/user.json`**                                     |
+| **`alc`**      | **Application Lifecycle** — `src/tests/app/**/*.spec.ts` (use **`--project alc`**) |
+| **`chromium`** | Other UI tests (e.g. **`src/tests/cluster/**`**) — excludes **`app/**`**           |
+| **`unit`**     | YAML / loader tests — `src/tests/unit/**/*.unit.spec.ts` (no hub)                  |
+
+**GitOps prep** in **`src/global-setup/gitOpsPrep.ts`** runs only when **`E2E_GITOPS_PREP`** is enabled (**`1/true/yes`**, set to `1` by default in **`./start.sh alc`**) **and** **`--project`** includes **`alc`** (and the run is not unit-only). Use **`E2E_GITOPS_PREP=0`** to disable. Non-ALC runs (e.g. **`--project chromium`**) skip GitOps even if the env is set.
+
+### Managed cluster context
+
+By default, **`globalSetup`** runs managed-cluster prep for any non-unit run:
+
+- **`scripts/cluster/generate-managed-cluster-data.py`** writes **`.auth/managedClusters.json`**
+- **`scripts/cluster/setup-managed-cluster-kubeconfig.sh`** writes **`.auth/MC_MERGED_kubeconfig`** and prepares spoke contexts named like `ManagedCluster` resources (same pattern as application-ui-test)
+
+Managed-cluster prep is **skipped** when you run **only** the **`unit`** project (e.g. **`--project=unit`**) or when **`E2E_SKIP_MANAGED_CLUSTER_PREP=1`**.
+
+You can skip only the kubeconfig merge step with **`E2E_SKIP_MANAGED_KUBECONFIG_MERGE=1`**.
+
+Tests read **`.auth/managedClusters.json`** via **`loadManagedClusterContext()`** or the **`managedClusterContext`** fixture in **`app-test`**. Override the JSON path with **`MANAGED_CLUSTER_CONTEXT_PATH`**.
 
 ### Example Setup
 
@@ -71,7 +97,7 @@ export HUB_URL='https://api.<cluster>:6443'
 export HUB_PASSWORD='<kubeadmin-password>'
 # or: export HUB_TOKEN='<token>'
 
-./start.sh alc                          # ALC: default --grep @alc, --project chromium
+./start.sh alc                          # ALC entrypoint: default --grep @alc, --project alc
 ./start.sh alc --grep @app --headed     # override defaults via CLI
 ```
 
@@ -86,7 +112,7 @@ export HUB_PASSWORD='<kubeadmin-password>'
 | `OC_CLUSTER_URL` / `OC_CLUSTER_USER` / `OC_CLUSTER_PASS` | Default from `HUB_URL`, `kubeadmin`, `HUB_PASSWORD` (override via env if needed) |
 | `PLAYWRIGHT_TEST_MODE`                                   | Default `e2e`, or from `TEST_MODE` / explicit `PLAYWRIGHT_TEST_MODE`             |
 
-**ALC-only file:** `./start.sh alc` also loads **`env/alc.local.env`** (gitignored) for integrations — **`OBJECTSTORE_*`**, **`ANSIBLE_*`** only (see `env/alc.env.example`).
+**ALC-only file:** `./start.sh alc` also loads **`env/alc.local.env`** (gitignored) for **`GITHUB_USER`** / **`GITHUB_TOKEN`** (private Git auth) and **`OBJECTSTORE_*`** (see `env/alc.env.example`). **`ANSIBLE_*`** is read from repo-root **`.env`** with everything else.
 
 Add more components later by extending the `case` in `start.sh` and adding e.g. `src/tests/<area>/start.sh`. Shared logic lives in `scripts/lib/common.sh`.
 
@@ -111,13 +137,19 @@ npx playwright show-report
 
 ## Project Structure
 
-See **`docs/architecture-overview.md`** for the full ACM automation model. This repo maps to it as follows:
+See **`docs/architecture-overview.md`** for the full ACM automation model. The subscription **Create application → Subscription** wizard is mapped in **`APP_SUBSCRIPTION_CREATE_WIZARD`** + **`SubscriptionApplicationCreateWizardPage`** (same locator style as **`ApplicationListPage`**). Optional screenshots under **`docs/images/`**.
+
+This repo maps to it as follows:
 
 ```
 console-e2e/
+├── docs/                    # architecture-overview.md; optional images in docs/images/
 ├── start.sh                 # Dispatcher → e.g. src/tests/app/start.sh (ALC)
-├── env/                     # ALC env template (alc.env.example); alc.local.env gitignored
-├── scripts/lib/             # Shared shell (common.sh, alc-env.sh)
+├── env/                     # ALC object-store template (alc.env.example); alc.local.env gitignored
+├── scripts/
+│   ├── lib/                 # Shared shell (common.sh, alc-env.sh)
+│   ├── cluster/             # managedClusters.json + merged kubeconfig prep scripts
+│   └── gitops/              # argocd integration bootstrap + YAML templates
 ├── src/
 │   ├── config/              # .env loader, getHubAuth() / getTestConfig()
 │   ├── constants/           # Selectors, strings
@@ -128,13 +160,15 @@ console-e2e/
 │   ├── lib/                 # Shared assertions / factories (expand)
 │   ├── pages/
 │   │   ├── BasePage.ts
-│   │   ├── app/             # ApplicationListPage
+│   │   ├── app/             # ApplicationListPage, SubscriptionApplicationCreateWizardPage
 │   │   └── cluster/         # ClusterListPage, ClusterSetsPage
 │   ├── services/            # OcCliService
+│   ├── global-setup/        # clusterPrep, gitOpsPrep, projectArgv, logPrefix
 │   ├── tests/
 │   │   ├── auth.setup.ts
-│   │   ├── app/
-│   │   └── cluster/
+│   │   ├── app/             # ALC UI (`--project alc`)
+│   │   ├── cluster/         # Other UI (`--project chromium`)
+│   │   └── unit/            # Config / lib unit tests (`--project unit`)
 │   └── utils/
 ├── .auth/                   # Auth state (gitignored)
 ├── playwright.config.ts

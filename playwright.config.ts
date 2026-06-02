@@ -22,8 +22,11 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   /* Opt out of parallel tests on CI. */
   workers: process.env.CI ? 1 : undefined,
-  /* Reporter to use. See https://playwright.dev/docs/test-reporters */
-  reporter: 'html',
+  /* Reporters: HTML locally; JUnit XML for CI / tooling (`test-results/` is gitignored). */
+  reporter: [
+    ['html'],
+    ['junit', { outputFile: 'test-results/junit.xml' }],
+  ],
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
@@ -34,30 +37,8 @@ export default defineConfig({
   },
 
   /*
-   * Projects — each test project uses testMatch to own its directories.
-   *
-   * Auth setup:
-   *   setup       — admin login (always runs)
-   *   rbac-setup  — RBAC user login (only runs when a dependent project has matching tests)
-   *
-   * Test projects (admin only):
-   *   cluster     — src/tests/cluster/
-   *   app         — src/tests/app/
-   *
-   * Test projects (admin + RBAC users):
-   *   fg-rbac     — src/tests/fg-rbac/
-   *
-   * Adding a new domain:
-   *   1. Add a project with testMatch: /your-domain/
-   *   2. If it needs RBAC users: add dependencies: ['setup', 'rbac-setup']
-   *      and add users to src/config/presets.ts with domains: ['your-domain']
-   *   3. If admin-only: add dependencies: ['setup']
-   *
-   * CLI examples:
-   *   npx playwright test --project=cluster           → setup → cluster tests
-   *   npx playwright test --project=fg-rbac           → setup + rbac-setup → fg-rbac tests
-   *   npx playwright test --project=cluster --project=app  → setup → cluster + app tests
-   *   RBAC_DOMAIN=fg-rbac npx playwright test         → rbac-setup only authenticates fg-rbac users
+   * Projects: setup → admin auth; rbac-setup → RBAC users; cluster / alc / fg-rbac / unit by testMatch.
+   * ALC: `./start.sh alc` (--project alc).
    */
   projects: [
     {
@@ -85,15 +66,17 @@ export default defineConfig({
       testMatch: /cluster/,
     },
 
+    // Application Lifecycle (ALC) — `src/tests/app/**`; `./start.sh alc` sets E2E_GITOPS_PREP.
     {
-      name: 'app',
+      name: 'alc',
+      testMatch: 'app/**/*.spec.ts',
+      testIgnore: 'unit/**',
       use: {
         ...devices['Desktop Chrome'],
         viewport: { width: 1920, height: 1080 },
         storageState: '.auth/admin.json',
       },
       dependencies: ['setup'],
-      testMatch: /app/,
     },
 
     {
@@ -118,6 +101,16 @@ export default defineConfig({
       },
       dependencies: ['setup', 'rbac-setup'],
       testMatch: /fg-rbac/,
+    },
+
+    // Config / YAML unit tests (no hub login) — `src/tests/unit/**`
+    {
+      name: 'unit',
+      testMatch: 'unit/**/*.unit.spec.ts',
+      use: {
+        ...devices['Desktop Chrome'],
+      },
+      dependencies: [],
     },
   ],
 });
