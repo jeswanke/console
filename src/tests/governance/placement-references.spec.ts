@@ -37,6 +37,7 @@ test.describe.serial(
       await oc.deleteYaml(RESOURCES_YAML);
     });
 
+    // Polarion steps 1-2: Policy visible in list
     test('policy appears on the policies list', async ({ governancePage }) => {
       await governancePage.goto();
       await governancePage.openPoliciesTab();
@@ -46,6 +47,7 @@ test.describe.serial(
       ).toBeVisible();
     });
 
+    // Polarion steps 3-4: Policy details show placement reference
     test('policy details page shows placement reference', async ({
       policyDetailsPage,
     }) => {
@@ -60,8 +62,10 @@ test.describe.serial(
       await expect(placementValue).toContainText(GOV_TEST_RESOURCES.placement);
     });
 
-    test('clicking placement on policy details navigates to placement details with governance references', async ({
+    // Polarion steps 5-7: Click placement → navigate → verify governance references
+    test('clicking placement navigates to placement details with governance references', async ({
       policyDetailsPage,
+      placementDetailsPage,
       page,
     }) => {
       await policyDetailsPage.goto(ns, GOV_TEST_RESOURCES.policy);
@@ -73,12 +77,8 @@ test.describe.serial(
       await expect(page).toHaveURL(
         new RegExp(`placements/details/${ns}/${GOV_TEST_RESOURCES.placement}`)
       );
-    });
 
-    test('placement details page shows governance references from policy', async ({
-      placementDetailsPage,
-    }) => {
-      await placementDetailsPage.goto(ns, GOV_TEST_RESOURCES.placement);
+      await placementDetailsPage.waitForLoad(45_000);
 
       await expect(placementDetailsPage.getPageHeading()).toContainText(
         GOV_TEST_RESOURCES.placement
@@ -97,6 +97,7 @@ test.describe.serial(
       );
     });
 
+    // Polarion steps 8-9: Policy set visible in list
     test('policy set appears on the policy sets list', async ({
       governancePage,
     }) => {
@@ -107,9 +108,11 @@ test.describe.serial(
       ).toBeVisible();
     });
 
-    test('policy set details panel shows placement reference', async ({
+    // Polarion steps 10-12: Policy set panel shows placement, click navigates
+    test('policy set details panel shows placement and navigates to placement details', async ({
       governancePage,
       policySetDetailsPage,
+      page,
     }) => {
       await governancePage.goto();
       await governancePage.openPolicySetsTab();
@@ -119,20 +122,6 @@ test.describe.serial(
       const panel = policySetDetailsPage.getDetailsPanel();
       await expect(panel).toBeVisible();
       await expect(panel).toContainText(GOV_TEST_RESOURCES.policySet);
-      await expect(
-        policySetDetailsPage.getPlacementLink(GOV_TEST_RESOURCES.placement)
-      ).toBeVisible();
-    });
-
-    test('clicking placement on policy set details navigates to placement details', async ({
-      governancePage,
-      policySetDetailsPage,
-      page,
-    }) => {
-      await governancePage.goto();
-      await governancePage.openPolicySetsTab();
-      await governancePage.getPolicySetCard(GOV_TEST_RESOURCES.policySet).click();
-      await policySetDetailsPage.waitForLoad(30_000);
 
       const placementLink = policySetDetailsPage.getPlacementLink(
         GOV_TEST_RESOURCES.placement

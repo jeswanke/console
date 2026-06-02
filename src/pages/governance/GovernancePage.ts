@@ -1,4 +1,4 @@
-import { Page, Locator } from '@playwright/test';
+import { Page, Locator, expect } from '@playwright/test';
 import { BasePage } from '@pages/BasePage';
 import { OcCliService } from '@services/OcCliService';
 import { SELECTORS } from '@constants/selectors';
@@ -21,7 +21,7 @@ export class GovernancePage extends BasePage {
   async goto(): Promise<void> {
     const consoleUrl = await this.oc.getConsoleUrl();
     await this.page.goto(`${consoleUrl}${GOV_ROUTES.governance}`);
-    await this.waitForLoad(30_000);
+    await expect(this.getPageTitle()).toBeVisible({ timeout: 60_000 });
   }
 
   async openPoliciesTab(): Promise<void> {
@@ -55,7 +55,18 @@ export class GovernancePage extends BasePage {
     return this.page.getByRole('link', { name: policyName, exact: true });
   }
 
+  async openDiscoveredPoliciesTab(): Promise<void> {
+    await this.page
+      .getByRole('tab', { name: GOV_PAGE.tabs.discoveredPolicies })
+      .click();
+    await this.waitForLoad(30_000);
+  }
+
   getPolicySetCard(policySetName: string): Locator {
     return this.page.getByText(policySetName, { exact: true });
+  }
+
+  getDiscoveredPolicyRow(policyName: string): Locator {
+    return this.page.getByRole('link', { name: policyName, exact: true });
   }
 }

@@ -86,6 +86,36 @@ export const GOV_PLACEMENT_DETAILS = {
 } as const;
 
 // =============================================================================
+// Discovered policy details page
+// =============================================================================
+
+export const GOV_DISCOVERED_POLICY_DETAILS = {
+  tabs: {
+    relatedResources: 'Related resources',
+    clusters: 'Clusters',
+  },
+  labelFilterText: 'Label',
+  noLabelsIndicator: '-',
+} as const;
+
+// =============================================================================
+// Test resource names (used in discovered-policy-labels tests)
+// =============================================================================
+
+export const GOV_DISCOVERED_TEST_RESOURCES = {
+  namespace: 'compliance-test-ns',
+  parentPolicy: 'compliance-check-policy',
+  labeledPolicy: 'compliance-e8-scan',
+  unlabeledPolicy: 'compliance-suite-e8',
+  placement: 'compliance-check-placement',
+  label: {
+    key: 'custom-classification',
+    value: 'compliance-scan',
+    formatted: 'custom-classification=compliance-scan',
+  },
+} as const;
+
+// =============================================================================
 // Test resource names (used in placement-references tests)
 // =============================================================================
 
