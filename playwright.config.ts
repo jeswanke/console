@@ -103,6 +103,17 @@ export default defineConfig({
       testMatch: /fg-rbac/,
     },
 
+    {
+      name: 'fleet-virt',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1920, height: 1080 },
+        storageState: '.auth/admin.json',
+      },
+      dependencies: ['setup', 'rbac-setup'],
+      testMatch: /fleet-virt/,
+    },
+
     // Config / YAML unit tests (no hub login) — `src/tests/unit/**`
     {
       name: 'unit',
