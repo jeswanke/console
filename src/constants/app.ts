@@ -361,6 +361,24 @@ export const APP_FILTER = {
   },
 } as const;
 
+/** Labels column on Applications Overview (extension column; PF overflow label + popover). */
+export const APP_TABLE_LABELS_CELL = {
+  /** Cell button summarizing resource labels, e.g. "6 labels". */
+  countButtonNamePattern: /\d+\s+labels?/i,
+  popoverContentSelector: '.pf-v6-c-popover__content, .pf-v5-c-popover__content',
+} as const;
+
+/** Applications list — dedicated Label filter (`#acm-table-filter-select-Label`). */
+export const APP_LABEL_FILTER = {
+  toggleId: 'acm-table-filter-select-Label',
+  groupTitle: 'Label',
+  searchAriaLabel: 'Search',
+  /** MenuToggle shows "Label" with a badge when filters are active (e.g. "Label 1"). */
+  toggleNamePattern: /^Label(\s+\d+)?$/i,
+  operatorEquals: '=',
+  operatorNotEquals: '!=',
+} as const;
+
 // =============================================================================
 // Advanced Configuration tab: **Subscriptions** and **Channels** toggles only (`#subscriptions`, `#channels`).
 // Placements and Placement rules UIs were removed from this page (see deprecation; use Infrastructure / app views).

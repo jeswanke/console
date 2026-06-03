@@ -9,6 +9,8 @@ import {
   APP_TABLE_COLUMN_HELP,
   APP_TOOLBAR,
   APP_FILTER,
+  APP_LABEL_FILTER,
+  APP_TABLE_LABELS_CELL,
   APP_CREATE_MENU,
   APP_COMPARE_POPOVER,
 } from '@constants/app';
@@ -29,6 +31,7 @@ export class ApplicationsTable extends AcmTable {
   private readonly table: Locator;
   private readonly createButton: Locator;
   private readonly filterButton: Locator;
+  private readonly labelFilterButton: Locator;
   private readonly exportButton: Locator;
 
   constructor(page: Page) {
@@ -36,6 +39,7 @@ export class ApplicationsTable extends AcmTable {
     this.table = page.locator(SELECTORS.application.table);
     this.createButton = page.locator(SELECTORS.application.createButton);
     this.filterButton = page.locator(SELECTORS.application.filterButton);
+    this.labelFilterButton = page.locator(SELECTORS.application.labelFilterButton);
     this.exportButton = page.locator(SELECTORS.application.exportButton);
   }
 
@@ -146,6 +150,95 @@ export class ApplicationsTable extends AcmTable {
   /** Deselect (uncheck) a filter option by label. Filter menu must be open. */
   async deselectFilterOption(optionLabel: string): Promise<void> {
     await this.getFilterOption(optionLabel).uncheck();
+  }
+
+  getLabelFilterButton(): Locator {
+    return this.labelFilterButton;
+  }
+
+  /**
+   * Label filter listbox (portaled). Anchor by the in-panel "Label" heading.
+   */
+  getLabelFilterListbox(): Locator {
+    return this.page
+      .getByRole('listbox')
+      .filter({
+        has: this.page.getByRole('heading', {
+          name: APP_LABEL_FILTER.groupTitle,
+          level: 1,
+        }),
+      })
+      .first();
+  }
+
+  getLabelFilterSearchInput(): Locator {
+    return this.getLabelFilterListbox().getByRole('textbox', {
+      name: APP_LABEL_FILTER.searchAriaLabel,
+    });
+  }
+
+  /** Checkbox for a label key=value option (accessible name includes trailing count). */
+  getLabelFilterCheckbox(labelKeyValue: string): Locator {
+    const prefix = escapeRegExp(labelKeyValue.trim());
+    return this.getLabelFilterListbox().getByRole('checkbox', {
+      name: new RegExp(`^${prefix}(\\s+\\d+)?$`),
+    });
+  }
+
+  async openLabelFilter(): Promise<void> {
+    await this.labelFilterButton.click();
+    const listbox = this.getLabelFilterListbox();
+    await listbox.waitFor({ state: 'visible', timeout: 10_000 });
+    await listbox.getByRole('checkbox').first().waitFor({ state: 'visible', timeout: 10_000 });
+  }
+
+  async searchLabelFilter(query: string): Promise<void> {
+    await this.getLabelFilterSearchInput().fill(query);
+  }
+
+  async selectLabelFilterOption(labelKeyValue: string): Promise<void> {
+    const listbox = this.getLabelFilterListbox();
+    const isOpen = await listbox.getByRole('checkbox').first().isVisible().catch(() => false);
+    if (!isOpen) {
+      await this.openLabelFilter();
+    }
+    await this.getLabelFilterCheckbox(labelKeyValue).check();
+  }
+
+  /** Count of visible data rows on the current table page. */
+  async getDataRowCount(): Promise<number> {
+    return this.table.locator('tbody tr').count();
+  }
+
+  getDataRows(): Locator {
+    return this.table.locator('tbody tr');
+  }
+
+  getLabelsColumnHeader(): Locator {
+    return this.table.locator(`th[data-label="${APP_TABLE_COLUMNS.labels}"]`);
+  }
+
+  getLabelsCell(row: Locator): Locator {
+    return this.getCellByLabel(row, 'labels');
+  }
+
+  /** Overflow label button in the Labels column (e.g. "6 labels"). */
+  getLabelsCountButton(row: Locator): Locator {
+    return this.getLabelsCell(row).getByRole('button', {
+      name: APP_TABLE_LABELS_CELL.countButtonNamePattern,
+    });
+  }
+
+  async openLabelsPopover(row: Locator): Promise<void> {
+    await this.getLabelsCountButton(row).click();
+  }
+
+  getLabelsPopoverContent(): Locator {
+    return this.page.locator(APP_TABLE_LABELS_CELL.popoverContentSelector).first();
+  }
+
+  async closeLabelsPopover(): Promise<void> {
+    await this.page.keyboard.press('Escape');
   }
 
   getExportButton(): Locator {
