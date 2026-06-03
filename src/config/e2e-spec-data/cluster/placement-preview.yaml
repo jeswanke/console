@@ -1,0 +1,22 @@
+# Standalone Create placement wizard — placement cluster preview (RHACM4K-64220).
+
+version: 1
+
+profiles:
+  placement_create_preview:
+    specDomains:
+      placement:
+        setupYamlRelativePath: src/templates/cluster/placement-preview-test-setup.yaml
+        namespace: preview-test-ns
+        clusterSet: preview-test-cluster-set
+        namePrefix: placement-preview
+
+scenarios:
+  placement_create_preview_64220:
+    enabled: true
+    tests:
+      - RHACM4K-64220
+    extends:
+      - placement_create_preview
+    specDomains:
+      placement: {}

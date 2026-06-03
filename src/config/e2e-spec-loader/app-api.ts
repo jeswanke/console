@@ -1,3 +1,4 @@
+/** Application lifecycle (ALC) — resolve API for subscription and argoPush scenarios. */
 import { loadE2eSpecData } from './io/loadSpec';
 import { findScenarioIdsByTestId } from './lookup/findScenarioIds';
 import { buildResolvedAppScenario } from './resolve/buildResolvedAppScenario';
@@ -12,7 +13,6 @@ export type {
   ResolvedArgoPushAppScenario,
   ResolvedSubscriptionAppScenario,
 } from './types';
-export { clearE2eSpecDataCache, loadE2eSpecData } from './io/loadSpec';
 
 function requireSubscriptionScenario(
   resolved: ResolvedAppScenario,

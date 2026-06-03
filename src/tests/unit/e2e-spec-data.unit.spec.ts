@@ -11,6 +11,9 @@ import {
   mergeExpectationsRowsForComposerBlock,
   resolveArgoPushScenarioById,
   resolveArgoPushScenarioByTestId,
+  resolvePlacementScenarioByTestId,
+  resolvePolicyScenarioByTestId,
+  resolvePolicySetScenarioByTestId,
   resolveScenarioByTestId,
   resolveSubscriptionScenarioById,
   resolveSubscriptionScenarioByTestId,
@@ -385,6 +388,41 @@ test.describe('e2e-spec-data YAML processing', () => {
         branch: 'main',
         path: 'helloworld',
       },
+    });
+  });
+
+  test('governance placement-preview.yaml: RHACM4K-64221 policy scenario', () => {
+    const resolved = resolvePolicyScenarioByTestId('RHACM4K-64221', E2E_SPEC_DATA_DIR);
+    expect(resolved.scenarioId).toBe('policy_placement_preview_64221');
+    expect(resolved.policy).toMatchObject({
+      setupYamlRelativePath: 'src/templates/governance/policy-preview-test-setup.yaml',
+      namespace: 'policy-preview-test-ns',
+      clusterSet: 'policy-test-cluster-set',
+      namePrefix: 'policy-placement-preview',
+      existingPlacementName: 'policy-preview-test-placement',
+    });
+  });
+
+  test('governance placement-preview.yaml: RHACM4K-64222 policy set scenario', () => {
+    const resolved = resolvePolicySetScenarioByTestId('RHACM4K-64222', E2E_SPEC_DATA_DIR);
+    expect(resolved.scenarioId).toBe('policy_set_placement_preview_64222');
+    expect(resolved.policySet).toMatchObject({
+      setupYamlRelativePath: 'src/templates/governance/policy-set-preview-test-setup.yaml',
+      namespace: 'policyset-preview-test-ns',
+      clusterSet: 'policyset-test-cluster-set',
+      namePrefix: 'policyset-placement-preview',
+      existingPlacementName: 'policyset-existing-placement-test',
+    });
+  });
+
+  test('cluster placement-preview.yaml: RHACM4K-64220 placement scenario', () => {
+    const resolved = resolvePlacementScenarioByTestId('RHACM4K-64220', E2E_SPEC_DATA_DIR);
+    expect(resolved.scenarioId).toBe('placement_create_preview_64220');
+    expect(resolved.placement).toMatchObject({
+      setupYamlRelativePath: 'src/templates/cluster/placement-preview-test-setup.yaml',
+      namespace: 'preview-test-ns',
+      clusterSet: 'preview-test-cluster-set',
+      namePrefix: 'placement-preview',
     });
   });
 });

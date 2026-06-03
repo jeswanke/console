@@ -1,33 +1,29 @@
-import path from 'path';
-
-import { POLICY_PLACEMENT_PREVIEW } from '@constants/governance';
+import type { PlacementPreviewSetupPayload } from '@config';
 import type { OcCliService } from '@services/OcCliService';
+import {
+  applyPlacementPreviewSetup,
+  cleanupPlacementPreviewSetup,
+  labelClustersForPlacementPreview,
+} from '@lib/placement/placement-preview-setup';
 
-const SETUP_YAML_PATH = path.join(
-  path.resolve(__dirname, '../../..'),
-  POLICY_PLACEMENT_PREVIEW.setupYamlRelativePath
-);
-
-const CLUSTER_SET_LABEL = 'cluster.open-cluster-management.io/clusterset';
-
-/** Apply namespace, ManagedClusterSet, binding, and existing Placement for preview E2E. */
-export async function applyPolicyPlacementPreviewSetup(oc: OcCliService): Promise<void> {
-  await oc.applyYaml(SETUP_YAML_PATH);
+export async function applyPolicyPlacementPreviewSetup(
+  oc: OcCliService,
+  setup: Pick<PlacementPreviewSetupPayload, 'setupYamlRelativePath'>
+): Promise<void> {
+  await applyPlacementPreviewSetup(oc, setup);
 }
 
-/** Assign managed clusters to the test cluster set (requires at least local-cluster). */
 export async function labelClustersForPolicyPreviewTest(
   oc: OcCliService,
-  clusterNames: string[]
+  clusterNames: string[],
+  clusterSet: string
 ): Promise<void> {
-  const clusterSet = POLICY_PLACEMENT_PREVIEW.clusterSet;
-  for (const name of clusterNames) {
-    await oc.run(
-      `oc label managedcluster ${name} ${CLUSTER_SET_LABEL}=${clusterSet} --overwrite`
-    );
-  }
+  await labelClustersForPlacementPreview(oc, clusterNames, clusterSet);
 }
 
-export async function cleanupPolicyPlacementPreviewSetup(oc: OcCliService): Promise<void> {
-  await oc.deleteYaml(SETUP_YAML_PATH).catch(() => undefined);
+export async function cleanupPolicyPlacementPreviewSetup(
+  oc: OcCliService,
+  setup: Pick<PlacementPreviewSetupPayload, 'setupYamlRelativePath'>
+): Promise<void> {
+  await cleanupPlacementPreviewSetup(oc, setup);
 }

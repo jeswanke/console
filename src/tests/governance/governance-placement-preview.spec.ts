@@ -1,6 +1,13 @@
-/** RHACM4K-64221 / RHACM4K-64222 — Policy and Policy set create wizards, placement cluster preview. */
+/**
+ * RHACM4K-64221 / RHACM4K-64222 — Policy and Policy set create wizards, placement cluster preview.
+ *
+ * Scenario data: `src/config/e2e-spec-data/governance/placement-preview.yaml`.
+ */
 import { test } from '@fixtures/acm-test';
-import { POLICY_PLACEMENT_PREVIEW, POLICY_SET_PLACEMENT_PREVIEW } from '@constants/governance';
+import {
+  resolvePolicyScenarioByTestId,
+  resolvePolicySetScenarioByTestId,
+} from '@config';
 import { loadManagedClusterContext } from '@lib/cluster/managedClusterContext';
 import {
   applyPolicyPlacementPreviewSetup,
@@ -29,18 +36,21 @@ function managedClusterNamesForPreview(): string[] {
   return [...names];
 }
 
+const policyPreviewScenario = resolvePolicyScenarioByTestId('RHACM4K-64221');
+const policySetPreviewScenario = resolvePolicySetScenarioByTestId('RHACM4K-64222');
+
 test.describe(
   'Governance create wizards — Placement cluster preview',
   { tag: ['@governance', '@grc', '@UI', '@placement', '@placement-preview'] },
   () => {
     test.beforeAll(async ({ oc }) => {
-      await applyPolicyPlacementPreviewSetup(oc);
-      await applyPolicySetPlacementPreviewSetup(oc);
+      await applyPolicyPlacementPreviewSetup(oc, policyPreviewScenario.policy);
+      await applyPolicySetPlacementPreviewSetup(oc, policySetPreviewScenario.policySet);
     });
 
     test.afterAll(async ({ oc }) => {
-      await cleanupPolicyPlacementPreviewSetup(oc);
-      await cleanupPolicySetPlacementPreviewSetup(oc);
+      await cleanupPolicyPlacementPreviewSetup(oc, policyPreviewScenario.policy);
+      await cleanupPolicySetPlacementPreviewSetup(oc, policySetPreviewScenario.policySet);
     });
 
     test(
@@ -49,10 +59,10 @@ test.describe(
       async ({ oc, policiesListPage, createPolicyWizardPage: wizard }) => {
         test.setTimeout(300_000);
 
-        await labelClustersForPolicyPreviewTest(oc, managedClusterNamesForPreview());
+        const { namespace, clusterSet, namePrefix } = policyPreviewScenario.policy;
+        await labelClustersForPolicyPreviewTest(oc, managedClusterNamesForPreview(), clusterSet);
 
-        const { namespace, clusterSet, testData } = POLICY_PLACEMENT_PREVIEW;
-        const policyName = `${testData.namePrefix}-${Date.now()}`;
+        const policyName = `${namePrefix}-${Date.now()}`;
 
         await test.step('Open Create policy and run new-placement preview scenarios', async () => {
           await wizard.openFromPoliciesList(policiesListPage);
@@ -72,10 +82,10 @@ test.describe(
       async ({ oc, policySetsListPage, createPolicySetWizardPage: wizard }) => {
         test.setTimeout(300_000);
 
-        await labelClustersForPolicySetPlacementPreview(oc, managedClusterNamesForPreview());
+        const { namespace, clusterSet, namePrefix } = policySetPreviewScenario.policySet;
+        await labelClustersForPolicySetPlacementPreview(oc, managedClusterNamesForPreview(), clusterSet);
 
-        const { namespace, clusterSet, testData } = POLICY_SET_PLACEMENT_PREVIEW;
-        const policySetName = `${testData.namePrefix}-${Date.now()}`;
+        const policySetName = `${namePrefix}-${Date.now()}`;
 
         await test.step('Open Create policy set and run new-placement preview scenarios', async () => {
           await wizard.openFromPolicySetsList(policySetsListPage);

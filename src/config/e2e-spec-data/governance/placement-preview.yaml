@@ -1,0 +1,41 @@
+# Governance placement cluster preview — Policy and Policy set create wizards.
+
+version: 1
+
+profiles:
+  policy_placement_preview:
+    specDomains:
+      policy:
+        setupYamlRelativePath: src/templates/governance/policy-preview-test-setup.yaml
+        namespace: policy-preview-test-ns
+        clusterSet: policy-test-cluster-set
+        namePrefix: policy-placement-preview
+        existingPlacementName: policy-preview-test-placement
+
+  policy_set_placement_preview:
+    specDomains:
+      policySet:
+        setupYamlRelativePath: src/templates/governance/policy-set-preview-test-setup.yaml
+        namespace: policyset-preview-test-ns
+        clusterSet: policyset-test-cluster-set
+        namePrefix: policyset-placement-preview
+        existingPlacementName: policyset-existing-placement-test
+
+scenarios:
+  policy_placement_preview_64221:
+    enabled: true
+    tests:
+      - RHACM4K-64221
+    extends:
+      - policy_placement_preview
+    specDomains:
+      policy: {}
+
+  policy_set_placement_preview_64222:
+    enabled: true
+    tests:
+      - RHACM4K-64222
+    extends:
+      - policy_set_placement_preview
+    specDomains:
+      policySet: {}

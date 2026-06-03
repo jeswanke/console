@@ -1,10 +1,10 @@
 /**
  * RHACM4K-64220: Standalone Create placement wizard — Placement cluster preview.
  *
- * Prereq: {@link applyPlacementCreatePreviewSetup} + cluster labels for preview-test-cluster-set.
+ * Scenario data: `src/config/e2e-spec-data/cluster/placement-preview.yaml`.
  */
 import { test } from '@fixtures/acm-test';
-import { PLACEMENT_CREATE_PREVIEW } from '@constants/placement-preview';
+import { resolvePlacementScenarioByTestId } from '@config';
 import { loadManagedClusterContext } from '@lib/cluster/managedClusterContext';
 import {
   applyPlacementCreatePreviewSetup,
@@ -15,17 +15,23 @@ import {
   verifyCreatePlacementWizardVisible,
 } from '@lib/cluster/placement-create-preview-verify';
 
+const placementPreviewScenario = resolvePlacementScenarioByTestId('RHACM4K-64220');
+
 test.describe(
   'Infrastructure Placements create wizard — cluster preview',
   { tag: ['@cluster', '@clc', '@UI', '@placement', '@placement-preview'] },
   () => {
     test.beforeAll(async ({ oc }) => {
-      await applyPlacementCreatePreviewSetup(oc);
+      await applyPlacementCreatePreviewSetup(oc, placementPreviewScenario.placement);
       const names = new Set<string>(['local-cluster']);
       for (const entry of loadManagedClusterContext()?.managedClusters ?? []) {
         if (entry?.name) names.add(entry.name);
       }
-      await labelClustersForPlacementCreatePreview(oc, [...names]);
+      await labelClustersForPlacementCreatePreview(
+        oc,
+        [...names],
+        placementPreviewScenario.placement.clusterSet
+      );
     });
 
     test(
@@ -34,8 +40,8 @@ test.describe(
       async ({ placementsListPage, createPlacementWizardPage: wizard }) => {
         test.setTimeout(300_000);
 
-        const { namespace, clusterSet, testData } = PLACEMENT_CREATE_PREVIEW;
-        const placementName = `${testData.namePrefix}-${Date.now()}`;
+        const { namespace, clusterSet, namePrefix } = placementPreviewScenario.placement;
+        const placementName = `${namePrefix}-${Date.now()}`;
 
         await test.step('Open Create placement and run placement preview scenarios', async () => {
           await wizard.openFromPlacementsList(placementsListPage);

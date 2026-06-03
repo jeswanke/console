@@ -49,12 +49,9 @@ export const APP_ARGO_APPSET_PLACEMENT_PREVIEW_UI = {
   },
 } as const;
 
-/** RHACM4K-64220 — standalone Create placement wizard. */
+/** RHACM4K-64220 — standalone Create placement wizard UI (data in e2e-spec-data). */
 export const PLACEMENT_CREATE_PREVIEW = {
   ...PLACEMENT_CLUSTER_PREVIEW,
-  setupYamlRelativePath: 'src/templates/cluster/placement-preview-test-setup.yaml',
-  namespace: 'preview-test-ns',
-  clusterSet: 'preview-test-cluster-set',
   placement: {
     ...PLACEMENT_CLUSTER_PREVIEW.placement,
     /** Hub PF Select — aria-label is "Select the cluster sets", not "Cluster sets". */
@@ -69,8 +66,5 @@ export const PLACEMENT_CREATE_PREVIEW = {
   review: {
     placementSectionId: 'placement',
     expandableSectionClass: 'wizard-review-expandable-section',
-  },
-  testData: {
-    namePrefix: 'placement-preview',
   },
 } as const;

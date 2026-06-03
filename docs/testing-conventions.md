@@ -2,24 +2,24 @@
 
 ## Layer rules
 
-| Layer | Purpose |
-| ----- | ------- |
-| `src/tests/**` | Specs only — `test.step`, fixtures, tags. No complex logic. |
-| `src/pages/**` | Page objects (`BasePage`, locators, navigation). |
-| `src/components/**` | Reusable widgets (`ApplicationsTable`, PF wrappers). |
-| `src/lib/**` | Flows, assertions, factories (e.g. `placement-preview-flow.ts`). |
-| `src/services/**` | `oc` / API only — no Playwright locators. |
-| `src/config/e2e-spec-data/**` | Scenario YAML + `resolve*ScenarioByTestId`. |
-| `src/templates/**` | Fixture YAML applied via `OcCliService`. |
+| Layer                         | Purpose                                                                                  |
+| ----------------------------- | ---------------------------------------------------------------------------------------- |
+| `src/tests/**`                | Specs only — `test.step`, fixtures, tags. No complex logic.                              |
+| `src/pages/**`                | Page objects (`BasePage`, locators, navigation).                                         |
+| `src/components/**`           | Reusable widgets (`ApplicationsTable`, PF wrappers).                                     |
+| `src/lib/**`                  | Flows, assertions, factories (e.g. `placement-preview-flow.ts`).                         |
+| `src/services/**`             | `oc` / API only — no Playwright locators.                                                |
+| `src/config/e2e-spec-data/**` | Scenario YAML (`applications/`, `governance/`, `cluster/`) + `resolve*ScenarioByTestId`. |
+| `src/templates/**`            | Fixture YAML applied via `OcCliService`.                                                 |
 
 ## Tags
 
-| Tag | Use |
-| --- | --- |
-| `@alc` / `@clc` / `@grc` | Component suite (default grep for `./start.sh`). |
-| `@RHACM4K-*` | Polarion-backed regression tests. |
-| `@sample` | Exploratory / scaffold — **not** run in integration mode. |
-| `@UI` | Console UI (vs unit/oc-only). |
+| Tag                      | Use                                                       |
+| ------------------------ | --------------------------------------------------------- |
+| `@alc` / `@clc` / `@grc` | Component suite (default grep for `./start.sh`).          |
+| `@RHACM4K-*`             | Polarion-backed regression tests.                         |
+| `@sample`                | Exploratory / scaffold — **not** run in integration mode. |
+| `@UI`                    | Console UI (vs unit/oc-only).                             |
 
 ## Integration runs (`TEST_MODE=integration`)
 

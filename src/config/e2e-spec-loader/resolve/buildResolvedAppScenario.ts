@@ -4,17 +4,7 @@ import type { CreateSubscriptionOptions } from '@lib/app/subscription/types';
 import type { CreateArgoPushApplicationOptions } from '@lib/app/argo-push/types';
 import type { E2eSpecData } from '../schema';
 import type { ResolvedAppScenario } from '../types';
-
-function collectMatrixTestIdsForScenario(spec: E2eSpecData, scenarioId: string): string[] {
-  const matrix = spec.matrix ?? {};
-  const ids: string[] = [];
-  for (const [testId, sid] of Object.entries(matrix)) {
-    if (sid === scenarioId && testId !== '') {
-      ids.push(testId);
-    }
-  }
-  return ids;
-}
+import { collectScenarioTestIds } from './collectScenarioTestIds';
 
 /** Resolves domain payloads for one scenario id (throws if missing or invalid). */
 export function buildResolvedAppScenario(spec: E2eSpecData, scenarioId: string): ResolvedAppScenario {
@@ -57,11 +47,11 @@ export function buildResolvedAppScenario(spec: E2eSpecData, scenarioId: string):
     );
   }
 
-  const tests = scenarioBody.tests ?? [];
-  const matrixIds = collectMatrixTestIdsForScenario(spec, scenarioId);
-  const testIds = [...new Set([...tests, ...matrixIds])].sort();
-
-  const base = { scenarioId, enabled: true as const, testIds };
+  const base = {
+    scenarioId,
+    enabled: true as const,
+    testIds: collectScenarioTestIds(spec, scenarioId),
+  };
 
   if (hasArgoPush) {
     return {

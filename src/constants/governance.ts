@@ -41,13 +41,9 @@ export const POLICY_CREATE_WIZARD = {
   },
 } as const;
 
-/** Policy create wizard — Placement cluster preview (RHACM4K-64221; see ACM-33679 / ACM-33680). */
+/** Policy create wizard — Placement cluster preview UI (RHACM4K-64221; data in e2e-spec-data). */
 export const POLICY_PLACEMENT_PREVIEW = {
   ...PLACEMENT_CLUSTER_PREVIEW,
-  setupYamlRelativePath: 'src/templates/governance/policy-preview-test-setup.yaml',
-  namespace: 'policy-preview-test-ns',
-  clusterSet: 'policy-test-cluster-set',
-  existingPlacementName: 'policy-preview-test-placement',
   placementStepNavId: 'placement',
   reviewStepNavId: 'review-step',
   stepsNavAriaLabel: 'Policy steps',
@@ -57,9 +53,6 @@ export const POLICY_PLACEMENT_PREVIEW = {
     clusterSetsComboboxLabel: /^Select the cluster sets$/i,
     existingPlacementComboboxLabel: /^Placement$/i,
   },
-  testData: {
-    namePrefix: 'policy-placement-preview',
-  },
 } as const;
 
 export const POLICY_SET_LIST = {
@@ -67,13 +60,9 @@ export const POLICY_SET_LIST = {
   createPolicySetLinkLabel: /^Create policy set$/i,
 } as const;
 
-/** Policy set create wizard — Placement cluster preview (RHACM4K-64222; see ACM-33679 / ACM-33680). */
+/** Policy set create wizard — Placement cluster preview UI (RHACM4K-64222; data in e2e-spec-data). */
 export const POLICY_SET_PLACEMENT_PREVIEW = {
   ...PLACEMENT_CLUSTER_PREVIEW,
-  setupYamlRelativePath: 'src/templates/governance/policy-set-preview-test-setup.yaml',
-  namespace: 'policyset-preview-test-ns',
-  clusterSet: 'policyset-test-cluster-set',
-  existingPlacementName: 'policyset-existing-placement-test',
   placementStepNavId: 'placement-step',
   reviewStepNavId: 'review-step',
   stepsNavAriaLabel: 'Policy set steps',
@@ -81,9 +70,6 @@ export const POLICY_SET_PLACEMENT_PREVIEW = {
     ...PLACEMENT_CLUSTER_PREVIEW.placement,
     clusterSetsComboboxLabel: /^Select the cluster sets$/i,
     existingPlacementComboboxLabel: /^Placement$/i,
-  },
-  testData: {
-    namePrefix: 'policyset-placement-preview',
   },
 } as const;
 

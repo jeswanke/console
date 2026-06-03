@@ -1,27 +1,21 @@
-import path from 'path';
-
-import { PLACEMENT_CREATE_PREVIEW } from '@constants/placement-preview';
+import type { PlacementPreviewSetupPayload } from '@config';
 import type { OcCliService } from '@services/OcCliService';
+import {
+  applyPlacementPreviewSetup,
+  labelClustersForPlacementPreview,
+} from '@lib/placement/placement-preview-setup';
 
-const SETUP_YAML_PATH = path.join(
-  path.resolve(__dirname, '../../..'),
-  PLACEMENT_CREATE_PREVIEW.setupYamlRelativePath
-);
-
-const CLUSTER_SET_LABEL = 'cluster.open-cluster-management.io/clusterset';
-
-export async function applyPlacementCreatePreviewSetup(oc: OcCliService): Promise<void> {
-  await oc.applyYaml(SETUP_YAML_PATH);
+export async function applyPlacementCreatePreviewSetup(
+  oc: OcCliService,
+  setup: Pick<PlacementPreviewSetupPayload, 'setupYamlRelativePath'>
+): Promise<void> {
+  await applyPlacementPreviewSetup(oc, setup);
 }
 
 export async function labelClustersForPlacementCreatePreview(
   oc: OcCliService,
-  clusterNames: string[]
+  clusterNames: string[],
+  clusterSet: string
 ): Promise<void> {
-  const clusterSet = PLACEMENT_CREATE_PREVIEW.clusterSet;
-  for (const name of clusterNames) {
-    await oc.run(
-      `oc label managedcluster ${name} ${CLUSTER_SET_LABEL}=${clusterSet} --overwrite`
-    );
-  }
+  await labelClustersForPlacementPreview(oc, clusterNames, clusterSet);
 }
