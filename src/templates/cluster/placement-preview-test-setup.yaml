@@ -1,0 +1,18 @@
+# RHACM4K-64220 — standalone Placement wizard preview E2E.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: preview-test-ns
+---
+apiVersion: cluster.open-cluster-management.io/v1beta2
+kind: ManagedClusterSet
+metadata:
+  name: preview-test-cluster-set
+---
+apiVersion: cluster.open-cluster-management.io/v1beta2
+kind: ManagedClusterSetBinding
+metadata:
+  name: preview-test-cluster-set
+  namespace: preview-test-ns
+spec:
+  clusterSet: preview-test-cluster-set
