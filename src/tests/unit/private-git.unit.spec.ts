@@ -3,10 +3,12 @@
  */
 import path from 'path';
 import { expect, test } from '@playwright/test';
-import { clearE2eSpecDataCache, resolveSubscriptionScenarioById, resolveSubscriptionScenarioByTestId } from '@config';
+import { clearE2eSpecDataCache, resolveArgoPushScenarioByTestId, resolveSubscriptionScenarioById, resolveSubscriptionScenarioByTestId } from '@config';
 import {
   applyPrivateGitAuthToSubscriptionOptions,
   getPrivateGitAuthFromEnv,
+  PRIVATE_GIT_ARGO_NAMESPACE,
+  PRIVATE_GIT_ARGO_REPO_SECRET_NAME,
 } from '@lib/app/auth/private-git';
 
 const E2E_SPEC_DATA_DIR = path.join(process.cwd(), 'src/config/e2e-spec-data');
@@ -109,5 +111,26 @@ test.describe('private-git', () => {
       'stolostron-application-lifecycle-samples-private'
     );
     expect(appExp.detailsClustersSummary).toEqual({ variant: 'localOnly' });
+  });
+
+  test('auto_git_push_private_63608 scenario resolves RHACM4K-63608 from YAML', () => {
+    const resolved = resolveArgoPushScenarioByTestId('RHACM4K-63608', E2E_SPEC_DATA_DIR);
+    expect(resolved.scenarioId).toBe('auto_git_push_private_63608');
+
+    const push = resolved.argoPush;
+    expect(push.applicationName).toBe('auto-git-push-private-63608');
+    expect(push.argoServerLabel).toBe('openshift-gitops');
+    expect(push.destinationNamespace).toBe('auto-git-push-private-63608-ns');
+    expect(push.git).toMatchObject({
+      url: 'https://github.com/stolostron/application-lifecycle-samples-private.git',
+      branch: 'main',
+      path: 'helloworld-argo',
+    });
+    expect(push.placementLabelExpression).toMatchObject({
+      labelName: 'name',
+      labelValues: ['local-cluster'],
+    });
+    expect(PRIVATE_GIT_ARGO_REPO_SECRET_NAME).toBe('private-repo-creds');
+    expect(PRIVATE_GIT_ARGO_NAMESPACE).toBe('openshift-gitops');
   });
 });

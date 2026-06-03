@@ -114,6 +114,17 @@ export function resolveArgoPushScenarioById(
   );
 }
 
+/** Push-model ApplicationSet variant of {@link resolveScenarioByTestId}. */
+export function resolveArgoPushScenarioByTestId(
+  testId: string,
+  configPath?: string
+): ResolvedArgoPushAppScenario {
+  return requireArgoPushScenario(
+    resolveScenarioByTestIdInternal(testId, configPath),
+    `test id "${testId}"`
+  );
+}
+
 /** Base scenario by id + delta scenario by Polarion test id (add/edit flows). */
 export function resolveScenarioPair(params: {
   baseScenarioId: string;

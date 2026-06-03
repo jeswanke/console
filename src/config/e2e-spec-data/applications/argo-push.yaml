@@ -11,9 +11,37 @@ fragments:
       path: helloworld
     clusterSet: auto-gitops-cluster-set
 
+  # RHACM4K-63807: helloworld-argo path + label placement to local-cluster.
+  argo_push_review_63807:
+    git:
+      url: https://github.com/stolostron/application-lifecycle-samples.git
+      branch: main
+      path: helloworld-argo
+    clusterSet: auto-gitops-cluster-set
+    placementLabelExpression:
+      labelName: name
+      labelValues:
+        - local-cluster
+
+  # RHACM4K-63608: private Git repo (helloworld-argo AppSet path) + local-cluster placement.
+  argo_push_private_helloworld_argo:
+    git:
+      url: https://github.com/stolostron/application-lifecycle-samples-private.git
+      branch: main
+      path: helloworld-argo
+    clusterSet: auto-gitops-cluster-set
+    placementLabelExpression:
+      labelName: name
+      labelValues:
+        - local-cluster
+
 profiles:
   argo_push_submit:
     submit: true
+    collapseYamlPanel: true
+
+  argo_push_review_only:
+    submit: false
     collapseYamlPanel: true
 
 scenarios:
@@ -31,3 +59,33 @@ scenarios:
         applicationName: auto-git-push-helloworld
         argoServerLabel: openshift-gitops
         destinationNamespace: auto-git-push-helloworld-ns
+
+  auto_git_push_review_63807:
+    enabled: true
+    tests:
+      - RHACM4K-63807
+    blocks:
+      - use:
+          - argo_push_review_63807
+    extends:
+      - argo_push_review_only
+    specDomains:
+      argoPush:
+        applicationName: auto-git-push-review-63807
+        argoServerLabel: openshift-gitops
+        destinationNamespace: auto-git-push-review-63807-ns
+
+  auto_git_push_private_63608:
+    enabled: true
+    tests:
+      - RHACM4K-63608
+    blocks:
+      - use:
+          - argo_push_private_helloworld_argo
+    extends:
+      - argo_push_submit
+    specDomains:
+      argoPush:
+        applicationName: auto-git-push-private-63608
+        argoServerLabel: openshift-gitops
+        destinationNamespace: auto-git-push-private-63608-ns

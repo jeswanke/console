@@ -1,0 +1,51 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: test-api-argo-helm
+  namespace: openshift-gitops
+spec:
+  generators:
+    - clusterDecisionResource:
+        configMapRef: acm-placement
+        labelSelector:
+          matchLabels:
+            cluster.open-cluster-management.io/placement: test-api-argo-helm-placement
+        requeueAfterSeconds: 180
+  template:
+    metadata:
+      name: test-api-argo-helm-{{name}}
+      labels:
+        velero.io/exclude-from-backup: "true"
+    spec:
+      project: default
+      source:
+        repoURL: https://raw.githubusercontent.com/stolostron/application-lifecycle-samples/main
+        chart: helloworld-helm
+        targetRevision: 0.2.0
+      destination:
+        namespace: api-argo-helm-ns
+        server: "{{server}}"
+      syncPolicy:
+        automated:
+          selfHeal: true
+          prune: true
+        syncOptions:
+          - CreateNamespace=true
+          - PruneLast=true
+---
+apiVersion: cluster.open-cluster-management.io/v1beta1
+kind: Placement
+metadata:
+  name: test-api-argo-helm-placement
+  namespace: openshift-gitops
+spec:
+  clusterSets:
+    - auto-gitops-cluster-set
+  predicates:
+    - requiredClusterSelector:
+        labelSelector:
+          matchExpressions:
+            - key: name
+              operator: In
+              values:
+                - local-cluster

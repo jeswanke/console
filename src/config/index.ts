@@ -66,6 +66,7 @@ export function getTestConfig(): TestConfig {
 export {
   clearE2eSpecDataCache,
   resolveArgoPushScenarioById,
+  resolveArgoPushScenarioByTestId,
   resolveScenarioById,
   resolveScenarioByTestId,
   resolveScenarioPair,

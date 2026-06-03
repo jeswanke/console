@@ -44,7 +44,7 @@ async function fillGitTemplateStep(
     await wizard.pickFirstComboboxOption(wizard.getGitRevisionCombobox());
   }
   if (git.path) {
-    await wizard.pickComboboxOption(wizard.getGitPathCombobox(), git.path);
+    await wizard.pickGitPathOption(git.path);
   } else {
     await wizard.pickFirstComboboxOption(wizard.getGitPathCombobox());
   }
@@ -53,9 +53,45 @@ async function fillGitTemplateStep(
 
 async function fillPlacementStep(
   wizard: ArgoPushApplicationCreateWizardPage,
-  clusterSet: string
+  options: Pick<CreateArgoPushApplicationOptions, 'clusterSet' | 'placementLabelExpression'>
 ): Promise<void> {
+  const { clusterSet, placementLabelExpression } = options;
   await wizard.pickComboboxOption(wizard.getClusterSetsCombobox(), clusterSet);
+  if (placementLabelExpression) {
+    await wizard.fillPlacementLabelExpression(placementLabelExpression);
+  }
+}
+
+/**
+ * Fills the push-model wizard through **Placement** and lands on **Review** without submitting.
+ */
+export async function fillArgoPushWizardToReview(
+  applicationListPage: ApplicationListPage,
+  wizard: ArgoPushApplicationCreateWizardPage,
+  options: CreateArgoPushApplicationOptions
+): Promise<void> {
+  const { collapseYamlPanel = true } = options;
+
+  await wizard.openFromApplicationsList(applicationListPage);
+  if (collapseYamlPanel) {
+    await wizard.collapseYamlPanel();
+  }
+
+  await fillGeneralStep(wizard, options);
+  await wizard.clickNext();
+
+  await fillGeneratorsStep(wizard, options.requeueTimeSeconds);
+  await wizard.clickNext();
+
+  await fillGitTemplateStep(wizard, options);
+  await wizard.clickNext();
+
+  await wizard.clickNext();
+
+  await fillPlacementStep(wizard, options);
+  await wizard.clickNext();
+
+  await wizard.expectOnReviewStep();
 }
 
 /**
@@ -72,7 +108,6 @@ export async function createArgoPushApplication(
     submit = true,
     applicationSetExistsError = false,
     requeueTimeSeconds,
-    clusterSet,
   } = options;
 
   const argoServerNamespace = options.argoServerLabel;
@@ -104,7 +139,7 @@ export async function createArgoPushApplication(
 
   await wizard.clickNext();
 
-  await fillPlacementStep(wizard, clusterSet);
+  await fillPlacementStep(wizard, options);
   await wizard.clickNext();
 
   if (submit) {

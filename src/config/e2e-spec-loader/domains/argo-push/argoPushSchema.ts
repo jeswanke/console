@@ -8,6 +8,14 @@ const argoPushGitRepositorySchema = z
   })
   .passthrough();
 
+const argoPushPlacementLabelExpressionSchema = z
+  .object({
+    labelName: z.string().min(1),
+    labelValues: z.array(z.string().min(1)).min(1),
+    operator: z.literal('In').optional(),
+  })
+  .passthrough();
+
 /** Merged push-model ApplicationSet wizard payload. */
 export const argoPushDomainPayloadSchema = z
   .object({
@@ -16,6 +24,7 @@ export const argoPushDomainPayloadSchema = z
     destinationNamespace: z.string().min(1),
     git: argoPushGitRepositorySchema,
     clusterSet: z.string().min(1),
+    placementLabelExpression: argoPushPlacementLabelExpressionSchema.optional(),
     requeueTimeSeconds: z.number().int().positive().optional(),
     collapseYamlPanel: z.boolean().optional(),
     submit: z.boolean().optional(),

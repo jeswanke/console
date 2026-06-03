@@ -4,12 +4,21 @@
  * @see env/alc.env.example — `GITHUB_USER` / `GITHUB_TOKEN` (base64).
  */
 
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
+
 import type { PlaywrightTestSkip } from '@lib/cluster/managedClusterContext';
+import type { OcCliService } from '@services/OcCliService';
 
 import type { CreateSubscriptionOptions, GitSubscriptionRepositoryFields } from '../subscription/types';
 
 const ENV_GITHUB_USER = 'GITHUB_USER';
 const ENV_GITHUB_TOKEN = 'GITHUB_TOKEN';
+
+/** Argo CD repository Secret on the hub (RHACM4K-63608 setup). */
+export const PRIVATE_GIT_ARGO_REPO_SECRET_NAME = 'private-repo-creds';
+export const PRIVATE_GIT_ARGO_NAMESPACE = 'openshift-gitops';
 
 export type PrivateGitAuth = {
   username: string;
@@ -94,6 +103,60 @@ export function applyPrivateGitAuthToSubscriptionOptions(
       };
     }),
   };
+}
+
+function buildPrivateGitArgoRepoSecretYaml(
+  auth: PrivateGitAuth,
+  repoUrl: string,
+  secretName = PRIVATE_GIT_ARGO_REPO_SECRET_NAME
+): string {
+  const yamlEscape = (value: string): string =>
+    value.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n');
+
+  return `apiVersion: v1
+kind: Secret
+metadata:
+  name: ${secretName}
+  namespace: ${PRIVATE_GIT_ARGO_NAMESPACE}
+  labels:
+    argocd.argoproj.io/secret-type: repository
+stringData:
+  type: git
+  url: "${yamlEscape(repoUrl)}"
+  password: "${yamlEscape(auth.token)}"
+  username: "${yamlEscape(auth.username)}"
+`;
+}
+
+/** Applies (or updates) the Argo CD repository Secret used by push-model private Git wizard tests. */
+export async function applyPrivateGitRepoSecretToArgo(
+  oc: OcCliService,
+  auth: PrivateGitAuth,
+  repoUrl: string,
+  options?: { secretName?: string }
+): Promise<void> {
+  const secretName = options?.secretName ?? PRIVATE_GIT_ARGO_REPO_SECRET_NAME;
+  const manifest = buildPrivateGitArgoRepoSecretYaml(auth, repoUrl, secretName);
+  const tmpPath = path.join(
+    os.tmpdir(),
+    `e2e-${secretName}-${Date.now()}.yaml`
+  );
+  try {
+    fs.writeFileSync(tmpPath, manifest, 'utf8');
+    await oc.applyYaml(tmpPath);
+  } finally {
+    fs.unlinkSync(tmpPath);
+  }
+}
+
+/** Best-effort delete of the test Argo CD repository Secret. */
+export async function deletePrivateGitRepoSecretFromArgo(
+  oc: OcCliService,
+  secretName = PRIVATE_GIT_ARGO_REPO_SECRET_NAME
+): Promise<void> {
+  await oc.run(
+    `oc delete secret ${secretName} -n ${PRIVATE_GIT_ARGO_NAMESPACE} --ignore-not-found`
+  );
 }
 
 /** `test.skip()` when credentials are missing; returns auth when configured. */

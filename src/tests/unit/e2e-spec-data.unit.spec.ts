@@ -351,4 +351,19 @@ test.describe('e2e-spec-data YAML processing', () => {
       expect(resolved.argoPush.applicationName).toBe('auto-git-push-helloworld');
     }
   });
+
+  test('auto_git_push_review_63807: RHACM4K-63807 review wizard payload', () => {
+    const resolved = resolveScenarioByTestId('RHACM4K-63807', E2E_SPEC_DATA_DIR);
+    expect(resolved.scenarioId).toBe('auto_git_push_review_63807');
+    expect(resolved.domain).toBe('argoPush');
+    if (resolved.domain === 'argoPush') {
+      expect(resolved.argoPush).toMatchObject({
+        applicationName: 'auto-git-push-review-63807',
+        submit: false,
+        collapseYamlPanel: true,
+        git: { branch: 'main', path: 'helloworld-argo' },
+        placementLabelExpression: { labelName: 'name', labelValues: ['local-cluster'] },
+      });
+    }
+  });
 });

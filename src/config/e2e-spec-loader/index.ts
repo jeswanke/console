@@ -3,6 +3,7 @@ export {
   clearE2eSpecDataCache,
   loadE2eSpecData,
   resolveArgoPushScenarioById,
+  resolveArgoPushScenarioByTestId,
   resolveScenarioById,
   resolveScenarioByTestId,
   resolveScenarioPair,

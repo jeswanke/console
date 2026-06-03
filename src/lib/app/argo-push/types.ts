@@ -5,6 +5,14 @@ export type ArgoPushGitRepositorySpec = {
   path?: string;
 };
 
+/** Label expression row on **Placement** (new placement path). */
+export type ArgoPushPlacementLabelExpression = {
+  labelName: string;
+  labelValues: string[];
+  /** PF operator menu label (default `In` → "equals any of"). */
+  operator?: 'In';
+};
+
 export type CreateArgoPushApplicationOptions = {
   /** ApplicationSet `metadata.name`. */
   applicationName: string;
@@ -18,6 +26,8 @@ export type CreateArgoPushApplicationOptions = {
   git: ArgoPushGitRepositorySpec;
   /** Managed cluster set on **Placement** (default from GitOps prep: `auto-gitops-cluster-set`). */
   clusterSet: string;
+  /** Optional label expression on **Placement** (e.g. `name` / `local-cluster`). */
+  placementLabelExpression?: ArgoPushPlacementLabelExpression;
   /** Requeue time (seconds) on **Generators** — hub default is often `180`. */
   requeueTimeSeconds?: number;
   /** Collapse YAML split panel before filling (default `true`). */
