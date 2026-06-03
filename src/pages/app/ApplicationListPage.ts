@@ -104,6 +104,15 @@ export class ApplicationListPage extends BasePage {
     });
   }
 
+  /** Click deprecation **Learn more**; returns the new documentation tab (RHACM4K-63573). */
+  async openAdvancedDeprecationLearnMoreInNewTab() {
+    const popupPromise = this.page.waitForEvent('popup');
+    await this.getAdvancedDeprecationLearnMoreLink().click();
+    const popup = await popupPromise;
+    await popup.waitForLoadState('domcontentloaded');
+    return popup;
+  }
+
   /** Terminology card title (e.g. "Learn more about the terminology") */
   getAdvancedTerminologyCardTitle(): Locator {
     return this.getAdvancedConfigContent().getByText(
