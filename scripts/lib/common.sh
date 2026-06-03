@@ -50,6 +50,8 @@ function console_e2e_usage_main {
   errEcho
   errEcho "  Components:"
   errEcho "    alc   Application Lifecycle (src/tests/app); defaults: --grep @alc, --project alc"
+  errEcho "    clc   Cluster lifecycle (src/tests/cluster); defaults: --grep @clc, --project cluster"
+  errEcho "    grc   Governance (src/tests/governance); defaults: --grep @grc, --project governance"
   errEcho
   errEcho "  Required env: HUB_URL, and HUB_PASSWORD or HUB_TOKEN"
   errEcho "  Optional: CONSOLE_USERNAME (default: kubeadmin), CONSOLE_IDP (default: kube:admin)"

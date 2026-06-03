@@ -99,6 +99,8 @@ export HUB_PASSWORD='<kubeadmin-password>'
 
 ./start.sh alc                          # ALC entrypoint: default --grep @alc, --project alc
 ./start.sh alc --grep @app --headed     # override defaults via CLI
+./start.sh clc                          # CLC: default --grep @clc, --project cluster
+./start.sh grc                          # GRC: default --grep @grc, --project governance
 ```
 
 ### ALC environment (no `CYPRESS_*` prefix)

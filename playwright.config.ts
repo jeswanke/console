@@ -37,8 +37,8 @@ export default defineConfig({
   },
 
   /*
-   * Projects: setup → admin auth; rbac-setup → RBAC users; cluster / alc / fg-rbac / unit by testMatch.
-   * ALC: `./start.sh alc` (--project alc).
+   * Projects: setup → admin auth; rbac-setup → RBAC users; cluster / governance / alc / fg-rbac / unit by testMatch.
+   * Component entrypoints: `./start.sh alc` | `clc` | `grc` (hub login + BASE_URL, then component defaults).
    */
   projects: [
     {
@@ -64,6 +64,17 @@ export default defineConfig({
       },
       dependencies: ['setup'],
       testMatch: /cluster/,
+    },
+
+    {
+      name: 'governance',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1920, height: 1080 },
+        storageState: '.auth/admin.json',
+      },
+      dependencies: ['setup'],
+      testMatch: /governance/,
     },
 
     // Application Lifecycle (ALC) — `src/tests/app/**`; `./start.sh alc` sets E2E_GITOPS_PREP.
