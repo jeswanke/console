@@ -1,6 +1,7 @@
 import { Page, Locator, expect } from '@playwright/test';
 import { BasePage } from '@pages/BasePage';
 import { ApplicationsTable } from '@components/app/ApplicationsTable';
+import { ManageColumnsDialog } from '@components/patternfly/ManageColumnsDialog';
 import { OcCliService } from '@services/OcCliService';
 import { PF_SKELETON, SELECTORS } from '@constants/selectors';
 import {
@@ -25,6 +26,7 @@ function escapeRegExp(s: string): string {
 /** Applications list (`/multicloud/applications`). Wizard: {@link SubscriptionApplicationCreateWizardPage}. */
 export class ApplicationListPage extends BasePage {
   readonly applicationsTable: ApplicationsTable;
+  readonly manageColumns: ManageColumnsDialog;
 
   constructor(
     page: Page,
@@ -32,6 +34,7 @@ export class ApplicationListPage extends BasePage {
   ) {
     super(page);
     this.applicationsTable = new ApplicationsTable(page);
+    this.manageColumns = new ManageColumnsDialog(page);
   }
 
   private async waitForApplicationsListReady(options?: {
@@ -149,6 +152,15 @@ export class ApplicationListPage extends BasePage {
   /** Search input (toolbar; visible on both Overview and Advanced configuration tabs) */
   getSearchInput(): Locator {
     return acmToolbarSearchLocator(this.page);
+  }
+
+  /** Toolbar **Manage columns** control (`aria-label="columns-management"`). */
+  getManageColumnsButton(): Locator {
+    return this.page.getByLabel('columns-management');
+  }
+
+  async verifyManageColumnsButtonVisible(): Promise<void> {
+    await expect(this.getManageColumnsButton()).toBeVisible();
   }
 
   /** Get the page heading (Applications) */

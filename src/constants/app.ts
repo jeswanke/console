@@ -263,10 +263,27 @@ export const APP_TABLE_COLUMNS = {
   type: 'Type',
   namespace: 'Namespace',
   clusters: 'Clusters',
+  labels: 'Labels',
   healthStatus: 'Health Status',
   syncStatus: 'Sync Status',
   podStatus: 'Pod Status',
   created: 'Created',
+} as const;
+
+/** Overview table **Manage columns** dialog defaults (RHACM4K-63768). */
+export const APP_TABLE_MANAGE_COLUMNS = {
+  /** Hidden until enabled in the dialog. */
+  defaultUnchecked: [APP_TABLE_COLUMNS.created] as const,
+  /** Required columns — checkbox disabled in the dialog. */
+  required: [APP_TABLE_COLUMNS.name, APP_TABLE_COLUMNS.namespace, APP_TABLE_COLUMNS.clusters] as const,
+  /** Optional columns — can be toggled off. */
+  optional: [
+    APP_TABLE_COLUMNS.type,
+    APP_TABLE_COLUMNS.labels,
+    APP_TABLE_COLUMNS.healthStatus,
+    APP_TABLE_COLUMNS.syncStatus,
+    APP_TABLE_COLUMNS.podStatus,
+  ] as const,
 } as const;
 
 /** Row action kebab (Overview table); menu items vary by application kind (see Overview rowActionResolver). */

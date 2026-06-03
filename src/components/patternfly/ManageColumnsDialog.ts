@@ -1,5 +1,17 @@
 import { Page, Locator, expect } from '@playwright/test';
 
+export type ManageColumnsDefaultsConfig = {
+  defaultUnchecked: readonly string[];
+  required: readonly string[];
+  optional: readonly string[];
+};
+
+export type ManageColumnsCustomizeOptions = {
+  enable?: readonly string[];
+  moveAfter?: { column: string; target: string };
+  hide?: readonly string[];
+};
+
 export class ManageColumnsDialog {
   private readonly manageColumnsButton: Locator;
 
@@ -24,6 +36,36 @@ export class ManageColumnsDialog {
 
   async clickRestoreDefaults(): Promise<void> {
     await this.getDialogButton('Restore defaults').click();
+  }
+
+  async restoreDefaultsAndSave(): Promise<void> {
+    await this.clickRestoreDefaults();
+    await this.save();
+  }
+
+  async verifyDefaults(config: ManageColumnsDefaultsConfig): Promise<void> {
+    for (const column of config.defaultUnchecked) {
+      await this.verifyColumnUnchecked(column);
+    }
+    for (const column of config.required) {
+      await this.verifyColumnDisabled(column);
+    }
+    for (const column of config.optional) {
+      await this.verifyColumnEnabled(column);
+    }
+  }
+
+  async customizeAndSave(options: ManageColumnsCustomizeOptions): Promise<void> {
+    for (const column of options.enable ?? []) {
+      await this.checkColumn(column);
+    }
+    if (options.moveAfter) {
+      await this.moveColumnAfter(options.moveAfter.column, options.moveAfter.target);
+    }
+    for (const column of options.hide ?? []) {
+      await this.uncheckColumn(column);
+    }
+    await this.save();
   }
 
   async checkColumn(columnName: string): Promise<void> {
