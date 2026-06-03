@@ -9,10 +9,11 @@ import { APP_TABLE_COLUMNS, APP_TABLE_MANAGE_COLUMNS } from '@constants/app';
 
 test.describe(
   'Applications list manage columns',
-  { tag: ['@app', '@alc', '@UI', '@RHACM4K-63768'] },
+  { tag: ['@app', '@alc', '@UI'] },
   () => {
     test(
       'RHACM4K-63768: As a cluster admin, I can manage additional columns for different applications',
+      { tag: ['@RHACM4K-63768'] },
       async ({ applicationListPage }) => {
         const { manageColumns, applicationsTable: table } = applicationListPage;
 

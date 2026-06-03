@@ -444,6 +444,18 @@ export class SubscriptionApplicationCreateWizardPage extends BasePage {
     return this.byTestId(APP_SUBSCRIPTION_CREATE_WIZARD.testIds.general.namespaceCombo);
   }
 
+  async fillApplicationName(name: string): Promise<void> {
+    await this.getApplicationNameInput().fill(name);
+  }
+
+  /** Type namespace and commit selection (Enter) when the combobox accepts it. */
+  async selectNamespace(namespace: string): Promise<void> {
+    const nsInput = this.getNamespaceInput();
+    await nsInput.fill(namespace);
+    await nsInput.press('Enter').catch(() => undefined);
+    await this.waitForLoad();
+  }
+
   // ---------------------------------------------------------------------------
   // Repository sections (accordion toggles)
   // ---------------------------------------------------------------------------
@@ -929,6 +941,32 @@ export class SubscriptionApplicationCreateWizardPage extends BasePage {
       .locator('[class*="c-alert"]')
       .filter({ hasText: new RegExp(copy.alertTitle, 'i') })
       .first();
+  }
+
+  /** Scoped to repository block `blockIndex` so unrelated page alerts do not affect assertions. */
+  getPlacementRuleDeprecationAlertInRepositoryBlock(blockIndex: number): Locator {
+    const copy = APP_SUBSCRIPTION_CREATE_WIZARD.clusterDeployment.placementRuleDeprecation;
+    return this.getRepositoryBlockContainer(blockIndex)
+      .locator('[class*="c-alert"]')
+      .filter({ hasText: new RegExp(copy.alertTitle, 'i') });
+  }
+
+  /** **Select an existing placement configuration** radio for repository block `blockIndex`. */
+  getExistingPlacementConfigurationRadioForRepositoryBlock(blockIndex: number): Locator {
+    const label =
+      APP_SUBSCRIPTION_CREATE_WIZARD.clusterDeployment.placementAccessibleNames
+        .existingPlacementConfiguration;
+    return this.getRepositoryBlockContainer(blockIndex).getByRole('radio', {
+      name: new RegExp(label, 'i'),
+    });
+  }
+
+  /** Existing **Placement** dropdown for repository block `blockIndex` (current + legacy test ids). */
+  getExistingPlacementComboInRepositoryBlock(blockIndex: number): Locator {
+    const currentCombo = this.byTestId(
+      subscriptionWizardPlacementTestId('placementCombo', blockIndex)
+    );
+    return currentCombo.or(this.getPlacementRuleComboInRepositoryBlock(blockIndex)).first();
   }
 
   /** **Deploy on local cluster only** — accessible name (no stable `data-testid` on all hubs). */

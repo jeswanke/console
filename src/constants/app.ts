@@ -137,11 +137,11 @@ export const APP_DOCS_MANAGING_APPLICATIONS_HREF_RE =
   /^https:\/\/docs\.redhat\.com\/en\/documentation\/red_hat_advanced_cluster_management_for_kubernetes\/2\.\d+\/html-single\/applications\/index#managing-applications$/;
 
 /**
- * "Learn more" on the Advanced configuration **page deprecation** banner (Placements moving to Infrastructure).
- * Differs from {@link APP_DOCS_MANAGING_APPLICATIONS_HREF_RE} (managing-applications path + anchor).
+ * "Learn more" on the Advanced configuration **page deprecation** banner.
+ * Verified on hub via Playwriter — links to ACM release notes deprecations anchor (not managing-applications).
  */
 export const APP_DOCS_ADVANCED_DEPRECATION_HREF_RE =
-  /^https:\/\/docs\.redhat\.com\/en\/documentation\/red_hat_advanced_cluster_management_for_kubernetes\/2\.\d+\/html-single\/applications\/managing-applications#application-advanced-configuration$/;
+  /^https:\/\/docs\.redhat\.com\/en\/documentation\/red_hat_advanced_cluster_management_for_kubernetes\/2\.\d+\/html-single\/release_notes\/release-notes#deprecations-removals-acm$/;
 
 /**
  * **Placement rule deprecation** inline alert in the subscription wizard (cluster placement section).
@@ -286,6 +286,15 @@ export const APP_TABLE_MANAGE_COLUMNS = {
   ] as const,
 } as const;
 
+/** RHACM4K-64215 — pre-seeded Placement + legacy PlacementRule for subscription wizard. */
+export const PLACEMENT_TEST_RESOURCES = {
+  namespace: 'placement-test-ns',
+  applicationName: 'placement-wizard-test',
+  placementName: 'placement-test-placement-1',
+  legacyPlacementRuleName: 'test-legacy-placementrule',
+  setupYamlRelativePath: 'src/templates/app/subscription/existing-placement-wizard-setup.yaml',
+} as const;
+
 /** Row action kebab (Overview table); menu items vary by application kind (see Overview rowActionResolver). */
 export const APP_TABLE_ROW_ACTIONS = {
   actionsAriaLabel: 'Actions',
@@ -355,12 +364,18 @@ export const APP_FILTER = {
 /** Terminology card and resource-type toggle (Advanced configuration tab only). */
 export const APP_ADVANCED_CONFIG = {
   /**
-   * Inline alert above Advanced content: page removal / Placements relocation (PatternFly alert).
+   * Inline alert above Advanced content (PF Alert). Copy captured from live hub (Playwriter, Advanced tab).
    * Omit on consoles that have not shipped this banner yet.
    */
   deprecationBanner: {
-    bodyPattern:
-      /Placements will move to a central location under Infrastructure > Clusters > Placements/i,
+    alertTitle: 'Page deprecation',
+    bodySnippets: {
+      placementsManagedFromInfrastructure:
+        /Placements are managed from the Placements tab of the Infrastructure page/i,
+      selectInfrastructurePlacementsPath: /Select Infrastructure > Clusters > Placements/i,
+      placementDetailsInApps:
+        /view placement details directly within individual applications or policies/i,
+    },
     learnMoreLinkName: 'Learn more',
   },
   /** Expandable card id and title */
@@ -372,6 +387,8 @@ export const APP_ADVANCED_CONFIG = {
       subscriptions: 'Subscriptions',
       channels: 'Channels',
     },
+    /** RHACM4K-64170 — removed from the terminology card (was listed alongside Subscriptions/Channels). */
+    removedTermTitlePattern: /Placement\s*Rules?/i,
     /** Deprecated label shown next to some terms */
     deprecatedLabel: 'Deprecated',
     viewDocsLinkText: 'View documentation',
@@ -387,6 +404,10 @@ export const APP_ADVANCED_CONFIG = {
       subscriptions: 'Subscriptions',
       channels: 'Channels',
     },
+    /** RHACM4K-64170 — legacy toggle id if the console still emits a hidden control. */
+    removedToggleIds: ['placementrules', 'placement-rules'] as const,
+    /** RHACM4K-64170 — removed sub-tab label (matches terminology heading copy). */
+    removedTabLabelPattern: /Placement\s*Rules?/i,
   },
   /** Same toolbar search/export/pagination ids as Overview; table uses APP_TABLE. */
   /** Empty state (when no resources). Verify title, body, and actions. */
@@ -588,6 +609,8 @@ export const APP_SUBSCRIPTION_CREATE_WIZARD = {
       labelOperator: 'Operator',
       labelValue: 'Value',
       addAnotherLabel: 'Add another label',
+      /** PF radio — replaces legacy **existing placement rule** checkbox on current hubs. */
+      existingPlacementConfiguration: 'Select an existing placement configuration',
     },
   },
   /**
@@ -778,8 +801,14 @@ export const APP_SUBSCRIPTION_CREATE_WIZARD = {
     },
     /** Placement (partial; dynamic PF select toggles also appear without data-testid) */
     placement: {
+      /** Legacy — checkbox on older hubs. */
       existingRuleCheckbox: 'checkbox-existingrule-checkbox',
+      /** Current hub — PF radio (`input[type=radio]`) despite `checkbox-*` test id prefix. */
+      existingPlacementRadio: 'checkbox-existing-placement-checkbox',
+      /** Legacy placement rule typeahead. */
       placementRuleCombo: 'combo-placementrulecombo',
+      /** Current hub — existing **Placement** resource dropdown. */
+      placementCombo: 'placementcombo',
     },
     actions: {
       create: 'create-button-portal-id',

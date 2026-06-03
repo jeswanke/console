@@ -88,11 +88,12 @@ export class ApplicationListPage extends BasePage {
     return this.page.locator(SELECTORS.application.terminologyCard);
   }
 
-  /** Deprecation alert (Placements → Infrastructure); scoped by banner copy. */
+  /** Deprecation alert (Advanced configuration tab); scoped by {@link APP_ADVANCED_CONFIG.deprecationBanner.alertTitle}. */
   getAdvancedDeprecationAlert(): Locator {
+    const { alertTitle } = APP_ADVANCED_CONFIG.deprecationBanner;
     return this.page
       .locator('[class*="c-alert"]')
-      .filter({ hasText: APP_ADVANCED_CONFIG.deprecationBanner.bodyPattern })
+      .filter({ hasText: new RegExp(alertTitle, 'i') })
       .first();
   }
 
