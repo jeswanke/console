@@ -123,7 +123,7 @@ export class GovernancePage extends BasePage {
    * Finds the column index from the header row at call time, then
    * returns the td at that index. Resilient to column reordering.
    */
-  async getCellByColumnHeader(
+  private async getCellByColumnHeader(
     row: Locator,
     columnName: string,
   ): Promise<Locator> {

@@ -16,7 +16,7 @@
 
 import { test, expect } from '@fixtures/governance-test';
 import { OcCliService } from '@services/OcCliService';
-import { PolicyService } from '@services/domains/PolicyService';
+
 import {
   GOV_LABELS,
   GOV_POLICY_API,
@@ -29,6 +29,7 @@ const TEST_LABELS = {
 } as const;
 
 const { clusterName } = GOV_CLUSTER_BACKUP;
+const ocSvc = new OcCliService();
 
 test.describe(
   'Governance - Labels on Individual Policy Details Page',
@@ -40,15 +41,15 @@ test.describe(
     let hasClusterBackup = false;
 
     test.beforeAll(async () => {
-      const svc = new PolicyService(new OcCliService());
-      hasClusterBackup = await svc.exists(
+
+      hasClusterBackup = await ocSvc.policyExists(
         GOV_CLUSTER_BACKUP.discoveredPolicy,
         clusterName,
       );
 
       if (!hasClusterBackup) return;
 
-      await svc.removeLabels(
+      await ocSvc.policyRemoveLabels(
         GOV_CLUSTER_BACKUP.discoveredPolicy,
         clusterName,
         labelKeys,
@@ -64,8 +65,8 @@ test.describe(
 
     test.afterAll(async () => {
       if (!hasClusterBackup) return;
-      const svc = new PolicyService(new OcCliService());
-      await svc.removeLabels(
+
+      await ocSvc.policyRemoveLabels(
         GOV_CLUSTER_BACKUP.discoveredPolicy,
         clusterName,
         labelKeys,
@@ -75,7 +76,7 @@ test.describe(
     test('RHACM4K-63381: Labels on discovered and managed policy template details', async ({
       governancePage,
       policyTemplateDetailsPage,
-      policyService,
+      oc,
       page,
     }) => {
       await test.step(
@@ -137,13 +138,13 @@ test.describe(
       await test.step(
         '4: Add user-defined labels via CLI',
         async () => {
-          await policyService.addLabels(
+          await oc.policyAddLabels(
             GOV_CLUSTER_BACKUP.discoveredPolicy,
             clusterName,
             TEST_LABELS,
           );
 
-          const output = await policyService.getLabels(
+          const output = await oc.policyGetLabels(
             GOV_CLUSTER_BACKUP.discoveredPolicy,
             clusterName,
           );

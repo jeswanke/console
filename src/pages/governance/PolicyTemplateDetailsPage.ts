@@ -19,7 +19,7 @@ export class PolicyTemplateDetailsPage extends BasePage {
    * Scoped to #template-details-section to avoid matching other description
    * lists on the page (e.g., cluster labels on managed policy results).
    */
-  getFieldValue(fieldName: string): Locator {
+  private getFieldValue(fieldName: string): Locator {
     return this.page
       .locator(
         `#${GOV_TEMPLATE_DETAILS.sectionId} dt:has-text("${fieldName}")`,
