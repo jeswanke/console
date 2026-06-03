@@ -71,6 +71,12 @@ case "${COMPONENT}" in
   grc | GRC)
     exec bash "${CONSOLE_E2E_ROOT}/src/tests/governance/start.sh" "$@"
     ;;
+  fg-rbac | FG-RBAC)
+    exec bash "${CONSOLE_E2E_ROOT}/src/tests/fg-rbac/start.sh" "$@"
+    ;;
+  fleet-virt | FLEET-VIRT | virt | VIRT)
+    exec bash "${CONSOLE_E2E_ROOT}/src/tests/fleet-virt/start.sh" "$@"
+    ;;
   *)
     errEcho "Unknown component: ${COMPONENT}"
     console_e2e_usage_main

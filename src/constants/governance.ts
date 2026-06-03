@@ -1,5 +1,5 @@
 /**
- * Governance — Policy / Policy set lists and create wizards (RHACM4K-64217, RHACM4K-64218).
+ * Governance — create wizards (RHACM4K-64217/64218/64221/64222) and detail-page constants (main).
  */
 import { PLACEMENT_CLUSTER_PREVIEW } from '@constants/placement-preview';
 import { PLACEMENT_TOLERATIONS_YAML_PATTERNS } from '@constants/placement-tolerations';
@@ -41,7 +41,7 @@ export const POLICY_CREATE_WIZARD = {
   },
 } as const;
 
-/** Policy create wizard — Placement cluster preview (RHACM4K policy flow; see ACM-33679 / ACM-33680). */
+/** Policy create wizard — Placement cluster preview (RHACM4K-64221; see ACM-33679 / ACM-33680). */
 export const POLICY_PLACEMENT_PREVIEW = {
   ...PLACEMENT_CLUSTER_PREVIEW,
   setupYamlRelativePath: 'src/templates/governance/policy-preview-test-setup.yaml',
@@ -53,6 +53,8 @@ export const POLICY_PLACEMENT_PREVIEW = {
   stepsNavAriaLabel: 'Policy steps',
   placement: {
     ...PLACEMENT_CLUSTER_PREVIEW.placement,
+    /** Hub PF Select — aria-label is "Select the cluster sets", not "Cluster sets". */
+    clusterSetsComboboxLabel: /^Select the cluster sets$/i,
     existingPlacementComboboxLabel: /^Placement$/i,
   },
   testData: {
@@ -77,6 +79,7 @@ export const POLICY_SET_PLACEMENT_PREVIEW = {
   stepsNavAriaLabel: 'Policy set steps',
   placement: {
     ...PLACEMENT_CLUSTER_PREVIEW.placement,
+    clusterSetsComboboxLabel: /^Select the cluster sets$/i,
     existingPlacementComboboxLabel: /^Placement$/i,
   },
   testData: {
@@ -112,4 +115,125 @@ export const POLICY_SET_CREATE_WIZARD = {
   testData: {
     namePrefix: 'policy-set-tolerations',
   },
+} as const;
+
+// =============================================================================
+// Routes (governance detail pages — from main)
+// =============================================================================
+
+export const GOV_ROUTES = {
+  governance: '/multicloud/governance',
+  policyDetails: (namespace: string, name: string) =>
+    `/multicloud/governance/policies/details/${namespace}/${name}`,
+} as const;
+
+export const GOV_PLACEMENT_ROUTES = {
+  details: (namespace: string, name: string) =>
+    `/multicloud/infrastructure/clusters/placements/details/${namespace}/${name}`,
+} as const;
+
+// =============================================================================
+// Page structure
+// =============================================================================
+
+export const GOV_PAGE = {
+  title: 'Governance',
+  tabs: {
+    overview: 'Overview',
+    policySets: 'Policy sets',
+    policies: 'Policies',
+    discoveredPolicies: 'Discovered policies',
+  },
+} as const;
+
+// =============================================================================
+// Policy details page
+// =============================================================================
+
+export const GOV_POLICY_DETAILS = {
+  tabs: {
+    details: 'Details',
+    results: 'Results',
+  },
+  fields: {
+    name: 'Name',
+    description: 'Description',
+    namespace: 'Namespace',
+    status: 'Status',
+    remediation: 'Remediation',
+    cluster: 'Cluster',
+    categories: 'Categories',
+    controls: 'Controls',
+    standards: 'Standards',
+    created: 'Created',
+    automation: 'Automation',
+    placement: 'Placement',
+  },
+} as const;
+
+// =============================================================================
+// Placement details page
+// =============================================================================
+
+export const GOV_PLACEMENT_DETAILS = {
+  tabs: {
+    overview: 'Overview',
+  },
+  sections: {
+    details: 'Details',
+    usedIn: 'Used in',
+  },
+  governance: {
+    heading: 'Governance',
+    columns: {
+      name: 'Name',
+      type: 'Type',
+      namespace: 'Namespace',
+    },
+    types: {
+      policy: 'Policy',
+      policySet: 'PolicySet',
+    },
+  },
+} as const;
+
+// =============================================================================
+// Discovered policy details page
+// =============================================================================
+
+export const GOV_DISCOVERED_POLICY_DETAILS = {
+  tabs: {
+    relatedResources: 'Related resources',
+    clusters: 'Clusters',
+  },
+  labelFilterText: 'Label',
+  noLabelsIndicator: '-',
+} as const;
+
+// =============================================================================
+// Test resource names (used in discovered-policy-labels tests)
+// =============================================================================
+
+export const GOV_DISCOVERED_TEST_RESOURCES = {
+  namespace: 'compliance-test-ns',
+  parentPolicy: 'compliance-check-policy',
+  labeledPolicy: 'compliance-e8-scan',
+  unlabeledPolicy: 'compliance-suite-e8',
+  placement: 'compliance-check-placement',
+  label: {
+    key: 'custom-classification',
+    value: 'compliance-scan',
+    formatted: 'custom-classification=compliance-scan',
+  },
+} as const;
+
+// =============================================================================
+// Test resource names (used in placement-references tests)
+// =============================================================================
+
+export const GOV_TEST_RESOURCES = {
+  namespace: 'open-cluster-management-global-set',
+  placement: 'e2e-lifecycle-placement',
+  policy: 'e2e-test-policy',
+  policySet: 'e2e-test-policyset',
 } as const;

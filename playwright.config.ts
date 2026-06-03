@@ -2,6 +2,14 @@
 import './src/config/index';
 import { defineConfig, devices } from '@playwright/test';
 
+/** Sample / exploratory specs — not run when TEST_MODE=integration (see docs/testing-conventions.md). */
+const sampleSpecIgnoreWhenIntegration =
+  process.env.PLAYWRIGHT_TEST_MODE === 'integration'
+    ? ['**/applications-list.spec.ts', '**/cluster-list.spec.ts']
+    : [];
+
+const alcIntegrationTestIgnore = ['unit/**', ...sampleSpecIgnoreWhenIntegration];
+
 /**
  * See https://playwright.dev/docs/test-configuration.
  */
@@ -37,8 +45,8 @@ export default defineConfig({
   },
 
   /*
-   * Projects: setup → admin auth; rbac-setup → RBAC users; cluster / governance / alc / fg-rbac / unit by testMatch.
-   * Component entrypoints: `./start.sh alc` | `clc` | `grc` (hub login + BASE_URL, then component defaults).
+   * Projects: setup → admin auth; rbac-setup → RBAC users; cluster / governance / alc / fg-rbac / fleet-virt / unit.
+   * Component entrypoints: `./start.sh alc` | `clc` | `grc` | `fg-rbac` | `fleet-virt`
    */
   projects: [
     {
@@ -64,6 +72,7 @@ export default defineConfig({
       },
       dependencies: ['setup'],
       testMatch: /cluster/,
+      testIgnore: sampleSpecIgnoreWhenIntegration,
     },
 
     {
@@ -81,7 +90,7 @@ export default defineConfig({
     {
       name: 'alc',
       testMatch: 'app/**/*.spec.ts',
-      testIgnore: 'unit/**',
+      testIgnore: alcIntegrationTestIgnore,
       use: {
         ...devices['Desktop Chrome'],
         viewport: { width: 1920, height: 1080 },
@@ -101,6 +110,17 @@ export default defineConfig({
       },
       dependencies: ['setup', 'rbac-setup'],
       testMatch: /fg-rbac/,
+    },
+
+    {
+      name: 'fleet-virt',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1920, height: 1080 },
+        storageState: '.auth/admin.json',
+      },
+      dependencies: ['setup', 'rbac-setup'],
+      testMatch: /fleet-virt/,
     },
 
     // Config / YAML unit tests (no hub login) — `src/tests/unit/**`

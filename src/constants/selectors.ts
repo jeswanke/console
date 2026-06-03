@@ -2,13 +2,12 @@
  * Centralized CSS selectors.
  *
  * Structure:
- * - PF_* : PatternFly component selectors (global)
- * - SELECTORS.domain.* : Domain-specific selectors (namespaced)
+ * - PF_* : PatternFly component selectors (global, used across all domains)
+ * - SELECTORS.domain.* : Domain-specific selectors for areas without their own constants file
  *
- * When to split into separate files:
- * - This file exceeds ~150 lines
- * - A domain has 20+ unique selectors
- * - Split by TYPE first (selectors.ts, routes.ts, labels.ts), not by domain
+ * Areas with 20+ selectors have their own constants files (fg-rbac.ts, fleet-virt.ts, app.ts).
+ * Those files are the authoritative source for domain selectors.
+ * This file owns PatternFly globals and small cross-domain selectors only.
  */
 
 const PF = 'pf-v6-c'; // Single version per ACM release
@@ -26,7 +25,10 @@ export const PF_DROPDOWN = `.${PF}-dropdown`;
 export const PF_TABLE = `.${PF}-table`;
 
 // =============================================================================
-// Domain-Specific Selectors
+// Domain-Specific Selectors (small domains without their own constants file)
+// For FG-RBAC selectors: see constants/fg-rbac.ts
+// For Fleet Virt selectors: see constants/fleet-virt.ts
+// For ALC selectors: see constants/app.ts
 // =============================================================================
 export const SELECTORS = {
   /** Common selectors used across multiple domains */
@@ -53,7 +55,6 @@ export const SELECTORS = {
     rowByOuiaId: (ouiaId: string) => `tr[data-ouia-component-id="${ouiaId}"]`,
     exportButton: '#export-search-result',
     filterButton: '#acm-table-filter-select-undefined',
-    /** Advanced configuration tab: terminology card and resource-type toggle buttons */
     terminologyCard: '#ApplicationDeploymentHighlightsTerminology',
     resourceToggle: {
       subscriptions: '#subscriptions',
@@ -73,7 +74,7 @@ export const SELECTORS = {
   },
 
   /** Governance/Policy domain */
-  policy: {
+  governance: {
     // Add as needed
   },
 

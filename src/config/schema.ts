@@ -1,6 +1,8 @@
 /**
- * Configuration types — hub auth and runtime options.
- * Values are loaded in `index.ts` / `getHubAuth()` from CONSOLE_* env (not read ad hoc in tests).
+ * Configuration types for hub auth and area-specific runtime options.
+ *
+ * Values are loaded by per-area getters in index.ts.
+ * Tests receive config via fixtures, never via process.env directly.
  */
 
 export interface HubAuthConfig {
@@ -15,6 +17,19 @@ export interface RbacUser {
   readonly password: string;
   readonly idp: string;
   readonly domains: readonly string[];
+}
+
+export interface RbacConfig {
+  readonly testUser: string;
+  readonly testPassword: string;
+  readonly idpName: string;
+  readonly managedAdminUser: string;
+  readonly managedAdminPassword: string;
+  readonly spokeCluster: string;
+}
+
+export interface VirtConfig {
+  readonly spokeCluster: string;
 }
 
 export interface TestConfig {
