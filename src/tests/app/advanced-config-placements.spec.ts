@@ -1,10 +1,4 @@
-/**
- * RHACM4K-63573: Applications → Advanced configuration — page deprecation notice,
- * Placements removed from terminology and resource sub-tabs, Learn more documentation link.
- *
- * Architecture: spec is declarative; locators on {@link ApplicationListPage};
- * assertions in {@link advanced-config}.
- */
+/** RHACM4K-63573 — Advanced configuration: Placements removed from terminology and resource tabs. */
 import { test } from '@fixtures/app-test';
 import {
   ensureAdvancedTerminologyCardExpanded,
@@ -16,7 +10,7 @@ import {
 } from '@lib/app/verify/advanced-config';
 
 test.describe(
-  'Applications Advanced configuration',
+  'Applications Advanced configuration — RHACM4K-63573',
   { tag: ['@app', '@alc', '@UI'] },
   () => {
     test(

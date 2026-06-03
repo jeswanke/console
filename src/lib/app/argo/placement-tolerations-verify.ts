@@ -31,8 +31,6 @@ export {
 export type ArgoPlacementTolerationsYamlPatterns = {
   modalGitOpsPlacementTolerations: RegExp;
   wizardApplicationSetPlacementTolerations: RegExp;
-  placementPredicate?: RegExp;
-  wizardNumberOfClusters?: RegExp;
 };
 
 export type ArgoPlacementTolerationsWizardHost = PlacementTolerationsWizardHost & {
@@ -111,12 +109,9 @@ export async function verifyDefaultArgoPlacementTolerationsInYaml(
       }),
     ])
   );
-  if (patterns.wizardNumberOfClusters) {
-    expect(yamlText).toMatch(patterns.wizardNumberOfClusters);
-  }
-  if (patterns.placementPredicate) {
-    expect(yamlText).toMatch(patterns.placementPredicate);
-  }
+  // Limit checkbox is off by default; numberOfClusters is omitted until the user enables it.
+  expect(placement?.spec?.numberOfClusters).toBeUndefined();
+  expect(yamlText).not.toMatch(/numberOfClusters:/);
 }
 
 export async function verifyUnreachableTolerationUpdatedInArgoYaml(

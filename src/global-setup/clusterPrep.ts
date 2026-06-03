@@ -51,8 +51,8 @@ export function isManagedKubeconfigMergeSkipped(): boolean {
 }
 
 /**
- * Runs {@link runManagedClusterDataGeneration} then, unless {@link isManagedKubeconfigMergeSkipped},
- * {@link runManagedClusterKubeconfigMerge} — same timing as application-ui-test (JSON + merged kubeconfig).
+ * Runs {@link runManagedClusterDataGeneration} then, unless skipped,
+ * {@link runManagedClusterKubeconfigMerge} (managedClusters.json + MC_MERGED_kubeconfig).
  */
 export async function runManagedClusterPrep(authDir: string): Promise<void> {
   console.log(`${LOG_CLUSTER_PREP} Running scripts/cluster/generate-managed-cluster-data.py …`);
@@ -72,11 +72,9 @@ export async function runManagedClusterPrep(authDir: string): Promise<void> {
 }
 
 /**
- * Same idea as application-ui-test `setup-cluster-contexts.sh`: merge kubeconfigs and **rename**
- * each spoke context to the ManagedCluster name so `oc config use-context <mc>` works consistently.
- * Writes **`MC_MERGED_kubeconfig`** into `authDir` and sets **`process.env.KUBECONFIG`**.
- *
- * Requires **jq** and **yq** on `PATH`.
+ * Merge spoke kubeconfigs and rename each context to the ManagedCluster name
+ * so `oc config use-context <mc>` works. Writes MC_MERGED_kubeconfig and sets KUBECONFIG.
+ * Requires jq and yq on PATH.
  */
 export async function runManagedClusterKubeconfigMerge(authDir: string): Promise<void> {
   const repoRoot = getRepoRoot();

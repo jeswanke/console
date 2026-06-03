@@ -38,29 +38,43 @@ export class PlacementDetailsPage extends BasePage {
     });
   }
 
-  /** Expandable Overview card toggle (Details, Used in, PlacementDecisions, Conditions). */
-  getSectionToggle(sectionTitle: keyof typeof PLACEMENT_DETAILS.sections): Locator {
+  /**
+   * Expandable Overview card (PF card header title + **Toggle details** + body).
+   * Scope by {@link PLACEMENT_DETAILS.sectionCardTitleClass} — section labels like
+   * **Used in** also appear inside the Details description list.
+   */
+  getSectionCard(sectionTitle: keyof typeof PLACEMENT_DETAILS.sections): Locator {
     const label = PLACEMENT_DETAILS.sections[sectionTitle];
-    return this.page.locator(`#${PLACEMENT_DETAILS.sectionToggleId}`).filter({ hasText: label });
+    return this.page
+      .getByRole('main')
+      .locator(`.${PLACEMENT_DETAILS.sectionCardClass}`)
+      .filter({
+        has: this.page.locator(`.${PLACEMENT_DETAILS.sectionCardTitleClass}`, {
+          hasText: new RegExp(`^${label}$`),
+        }),
+      });
   }
 
-  /** Description list inside the **Details** expandable card. */
+  /** Expandable Overview card toggle (Details, Used in, PlacementDecisions, Conditions). */
+  getSectionToggle(sectionTitle: keyof typeof PLACEMENT_DETAILS.sections): Locator {
+    return this.getSectionCard(sectionTitle).getByRole('button', {
+      name: PLACEMENT_DETAILS.sectionToggleButtonLabel,
+    });
+  }
+
+  /** PF DescriptionList column(s) inside the **Details** expandable card. */
   getDetailsCardDescriptionList(): Locator {
-    return this.getSectionToggle('details')
-      .locator('..')
-      .locator('dl')
-      .first();
+    return this.getSectionCard('details').locator('.pf-v6-c-description-list');
   }
 
   getDetailsCardTerm(term: keyof typeof PLACEMENT_DETAILS.descriptionTerms): Locator {
     const label = PLACEMENT_DETAILS.descriptionTerms[term];
-    return this.getDetailsCardDescriptionList()
-      .getByRole('term', { name: label, exact: true })
-      .first();
+    const labelRe = new RegExp(`^\\s*${escapeRegExp(label)}\\s*$`, 'i');
+    return this.getDetailsCardDescriptionList().locator('dt').filter({ hasText: labelRe }).first();
   }
 
   getDetailsCardValue(term: keyof typeof PLACEMENT_DETAILS.descriptionTerms): Locator {
-    return this.getDetailsCardTerm(term).locator('xpath=following-sibling::dd[1]');
+    return this.getDetailsCardTerm(term).locator('xpath=following-sibling::dd[1]').first();
   }
 
   getClusterSetLink(clusterSetName: string): Locator {
@@ -125,4 +139,8 @@ export class PlacementDetailsPage extends BasePage {
     await expect(tab).toBeVisible({ timeout });
     await expect(tab).toHaveAttribute('aria-selected', 'true', { timeout });
   }
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }

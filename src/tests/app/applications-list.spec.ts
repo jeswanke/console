@@ -1,8 +1,8 @@
 /**
- * Application Lifecycle: Applications list page.
+ * Application Lifecycle: Applications list page — **sample / exploratory** coverage.
  *
- * Minimal sanity: navigate to Applications, verify title and table toolbar.
- * Uses authenticated state from auth.setup.ts (playwright.config projects).
+ * Not part of integration runs (`PLAYWRIGHT_TEST_MODE=integration` ignores this file).
+ * Run locally: `./start.sh alc --grep @sample` or `npx playwright test applications-list.spec.ts --project alc`.
  */
 
 import { test, expect } from '@fixtures/app-test';
@@ -20,7 +20,7 @@ import {
 import { verifyAdvancedDeprecationBanner } from '@lib/app/verify/advanced-config';
 import type { AppTableColumnHelpKey } from '@constants/app';
 
-test.describe('Applications list', { tag: ['@app', '@alc'] }, () => {
+test.describe('Applications list', { tag: ['@app', '@alc', '@sample'] }, () => {
   test('displays Applications page with title and Create button', async ({
     applicationListPage,
   }) => {

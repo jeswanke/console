@@ -130,6 +130,12 @@ test.describe('private-git', () => {
       labelName: 'name',
       labelValues: ['local-cluster'],
     });
+    expect(push.clusterResources).toEqual([
+      { kind: 'Service', name: 'helloworld-app-svc' },
+      { kind: 'Deployment', name: 'helloworld-app-deploy' },
+      { kind: 'ReplicaSet', name: 'helloworld-app-deploy' },
+      { kind: 'Pod', name: 'helloworld-app-deploy' },
+    ]);
     expect(PRIVATE_GIT_ARGO_REPO_SECRET_NAME).toBe('private-repo-creds');
     expect(PRIVATE_GIT_ARGO_NAMESPACE).toBe('openshift-gitops');
   });

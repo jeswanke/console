@@ -64,7 +64,7 @@ export class CreatePlacementWizardPage
 
   getNumberOfClustersInput(): Locator {
     return this.page.locator(
-      `#${PLACEMENT_CREATE_PREVIEW.placement.numberOfClustersInputId}`
+      `[id="${PLACEMENT_CREATE_PREVIEW.placement.numberOfClustersInputId}"]`
     );
   }
 
@@ -96,7 +96,7 @@ export class CreatePlacementWizardPage
   }
 
   getReviewInfoPlacementPreviewAlert(): Locator {
-    return this.page
+    return this.getReviewPlacementSection()
       .locator('.pf-v6-c-alert.pf-m-info')
       .filter({ hasText: PLACEMENT_CREATE_PREVIEW.alerts.reviewInfoPlacementPreview });
   }
@@ -152,6 +152,7 @@ export class CreatePlacementWizardPage
 
   async selectClusterSet(clusterSetName: string): Promise<void> {
     const combo = this.getClusterSetsCombobox().first();
+    await expect(combo).toBeVisible({ timeout: 30_000 });
     await combo.click();
     await this.page.getByRole('option', { name: clusterSetName, exact: true }).click();
     await this.page.keyboard.press('Escape').catch(() => undefined);
@@ -161,14 +162,11 @@ export class CreatePlacementWizardPage
 
   async setPlacementLimitEnabled(enabled: boolean): Promise<void> {
     const checkbox = this.getSetLimitCheckbox();
-    const checked = await checkbox.isChecked();
-    if (checked !== enabled) {
-      await checkbox.click({ force: true });
-      await this.waitForLoad();
-    }
+    await checkbox.setChecked(enabled);
     if (enabled) {
       await this.getNumberOfClustersInput().waitFor({ state: 'visible', timeout: 30_000 });
     }
+    await this.waitForLoad();
   }
 
   async setPlacementLimitValue(value: number): Promise<void> {

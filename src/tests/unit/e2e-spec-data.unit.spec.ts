@@ -10,7 +10,7 @@ import {
   mergeApplicationExpectationsLayers,
   mergeExpectationsRowsForComposerBlock,
   resolveArgoPushScenarioById,
-  resolveScenarioById,
+  resolveArgoPushScenarioByTestId,
   resolveScenarioByTestId,
   resolveSubscriptionScenarioById,
   resolveSubscriptionScenarioByTestId,
@@ -365,5 +365,26 @@ test.describe('e2e-spec-data YAML processing', () => {
         placementLabelExpression: { labelName: 'name', labelValues: ['local-cluster'] },
       });
     }
+  });
+
+  test('argo_appset_placement_preview_64219: RHACM4K-64219 placement preview payload', () => {
+    const resolved = resolveArgoPushScenarioByTestId('RHACM4K-64219', E2E_SPEC_DATA_DIR);
+    expect(resolved.scenarioId).toBe('argo_appset_placement_preview_64219');
+    expect(resolved.argoPush).toMatchObject({
+      pullApplicationName: 'argo-pull-placement-preview',
+      applicationName: 'argo-push-placement-preview',
+      argoServerLabel: 'openshift-gitops',
+      destinationNamespace: 'argo-placement-preview-ns',
+      clusterSet: 'auto-gitops-cluster-set',
+      existingPlacementName: 'gitops-placement-preview-test',
+      setupYamlRelativePath: 'src/templates/app/gitops-placement-preview-setup.yaml',
+      submit: false,
+      collapseYamlPanel: true,
+      git: {
+        url: 'https://github.com/stolostron/application-lifecycle-samples.git',
+        branch: 'main',
+        path: 'helloworld',
+      },
+    });
   });
 });

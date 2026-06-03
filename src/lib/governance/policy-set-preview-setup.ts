@@ -25,3 +25,7 @@ export async function labelClustersForPolicySetPlacementPreview(
     );
   }
 }
+
+export async function cleanupPolicySetPlacementPreviewSetup(oc: OcCliService): Promise<void> {
+  await oc.deleteYaml(SETUP_YAML_PATH).catch(() => undefined);
+}

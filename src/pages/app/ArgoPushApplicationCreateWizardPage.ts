@@ -10,6 +10,11 @@ import {
 } from '@constants/app';
 import type { ApplicationListPage } from '@pages/app/ApplicationListPage';
 import type { ArgoPushPlacementLabelExpression } from '@lib/app/argo-push/types';
+import {
+  fillArgoAppsetWizardBeforePlacement,
+  type FillArgoAppsetBeforePlacementOptions,
+} from '@lib/app/argo/fill-wizard-before-placement';
+import { ArgoPlacementPreviewActions } from '@lib/app/argo/placement-preview-actions';
 import { PlacementTolerationsActions } from '@lib/placement/tolerations-actions';
 import { SyncEditorYamlActions } from '@lib/placement/sync-editor-actions';
 import type { PlacementTolerationsWizardHost } from '@lib/placement/tolerations-verify';
@@ -38,6 +43,7 @@ function reviewFieldAccessibleNamePattern(fieldLabel: string | RegExp): RegExp {
 export class ArgoPushApplicationCreateWizardPage extends BasePage implements PlacementTolerationsWizardHost {
   readonly tolerations: PlacementTolerationsActions;
   readonly syncEditor: SyncEditorYamlActions;
+  readonly placementPreview: ArgoPlacementPreviewActions;
 
   constructor(
     page: Page,
@@ -46,6 +52,7 @@ export class ArgoPushApplicationCreateWizardPage extends BasePage implements Pla
     super(page);
     this.tolerations = new PlacementTolerationsActions(page);
     this.syncEditor = new SyncEditorYamlActions(page, '__argoPushWizardYamlCopy');
+    this.placementPreview = new ArgoPlacementPreviewActions(page);
   }
 
   private byIdSuffix(suffix: string): Locator {
@@ -192,7 +199,11 @@ export class ArgoPushApplicationCreateWizardPage extends BasePage implements Pla
   /** RHACM4K-63608: info alert on **Template** for private repository credentials. */
   getPrivateRepoCredentialsAlert(): Locator {
     const { title } = APP_ARGO_PUSH_CREATE_WIZARD.template.privateRepoCredentialsAlert;
-    return this.page.getByRole('alert').filter({ hasText: title }).first();
+    // PF6 info alerts expose copy via heading ("Info alert: …"), not role="alert" on the root.
+    return this.page
+      .locator('[class*="c-alert"]')
+      .filter({ hasText: title })
+      .first();
   }
 
   getConfigureRepositoryCredentialsButton(): Locator {
@@ -619,6 +630,12 @@ export class ArgoPushApplicationCreateWizardPage extends BasePage implements Pla
 
   async expectOnCreateRoute(): Promise<void> {
     await expect(this.page).toHaveURL(new RegExp(`${APP_ROUTES.createArgoPush.replace(/\//g, '\\/')}$`));
+  }
+
+  /** General → Sync policy, then **Placement** (RHACM4K-64219). */
+  async fillStepsBeforePlacement(options: FillArgoAppsetBeforePlacementOptions): Promise<void> {
+    await fillArgoAppsetWizardBeforePlacement(this.page, options);
+    await this.waitForLoad();
   }
 
   async gotoApplicationSetOverview(argoServerNamespace: string, applicationSetName: string): Promise<void> {

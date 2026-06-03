@@ -1,10 +1,6 @@
 #!/usr/bin/env bash
-#
-# Ported from application-ui-test: tests/cypress/scripts/mc_kubeconfigs/setup-cluster-contexts.sh
-#
-# Builds MC_MERGED_kubeconfig in the **current directory** (use cwd=.auth/ from globalSetup).
-# Each spoke context is renamed to the ManagedCluster name so `oc config use-context <mc>` works
-# (same contract as Cypress managedOcLogin).
+# Builds MC_MERGED_kubeconfig in the current directory (globalSetup uses cwd=.auth/).
+# Renames each spoke context to the ManagedCluster name so `oc config use-context <mc>` works.
 #
 # Requires: oc, jq, yq. Run while logged into the hub (same as generate-managed-cluster-data.py).
 #

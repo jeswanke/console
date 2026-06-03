@@ -5,12 +5,19 @@ import { POLICY_CREATE_WIZARD, POLICY_PLACEMENT_PREVIEW } from '@constants/gover
 import type { PoliciesListPage } from '@pages/governance/PoliciesListPage';
 import { PlacementTolerationsActions } from '@lib/placement/tolerations-actions';
 import { SyncEditorYamlActions } from '@lib/placement/sync-editor-actions';
+import {
+  getNoClustersMatchWarningInSection,
+  type PlacementPreviewWizardHost,
+} from '@lib/placement/placement-preview-verify';
 import type { PlacementTolerationsWizardHost } from '@lib/placement/tolerations-verify';
 
 /**
  * Governance → **Create policy** wizard (Placement step hosts shared PlacementSection).
  */
-export class CreatePolicyWizardPage extends BasePage implements PlacementTolerationsWizardHost {
+export class CreatePolicyWizardPage
+  extends BasePage
+  implements PlacementTolerationsWizardHost, PlacementPreviewWizardHost
+{
   readonly tolerations: PlacementTolerationsActions;
   readonly syncEditor: SyncEditorYamlActions;
 
@@ -78,8 +85,9 @@ export class CreatePolicyWizardPage extends BasePage implements PlacementTolerat
   }
 
   getNumberOfClustersInput(): Locator {
+    // Id contains dots — `#Placement.spec...` is invalid CSS (parsed as classes).
     return this.getWizardContent().locator(
-      `#${POLICY_PLACEMENT_PREVIEW.placement.numberOfClustersInputId}`
+      `[id="${POLICY_PLACEMENT_PREVIEW.placement.numberOfClustersInputId}"]`
     );
   }
 
@@ -155,7 +163,7 @@ export class CreatePolicyWizardPage extends BasePage implements PlacementTolerat
     await this.waitForLoad();
   }
 
-  /** Policy wizard defaults to **Existing placement** until **New placement** is selected. */
+  /** Policy wizard defaults to **No placement**; tolerations require **New placement**. */
   async ensureNewPlacementSelected(): Promise<void> {
     const btn = this.getNewPlacementButton();
     await btn.waitFor({ state: 'visible', timeout: 30_000 });
@@ -178,6 +186,7 @@ export class CreatePolicyWizardPage extends BasePage implements PlacementTolerat
 
   async selectClusterSet(clusterSetName: string): Promise<void> {
     const combo = this.getClusterSetsCombobox().first();
+    await expect(combo).toBeVisible({ timeout: 30_000 });
     await combo.click();
     await this.page.getByRole('option', { name: clusterSetName, exact: true }).click();
     await this.page.keyboard.press('Escape').catch(() => undefined);
@@ -195,14 +204,19 @@ export class CreatePolicyWizardPage extends BasePage implements PlacementTolerat
 
   async setPlacementLimitEnabled(enabled: boolean): Promise<void> {
     const checkbox = this.getSetLimitCheckbox();
-    const checked = await checkbox.isChecked();
-    if (checked !== enabled) {
-      await checkbox.click({ force: true });
-      await this.waitForLoad();
-    }
+    await checkbox.setChecked(enabled);
     if (enabled) {
       await this.getNumberOfClustersInput().waitFor({ state: 'visible', timeout: 30_000 });
     }
+    await this.waitForLoad();
+  }
+
+  getReviewPane(): Locator {
+    return this.getWizardContent();
+  }
+
+  getReviewPlacementSection(): Locator {
+    return this.getReviewPane().getByRole('region', { name: 'Placement' });
   }
 
   async setPlacementLimitValue(value: number): Promise<void> {
@@ -235,13 +249,11 @@ export class CreatePolicyWizardPage extends BasePage implements PlacementTolerat
   }
 
   getNoClustersMatchWarningAlert(): Locator {
-    return this.page
-      .getByRole('alert')
-      .filter({ hasText: POLICY_PLACEMENT_PREVIEW.alerts.noClustersMatchWarning });
+    return getNoClustersMatchWarningInSection(this.getReviewPlacementSection());
   }
 
   getReviewInfoPlacementPreviewAlert(): Locator {
-    return this.page
+    return this.getReviewPlacementSection()
       .locator('.pf-v6-c-alert.pf-m-info')
       .filter({ hasText: POLICY_PLACEMENT_PREVIEW.alerts.reviewInfoPlacementPreview });
   }

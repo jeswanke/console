@@ -16,6 +16,11 @@ const argoPushPlacementLabelExpressionSchema = z
   })
   .passthrough();
 
+const topologyClusterResourceRefSchema = z.object({
+  kind: z.string().min(1),
+  name: z.string().min(1),
+});
+
 /** Merged push-model ApplicationSet wizard payload. */
 export const argoPushDomainPayloadSchema = z
   .object({
@@ -29,6 +34,10 @@ export const argoPushDomainPayloadSchema = z
     collapseYamlPanel: z.boolean().optional(),
     submit: z.boolean().optional(),
     applicationSetExistsError: z.boolean().optional(),
+    clusterResources: z.array(topologyClusterResourceRefSchema).optional(),
+    pullApplicationName: z.string().min(1).optional(),
+    existingPlacementName: z.string().min(1).optional(),
+    setupYamlRelativePath: z.string().min(1).optional(),
   })
   .passthrough();
 

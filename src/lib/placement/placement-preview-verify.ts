@@ -2,10 +2,28 @@ import { expect, type Locator } from '@playwright/test';
 
 import { PLACEMENT_CLUSTER_PREVIEW } from '@constants/placement-preview';
 
+/** Footer link reflects placement predicates/limits — not raw ManagedClusterSet membership. */
+export async function readPlacementPreviewCountsFromFooter(
+  wizard: PlacementPreviewWizardHost
+): Promise<PlacementPreviewCounts> {
+  const link = wizard.getPlacementPreviewLink();
+  await expect(link).toBeVisible({ timeout: 60_000 });
+  const counts = parsePlacementPreviewCounts(await link.innerText());
+  expect(counts).not.toBeNull();
+  return counts!;
+}
+
 export type PlacementPreviewCounts = {
   matched: number;
   total: number;
 };
+
+/** Split "Matched" / "Not matched" sections only when some (not all, not zero) clusters match. */
+export function shouldExpectPlacementPreviewSplitSections(
+  counts: PlacementPreviewCounts
+): boolean {
+  return counts.matched > 0 && counts.matched < counts.total;
+}
 
 export type PlacementPreviewWizardHost = {
   getPlacementMatchSummary(): Locator;
@@ -15,13 +33,27 @@ export type PlacementPreviewWizardHost = {
   closePlacementPreviewModal(): Promise<void>;
 };
 
-/** Parse footer/modal text like `2 of 2 clusters` or `2 clusters`. */
+/** Parse footer link text like `2 of 2 clusters` or `1 cluster`. */
 export function parsePlacementPreviewCounts(text: string): PlacementPreviewCounts | null {
-  const ofMatch = text.match(/(\d+)\s+of\s+(\d+)\s+clusters/i);
+  const ofMatch = text.match(/(\d+)\s+of\s+(\d+)\s+clusters?/i);
   if (ofMatch) {
     return { matched: Number(ofMatch[1]), total: Number(ofMatch[2]) };
   }
-  const simple = text.match(/(\d+)\s+clusters/i);
+  const simple = text.match(/(\d+)\s+clusters?/i);
+  if (simple) {
+    const n = Number(simple[1]);
+    return { matched: n, total: n };
+  }
+  return null;
+}
+
+/** Parse modal h1: `2 of 3 clusters matched`, `2 clusters matched`, or `1 cluster matched` (ACM-33680). */
+export function parsePlacementPreviewModalTitle(text: string): PlacementPreviewCounts | null {
+  const ofMatch = text.match(/(\d+)\s+of\s+(\d+)\s+clusters?\s+matched/i);
+  if (ofMatch) {
+    return { matched: Number(ofMatch[1]), total: Number(ofMatch[2]) };
+  }
+  const simple = text.match(/(\d+)\s+clusters?\s+matched/i);
   if (simple) {
     const n = Number(simple[1]);
     return { matched: n, total: n };
@@ -58,16 +90,15 @@ export async function verifyPlacementPreviewModal(
   await expect(modal).toContainText(PLACEMENT_CLUSTER_PREVIEW.previewModal.descriptionPattern);
 
   if (options.expectedCounts) {
-    const titleCounts = parsePlacementPreviewCounts(title);
-    if (titleCounts) {
-      expect(titleCounts.matched).toBe(options.expectedCounts.matched);
-      expect(titleCounts.total).toBe(options.expectedCounts.total);
-    }
+    const titleCounts = parsePlacementPreviewModalTitle(title);
+    expect(titleCounts).toEqual(options.expectedCounts);
   }
 
   if (options.expectMatchedClusters?.length) {
     await expect(
-      modal.getByText(PLACEMENT_CLUSTER_PREVIEW.previewModal.matchedSectionLabel)
+      modal.getByRole('heading', {
+        name: PLACEMENT_CLUSTER_PREVIEW.previewModal.matchedSectionLabel,
+      })
     ).toBeVisible();
     for (const cluster of options.expectMatchedClusters) {
       await expect(modal.getByText(cluster, { exact: true })).toBeVisible();
@@ -76,16 +107,22 @@ export async function verifyPlacementPreviewModal(
 
   if (options.expectSplitSections) {
     await expect(
-      modal.getByText(PLACEMENT_CLUSTER_PREVIEW.previewModal.matchedSectionLabel)
+      modal.getByRole('heading', {
+        name: PLACEMENT_CLUSTER_PREVIEW.previewModal.matchedSectionLabel,
+      })
     ).toBeVisible();
     await expect(
-      modal.getByText(PLACEMENT_CLUSTER_PREVIEW.previewModal.notMatchedSectionLabel)
+      modal.getByRole('heading', {
+        name: PLACEMENT_CLUSTER_PREVIEW.previewModal.notMatchedSectionLabel,
+      })
     ).toBeVisible();
   }
 
   if (options.expectNotMatchedClusters?.length) {
     await expect(
-      modal.getByText(PLACEMENT_CLUSTER_PREVIEW.previewModal.notMatchedSectionLabel)
+      modal.getByRole('heading', {
+        name: PLACEMENT_CLUSTER_PREVIEW.previewModal.notMatchedSectionLabel,
+      })
     ).toBeVisible();
     for (const cluster of options.expectNotMatchedClusters) {
       await expect(modal.getByText(cluster, { exact: true })).toBeVisible();
@@ -111,12 +148,21 @@ export async function verifyReviewPlacementPreviewInfoAlert(
   }
 }
 
+/** PF6 review warning — inline Alert may not map to role=alert; match alert chrome or message text. */
+export function getNoClustersMatchWarningInSection(section: Locator): Locator {
+  const message = PLACEMENT_CLUSTER_PREVIEW.alerts.noClustersMatchWarning;
+  return section
+    .locator('.pf-v6-c-alert.pf-m-warning, .pf-v6-c-alert.pf-m-danger')
+    .filter({ hasText: message })
+    .or(section.getByRole('alert').filter({ hasText: message }))
+    .or(section.getByText(message))
+    .first();
+}
+
 export async function verifyNoClustersMatchWarningInSection(
   section: Locator
 ): Promise<void> {
-  await expect(
-    section.getByRole('alert').filter({
-      hasText: PLACEMENT_CLUSTER_PREVIEW.alerts.noClustersMatchWarning,
-    })
-  ).toBeVisible({ timeout: 30_000 });
+  await expect(getNoClustersMatchWarningInSection(section)).toBeVisible({
+    timeout: 30_000,
+  });
 }

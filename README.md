@@ -51,7 +51,7 @@ npx playwright install chromium
 By default, **`globalSetup`** runs managed-cluster prep for any non-unit run:
 
 - **`scripts/cluster/generate-managed-cluster-data.py`** writes **`.auth/managedClusters.json`**
-- **`scripts/cluster/setup-managed-cluster-kubeconfig.sh`** writes **`.auth/MC_MERGED_kubeconfig`** and prepares spoke contexts named like `ManagedCluster` resources (same pattern as application-ui-test)
+- **`scripts/cluster/setup-managed-cluster-kubeconfig.sh`** writes **`.auth/MC_MERGED_kubeconfig`** and renames spoke contexts to match `ManagedCluster` resource names
 
 Managed-cluster prep is **skipped** when you run **only** the **`unit`** project (e.g. **`--project=unit`**) or when **`E2E_SKIP_MANAGED_CLUSTER_PREP=1`**.
 
@@ -98,10 +98,13 @@ export HUB_PASSWORD='<kubeadmin-password>'
 # or: export HUB_TOKEN='<token>'
 
 ./start.sh alc                          # ALC entrypoint: default --grep @alc, --project alc
-./start.sh alc --grep @app --headed     # override defaults via CLI
+./start.sh alc --grep @RHACM4K-64219    # single Polarion ticket
+./start.sh alc --grep @sample           # exploratory specs only
 ./start.sh clc                          # CLC: default --grep @clc, --project cluster
 ./start.sh grc                          # GRC: default --grep @grc, --project governance
 ```
+
+**Integration mode** (`TEST_MODE=integration` in `.env`): sample specs (`@sample`) are excluded; see `docs/testing-conventions.md`.
 
 ### ALC environment (no `CYPRESS_*` prefix)
 

@@ -1,7 +1,4 @@
-/**
- * Fail fast before Ansible / GitOps prep if required operators are missing on the hub.
- * Parity with application-ui-test `checkAnsibleOperator` / `checkGitopsOperator` (pod presence).
- */
+/** Fail fast before Ansible / GitOps prep if required operators are missing on the hub (pod presence). */
 
 import { execFile } from 'child_process';
 import { promisify } from 'util';

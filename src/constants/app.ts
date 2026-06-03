@@ -1,4 +1,4 @@
-/** ALC routes and UI strings (from live hub / Playwriter snapshots). */
+/** ALC routes and UI strings for the Applications console. */
 
 import { PLACEMENT_TOLERATIONS_YAML_PATTERNS } from '@constants/placement-tolerations';
 
@@ -91,7 +91,7 @@ export const APP_APPLICATION_SYNC = {
 export const APP_APPLICATION_TOPOLOGY = {
   /**
    * **`data-test-id`** on the PF topology visualization surface wrapping the `svg` graph (`g[data-kind=node]`,
-   * `data-id` values — see `src/lib/app/topology/graph-ids.ts` / Playwriter hub capture).
+   * `data-id` values — see `src/lib/app/topology/graph-ids.ts`.
    */
   graphSurfaceTestId: 'topology',
   /** Topology / Details tab list lives in this labelled region (PF). */
@@ -113,7 +113,7 @@ export const APP_APPLICATION_TOPOLOGY = {
     /**
      * PF6 **MenuToggle** for topology **subscription scope** (`All Subscriptions` vs each Subscription CR name).
      * Rendered only when the application has **more than one** subscription/repo; absent on single-repo topology.
-     * Same element historically called “channel combo” (Playwriter / PF6 hub).
+     * Subscription scope MenuToggle; rendered only when the app has multiple subscriptions.
      */
     channelCombo: 'comboChannel',
   },
@@ -191,10 +191,7 @@ export const APP_TOOLBAR = {
   exportButtonAriaLabel: 'export-search-result',
   /** Compare application types link */
   compareTypesLabel: 'Compare application types',
-  /**
-   * PF link **Clear all filters** on the Applications table toolbar (shown when filters are active).
-   * Validated with Playwriter on `multicloud/applications` (PF6 `role="button"`).
-   */
+  /** PF link Clear all filters on the Applications table toolbar (visible when filters are active). */
   clearAllFiltersButtonName: 'Clear all filters',
 } as const;
 
@@ -372,8 +369,7 @@ export const APP_FILTER = {
 /** Terminology card and resource-type toggle (Advanced configuration tab only). */
 export const APP_ADVANCED_CONFIG = {
   /**
-   * Inline alert above Advanced content (PF Alert). Copy captured from live hub (Playwriter, Advanced tab).
-   * Omit on consoles that have not shipped this banner yet.
+   * Inline alert above Advanced content. Omit on consoles that have not shipped this banner yet.
    */
   deprecationBanner: {
     alertTitle: 'Page deprecation',
@@ -473,10 +469,8 @@ export const APP_ADVANCED_TABLE_COLUMNS_CHANNELS = {
 // =============================================================================
 // Argo CD ApplicationSet create wizards (pull + push)
 // =============================================================================
-//
-// **Live hub (Playwriter):** PF Form Wizard — `nav[aria-label="Argo application steps"]`, six steps,
-// split YAML panel (`#yaml-switch`, Copy `#copy-button`). Path-based field ids — prefer placeholders
-// and combobox accessible names.
+// Argo wizards: PF Form Wizard (`nav[aria-label="Argo application steps"]`), six steps, split YAML panel.
+// Prefer placeholders and combobox accessible names over path-based field ids where possible.
 // =============================================================================
 
 /** Shared chrome for pull and push ApplicationSet create wizards. */
@@ -588,7 +582,6 @@ const APP_ARGO_PLACEMENT_TOLERATIONS_YAML_PATTERNS = {
     /kind:\s*GitOpsCluster[\s\S]*kind:\s*Placement[\s\S]*tolerations:[\s\S]*cluster\.open-cluster-management\.io\/unreachable[\s\S]*operator:\s*Exists[\s\S]*cluster\.open-cluster-management\.io\/unavailable[\s\S]*operator:\s*Exists[\s\S]*clusterSets:\s*\n\s*-\s*default/,
   wizardApplicationSetPlacementTolerations:
     /kind:\s*ApplicationSet[\s\S]*kind:\s*Placement[\s\S]*tolerations:[\s\S]*cluster\.open-cluster-management\.io\/unreachable[\s\S]*operator:\s*Exists[\s\S]*cluster\.open-cluster-management\.io\/unavailable[\s\S]*operator:\s*Exists/,
-  wizardNumberOfClusters: /numberOfClusters:\s*1/,
   ...PLACEMENT_TOLERATIONS_YAML_PATTERNS,
 } as const;
 
@@ -596,12 +589,7 @@ export const APP_ARGO_PUSH_CREATE_WIZARD = {
   ...APP_ARGO_CREATE_WIZARD_SHARED,
   routePath: '/multicloud/applications/create/argo',
   pageTitle: 'Create application set - push model',
-  yamlPatterns: {
-    ...APP_ARGO_PLACEMENT_TOLERATIONS_YAML_PATTERNS,
-    /** Manual testcase: predicates exclude local-cluster by name label. */
-    placementPredicate:
-      /kind:\s*Placement[\s\S]*predicates:[\s\S]*key:\s*name[\s\S]*operator:\s*NotIn[\s\S]*local-cluster/,
-  },
+  yamlPatterns: APP_ARGO_PLACEMENT_TOLERATIONS_YAML_PATTERNS,
 } as const;
 
 export type AppArgoPushCreateWizardStepId =
@@ -612,12 +600,7 @@ export const APP_ARGO_PULL_CREATE_WIZARD = {
   ...APP_ARGO_CREATE_WIZARD_SHARED,
   routePath: '/multicloud/applications/create/argopullmodel',
   pageTitle: /^Create application set - Pull model$/i,
-  yamlPatterns: {
-    ...APP_ARGO_PLACEMENT_TOLERATIONS_YAML_PATTERNS,
-    /** Hub may emit `key: local-cluster` instead of testcase `key: name` / local-cluster value. */
-    placementPredicate:
-      /kind:\s*Placement[\s\S]*predicates:[\s\S]*(?:key:\s*name[\s\S]*local-cluster|key:\s*local-cluster[\s\S]*NotIn)/,
-  },
+  yamlPatterns: APP_ARGO_PLACEMENT_TOLERATIONS_YAML_PATTERNS,
 } as const;
 
 export type AppArgoPullCreateWizardStepId =

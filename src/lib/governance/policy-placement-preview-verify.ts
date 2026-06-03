@@ -1,35 +1,21 @@
-import { expect } from '@playwright/test';
-
-import { PLACEMENT_CLUSTER_PREVIEW } from '@constants/placement-preview';
+/** RHACM4K-64221 — Policy create wizard placement preview. */
 import type { CreatePolicyWizardPage } from '@pages/governance/CreatePolicyWizardPage';
+import { runGovernanceNewPlacementPreviewScenarios } from '@lib/placement/placement-preview-flow';
 
-export {
-  parsePlacementPreviewCounts,
-  verifyPlacementPreviewLinkShowsCounts,
-  verifyPlacementPreviewModal,
-  verifyReviewPlacementPreviewInfoAlert,
-  type PlacementPreviewCounts,
-} from '@lib/placement/placement-preview-verify';
+export { verifyCreatePolicyWizardTitle } from '@lib/governance/policy-create-verify';
 
-export async function verifyReviewPlacementPreviewWhenPresent(
-  wizard: CreatePolicyWizardPage
+export type PolicyPlacementPreviewOptions = {
+  policyName: string;
+  namespace: string;
+  clusterSet: string;
+  existingPlacementName?: string;
+};
+
+export async function runPolicyPlacementPreviewFlow(
+  wizard: CreatePolicyWizardPage,
+  options: PolicyPlacementPreviewOptions
 ): Promise<void> {
-  const infoAlert = wizard.getReviewInfoPlacementPreviewAlert();
-  if ((await infoAlert.count()) === 0) {
-    return;
-  }
-  await expect(infoAlert.first()).toBeVisible();
-  await expect(
-    infoAlert.first().getByRole('button', {
-      name: PLACEMENT_CLUSTER_PREVIEW.footer.previewLinkPattern,
-    })
-  ).toBeVisible();
-}
-
-export async function verifyNoClustersMatchWarningVisible(
-  wizard: CreatePolicyWizardPage
-): Promise<void> {
-  await expect(wizard.getNoClustersMatchWarningAlert().first()).toBeVisible({
-    timeout: 30_000,
-  });
+  const { policyName, namespace, clusterSet } = options;
+  await wizard.fillDetailsAndAdvanceToPlacementStep(policyName, namespace);
+  await runGovernanceNewPlacementPreviewScenarios(wizard, clusterSet);
 }

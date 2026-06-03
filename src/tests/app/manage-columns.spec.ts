@@ -1,9 +1,4 @@
-/**
- * RHACM4K-63768: Applications list **Manage columns** (Overview table).
- *
- * Architecture: spec is declarative; {@link ManageColumnsDialog} + {@link ApplicationsTable}
- * (via {@link ApplicationListPage}) hold locators; column labels live in {@link APP_TABLE_COLUMNS}.
- */
+/** RHACM4K-63768 — Applications list Manage columns (Overview table). */
 import { test } from '@fixtures/app-test';
 import { APP_TABLE_COLUMNS, APP_TABLE_MANAGE_COLUMNS } from '@constants/app';
 

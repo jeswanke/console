@@ -32,8 +32,9 @@ export async function verifyCreatePolicyWizardTitle(
   await expect(wizard.getPageTitle()).toBeVisible();
 }
 
+/** Policy wizard defaults to **No placement**; select **New placement** before toleration UI is shown. */
 export async function verifyNewPlacementSelected(wizard: CreatePolicyWizardPage): Promise<void> {
-  await expect(wizard.getNewPlacementButton()).toHaveAttribute('aria-pressed', 'true');
+  await wizard.ensureNewPlacementSelected();
 }
 
 export async function verifyDefaultPolicyPlacementTolerationsInYaml(

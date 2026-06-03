@@ -90,10 +90,7 @@ export class ApplicationsTable extends AcmTable {
     await listbox.getByRole('checkbox').first().waitFor({ state: 'visible', timeout: 10000 });
   }
 
-  /**
-   * Toolbar **Clear all filters** (PF link button). Present when at least one table filter is active
-   * (see Playwriter snapshot on Applications list).
-   */
+  /** Toolbar Clear all filters (PF link button); visible when at least one table filter is active. */
   getClearAllFiltersButton(): Locator {
     return this.page.getByRole('button', {
       name: APP_TOOLBAR.clearAllFiltersButtonName,

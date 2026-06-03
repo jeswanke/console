@@ -1,3 +1,5 @@
+import type { TopologyClusterResourceRef } from '@lib/app/topology/graph-ids';
+
 /** Git repository fields on the push-model **Template** step. */
 export type ArgoPushGitRepositorySpec = {
   url: string;
@@ -35,8 +37,19 @@ export type CreateArgoPushApplicationOptions = {
   /** Click **Submit** on **Review** (default `true`). */
   submit?: boolean;
   /**
+   * Deployed resources expected on Topology (kind/name; used by `data-id` builders in appset-graph-ids).
+   * helloworld / helloworld-argo paths typically omit Route on ApplicationSet graphs.
+   */
+  clusterResources?: TopologyClusterResourceRef[];
+  /**
    * When **false** (default): if ApplicationSet already exists in the Argo server namespace, skip wizard
    * and open overview. When **true**: throw if duplicate.
    */
   applicationSetExistsError?: boolean;
+  /** RHACM4K-64219 pull-model wizard name when it differs from {@link applicationName} (push). */
+  pullApplicationName?: string;
+  /** RHACM4K-64219 pre-created Placement for existing-placement preview (push wizard). */
+  existingPlacementName?: string;
+  /** RHACM4K-64219 hub fixture applied in `beforeAll` (path relative to project root). */
+  setupYamlRelativePath?: string;
 };

@@ -75,10 +75,19 @@ test.describe(
         });
 
         await test.step('Wait for topology to show deployed Git path resources', async () => {
-          await verifyArgoPushPrivateRepoTopologyDeployed(
-            applicationDetailsPage,
-            git.path ?? 'helloworld-argo'
-          );
+          const clusterResourceRows = options.clusterResources ?? [];
+          if (clusterResourceRows.length === 0) {
+            throw new Error(
+              'RHACM4K-63608: clusterResources must be defined in argo-push scenario YAML'
+            );
+          }
+          await verifyArgoPushPrivateRepoTopologyDeployed(applicationDetailsPage, {
+            page,
+            applicationSetName: applicationName,
+            argoServerNamespace,
+            destinationNamespace: options.destinationNamespace,
+            clusterResourceRows,
+          });
         });
 
         await test.step('Verify ApplicationSet details on Details tab', async () => {

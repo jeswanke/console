@@ -1,9 +1,4 @@
-/**
- * RHACM4K-64216: Standalone Create placement wizard — default unreachable/unavailable tolerations and YAML sync.
- *
- * Architecture: navigation on {@link PlacementsListPage} / {@link CreatePlacementWizardPage};
- * assertions in {@link placement-create-verify}.
- */
+/** RHACM4K-64216 — Create placement wizard: default tolerations and YAML sync. */
 import { test } from '@fixtures/acm-test';
 import { PLACEMENT_DEFAULT_TOLERATIONS } from '@constants/placement';
 import {

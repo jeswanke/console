@@ -5,14 +5,14 @@ import { expect, test } from '@fixtures/app-test';
 
 test.describe(
   'Git Push Applications',
-  { tag: ['@ALC', '@git', '@gitops', '@argo', '@push-model', '@alc', '@app'] },
+  { tag: ['@alc', '@app', '@git', '@gitops', '@argo', '@push-model'] },
   () => {
     test.describe.configure({ mode: 'serial' });
 
     test(
-      'ALC: Create a Git ApplicationSet (push model) deployed via GitOps',
-      { tag: ['@create', '@UI', '@e2e-common'] },
-      async ({ oc, applicationListPage, argoPushApplicationCreateWizardPage, page }) => {
+      'RHACM4K-PUSH-GIT-HELLOWORLD: Create a Git ApplicationSet (push model) deployed via GitOps',
+      { tag: ['@create', '@UI', '@e2e-common', '@RHACM4K-PUSH-GIT-HELLOWORLD'] },
+      async ({ oc, applicationListPage, argoPushApplicationCreateWizardPage }) => {
         test.setTimeout(300_000);
 
         const { argoPush: options } = resolveArgoPushScenarioById('auto_git_push_helloworld');

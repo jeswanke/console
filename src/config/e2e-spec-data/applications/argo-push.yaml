@@ -34,6 +34,35 @@ fragments:
       labelName: name
       labelValues:
         - local-cluster
+    clusterResources:
+      - kind: Service
+        name: helloworld-app-svc
+      - kind: Deployment
+        name: helloworld-app-deploy
+      - kind: ReplicaSet
+        name: helloworld-app-deploy
+      - kind: Pod
+        name: helloworld-app-deploy
+
+  # Push-model topology deployables for helloworld / helloworld-argo (Route omitted on AppSet graph).
+  # RHACM4K-64219: shared git/cluster set for pull + push placement preview wizards.
+  argo_appset_placement_preview:
+    git:
+      url: https://github.com/stolostron/application-lifecycle-samples.git
+      branch: main
+      path: helloworld
+    clusterSet: auto-gitops-cluster-set
+
+  argo_push_helloworld_cluster_resources:
+    clusterResources:
+      - kind: Service
+        name: helloworld-app-svc
+      - kind: Deployment
+        name: helloworld-app-deploy
+      - kind: ReplicaSet
+        name: helloworld-app-deploy
+      - kind: Pod
+        name: helloworld-app-deploy
 
 profiles:
   argo_push_submit:
@@ -41,6 +70,10 @@ profiles:
     collapseYamlPanel: true
 
   argo_push_review_only:
+    submit: false
+    collapseYamlPanel: true
+
+  argo_appset_placement_preview:
     submit: false
     collapseYamlPanel: true
 
@@ -89,3 +122,21 @@ scenarios:
         applicationName: auto-git-push-private-63608
         argoServerLabel: openshift-gitops
         destinationNamespace: auto-git-push-private-63608-ns
+
+  argo_appset_placement_preview_64219:
+    enabled: true
+    tests:
+      - RHACM4K-64219
+    blocks:
+      - use:
+          - argo_appset_placement_preview
+    extends:
+      - argo_appset_placement_preview
+    specDomains:
+      argoPush:
+        pullApplicationName: argo-pull-placement-preview
+        applicationName: argo-push-placement-preview
+        argoServerLabel: openshift-gitops
+        destinationNamespace: argo-placement-preview-ns
+        existingPlacementName: gitops-placement-preview-test
+        setupYamlRelativePath: src/templates/app/gitops-placement-preview-setup.yaml

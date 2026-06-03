@@ -13,7 +13,7 @@ export { PLACEMENT_DEFAULT_TOLERATIONS };
 export const PLACEMENT_ROUTES = {
   placementsList: '/multicloud/infrastructure/clusters/placements',
   createPlacement: '/multicloud/infrastructure/clusters/placements/create',
-  /** Placement details → Overview tab (live hub / Playwriter). */
+  /** Placement details → Overview tab. */
   detailsOverview: (namespace: string, name: string) =>
     `/multicloud/infrastructure/clusters/placements/details/${namespace}/${name}/overview`,
 } as const;
@@ -32,6 +32,9 @@ export const PLACEMENT_DETAILS = {
     placementDecisions: 'PlacementDecisions',
     conditions: 'Conditions',
   },
+  sectionToggleButtonLabel: 'Toggle details',
+  sectionCardTitleClass: 'pf-v6-c-card__title-text',
+  sectionCardClass: 'pf-v6-c-card',
   /** PF DescriptionList **term** labels on the Details card. */
   descriptionTerms: {
     name: 'Name',
@@ -72,8 +75,6 @@ export const PLACEMENT_DETAILS = {
       reason: 'AllDecisionsScheduled',
     },
   },
-  /** Expandable section toggle id shared across Overview cards (live hub). */
-  sectionToggleId: 'toggle-button',
 } as const;
 
 export const PLACEMENT_LIST = {

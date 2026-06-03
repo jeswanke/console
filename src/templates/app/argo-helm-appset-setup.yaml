@@ -15,7 +15,7 @@ spec:
     metadata:
       name: test-api-argo-helm-{{name}}
       labels:
-        velero.io/exclude-from-backup: "true"
+        velero.io/exclude-from-backup: 'true'
     spec:
       project: default
       source:
@@ -24,7 +24,7 @@ spec:
         targetRevision: 0.2.0
       destination:
         namespace: api-argo-helm-ns
-        server: "{{server}}"
+        server: '{{server}}'
       syncPolicy:
         automated:
           selfHeal: true

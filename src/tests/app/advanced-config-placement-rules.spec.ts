@@ -1,9 +1,4 @@
-/**
- * RHACM4K-64170: Applications → Advanced configuration — PlacementRules tab and terminology removed.
- *
- * Architecture: spec is declarative; locators on {@link ApplicationListPage};
- * assertions in {@link advanced-config}.
- */
+/** RHACM4K-64170 — Advanced configuration: PlacementRules tab and terminology removed. */
 import { test } from '@fixtures/app-test';
 import {
   ensureAdvancedTerminologyCardExpanded,
@@ -13,7 +8,7 @@ import {
 } from '@lib/app/verify/advanced-config';
 
 test.describe(
-  'Applications Advanced configuration',
+  'Applications Advanced configuration — RHACM4K-64170',
   { tag: ['@app', '@alc', '@UI'] },
   () => {
     test(

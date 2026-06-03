@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Ported from application-ui-test (Cypress). Paths are relative to this script.
+# GitOps / Argo CD hub integration for E2E. Paths are relative to this script.
 set -euo pipefail
 
 echo "e2e TEST - ArgoCD integration"

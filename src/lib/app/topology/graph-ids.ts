@@ -110,7 +110,7 @@ export type TopologyClusterResourceRef = { kind: string; name: string };
 
 /**
  * Builds the **node** `data-id` list for one subscription repo block (first channel + placement + local-cluster
- * deployables), matching Playwriter output for `auto_git_multi` block 0.
+ * deployables) for one subscription repo block (e.g. `auto_git_multi` block 0).
  */
 export function buildTopologyNodeDataIdsForSubscriptionBlock(params: {
   applicationName: string;
@@ -178,8 +178,8 @@ export function buildTopologyNodeDataIdsForSubscriptionBlock(params: {
 }
 
 /**
- * Drawer text to assert after clicking a graph **node** (`data-id`), from **Playwriter** hub capture
- * (`auto-git-multi` topology). The **cluster** hub node has no `Type: Cluster` line — match **`Clusters (n)`** with a regex.
+ * Drawer text to assert after clicking a topology node (`data-id`).
+ * Cluster hub nodes omit `Type: Cluster` — match `Clusters (n)` with a regex.
  */
 export function expectedTopologyDrawerContains(nodeDataId: string): string | RegExp {
   if (nodeDataId.startsWith('application--')) {

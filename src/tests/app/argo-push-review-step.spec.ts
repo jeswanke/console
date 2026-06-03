@@ -1,9 +1,4 @@
-/**
- * RHACM4K-63807: Argo CD ApplicationSet push-model wizard — enhanced Review step.
- *
- * Architecture: wizard fill via {@link fillArgoPushWizardToReview}; locators on
- * {@link ArgoPushApplicationCreateWizardPage}; assertions in {@link review-verify}.
- */
+/** RHACM4K-63807 — Argo ApplicationSet push-model wizard Review step (collapse, search, YAML highlight). */
 import { resolveArgoPushScenarioById } from '@config';
 import { fillArgoPushWizardToReview } from '@lib/app/argo-push/create';
 import {

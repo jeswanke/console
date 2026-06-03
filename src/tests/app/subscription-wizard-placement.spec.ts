@@ -1,9 +1,4 @@
-/**
- * RHACM4K-64215: Subscription create wizard — Placement-only dropdown, no PlacementRule deprecation banner.
- *
- * Architecture: OC setup in {@link applyPlacementTestResources}; wizard locators on
- * {@link SubscriptionApplicationCreateWizardPage}; assertions in {@link placement-wizard-verify}.
- */
+/** RHACM4K-64215 — Subscription create wizard: Placement dropdown only (no PlacementRule banner). */
 import { test } from '@fixtures/app-test';
 import { PLACEMENT_TEST_RESOURCES } from '@constants/app';
 import {

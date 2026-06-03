@@ -9,6 +9,8 @@ import type { ArgoPushApplicationCreateWizardPage } from '@pages/app/ArgoPushApp
 import type { OcCliService } from '@services/OcCliService';
 
 import type { CreateArgoPushApplicationOptions } from './types';
+import { verifyArgoPushAppTopologyTab } from '../verify/argo-push-topology-tab';
+import type { TopologyClusterResourceRef } from '../topology/graph-ids';
 
 /** Assert the private repository credentials info alert on the **Template** step. */
 export async function verifyPrivateRepoCredentialsAlertOnTemplate(
@@ -52,24 +54,29 @@ export async function verifyConfigureRepositoryCredentialsOpensGitOpsSettings(
   }
 }
 
-/** Poll until push-model topology shows the Git path node (e.g. **helloworld-argo**). */
+/** Poll until push-model topology graph contains expected node `data-id`s. */
 export async function verifyArgoPushPrivateRepoTopologyDeployed(
   detailsPage: ApplicationDetailsPage,
-  gitPath: string,
-  options?: { timeout?: number }
+  options: {
+    applicationSetName: string;
+    argoServerNamespace: string;
+    destinationNamespace: string;
+    clusterResourceRows: TopologyClusterResourceRef[];
+    page: Page;
+    clusterName?: string;
+    nodeHydrationTimeout?: number;
+  }
 ): Promise<void> {
-  const timeout = options?.timeout ?? 300_000;
-  const pathNode = detailsPage.getTopologyNodeButtonByName(new RegExp(gitPath, 'i'));
-
-  await expect
-    .poll(async () => pathNode.isVisible().catch(() => false), {
-      timeout,
-      intervals: [5_000, 10_000, 15_000, 30_000],
-      message: `Expected topology node for Git path "${gitPath}"`,
-    })
-    .toBe(true);
-
-  await expect(detailsPage.getTopologyZoomInButton()).toBeVisible({ timeout: 60_000 });
+  await verifyArgoPushAppTopologyTab({
+    page: options.page,
+    detailsPage,
+    applicationSetName: options.applicationSetName,
+    argoServerNamespace: options.argoServerNamespace,
+    destinationNamespace: options.destinationNamespace,
+    clusterResourceRows: options.clusterResourceRows,
+    clusterName: options.clusterName,
+    nodeHydrationTimeout: options.nodeHydrationTimeout,
+  });
 }
 
 /** Details tab smoke for a push-model ApplicationSet created from a private Git repo. */

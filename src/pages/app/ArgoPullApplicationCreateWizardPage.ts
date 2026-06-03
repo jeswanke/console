@@ -1,13 +1,13 @@
 import { Page, Locator, expect } from '@playwright/test';
 import { BasePage } from '@pages/BasePage';
 import { OcCliService } from '@services/OcCliService';
-import {
-  APP_ARGO_PULL_CREATE_WIZARD,
-  APP_CREATE_MENU,
-  APP_ROUTES,
-  type AppArgoPullCreateWizardStepId,
-} from '@constants/app';
+import { APP_ARGO_PULL_CREATE_WIZARD, APP_CREATE_MENU, APP_ROUTES } from '@constants/app';
 import type { ApplicationListPage } from '@pages/app/ApplicationListPage';
+import {
+  fillArgoAppsetWizardBeforePlacement,
+  type FillArgoAppsetBeforePlacementOptions,
+} from '@lib/app/argo/fill-wizard-before-placement';
+import { ArgoPlacementPreviewActions } from '@lib/app/argo/placement-preview-actions';
 import { PlacementTolerationsActions } from '@lib/placement/tolerations-actions';
 import { SyncEditorYamlActions } from '@lib/placement/sync-editor-actions';
 import type { PlacementTolerationsWizardHost } from '@lib/placement/tolerations-verify';
@@ -22,6 +22,7 @@ type ArgoPullWizardStep = keyof typeof APP_ARGO_PULL_CREATE_WIZARD.steps;
 export class ArgoPullApplicationCreateWizardPage extends BasePage implements PlacementTolerationsWizardHost {
   readonly tolerations: PlacementTolerationsActions;
   readonly syncEditor: SyncEditorYamlActions;
+  readonly placementPreview: ArgoPlacementPreviewActions;
 
   constructor(
     page: Page,
@@ -30,6 +31,7 @@ export class ArgoPullApplicationCreateWizardPage extends BasePage implements Pla
     super(page);
     this.tolerations = new PlacementTolerationsActions(page);
     this.syncEditor = new SyncEditorYamlActions(page, '__argoPullWizardYamlCopy');
+    this.placementPreview = new ArgoPlacementPreviewActions(page);
   }
 
   getPageTitle(): Locator {
@@ -107,5 +109,11 @@ export class ArgoPullApplicationCreateWizardPage extends BasePage implements Pla
     await expect(this.page).toHaveURL(
       new RegExp(`${APP_ROUTES.createArgoPull.replace(/\//g, '\\/')}$`)
     );
+  }
+
+  /** General → Sync policy, then **Placement** (RHACM4K-64219). */
+  async fillStepsBeforePlacement(options: FillArgoAppsetBeforePlacementOptions): Promise<void> {
+    await fillArgoAppsetWizardBeforePlacement(this.page, options);
+    await this.waitForLoad();
   }
 }

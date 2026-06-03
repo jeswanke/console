@@ -9,7 +9,10 @@ import type { PolicySetsListPage } from '@pages/governance/PolicySetsListPage';
 import { PlacementTolerationsActions } from '@lib/placement/tolerations-actions';
 import { SyncEditorYamlActions } from '@lib/placement/sync-editor-actions';
 import type { PlacementTolerationsWizardHost } from '@lib/placement/tolerations-verify';
-import type { PlacementPreviewWizardHost } from '@lib/placement/placement-preview-verify';
+import {
+  getNoClustersMatchWarningInSection,
+  type PlacementPreviewWizardHost,
+} from '@lib/placement/placement-preview-verify';
 
 /**
  * Governance → **Create policy set** wizard (Placement step hosts shared PlacementSection).
@@ -35,7 +38,8 @@ export class CreatePolicySetWizardPage
   }
 
   getWizardContent(): Locator {
-    return this.page.getByLabel(POLICY_SET_CREATE_WIZARD.contentAriaLabel);
+    // Wizard body is a generic with aria-label (not always exposed via getByLabel alone).
+    return this.page.locator(`[aria-label="${POLICY_SET_CREATE_WIZARD.contentAriaLabel}"]`);
   }
 
   getWizardStepsNav(): Locator {
@@ -88,7 +92,7 @@ export class CreatePolicySetWizardPage
 
   getNumberOfClustersInput(): Locator {
     return this.getWizardContent().locator(
-      `#${POLICY_SET_PLACEMENT_PREVIEW.placement.numberOfClustersInputId}`
+      `[id="${POLICY_SET_PLACEMENT_PREVIEW.placement.numberOfClustersInputId}"]`
     );
   }
 
@@ -112,14 +116,20 @@ export class CreatePolicySetWizardPage
     return this.page.locator('.pf-v6-c-modal-box').last();
   }
 
+  getReviewPane(): Locator {
+    return this.getWizardContent();
+  }
+
+  getReviewPlacementSection(): Locator {
+    return this.getReviewPane().getByRole('region', { name: 'Placement' });
+  }
+
   getNoClustersMatchWarningAlert(): Locator {
-    return this.page
-      .getByRole('alert')
-      .filter({ hasText: POLICY_SET_PLACEMENT_PREVIEW.alerts.noClustersMatchWarning });
+    return getNoClustersMatchWarningInSection(this.getReviewPlacementSection());
   }
 
   getReviewInfoPlacementPreviewAlert(): Locator {
-    return this.page
+    return this.getReviewPlacementSection()
       .locator('.pf-v6-c-alert.pf-m-info')
       .filter({ hasText: POLICY_SET_PLACEMENT_PREVIEW.alerts.reviewInfoPlacementPreview });
   }
@@ -191,6 +201,7 @@ export class CreatePolicySetWizardPage
 
   async selectClusterSet(clusterSetName: string): Promise<void> {
     const combo = this.getClusterSetsCombobox().first();
+    await expect(combo).toBeVisible({ timeout: 30_000 });
     await combo.click();
     await this.page.getByRole('option', { name: clusterSetName, exact: true }).click();
     await this.page.keyboard.press('Escape').catch(() => undefined);
@@ -208,14 +219,11 @@ export class CreatePolicySetWizardPage
 
   async setPlacementLimitEnabled(enabled: boolean): Promise<void> {
     const checkbox = this.getSetLimitCheckbox();
-    const checked = await checkbox.isChecked();
-    if (checked !== enabled) {
-      await checkbox.click({ force: true });
-      await this.waitForLoad();
-    }
+    await checkbox.setChecked(enabled);
     if (enabled) {
       await this.getNumberOfClustersInput().waitFor({ state: 'visible', timeout: 30_000 });
     }
+    await this.waitForLoad();
   }
 
   async setPlacementLimitValue(value: number): Promise<void> {

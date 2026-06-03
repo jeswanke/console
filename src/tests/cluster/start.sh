@@ -22,6 +22,10 @@ if [ "${CONSOLE_E2E_MANUAL_GREP}" -eq 0 ] && [ -z "${PLAYWRIGHT_GREP:-}" ] && [ 
   export PLAYWRIGHT_GREP=@clc
   echo "CLC: defaulting PLAYWRIGHT_GREP=@clc (set PLAYWRIGHT_GREP or pass --grep to override)"
 fi
+if [ "${PLAYWRIGHT_TEST_MODE:-}" = "integration" ] && [ "${CONSOLE_E2E_MANUAL_GREP}" -eq 0 ] && [ -z "${PLAYWRIGHT_GREP_INVERT:-}" ]; then
+  export PLAYWRIGHT_GREP_INVERT='@sample'
+  echo "CLC: integration mode — PLAYWRIGHT_GREP_INVERT=@sample (sample specs excluded)"
+fi
 
 console_e2e_build_pw_grep_args "$@"
 
