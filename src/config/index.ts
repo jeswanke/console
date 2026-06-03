@@ -1,12 +1,19 @@
 /**
- * Configuration loader: `.env` (optional) + process environment.
- * Per architecture doc: prefer `getHubAuth()` / `getTestConfig()` over `process.env` in specs.
- * Password for auth.setup: HUB_PASSWORD only (same as oc login). Optional: CONSOLE_USERNAME, CONSOLE_IDP.
+ * Configuration loader: .env (optional) + process environment.
+ *
+ * Per-area getters provide lazy validation -- RBAC vars are only checked
+ * when running RBAC tests, virt vars only when running virt tests, etc.
+ *
+ * Usage:
+ *   getHubAuth()      -- universal hub console login (auth.setup.ts)
+ *   getTestConfig()   -- unified config for general tests
+ *   getRbacConfig()   -- RBAC area config (rbac-test.ts fixture)
+ *   getVirtConfig()   -- Fleet Virt area config (fleet-virt-test.ts fixture)
  */
 import fs from 'fs';
 import path from 'path';
 import dotenv from 'dotenv';
-import type { HubAuthConfig, TestConfig, RbacUser } from './schema';
+import type { HubAuthConfig, RbacConfig, VirtConfig, TestConfig, RbacUser } from './schema';
 export type { RbacUser } from './schema';
 import { hubAuthPresets, rbacPresets } from './presets';
 
@@ -24,10 +31,6 @@ export function loadAlcLocalEnvFile(): void {
 
 loadAlcLocalEnvFile();
 
-/**
- * Hub console login credentials (used by auth.setup and fixtures).
- * @throws if password is missing
- */
 export function getHubAuth(): HubAuthConfig {
   const hubPassword = process.env.HUB_PASSWORD;
   if (!hubPassword) {
@@ -62,6 +65,28 @@ export function getTestConfig(): TestConfig {
     hub: getHubAuth(),
   };
 }
+
+export function getRbacConfig(): RbacConfig {
+  if (!process.env.RBAC_TEST_PASSWORD) {
+    throw new Error('RBAC_TEST_PASSWORD environment variable is required');
+  }
+  return {
+    testUser: process.env.RBAC_TEST_USER || 'clc-e2e-global-61726',
+    testPassword: process.env.RBAC_TEST_PASSWORD,
+    idpName: process.env.RBAC_IDP || 'clc-e2e-htpasswd',
+    managedAdminUser: process.env.RBAC_MANAGED_ADMIN_USER || 'clc-e2e-managed-admin',
+    managedAdminPassword: process.env.RBAC_MANAGED_ADMIN_PASSWORD || process.env.RBAC_TEST_PASSWORD,
+    spokeCluster: process.env.RBAC_SPOKE_CLUSTER || process.env.VIRT_SPOKE_CLUSTER || '',
+  };
+}
+
+export function getVirtConfig(): VirtConfig {
+  return {
+    spokeCluster: process.env.VIRT_SPOKE_CLUSTER ?? 'local-cluster',
+  };
+}
+
+export type { HubAuthConfig, RbacConfig, VirtConfig, TestConfig } from './schema';
 
 export {
   clearE2eSpecDataCache,

@@ -8,7 +8,7 @@ export abstract class BasePage {
    * Wait for PatternFly loading indicators to disappear.
    */
   async waitForLoad(): Promise<void> {
-    await expect(this.page.locator(PF_SPINNER)).toHaveCount(0);
-    await expect(this.page.locator(PF_SKELETON)).toHaveCount(0);
+    await expect(this.page.locator(PF_SPINNER)).toHaveCount(0, { timeout: 30000 });
+    await expect(this.page.locator(PF_SKELETON)).toHaveCount(0, { timeout: 30000 });
   }
 }

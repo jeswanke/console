@@ -1,0 +1,16 @@
+[
+  {
+    "op": "add",
+    "path": "/spec/identityProviders/-",
+    "value": {
+      "name": "clc-e2e-htpasswd",
+      "mappingMethod": "claim",
+      "type": "HTPasswd",
+      "htpasswd": {
+        "fileData": {
+          "name": "clc-e2e-users"
+        }
+      }
+    }
+  }
+]

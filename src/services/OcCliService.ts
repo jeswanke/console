@@ -284,4 +284,128 @@ export class OcCliService {
     );
     return JSON.parse(stdout) as PlacementJson;
   }
+
+  // ---------------------------------------------------------------------------
+  // MCRA (MulticlusterRoleAssignment) operations
+  // ---------------------------------------------------------------------------
+
+  async mcraGetAll(labelSelector?: string): Promise<Record<string, unknown>[]> {
+    const labelFlag = labelSelector ? ` -l "${labelSelector}"` : '';
+    const output = await this.run(
+      `oc get multiclusterroleassignment -A${labelFlag} -o json`
+    );
+    const parsed = JSON.parse(output);
+    return parsed.items || [];
+  }
+
+  async mcraDeleteByName(name: string, namespace: string): Promise<string> {
+    return this.run(
+      `oc delete multiclusterroleassignment ${name} -n ${namespace} --ignore-not-found`
+    );
+  }
+
+  async mcraGetForUser(username: string): Promise<Record<string, unknown>[]> {
+    const items = await this.mcraGetAll();
+    return items.filter((m) => {
+      const spec = m.spec as Record<string, unknown> | undefined;
+      const subject = spec?.subject as Record<string, unknown> | undefined;
+      return subject?.name === username;
+    });
+  }
+
+  async mcraGetRolesForUser(username: string): Promise<string[]> {
+    const items = await this.mcraGetForUser(username);
+    return items.flatMap((m) => {
+      const spec = m.spec as Record<string, unknown> | undefined;
+      const ra = spec?.roleAssignments as Record<string, unknown>[] | undefined;
+      return (ra || []).map((r) => r.clusterRole as string);
+    });
+  }
+
+  async mcraDeleteAllForUser(username: string): Promise<void> {
+    try {
+      const items = await this.mcraGetForUser(username);
+      for (const item of items) {
+        const metadata = item.metadata as Record<string, unknown> | undefined;
+        if (metadata?.name && metadata?.namespace) {
+          await this.mcraDeleteByName(
+            metadata.name as string,
+            metadata.namespace as string
+          );
+        }
+      }
+    } catch {
+      // Best-effort cleanup
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // VM (VirtualMachine) operations
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Ensure a lightweight test VM exists and is running.
+   * Uses cirros container disk (no PVC needed, starts in seconds).
+   * Idempotent: skips creation if VM already exists.
+   */
+  async vmEnsureTestVM(
+    name: string,
+    namespace: string,
+    labels?: Record<string, string>
+  ): Promise<string> {
+    const exists = await this.run(
+      `oc get vm ${name} -n ${namespace} --no-headers 2>/dev/null || true`
+    );
+    if (exists.includes(name)) {
+      return name;
+    }
+
+    const labelEntries = { 'e2e-test': 'true', ...labels };
+    const labelYaml = Object.entries(labelEntries)
+      .map(([k, v]) => `      ${k}: "${v}"`)
+      .join('\n');
+
+    await this.run(`oc apply -f - <<'EOF'
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  name: ${name}
+  namespace: ${namespace}
+  labels:
+${labelYaml}
+spec:
+  runStrategy: Always
+  template:
+    metadata:
+      labels:
+        kubevirt.io/vm: ${name}
+    spec:
+      domain:
+        devices:
+          disks:
+            - disk:
+                bus: virtio
+              name: containerdisk
+        resources:
+          requests:
+            memory: 512Mi
+      volumes:
+        - containerDisk:
+            image: quay.io/kubevirt/cirros-container-disk-demo
+          name: containerdisk
+EOF`);
+
+    return name;
+  }
+
+  async vmIsRunning(name: string, namespace: string): Promise<boolean> {
+    const output = await this.run(
+      `oc get vm ${name} -n ${namespace} -o jsonpath='{.status.printableStatus}' 2>/dev/null || true`
+    );
+    return output.includes('Running');
+  }
+
+  async vmDeleteTestVM(name: string, namespace: string): Promise<void> {
+    await this.run(`oc delete vm ${name} -n ${namespace} --ignore-not-found`);
+  }
 }
