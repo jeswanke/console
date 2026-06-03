@@ -49,7 +49,7 @@ function console_e2e_usage_main {
   errEcho "usage: ${me} <component> [playwright args...]"
   errEcho
   errEcho "  Components:"
-  errEcho "    alc   Application Lifecycle (src/tests/app); defaults: --grep @alc, --project chromium"
+  errEcho "    alc   Application Lifecycle (src/tests/app); defaults: --grep @alc, --project alc"
   errEcho
   errEcho "  Required env: HUB_URL, and HUB_PASSWORD or HUB_TOKEN"
   errEcho "  Optional: CONSOLE_USERNAME (default: kubeadmin), CONSOLE_IDP (default: kube:admin)"

@@ -1,0 +1,101 @@
+/**
+ * Fleet Virtualization constants.
+ *
+ * Organized hierarchically by UI location:
+ *   FLEET_VIRT_ROUTES       -- navigation paths
+ *   FLEET_VIRT_PAGE         -- page-level elements (perspective switcher, heading)
+ *   FLEET_VIRT_SEARCH       -- VM search bar (autocomplete dropdown)
+ *   FLEET_VIRT_ADVANCED_SEARCH -- advanced search modal (cluster/project/name filters)
+ *   FLEET_VIRT_SAVED_SEARCH -- save/load/remove saved searches
+ *   FLEET_VIRT_VM_TABLE     -- VM list table (VirtualizedTable, NOT AcmTable)
+ *   FLEET_VIRT_TREE_VIEW    -- left sidebar tree view
+ *
+ * Selectors verified against kubevirt-ui/kubevirt-plugin release-4.21 via acm-ui MCP.
+ * Fleet Virt uses VirtualizedTable from @openshift-console/dynamic-plugin-sdk,
+ * not AcmTable from stolostron/console.
+ */
+
+// =============================================================================
+// Routes
+// =============================================================================
+
+export const FLEET_VIRT_ROUTES = {
+  vmList: '/k8s/all-clusters/all-namespaces/kubevirt.io~v1~VirtualMachine',
+} as const;
+
+// =============================================================================
+// Page-level elements
+// =============================================================================
+
+export const FLEET_VIRT_PAGE = {
+  perspectiveSwitcher: '[data-test-id="perspective-switcher-toggle"]',
+  fleetManagementLabel: 'Fleet Management',
+  emptyState: {
+    noVMs: 'No VirtualMachines found',
+  },
+} as const;
+
+// =============================================================================
+// VM search bar (toolbar autocomplete)
+// =============================================================================
+
+export const FLEET_VIRT_SEARCH = {
+  searchInput: '[data-test="vm-search-input"] input',
+  searchResults: '[data-test="search-bar-results"]',
+  resetButton: 'button[aria-label="Reset"]',
+} as const;
+
+// =============================================================================
+// Advanced search modal
+//
+// Source: kubevirt-plugin AdvancedSearchModal + formFields (ClusterField, ProjectField, NameField)
+// Uses MultiSelectTypeahead for cluster/project (PF6 typeahead with menu).
+// =============================================================================
+
+export const FLEET_VIRT_ADVANCED_SEARCH = {
+  openButton: '[data-test="vm-advanced-search"]',
+  detailsContainer: '[data-test="adv-search-details"]',
+  nameInput: '[data-test="adv-search-vm-name"]',
+  cluster: {
+    dataTest: 'adv-search-vm-cluster',
+    wrapper: '[data-test="adv-search-vm-cluster"]',
+    placeholder: 'All clusters',
+    selectPlaceholder: 'Select cluster',
+    toggleClose: 'button[aria-label="Multi select Typeahead menu toggle"]',
+  },
+  project: {
+    dataTest: 'adv-search-vm-project',
+    wrapper: '[data-test="adv-search-vm-project"]',
+    placeholder: 'All projects',
+    selectPlaceholder: 'Select project',
+    toggleClose: 'button[aria-label="Multi select Typeahead menu toggle"]',
+  },
+  menuContent: '.pf-v6-c-menu__content',
+  footer: {
+    searchButton: 'Search',
+    clearAllButton: 'Clear all',
+  },
+} as const;
+
+// =============================================================================
+// Saved searches
+//
+// Source: kubevirt-plugin SaveSearchModal + SavedSearchesDropdown
+// =============================================================================
+
+export const FLEET_VIRT_SAVED_SEARCH = {
+  saveButton: 'Save search',
+  modal: {
+    nameInput: '[data-test-id="save-search-name"]',
+    descriptionInput: '[data-test-id="save-search-description"]',
+    submitButton: '[data-test="save-button"]',
+    cancelButton: '[data-test="cancel-button"]',
+  },
+  dropdown: {
+    toggle: 'Saved searches',
+    list: '[data-test="saved-searches"]',
+    item: (name: string) => `[data-test="saved-search-item-${name}"]`,
+    deleteItem: (name: string) => `[data-test="delete-search-item-${name}"]`,
+    deleteAriaLabel: 'Delete saved search',
+  },
+} as const;

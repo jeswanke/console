@@ -5,6 +5,7 @@
   "description": "ACM Console E2E Test Automation Framework",
   "scripts": {
     "test": "playwright test",
+    "test:unit": "playwright test --project=unit",
     "lint:check": "prettier --check \"**/*.{md,json,yml,yaml}\" --ignore-path .prettierignore && eslint . && npm run typecheck",
     "lint:fix": "prettier --write \"**/*.{md,json,yml,yaml}\" --ignore-path .prettierignore && eslint . --fix",
     "typecheck": "tsc --noEmit",
@@ -23,7 +24,9 @@
     "prettier": "^3.6.2",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.35.0"
+    "typescript-eslint": "^8.35.0",
+    "yaml": "^2.8.3",
+    "zod": "^4.3.6"
   },
   "engines": {
     "node": ">=20.0.0"

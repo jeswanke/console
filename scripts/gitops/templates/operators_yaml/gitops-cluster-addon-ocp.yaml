@@ -1,0 +1,47 @@
+apiVersion: apps.open-cluster-management.io/v1beta1
+kind: GitOpsCluster
+metadata:
+  name: mc-gitops-ocp
+  namespace: openshift-gitops
+spec:
+  createBlankClusterSecrets: false
+  argoServer:
+    argoNamespace: openshift-gitops
+  placementRef:
+    name: mc-gitops-placement-ocp
+    kind: Placement
+    apiVersion: cluster.open-cluster-management.io/v1beta1
+  gitopsAddon:
+    enabled: true
+    olmSubscription:
+      enabled: true
+    overrideExistingConfigs: true
+---
+apiVersion: cluster.open-cluster-management.io/v1beta2
+kind: ManagedClusterSetBinding
+metadata:
+  name: global
+  namespace: openshift-gitops
+spec:
+  clusterSet: global
+---
+apiVersion: cluster.open-cluster-management.io/v1beta1
+kind: Placement
+metadata:
+  name: mc-gitops-placement-ocp
+  namespace: openshift-gitops
+spec:
+  clusterSets:
+    - global
+  predicates:
+    - requiredClusterSelector:
+        labelSelector:
+          matchExpressions:
+            - key: vendor
+              operator: In
+              values:
+                - OpenShift
+            - key: name
+              operator: NotIn
+              values:
+                - local-cluster

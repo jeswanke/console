@@ -2,6 +2,7 @@ import { Page, Locator } from '@playwright/test';
 import { BasePage } from '../BasePage';
 import { AcmTable } from '@components/patternfly/AcmTable';
 import { OcCliService } from '@services/OcCliService';
+import { pageUrlPathnameEquals } from '@lib/navigation';
 
 /**
  * Cluster Sets page — reuses {@link AcmTable}.
@@ -19,9 +20,15 @@ export class ClusterSetsPage extends BasePage {
     this.createButton = page.getByRole('button', { name: 'Create cluster set' });
   }
 
+  private static readonly managedSetsPath = '/multicloud/infrastructure/clusters/sets';
+
   async goto(): Promise<void> {
+    if (pageUrlPathnameEquals(this.page, ClusterSetsPage.managedSetsPath)) {
+      await this.waitForLoad();
+      return;
+    }
     const consoleUrl = await this.oc.getConsoleUrl();
-    await this.page.goto(`${consoleUrl}/multicloud/infrastructure/clusters/sets`);
+    await this.page.goto(`${consoleUrl}${ClusterSetsPage.managedSetsPath}`);
     await this.waitForLoad();
   }
 

@@ -1,0 +1,319 @@
+/**
+ * Verifies merged YAML + domain resolution (no browser).
+ */
+import path from 'path';
+import { expect, test } from '@playwright/test';
+import {
+  clearE2eSpecDataCache,
+  findScenarioIdsByTestId,
+  loadE2eSpecData,
+  mergeApplicationExpectationsLayers,
+  mergeExpectationsRowsForComposerBlock,
+  resolveScenarioById,
+  resolveScenarioByTestId,
+} from '@config/e2e-spec-loader';
+import { resolveSubscriptionDomain } from '@config/e2e-spec-loader/domains/subscription/resolveSubscriptionDomain';
+
+const E2E_SPEC_DATA_DIR = path.join(process.cwd(), 'src/config/e2e-spec-data');
+
+test.beforeEach(() => {
+  clearE2eSpecDataCache();
+});
+
+test.describe('e2e-spec-data YAML processing', () => {
+  test('applications/_shared.yaml: Git URL YAML anchor resolves to full string on every repository entry', () => {
+    const spec = loadE2eSpecData(E2E_SPEC_DATA_DIR);
+    const expected = 'https://github.com/stolostron/application-lifecycle-samples.git';
+
+    const single = spec.fragments.repo_samples_default?.repositories as
+      | Array<{ url?: unknown }>
+      | undefined;
+    expect(single?.[0]?.url).toBe(expected);
+    expect(single?.[0]?.url).not.toMatch(/^\*/);
+
+    const multi = spec.fragments.repo_samples_dual?.repositories as
+      | Array<{ url?: unknown }>
+      | undefined;
+    expect(multi?.[0]?.url).toBe(expected);
+    expect(multi?.[1]?.url).toBe(expected);
+  });
+
+  test('merged data includes shared fragment and subscription scenarios', () => {
+    const spec = loadE2eSpecData(E2E_SPEC_DATA_DIR);
+
+    const repos = spec.fragments.repo_samples_default?.repositories as
+      | Array<Record<string, unknown>>
+      | undefined;
+    expect(repos?.[0]).toMatchObject({
+      kind: 'git',
+      branch: 'main',
+      path: 'helloworld',
+    });
+    expect(spec.profiles.subscription_full_wizard).toEqual({ fillEntireWizard: true });
+    expect(spec.profiles.subscription_submit).toEqual({
+      fillEntireWizard: false,
+      submit: true,
+      ensureFormMode: true,
+    });
+    expect(spec.scenarios.smoke_subscription).toBeDefined();
+    expect(spec.scenarios.matrix_example_subscription?.tests).toContain('RHACM4K-MATRIX-0001');
+  });
+
+  test('smoke_subscription resolves subscription domain with merged repositories and perBlock wizard config', () => {
+    const spec = loadE2eSpecData(E2E_SPEC_DATA_DIR);
+    expect(spec.scenarios.smoke_subscription?.blocks).toHaveLength(1);
+
+    const scenarioEntry = spec.scenarios.smoke_subscription!;
+    expect(scenarioEntry.tests).toContain('RHACM4K-SMOKE-SUBSCRIPTION');
+
+    const subResolved = resolveSubscriptionDomain(spec, 'smoke_subscription', scenarioEntry)!;
+    expect(subResolved.applicationName).toBe('e2e-spec-data-smoke-app');
+    expect(subResolved.namespace).toBe('e2e-spec-data-smoke-ns');
+    expect(subResolved.submit).toBe(false);
+    expect(subResolved.fillEntireWizard).toBe(true);
+    expect(subResolved.repositories?.[0]).toMatchObject({
+      kind: 'git',
+      url: expect.stringContaining('application-lifecycle-samples'),
+      path: 'helloworld',
+    });
+    const smokePb = subResolved.perBlock as Array<Record<string, unknown>> | undefined;
+    expect(smokePb?.[0]?.timeWindow).toMatchObject({ timezone: 'America/Toronto' });
+    expect(smokePb?.[0]?.clusterDeployment).toMatchObject({ clusterSet: 'global' });
+  });
+
+  test('findScenarioIdsByTestId resolves testcase id from scenario tests', () => {
+    const spec = loadE2eSpecData(E2E_SPEC_DATA_DIR);
+    const ids = findScenarioIdsByTestId(spec, 'RHACM4K-MATRIX-0001');
+    expect(ids).toEqual(['matrix_example_subscription']);
+    const entry = spec.scenarios.matrix_example_subscription!;
+    const sub = resolveSubscriptionDomain(spec, ids[0]!, entry);
+    expect(sub?.applicationName).toBe('e2e-matrix-app');
+  });
+
+  test('resolveScenarioByTestId returns subscription and applicationExpectations for Polarion id', () => {
+    const resolved = resolveScenarioByTestId('RHACM4K-7484', E2E_SPEC_DATA_DIR);
+    expect(resolved.scenarioId).toBe('auto_git_helloworld_local');
+    expect(resolved.subscription.applicationName).toBeTruthy();
+    expect(resolved.applicationExpectations.topologyClusterResourceBlocks.length).toBeGreaterThan(
+      0
+    );
+  });
+
+  test('auto_git_underscore: RHACM4K-39666 underscore URL and online vendor/OpenShift placement', () => {
+    const resolved = resolveScenarioByTestId('RHACM4K-39666', E2E_SPEC_DATA_DIR);
+    expect(resolved.scenarioId).toBe('auto_git_underscore');
+    expect(resolved.subscription.applicationName).toBe('auto-git-underscore');
+    expect(resolved.subscription.namespace).toBe('auto-git-underscore-ns');
+    expect(resolved.subscription.repositories?.[0]?.url).toBe(
+      'https://github.com/ruici-h/app_samples'
+    );
+    expect(resolved.subscription.perBlock?.[0]?.clusterDeployment).toMatchObject({
+      useClusterLabelSelector: true,
+      clusterSet: 'global',
+      labelSelectorRows: [{ labelName: 'vendor', labelValue: 'OpenShift' }],
+    });
+    expect(resolved.applicationExpectations.clusterResources[0]).toHaveLength(3);
+    expect(resolved.applicationExpectations.clusterResources[0]!.map((r) => r.kind)).toEqual([
+      'Route',
+      'Service',
+      'ReplicaSet',
+    ]);
+    expect(resolved.applicationExpectations.advancedConfiguration?.channelDisplaySubstring).toBe(
+      'app_samples'
+    );
+  });
+
+  test('auto_git_multi: scenario.blocks composes subscription + applicationExpectations', () => {
+    const spec = loadE2eSpecData(E2E_SPEC_DATA_DIR);
+    const entry = spec.scenarios.auto_git_multi;
+    expect(entry?.blocks).toHaveLength(2);
+    expect(entry?.blocks?.[0]?.use).toContain('git_helloworld');
+    expect(entry?.blocks?.[1]?.use).toContain('git_mortgage');
+
+    const resolved = resolveScenarioById('auto_git_multi', E2E_SPEC_DATA_DIR);
+    const sub = resolved.subscription;
+
+    expect(sub.submit).toBe(true);
+    expect(sub.repositories).toHaveLength(2);
+    expect(sub.repositories?.[0]).toMatchObject({ path: 'helloworld', reconcileOption: 'merge' });
+    expect(sub.repositories?.[1]).toMatchObject({ path: 'mortgage' });
+
+    const pb = sub.perBlock as Array<Record<string, unknown>> | undefined;
+    expect(pb?.[0]?.timeWindow).toBeDefined();
+    expect(pb?.[0]?.timeWindow).toMatchObject({ mode: 'default' });
+    expect(pb?.[1]?.timeWindow).toMatchObject({ mode: 'default' });
+    expect(pb?.[0]?.automation).toEqual({});
+    expect(pb?.[0]?.clusterDeployment).toMatchObject({
+      useClusterLabelSelector: true,
+      clusterSet: 'global',
+    });
+    expect(pb?.[1]?.clusterDeployment).toMatchObject({
+      useClusterLabelSelector: true,
+      clusterSet: 'global',
+    });
+
+    const appExp = resolved.applicationExpectations;
+    expect(appExp.clusterResourcesFlat.every((r) => r.namespace === 'auto-git-multi-ns')).toBe(true);
+    expect(appExp.clusterResourcesFlat).toHaveLength(9);
+    expect(appExp.clusterResources).toHaveLength(2);
+    expect(appExp.clusterResourcesPerRepo).toHaveLength(2);
+    expect(appExp.clusterResourcesPerRepo[0]).toMatchObject({
+      repositoryIndex: 0,
+      repositoryPath: 'helloworld',
+      repositoryKind: 'git',
+    });
+    expect(appExp.clusterResourcesPerRepo[0]!.rows).toHaveLength(5);
+    expect(appExp.clusterResourcesPerRepo[1]).toMatchObject({
+      repositoryIndex: 1,
+      repositoryPath: 'mortgage',
+      repositoryKind: 'git',
+    });
+    expect(appExp.clusterResourcesPerRepo[1]!.rows).toHaveLength(4);
+    expect(appExp.clusterResources[0]).toHaveLength(5);
+    expect(appExp.clusterResources[1]).toHaveLength(4);
+    expect(appExp.clusterResourcesFlat).toHaveLength(9);
+    expect(appExp.clusterResourcesFlat.map((r) => r.kind)).toEqual(
+      expect.arrayContaining(['Route', 'Deployment', 'Service', 'ReplicaSet', 'Pod'])
+    );
+    expect(appExp.clusterResources[0]!.map((r) => r.kind)).toContain('Deployment');
+    expect(appExp.clusterResources[1]!.map((r) => r.kind)).not.toContain('Route');
+
+    expect(appExp.topologyClusterResourceBlocks).toHaveLength(2);
+    expect(appExp.topologyClusterResourceBlocks[0]).toEqual(
+      appExp.clusterResources[0]!.map(({ kind, name }) => ({ kind, name }))
+    );
+    expect(appExp.topologyClusterResourceBlocks[1]).toEqual(
+      appExp.clusterResources[1]!.map(({ kind, name }) => ({ kind, name }))
+    );
+    expect(appExp.detailsClustersSummary).toEqual({ variant: 'localOnly' });
+  });
+
+  test('auto_git_crd: RHACM4K-10668 CRD path, disable auto-reconcile, online placement', () => {
+    const resolved = resolveScenarioByTestId('RHACM4K-10668', E2E_SPEC_DATA_DIR);
+    const sub = resolved.subscription;
+    const appExp = resolved.applicationExpectations;
+
+    expect(sub.applicationName).toBe('auto-git-crd');
+    expect(sub.namespace).toBe('auto-git-crd-ns');
+    expect(sub.repositories).toHaveLength(1);
+    expect(sub.repositories?.[0]).toMatchObject({
+      path: 'crd',
+      disableAutoReconcile: true,
+    });
+    expect(sub.perBlock?.[0]?.clusterDeployment).toMatchObject({
+      useClusterLabelSelector: true,
+      clusterSet: 'global',
+      labelSelectorRows: [{ labelName: 'vendor', labelValue: 'OpenShift' }],
+    });
+    expect(appExp.clusterResources[0]).toHaveLength(2);
+    expect(appExp.clusterResources[0]!.map((r) => r.kind)).toEqual([
+      'Secret',
+      'CustomResourceDefinition',
+    ]);
+    expect(appExp.detailsClustersSummary).toBeUndefined();
+  });
+
+  test('auto_git_multi_delete: RHACM4K-1558 multi-sub with vendor placement + local mortgage', () => {
+    const resolved = resolveScenarioByTestId('RHACM4K-1558', E2E_SPEC_DATA_DIR);
+    const sub = resolved.subscription;
+
+    expect(sub.applicationName).toBe('auto-git-multi-delete');
+    expect(sub.namespace).toBe('auto-git-multi-delete-ns');
+    expect(sub.repositories).toHaveLength(2);
+    expect(sub.repositories?.[0]).toMatchObject({ path: 'helloworld' });
+    expect(sub.repositories?.[1]).toMatchObject({ path: 'mortgage' });
+
+    const pb = sub.perBlock as Array<Record<string, unknown>> | undefined;
+    expect(pb?.[0]?.clusterDeployment).toMatchObject({
+      useClusterLabelSelector: true,
+      clusterSet: 'global',
+      labelSelectorRows: [{ labelName: 'vendor', labelValue: 'OpenShift' }],
+    });
+    expect(pb?.[1]?.clusterDeployment).toMatchObject({
+      useClusterLabelSelector: true,
+      clusterSet: 'global',
+      labelSelectorRows: [{ labelName: 'name', labelValue: 'local-cluster' }],
+    });
+  });
+
+  test('auto_git_placement_topology: helloworld + local placement (RHACM4K-39232)', () => {
+    const spec = loadE2eSpecData(E2E_SPEC_DATA_DIR);
+    expect(spec.scenarios.auto_git_placement_topology?.blocks?.[0]?.use).toContain('placement_label_local');
+
+    const resolved = resolveScenarioById('auto_git_placement_topology', E2E_SPEC_DATA_DIR);
+    const sub = resolved.subscription;
+
+    expect(sub.applicationName).toBe('api-git-local');
+    expect(sub.namespace).toBe('api-git-local-ns');
+    expect(sub.repositories?.[0]).toMatchObject({ path: 'helloworld', kind: 'git' });
+    expect(sub.perBlock?.[0]?.clusterDeployment).toMatchObject({
+      clusterSet: 'global',
+      labelSelectorRows: [{ labelName: 'name', labelValue: 'local-cluster' }],
+    });
+  });
+
+  test('auto_git_helloworld_local: single Git block, local placement, expectations for Details/Topology', () => {
+    const spec = loadE2eSpecData(E2E_SPEC_DATA_DIR);
+    expect(spec.scenarios.auto_git_helloworld_local?.blocks).toHaveLength(1);
+    expect(spec.scenarios.auto_git_helloworld_local?.blocks?.[0]?.use).toContain('git_helloworld');
+    expect(spec.scenarios.auto_git_helloworld_local?.blocks?.[0]?.use).toContain('placement_label_local');
+
+    const resolved = resolveScenarioById('auto_git_helloworld_local', E2E_SPEC_DATA_DIR);
+    const sub = resolved.subscription;
+
+    expect(sub.submit).toBe(true);
+    expect(sub.applicationName).toBe('auto-git-helloworld');
+    expect(sub.namespace).toBe('auto-git-helloworld-ns');
+    expect(sub.repositories).toHaveLength(1);
+    expect(sub.repositories?.[0]).toMatchObject({ path: 'helloworld', kind: 'git' });
+
+    const appExp = resolved.applicationExpectations;
+    expect(appExp.clusterResourcesFlat.every((r) => r.namespace === 'auto-git-helloworld-ns')).toBe(true);
+    expect(appExp.clusterResources).toHaveLength(1);
+    expect(appExp.clusterResources[0]).toHaveLength(5);
+    expect(appExp.topologyClusterResourceBlocks).toHaveLength(1);
+    expect(appExp.topologyClusterResourceBlocks[0]).toEqual(
+      appExp.clusterResources[0]!.map(({ kind, name }) => ({ kind, name }))
+    );
+    expect(appExp.detailsClustersSummary).toEqual({ variant: 'localOnly' });
+    expect(appExp.advancedConfiguration?.channelDisplaySubstring).toBe(
+      'stolostron-application-lifecycle-samples'
+    );
+    expect(appExp.advancedConfiguration?.channelRepositoryUrl).toBe(
+      'https://github.com/stolostron/application-lifecycle-samples.git'
+    );
+  });
+
+  test('mergeExpectationsRowsForComposerBlock: one outer clusterResources slot applies to any lane index', () => {
+    const spec = loadE2eSpecData(E2E_SPEC_DATA_DIR);
+    const use = ['git_mortgage'];
+    const at0 = mergeExpectationsRowsForComposerBlock(spec, 'auto_git_multi', use, 0);
+    const at1 = mergeExpectationsRowsForComposerBlock(spec, 'auto_git_multi', use, 1);
+    expect(at0).toEqual(at1);
+    expect(at0).toHaveLength(4);
+  });
+
+  test('applicationExpectations clusterResources merge concats rows per repository index', () => {
+    const merged = mergeApplicationExpectationsLayers(
+      {
+        clusterResources: [
+          [{ kind: 'A', name: '1', namespace: 'ns' }],
+          [{ kind: 'B', name: '2', namespace: 'ns' }],
+        ],
+      },
+      {
+        clusterResources: [
+          [{ kind: 'C', name: '3', namespace: 'ns' }],
+          [],
+        ],
+      }
+    );
+    expect(merged.clusterResources).toEqual([
+      [
+        { kind: 'A', name: '1', namespace: 'ns' },
+        { kind: 'C', name: '3', namespace: 'ns' },
+      ],
+      [{ kind: 'B', name: '2', namespace: 'ns' }],
+    ]);
+  });
+});
