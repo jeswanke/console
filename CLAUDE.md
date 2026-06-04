@@ -67,7 +67,7 @@ Authentication uses **storageState** — login happens once during setup, browse
 - `fg-rbac` → `dependencies: ['setup', 'rbac-setup']` → `testMatch: /fg-rbac/`
 - `unit` → no hub login → `testMatch: unit/**/*.unit.spec.ts`
 
-See `docs/testing-conventions.md` for tags and integration runs.
+**Integration mode** (`TEST_MODE=integration`): excludes `@sample` specs (see `playwright.config.ts`).
 
 **RBAC users are per-domain** (e.g., `clc-e2e-fg-rbac-admin`, not shared `clc-e2e-admin`). Defined in `src/config/presets.ts` with `domains` tags. This prevents parallel CI nodes from conflicting on test data.
 

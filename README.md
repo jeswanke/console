@@ -108,7 +108,7 @@ export HUB_PASSWORD='<kubeadmin-password>'
 ./start.sh grc                          # GRC: default --grep @grc, --project governance
 ```
 
-**Integration mode** (`TEST_MODE=integration` in `.env`): sample specs (`@sample`) are excluded; see `docs/testing-conventions.md`.
+**Integration mode** (`TEST_MODE=integration` in `.env`): sample specs (`@sample`) are excluded (`PLAYWRIGHT_GREP_INVERT` and ignores in `playwright.config.ts`).
 
 ### ALC environment (no `CYPRESS_*` prefix)
 
