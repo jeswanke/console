@@ -8,6 +8,10 @@ export const GOV_ROUTES = {
   governance: '/multicloud/governance',
   policyDetails: (namespace: string, name: string) =>
     `/multicloud/governance/policies/details/${namespace}/${name}`,
+  discoveredPolicyDetails: (clusterName: string, policyName: string) =>
+    `/multicloud/governance/discovered-policies/details/local-cluster/${clusterName}.${policyName}`,
+  policyTemplateDetails: (namespace: string, policyName: string, templateName: string) =>
+    `/multicloud/governance/policies/details/${namespace}/${policyName}/template/${templateName}`,
 } as const;
 
 export const GOVERNANCE_ROUTES = {
@@ -222,4 +226,34 @@ export const GOV_TEST_RESOURCES = {
   placement: 'e2e-lifecycle-placement',
   policy: 'e2e-test-policy',
   policySet: 'e2e-test-policyset',
+} as const;
+
+// =============================================================================
+// Policy Template Details page (Labels test -- RHACM4K-63381)
+// =============================================================================
+
+export const GOV_TEMPLATE_DETAILS = {
+  sectionId: 'TextDetail',
+  fields: {
+    labels: 'Labels',
+  },
+} as const;
+
+export const GOV_LABELS = {
+  noLabels: 'No labels',
+} as const;
+
+export const GOV_CLUSTER_BACKUP = {
+  discoveredPolicy: 'acm-backup-phase-validation',
+  managedPolicyNs: 'open-cluster-management-backup',
+  managedPolicyName: 'backup-restore-enabled',
+  managedTemplateName: 'backup-restore-enabled',
+  clusterName: 'local-cluster',
+} as const;
+
+export const GOV_POLICY_API = {
+  resource: 'configurationpolicy',
+  group: 'policy.open-cluster-management.io',
+  version: 'v1',
+  kind: 'ConfigurationPolicy',
 } as const;

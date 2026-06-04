@@ -616,4 +616,46 @@ EOF`);
   async vmDeleteTestVM(name: string, namespace: string): Promise<void> {
     await this.run(`oc delete vm ${name} -n ${namespace} --ignore-not-found`);
   }
+
+  // ---------------------------------------------------------------------------
+  // Policy (ConfigurationPolicy) operations
+  // ---------------------------------------------------------------------------
+
+  async policyExists(policyName: string, namespace: string): Promise<boolean> {
+    return this.run(
+      `oc get configurationpolicy ${policyName} -n ${namespace} --no-headers 2>/dev/null`,
+    )
+      .then(() => true)
+      .catch(() => false);
+  }
+
+  async policyAddLabels(
+    policyName: string,
+    namespace: string,
+    labels: Record<string, string>,
+  ): Promise<void> {
+    const labelArgs = Object.entries(labels)
+      .map(([k, v]) => `${k}=${v}`)
+      .join(' ');
+    await this.run(
+      `oc label configurationpolicy ${policyName} -n ${namespace} ${labelArgs}`,
+    );
+  }
+
+  async policyRemoveLabels(
+    policyName: string,
+    namespace: string,
+    labelKeys: string[],
+  ): Promise<void> {
+    const removeArgs = labelKeys.map((k) => `${k}-`).join(' ');
+    await this.run(
+      `oc label configurationpolicy ${policyName} -n ${namespace} ${removeArgs} 2>/dev/null || true`,
+    );
+  }
+
+  async policyGetLabels(policyName: string, namespace: string): Promise<string> {
+    return this.run(
+      `oc get configurationpolicy ${policyName} -n ${namespace} -o jsonpath='{.metadata.labels}'`,
+    );
+  }
 }

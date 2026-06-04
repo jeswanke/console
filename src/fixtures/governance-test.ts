@@ -5,6 +5,7 @@ import { PolicyDetailsPage } from '@pages/governance/PolicyDetailsPage';
 import { PolicySetDetailsPage } from '@pages/governance/PolicySetDetailsPage';
 import { PlacementDetailsPage } from '@pages/governance/PlacementDetailsPage';
 import { DiscoveredPolicyDetailsPage } from '@pages/governance/DiscoveredPolicyDetailsPage';
+import { PolicyTemplateDetailsPage } from '@pages/governance/PolicyTemplateDetailsPage';
 
 type GovernanceFixtures = {
   oc: OcCliService;
@@ -13,6 +14,7 @@ type GovernanceFixtures = {
   policySetDetailsPage: PolicySetDetailsPage;
   placementDetailsPage: PlacementDetailsPage;
   discoveredPolicyDetailsPage: DiscoveredPolicyDetailsPage;
+  policyTemplateDetailsPage: PolicyTemplateDetailsPage;
 };
 
 export const test = base.extend<GovernanceFixtures>({
@@ -38,6 +40,10 @@ export const test = base.extend<GovernanceFixtures>({
 
   discoveredPolicyDetailsPage: async ({ page, oc }, use) => {
     await use(new DiscoveredPolicyDetailsPage(page, oc));
+  },
+
+  policyTemplateDetailsPage: async ({ page }, use) => {
+    await use(new PolicyTemplateDetailsPage(page));
   },
 });
 
