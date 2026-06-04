@@ -29,18 +29,25 @@ function isFile(p: string): boolean {
   }
 }
 
-/** Sorted `applications/*.yaml`, then `matrix.yaml` if it exists. */
+const SPEC_SUBDIRS = ['applications', 'governance', 'cluster'] as const;
+
+function listYamlInSubdir(dir: string, subdir: string): string[] {
+  const subPath = path.join(dir, subdir);
+  if (!fs.existsSync(subPath)) {
+    return [];
+  }
+  return fs
+    .readdirSync(subPath)
+    .filter((fn) => fn.endsWith('.yaml') || fn.endsWith('.yml'))
+    .sort()
+    .map((fn) => path.join(subPath, fn));
+}
+
+/** Sorted YAML under `applications/`, `governance/`, `cluster/`, then root `matrix.yaml`. */
 export function listE2eSpecYamlFiles(dir: string): string[] {
   const out: string[] = [];
-  const appsDir = path.join(dir, 'applications');
-  if (fs.existsSync(appsDir)) {
-    const names = fs
-      .readdirSync(appsDir)
-      .filter((fn) => fn.endsWith('.yaml') || fn.endsWith('.yml'))
-      .sort();
-    for (const fn of names) {
-      out.push(path.join(appsDir, fn));
-    }
+  for (const sub of SPEC_SUBDIRS) {
+    out.push(...listYamlInSubdir(dir, sub));
   }
   const matrix = path.join(dir, 'matrix.yaml');
   if (fs.existsSync(matrix)) {

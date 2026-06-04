@@ -9,8 +9,14 @@ import {
   loadE2eSpecData,
   mergeApplicationExpectationsLayers,
   mergeExpectationsRowsForComposerBlock,
-  resolveScenarioById,
+  resolveArgoPushScenarioById,
+  resolveArgoPushScenarioByTestId,
+  resolvePlacementScenarioByTestId,
+  resolvePolicyScenarioByTestId,
+  resolvePolicySetScenarioByTestId,
   resolveScenarioByTestId,
+  resolveSubscriptionScenarioById,
+  resolveSubscriptionScenarioByTestId,
 } from '@config/e2e-spec-loader';
 import { resolveSubscriptionDomain } from '@config/e2e-spec-loader/domains/subscription/resolveSubscriptionDomain';
 
@@ -91,7 +97,7 @@ test.describe('e2e-spec-data YAML processing', () => {
   });
 
   test('resolveScenarioByTestId returns subscription and applicationExpectations for Polarion id', () => {
-    const resolved = resolveScenarioByTestId('RHACM4K-7484', E2E_SPEC_DATA_DIR);
+    const resolved = resolveSubscriptionScenarioByTestId('RHACM4K-7484', E2E_SPEC_DATA_DIR);
     expect(resolved.scenarioId).toBe('auto_git_helloworld_local');
     expect(resolved.subscription.applicationName).toBeTruthy();
     expect(resolved.applicationExpectations.topologyClusterResourceBlocks.length).toBeGreaterThan(
@@ -100,7 +106,7 @@ test.describe('e2e-spec-data YAML processing', () => {
   });
 
   test('auto_git_underscore: RHACM4K-39666 underscore URL and online vendor/OpenShift placement', () => {
-    const resolved = resolveScenarioByTestId('RHACM4K-39666', E2E_SPEC_DATA_DIR);
+    const resolved = resolveSubscriptionScenarioByTestId('RHACM4K-39666', E2E_SPEC_DATA_DIR);
     expect(resolved.scenarioId).toBe('auto_git_underscore');
     expect(resolved.subscription.applicationName).toBe('auto-git-underscore');
     expect(resolved.subscription.namespace).toBe('auto-git-underscore-ns');
@@ -130,7 +136,7 @@ test.describe('e2e-spec-data YAML processing', () => {
     expect(entry?.blocks?.[0]?.use).toContain('git_helloworld');
     expect(entry?.blocks?.[1]?.use).toContain('git_mortgage');
 
-    const resolved = resolveScenarioById('auto_git_multi', E2E_SPEC_DATA_DIR);
+    const resolved = resolveSubscriptionScenarioById('auto_git_multi', E2E_SPEC_DATA_DIR);
     const sub = resolved.subscription;
 
     expect(sub.submit).toBe(true);
@@ -189,7 +195,7 @@ test.describe('e2e-spec-data YAML processing', () => {
   });
 
   test('auto_git_crd: RHACM4K-10668 CRD path, disable auto-reconcile, online placement', () => {
-    const resolved = resolveScenarioByTestId('RHACM4K-10668', E2E_SPEC_DATA_DIR);
+    const resolved = resolveSubscriptionScenarioByTestId('RHACM4K-10668', E2E_SPEC_DATA_DIR);
     const sub = resolved.subscription;
     const appExp = resolved.applicationExpectations;
 
@@ -214,7 +220,7 @@ test.describe('e2e-spec-data YAML processing', () => {
   });
 
   test('auto_git_multi_delete: RHACM4K-1558 multi-sub with vendor placement + local mortgage', () => {
-    const resolved = resolveScenarioByTestId('RHACM4K-1558', E2E_SPEC_DATA_DIR);
+    const resolved = resolveSubscriptionScenarioByTestId('RHACM4K-1558', E2E_SPEC_DATA_DIR);
     const sub = resolved.subscription;
 
     expect(sub.applicationName).toBe('auto-git-multi-delete');
@@ -240,7 +246,7 @@ test.describe('e2e-spec-data YAML processing', () => {
     const spec = loadE2eSpecData(E2E_SPEC_DATA_DIR);
     expect(spec.scenarios.auto_git_placement_topology?.blocks?.[0]?.use).toContain('placement_label_local');
 
-    const resolved = resolveScenarioById('auto_git_placement_topology', E2E_SPEC_DATA_DIR);
+    const resolved = resolveSubscriptionScenarioById('auto_git_placement_topology', E2E_SPEC_DATA_DIR);
     const sub = resolved.subscription;
 
     expect(sub.applicationName).toBe('api-git-local');
@@ -258,7 +264,7 @@ test.describe('e2e-spec-data YAML processing', () => {
     expect(spec.scenarios.auto_git_helloworld_local?.blocks?.[0]?.use).toContain('git_helloworld');
     expect(spec.scenarios.auto_git_helloworld_local?.blocks?.[0]?.use).toContain('placement_label_local');
 
-    const resolved = resolveScenarioById('auto_git_helloworld_local', E2E_SPEC_DATA_DIR);
+    const resolved = resolveSubscriptionScenarioById('auto_git_helloworld_local', E2E_SPEC_DATA_DIR);
     const sub = resolved.subscription;
 
     expect(sub.submit).toBe(true);
@@ -315,5 +321,108 @@ test.describe('e2e-spec-data YAML processing', () => {
       ],
       [{ kind: 'B', name: '2', namespace: 'ns' }],
     ]);
+  });
+
+  test('auto_git_push_helloworld: argoPush domain from fragments + profile + scenario overlay', () => {
+    const spec = loadE2eSpecData(E2E_SPEC_DATA_DIR);
+    expect(spec.scenarios.auto_git_push_helloworld?.blocks?.[0]?.use).toContain(
+      'argo_push_git_helloworld'
+    );
+
+    const resolved = resolveArgoPushScenarioById('auto_git_push_helloworld', E2E_SPEC_DATA_DIR);
+    expect(resolved.domain).toBe('argoPush');
+    expect(resolved.argoPush).toMatchObject({
+      applicationName: 'auto-git-push-helloworld',
+      argoServerLabel: 'openshift-gitops',
+      destinationNamespace: 'auto-git-push-helloworld-ns',
+      clusterSet: 'auto-gitops-cluster-set',
+      submit: true,
+      collapseYamlPanel: true,
+      git: {
+        url: 'https://github.com/stolostron/application-lifecycle-samples.git',
+        branch: 'main',
+        path: 'helloworld',
+      },
+    });
+  });
+
+  test('resolveScenarioByTestId resolves argoPush scenario by Polarion id', () => {
+    const resolved = resolveScenarioByTestId('RHACM4K-PUSH-GIT-HELLOWORLD', E2E_SPEC_DATA_DIR);
+    expect(resolved.scenarioId).toBe('auto_git_push_helloworld');
+    expect(resolved.domain).toBe('argoPush');
+    if (resolved.domain === 'argoPush') {
+      expect(resolved.argoPush.applicationName).toBe('auto-git-push-helloworld');
+    }
+  });
+
+  test('auto_git_push_review_63807: RHACM4K-63807 review wizard payload', () => {
+    const resolved = resolveScenarioByTestId('RHACM4K-63807', E2E_SPEC_DATA_DIR);
+    expect(resolved.scenarioId).toBe('auto_git_push_review_63807');
+    expect(resolved.domain).toBe('argoPush');
+    if (resolved.domain === 'argoPush') {
+      expect(resolved.argoPush).toMatchObject({
+        applicationName: 'auto-git-push-review-63807',
+        submit: false,
+        collapseYamlPanel: true,
+        git: { branch: 'main', path: 'helloworld-argo' },
+        placementLabelExpression: { labelName: 'name', labelValues: ['local-cluster'] },
+      });
+    }
+  });
+
+  test('argo_appset_placement_preview_64219: RHACM4K-64219 placement preview payload', () => {
+    const resolved = resolveArgoPushScenarioByTestId('RHACM4K-64219', E2E_SPEC_DATA_DIR);
+    expect(resolved.scenarioId).toBe('argo_appset_placement_preview_64219');
+    expect(resolved.argoPush).toMatchObject({
+      pullApplicationName: 'argo-pull-placement-preview',
+      applicationName: 'argo-push-placement-preview',
+      argoServerLabel: 'openshift-gitops',
+      destinationNamespace: 'argo-placement-preview-ns',
+      clusterSet: 'auto-gitops-cluster-set',
+      existingPlacementName: 'gitops-placement-preview-test',
+      setupYamlRelativePath: 'src/templates/app/gitops-placement-preview-setup.yaml',
+      submit: false,
+      collapseYamlPanel: true,
+      git: {
+        url: 'https://github.com/stolostron/application-lifecycle-samples.git',
+        branch: 'main',
+        path: 'helloworld',
+      },
+    });
+  });
+
+  test('governance placement-preview.yaml: RHACM4K-64221 policy scenario', () => {
+    const resolved = resolvePolicyScenarioByTestId('RHACM4K-64221', E2E_SPEC_DATA_DIR);
+    expect(resolved.scenarioId).toBe('policy_placement_preview_64221');
+    expect(resolved.policy).toMatchObject({
+      setupYamlRelativePath: 'src/templates/governance/policy-preview-test-setup.yaml',
+      namespace: 'policy-preview-test-ns',
+      clusterSet: 'policy-test-cluster-set',
+      namePrefix: 'policy-placement-preview',
+      existingPlacementName: 'policy-preview-test-placement',
+    });
+  });
+
+  test('governance placement-preview.yaml: RHACM4K-64222 policy set scenario', () => {
+    const resolved = resolvePolicySetScenarioByTestId('RHACM4K-64222', E2E_SPEC_DATA_DIR);
+    expect(resolved.scenarioId).toBe('policy_set_placement_preview_64222');
+    expect(resolved.policySet).toMatchObject({
+      setupYamlRelativePath: 'src/templates/governance/policy-set-preview-test-setup.yaml',
+      namespace: 'policyset-preview-test-ns',
+      clusterSet: 'policyset-test-cluster-set',
+      namePrefix: 'policyset-placement-preview',
+      existingPlacementName: 'policyset-existing-placement-test',
+    });
+  });
+
+  test('cluster placement-preview.yaml: RHACM4K-64220 placement scenario', () => {
+    const resolved = resolvePlacementScenarioByTestId('RHACM4K-64220', E2E_SPEC_DATA_DIR);
+    expect(resolved.scenarioId).toBe('placement_create_preview_64220');
+    expect(resolved.placement).toMatchObject({
+      setupYamlRelativePath: 'src/templates/cluster/placement-preview-test-setup.yaml',
+      namespace: 'preview-test-ns',
+      clusterSet: 'preview-test-cluster-set',
+      namePrefix: 'placement-preview',
+    });
   });
 });

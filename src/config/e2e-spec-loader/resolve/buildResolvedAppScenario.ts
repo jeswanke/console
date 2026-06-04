@@ -1,21 +1,12 @@
 import type { ApplicationExpectationsPayload } from '../domains/application-expectations/applicationExpectationsSchema';
 import { resolveScenarioDomains } from '../domains/resolveScenarioDomains';
 import type { CreateSubscriptionOptions } from '@lib/app/subscription/types';
+import type { CreateArgoPushApplicationOptions } from '@lib/app/argo-push/types';
 import type { E2eSpecData } from '../schema';
 import type { ResolvedAppScenario } from '../types';
+import { collectScenarioTestIds } from './collectScenarioTestIds';
 
-function collectMatrixTestIdsForScenario(spec: E2eSpecData, scenarioId: string): string[] {
-  const matrix = spec.matrix ?? {};
-  const ids: string[] = [];
-  for (const [testId, sid] of Object.entries(matrix)) {
-    if (sid === scenarioId && testId !== '') {
-      ids.push(testId);
-    }
-  }
-  return ids;
-}
-
-/** Resolves `subscription` and `applicationExpectations` for one scenario id (throws if missing). */
+/** Resolves domain payloads for one scenario id (throws if missing or invalid). */
 export function buildResolvedAppScenario(spec: E2eSpecData, scenarioId: string): ResolvedAppScenario {
   const scenarioBody = spec.scenarios[scenarioId];
   if (!scenarioBody) {
@@ -27,29 +18,48 @@ export function buildResolvedAppScenario(spec: E2eSpecData, scenarioId: string):
 
   const specDomains = resolveScenarioDomains(spec, scenarioId, scenarioBody);
   const subscription = specDomains.subscription as CreateSubscriptionOptions | undefined;
-  if (subscription === undefined) {
-    throw new Error(
-      `e2e-spec-data: scenario "${scenarioId}" has no subscription domain payload`
-    );
-  }
   const applicationExpectations = specDomains.applicationExpectations as
     | ApplicationExpectationsPayload
     | undefined;
-  if (applicationExpectations === undefined) {
+  const argoPush = specDomains.argoPush as CreateArgoPushApplicationOptions | undefined;
+
+  const hasSubscription = subscription !== undefined;
+  const hasArgoPush = argoPush !== undefined;
+
+  if (hasSubscription && hasArgoPush) {
+    throw new Error(
+      `e2e-spec-data: scenario "${scenarioId}" must not define both subscription and argoPush domains`
+    );
+  }
+  if (!hasArgoPush && !hasSubscription) {
+    throw new Error(
+      `e2e-spec-data: scenario "${scenarioId}" has no subscription or argoPush domain payload`
+    );
+  }
+  if (hasSubscription && applicationExpectations === undefined) {
     throw new Error(
       `e2e-spec-data: scenario "${scenarioId}" has no applicationExpectations domain payload`
     );
   }
 
-  const tests = scenarioBody.tests ?? [];
-  const matrixIds = collectMatrixTestIdsForScenario(spec, scenarioId);
-  const testIds = [...new Set([...tests, ...matrixIds])].sort();
+  const base = {
+    scenarioId,
+    enabled: true as const,
+    testIds: collectScenarioTestIds(spec, scenarioId),
+  };
+
+  if (hasArgoPush) {
+    return {
+      ...base,
+      domain: 'argoPush',
+      argoPush: argoPush!,
+    };
+  }
 
   return {
-    scenarioId,
-    enabled: true,
-    testIds,
-    subscription,
-    applicationExpectations,
+    ...base,
+    domain: 'subscription',
+    subscription: subscription!,
+    applicationExpectations: applicationExpectations!,
   };
 }

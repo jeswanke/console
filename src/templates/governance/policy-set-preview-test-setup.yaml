@@ -1,0 +1,27 @@
+# RHACM4K-64222 — Policy set create wizard placement preview E2E.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: policyset-preview-test-ns
+---
+apiVersion: cluster.open-cluster-management.io/v1beta2
+kind: ManagedClusterSet
+metadata:
+  name: policyset-test-cluster-set
+---
+apiVersion: cluster.open-cluster-management.io/v1beta2
+kind: ManagedClusterSetBinding
+metadata:
+  name: policyset-test-cluster-set
+  namespace: policyset-preview-test-ns
+spec:
+  clusterSet: policyset-test-cluster-set
+---
+apiVersion: cluster.open-cluster-management.io/v1beta1
+kind: Placement
+metadata:
+  name: policyset-existing-placement-test
+  namespace: policyset-preview-test-ns
+spec:
+  clusterSets:
+    - policyset-test-cluster-set

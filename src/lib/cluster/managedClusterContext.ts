@@ -59,6 +59,15 @@ export function loadManagedClusterContext(
   return parsed as ManagedClusterContextFile;
 }
 
+/** Hub + managed clusters for placement-preview labeling (always includes `local-cluster`). */
+export function managedClusterNamesForPreview(): string[] {
+  const names = new Set<string>(['local-cluster']);
+  for (const entry of loadManagedClusterContext()?.managedClusters ?? []) {
+    if (entry?.name) names.add(entry.name);
+  }
+  return [...names];
+}
+
 /** First cluster in the file, if any (same order as the generator script). */
 export function getPrimaryManagedCluster(
   ctx: ManagedClusterContextFile | undefined

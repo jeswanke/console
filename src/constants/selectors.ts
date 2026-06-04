@@ -55,6 +55,7 @@ export const SELECTORS = {
     rowByOuiaId: (ouiaId: string) => `tr[data-ouia-component-id="${ouiaId}"]`,
     exportButton: '#export-search-result',
     filterButton: '#acm-table-filter-select-undefined',
+    labelFilterButton: '#acm-table-filter-select-Label',
     terminologyCard: '#ApplicationDeploymentHighlightsTerminology',
     resourceToggle: {
       subscriptions: '#subscriptions',

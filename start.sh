@@ -9,6 +9,8 @@
 # Usage: ./start.sh <component> [playwright args...]
 #   e.g. ./start.sh alc
 #   e.g. ./start.sh alc --grep @app --headed
+#   e.g. ./start.sh clc
+#   e.g. ./start.sh grc --grep RHACM4K-64217
 #
 # Universal variables: put them in repo-root `.env` (gitignored) or export in your shell.
 # start.sh loads `.env` before oc login so HUB_* and CONSOLE_* work from one file.
@@ -62,6 +64,12 @@ shift
 case "${COMPONENT}" in
   alc | ALC)
     exec bash "${CONSOLE_E2E_ROOT}/src/tests/app/start.sh" "$@"
+    ;;
+  clc | CLC)
+    exec bash "${CONSOLE_E2E_ROOT}/src/tests/cluster/start.sh" "$@"
+    ;;
+  grc | GRC)
+    exec bash "${CONSOLE_E2E_ROOT}/src/tests/governance/start.sh" "$@"
     ;;
   fg-rbac | FG-RBAC)
     exec bash "${CONSOLE_E2E_ROOT}/src/tests/fg-rbac/start.sh" "$@"

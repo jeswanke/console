@@ -1,8 +1,8 @@
 /**
- * Application Lifecycle: Applications list page.
+ * Application Lifecycle: Applications list page — **sample / exploratory** coverage.
  *
- * Minimal sanity: navigate to Applications, verify title and table toolbar.
- * Uses authenticated state from auth.setup.ts (playwright.config projects).
+ * Not part of integration runs (`PLAYWRIGHT_TEST_MODE=integration` ignores this file).
+ * Run locally: `./start.sh alc --grep @sample` or `npx playwright test applications-list.spec.ts --project alc`.
  */
 
 import { test, expect } from '@fixtures/app-test';
@@ -16,11 +16,11 @@ import {
   APP_ADVANCED_CONFIG,
   APP_ADVANCED_TABLE_COLUMNS,
   APP_ADVANCED_TABLE_COLUMNS_CHANNELS,
-  APP_DOCS_ADVANCED_DEPRECATION_HREF_RE,
 } from '@constants/app';
+import { verifyAdvancedDeprecationBanner } from '@lib/app/verify/advanced-config';
 import type { AppTableColumnHelpKey } from '@constants/app';
 
-test.describe('Applications list', { tag: ['@app', '@alc'] }, () => {
+test.describe('Applications list', { tag: ['@app', '@alc', '@sample'] }, () => {
   test('displays Applications page with title and Create button', async ({
     applicationListPage,
   }) => {
@@ -235,13 +235,7 @@ test.describe('Applications list', { tag: ['@app', '@alc'] }, () => {
   }) => {
     await applicationListPage.goto();
     await applicationListPage.openAdvancedConfigTab();
-
-    const banner = applicationListPage.getAdvancedDeprecationAlert();
-    await expect(banner).toBeVisible();
-    await expect(banner).toContainText(APP_ADVANCED_CONFIG.deprecationBanner.bodyPattern);
-    const learnMore = applicationListPage.getAdvancedDeprecationLearnMoreLink();
-    await expect(learnMore).toBeVisible();
-    await expect(learnMore).toHaveAttribute('href', APP_DOCS_ADVANCED_DEPRECATION_HREF_RE);
+    await verifyAdvancedDeprecationBanner(applicationListPage);
   });
 
   test('Advanced configuration shows terminology card with title and View documentation link', async ({

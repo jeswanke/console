@@ -10,10 +10,10 @@ This is a **Playwright-based E2E test framework** for **Red Hat Advanced Cluster
 
 ```bash
 npx playwright test                                  # Run all tests (all projects)
-npx playwright test --project=cluster                # Run cluster tests (admin auth only)
-npx playwright test --project=app                    # Run app tests (admin auth only)
-npx playwright test --project=fg-rbac                # Run fg-rbac tests (admin + RBAC auth)
-npx playwright test --project=cluster --project=app  # Run multiple projects (admin auth runs once)
+npx playwright test --project=cluster                # CLC tests (admin auth only)
+npx playwright test --project=alc                    # ALC tests (admin auth only)
+npx playwright test --project=fg-rbac                # fg-rbac tests (admin + RBAC auth)
+npx playwright test --project=cluster --project=alc  # Run multiple projects (admin auth runs once)
 npx playwright test -g "cluster list"                # Run tests matching pattern
 npx playwright test --project=cluster --list         # List tests without running (verify project matching)
 npx playwright show-report                           # Open HTML report
@@ -59,11 +59,15 @@ Authentication uses **storageState** — login happens once during setup, browse
 - `auth.setup.ts` → authenticates admin → saves `.auth/admin.json` (always runs)
 - `rbac-auth.setup.ts` → authenticates RBAC users → saves `.auth/{role}.json` per user (only runs when a dependent project has matching tests). One `test()` per user for parallel execution and individual pass/fail. Filters by `RBAC_DOMAIN` env var.
 
-**Playwright projects** — each domain owns its test directory via `testMatch`. No `testIgnore`. Adding a domain never requires editing other projects:
+**Playwright projects** — each domain owns its test directory via `testMatch`:
 
 - `cluster` → `dependencies: ['setup']` → `testMatch: /cluster/`
-- `app` → `dependencies: ['setup']` → `testMatch: /app/`
+- `alc` → `dependencies: ['setup']` → `testMatch: app/**/*.spec.ts` (integration mode ignores `@sample` specs)
+- `governance` → `dependencies: ['setup']` → `testMatch: /governance/`
 - `fg-rbac` → `dependencies: ['setup', 'rbac-setup']` → `testMatch: /fg-rbac/`
+- `unit` → no hub login → `testMatch: unit/**/*.unit.spec.ts`
+
+**Integration mode** (`TEST_MODE=integration`): excludes `@sample` specs (see `playwright.config.ts`).
 
 **RBAC users are per-domain** (e.g., `clc-e2e-fg-rbac-admin`, not shared `clc-e2e-admin`). Defined in `src/config/presets.ts` with `domains` tags. This prevents parallel CI nodes from conflicting on test data.
 

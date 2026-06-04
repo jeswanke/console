@@ -1,8 +1,8 @@
 /** Git ALC Playwright suite. Polarion ids in file tags; helpers in `@lib/app/verify`. */
 import {
   clearE2eSpecDataCache,
-  resolveScenarioByTestId,
-  resolveScenarioPair,
+  resolveSubscriptionScenarioByTestId,
+  resolveSubscriptionScenarioPair,
 } from '@config';
 import {
   addSubscriptionToExistingApplication,
@@ -71,7 +71,7 @@ test.describe('Git Applications', {
   }) => {
     test.setTimeout(180_000);
     const { subscription: options, applicationExpectations: expectations } =
-      resolveScenarioByTestId('RHACM4K-7484');
+      resolveSubscriptionScenarioByTestId('RHACM4K-7484');
 
     await applicationListPage.goto();
     await createSubscription(applicationListPage, subscriptionApplicationCreateWizardPage, options);
@@ -131,7 +131,7 @@ test.describe('Git Applications', {
     if (!auth) return;
 
     const { subscription: baseOptions, applicationExpectations: expectations } =
-      resolveScenarioByTestId('RHACM4K-1071');
+      resolveSubscriptionScenarioByTestId('RHACM4K-1071');
     const options = applyPrivateGitAuthToSubscriptionOptions(baseOptions, auth);
     const { applicationName, namespace } = options;
     const clusterResourceRows = expectations.topologyClusterResourceBlocks[0]!;
@@ -195,7 +195,7 @@ test.describe('Git Applications', {
   }) => {
     test.setTimeout(300_000);
     const { subscription: options, applicationExpectations: expectations } =
-      resolveScenarioByTestId('RHACM4K-7556');
+      resolveSubscriptionScenarioByTestId('RHACM4K-7556');
     expect(options.submit).toBe(true);
     expect(options.repositories).toHaveLength(2);
 
@@ -295,7 +295,7 @@ test.describe('Git Applications', {
     subscriptionApplicationCreateWizardPage,
   }) => {
     test.setTimeout(240_000);
-    const { base, delta } = resolveScenarioPair({
+    const { base, delta } = resolveSubscriptionScenarioPair({
       baseScenarioId: 'auto_git_add_subscription_base',
       testId: 'RHACM4K-7554',
     });
@@ -370,7 +370,7 @@ test.describe('Git Applications', {
     subscriptionApplicationCreateWizardPage,
   }) => {
     test.setTimeout(300_000);
-    const { base, delta } = resolveScenarioPair({
+    const { base, delta } = resolveSubscriptionScenarioPair({
       baseScenarioId: 'auto_git_mortgage_edit_base',
       testId: 'RHACM4K-1427',
     });
@@ -456,7 +456,7 @@ test.describe('Git Applications', {
   }) => {
     test.setTimeout(240_000);
     const { subscription: options, applicationExpectations: expectations } =
-      resolveScenarioByTestId('RHACM4K-7555');
+      resolveSubscriptionScenarioByTestId('RHACM4K-7555');
     expect(options.repositories).toHaveLength(2);
 
     await oc.deleteNamespace(options.namespace);
@@ -511,7 +511,7 @@ test.describe('Git Applications', {
     subscriptionApplicationCreateWizardPage,
   }) => {
     test.setTimeout(240_000);
-    const { subscription: options } = resolveScenarioByTestId('RHACM4K-7557');
+    const { subscription: options } = resolveSubscriptionScenarioByTestId('RHACM4K-7557');
     expect(options.repositories).toHaveLength(2);
 
     await applicationListPage.goto();
@@ -539,7 +539,7 @@ test.describe('Git Applications', {
     const managedCluster = skipUnlessPrimaryManagedCluster(test, managedClusterContext, 'RHACM4K-39232');
     if (!managedCluster) return;
 
-    const { subscription: options } = resolveScenarioByTestId('RHACM4K-39232');
+    const { subscription: options } = resolveSubscriptionScenarioByTestId('RHACM4K-39232');
     const { applicationName, namespace } = options;
 
     await oc.deleteNamespace(namespace);
@@ -601,7 +601,7 @@ test.describe('Git Applications', {
   }) => {
     test.setTimeout(300_000);
     const { subscription: options, applicationExpectations: expectations } =
-      resolveScenarioByTestId('RHACM4K-39666');
+      resolveSubscriptionScenarioByTestId('RHACM4K-39666');
 
     await oc.deleteNamespace(options.namespace);
     await applicationListPage.goto();
@@ -631,7 +631,7 @@ test.describe('Git Applications', {
     subscriptionApplicationCreateWizardPage,
   }) => {
     test.setTimeout(240_000);
-    const { subscription: options } = resolveScenarioByTestId('RHACM4K-7487');
+    const { subscription: options } = resolveSubscriptionScenarioByTestId('RHACM4K-7487');
 
     await applicationListPage.goto();
     await createSubscription(applicationListPage, subscriptionApplicationCreateWizardPage, options);
@@ -659,7 +659,7 @@ test.describe('Git Applications', {
     if (!managedCluster) return;
 
     const { subscription: options, applicationExpectations: expectations } =
-      resolveScenarioByTestId('RHACM4K-10668');
+      resolveSubscriptionScenarioByTestId('RHACM4K-10668');
     const { applicationName, namespace } = options;
 
     if (!(await oc.applicationsAppK8sIoExists(namespace, applicationName))) {
@@ -718,7 +718,7 @@ test.describe('Git Applications', {
   }) => {
     test.setTimeout(300_000);
     const { subscription: options, applicationExpectations: expectations } =
-      resolveScenarioByTestId('RHACM4K-1558');
+      resolveSubscriptionScenarioByTestId('RHACM4K-1558');
     const { applicationName, namespace } = options;
     expect(options.repositories).toHaveLength(2);
 

@@ -33,3 +33,4 @@ export {
   type ManagedClusterEntry,
   type PlaywrightTestSkip,
 } from './cluster/managedClusterContext';
+export * from './cluster';

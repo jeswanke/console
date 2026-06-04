@@ -7,6 +7,8 @@ import { mergePerBlockLayers } from '../subscription/subscriptionMerge';
 import { extractSubscriptionLayer } from '../subscription/extractSubscriptionLayer';
 import { extractApplicationExpectationsLayer } from '../application-expectations/extractApplicationExpectationsLayer';
 import { mergeApplicationExpectationsLayers } from '../application-expectations/applicationExpectationsMerge';
+import { extractArgoPushLayer } from '../argo-push/extractArgoPushLayer';
+import { mergeArgoPushLayers } from '../argo-push/argoPushMerge';
 
 export type ComposerBlockEntry = { use: string[] };
 
@@ -105,10 +107,11 @@ export function buildComposerSyntheticSubscriptionLayer(
     }
   }
 
-  return {
-    repositories: allRepositories,
-    perBlock: perBlockOut,
-  };
+  const out: Record<string, unknown> = { perBlock: perBlockOut };
+  if (allRepositories.length > 0) {
+    out.repositories = allRepositories;
+  }
+  return out;
 }
 
 export function mergeExpectationsRowsForComposerBlock(
@@ -182,4 +185,40 @@ export function buildComposerSyntheticApplicationExpectationsLayer(
     clusterResources,
     ...(mergedNonClusterExpectations ?? {}),
   };
+}
+
+export function mergeArgoPushSlicesForComposerBlock(
+  spec: E2eSpecData,
+  scenarioId: string,
+  useNames: string[]
+): Record<string, unknown> {
+  const fragments = spec.fragments ?? {};
+  const layers: Array<Record<string, unknown>> = [];
+
+  for (const name of useNames) {
+    const blob = fragments[name];
+    if (!blob) {
+      throw new Error(
+        `e2e-spec-data: unknown fragment "${name}" in blocks for scenario "${scenarioId}" (argoPush)`
+      );
+    }
+    layers.push(extractArgoPushLayer(blob as Record<string, unknown>));
+  }
+
+  return mergeArgoPushLayers(...layers);
+}
+
+/** Synthetic `specDomains.argoPush` layer from `scenario.blocks` (typically one block). */
+export function buildComposerSyntheticArgoPushLayer(
+  spec: E2eSpecData,
+  scenarioId: string,
+  blocks: ComposerBlockEntry[]
+): Record<string, unknown> {
+  const layers: Array<Record<string, unknown>> = [];
+  for (let i = 0; i < blocks.length; i++) {
+    const use = blocks[i]?.use ?? [];
+    if (use.length === 0) continue;
+    layers.push(mergeArgoPushSlicesForComposerBlock(spec, scenarioId, use));
+  }
+  return mergeArgoPushLayers(...layers);
 }

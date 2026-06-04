@@ -2,6 +2,16 @@
 import './src/config/index';
 import { defineConfig, devices } from '@playwright/test';
 
+/** Sample / exploratory specs — not run when TEST_MODE=integration. */
+const integrationTestMode =
+  process.env.TEST_MODE ?? process.env.PLAYWRIGHT_TEST_MODE;
+const sampleSpecIgnoreWhenIntegration =
+  integrationTestMode === 'integration'
+    ? ['**/applications-list.spec.ts', '**/cluster-list.spec.ts']
+    : [];
+
+const alcIntegrationTestIgnore = ['unit/**', ...sampleSpecIgnoreWhenIntegration];
+
 /**
  * See https://playwright.dev/docs/test-configuration.
  */
@@ -37,8 +47,8 @@ export default defineConfig({
   },
 
   /*
-   * Projects: setup → admin auth; rbac-setup → RBAC users; cluster / alc / fg-rbac / unit by testMatch.
-   * ALC: `./start.sh alc` (--project alc).
+   * Projects: setup → admin auth; rbac-setup → RBAC users; cluster / governance / alc / fg-rbac / fleet-virt / unit.
+   * Component entrypoints: `./start.sh alc` | `clc` | `grc` | `fg-rbac` | `fleet-virt`
    */
   projects: [
     {
@@ -64,19 +74,7 @@ export default defineConfig({
       },
       dependencies: ['setup'],
       testMatch: /cluster/,
-    },
-
-    // Application Lifecycle (ALC) — `src/tests/app/**`; `./start.sh alc` sets E2E_GITOPS_PREP.
-    {
-      name: 'alc',
-      testMatch: 'app/**/*.spec.ts',
-      testIgnore: 'unit/**',
-      use: {
-        ...devices['Desktop Chrome'],
-        viewport: { width: 1920, height: 1080 },
-        storageState: '.auth/admin.json',
-      },
-      dependencies: ['setup'],
+      testIgnore: sampleSpecIgnoreWhenIntegration,
     },
 
     {
@@ -88,6 +86,19 @@ export default defineConfig({
       },
       dependencies: ['setup'],
       testMatch: /governance/,
+    },
+
+    // Application Lifecycle (ALC) — `src/tests/app/**`; `./start.sh alc` sets E2E_GITOPS_PREP.
+    {
+      name: 'alc',
+      testMatch: 'app/**/*.spec.ts',
+      testIgnore: alcIntegrationTestIgnore,
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1920, height: 1080 },
+        storageState: '.auth/admin.json',
+      },
+      dependencies: ['setup'],
     },
 
     // -- RBAC test projects --

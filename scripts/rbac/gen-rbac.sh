@@ -5,7 +5,6 @@
 
 # Description:
 #     Sets up htpasswd users and OAuth IDP for RBAC tests.
-#     Ported from clc-ui-e2e/build/gen-rbac.sh for the Playwright framework.
 #
 # Usage:
 #     ./scripts/rbac/gen-rbac.sh

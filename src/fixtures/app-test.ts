@@ -7,6 +7,9 @@ import { OcCliService } from '@services/OcCliService';
 import { ApplicationListPage } from '@pages/app/ApplicationListPage';
 import { ApplicationDetailsPage } from '@pages/app/ApplicationDetailsPage';
 import { SubscriptionApplicationCreateWizardPage } from '@pages/app/SubscriptionApplicationCreateWizardPage';
+import { ArgoPushApplicationCreateWizardPage } from '@pages/app/ArgoPushApplicationCreateWizardPage';
+import { ArgoPullApplicationCreateWizardPage } from '@pages/app/ArgoPullApplicationCreateWizardPage';
+import { PlacementDetailsPage } from '@pages/cluster/PlacementDetailsPage';
 
 type AppFixtures = {
   oc: OcCliService;
@@ -14,7 +17,10 @@ type AppFixtures = {
   managedClusterContext: ManagedClusterContextFile | undefined;
   applicationListPage: ApplicationListPage;
   applicationDetailsPage: ApplicationDetailsPage;
+  placementDetailsPage: PlacementDetailsPage;
   subscriptionApplicationCreateWizardPage: SubscriptionApplicationCreateWizardPage;
+  argoPushApplicationCreateWizardPage: ArgoPushApplicationCreateWizardPage;
+  argoPullApplicationCreateWizardPage: ArgoPullApplicationCreateWizardPage;
 };
 
 export const test = base.extend<AppFixtures>({
@@ -34,8 +40,20 @@ export const test = base.extend<AppFixtures>({
     await use(new ApplicationDetailsPage(page, oc));
   },
 
+  placementDetailsPage: async ({ page, oc }, use) => {
+    await use(new PlacementDetailsPage(page, oc));
+  },
+
   subscriptionApplicationCreateWizardPage: async ({ page, oc }, use) => {
     await use(new SubscriptionApplicationCreateWizardPage(page, oc));
+  },
+
+  argoPushApplicationCreateWizardPage: async ({ page, oc }, use) => {
+    await use(new ArgoPushApplicationCreateWizardPage(page, oc));
+  },
+
+  argoPullApplicationCreateWizardPage: async ({ page, oc }, use) => {
+    await use(new ArgoPullApplicationCreateWizardPage(page, oc));
   },
 });
 

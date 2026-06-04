@@ -4,7 +4,6 @@
 #     Applies RBAC permissions for Virtualization test cases using template functions.
 #     Requires ACM 2.16+ with Fine-Grained RBAC enabled.
 #     Uses clusterSelection.type: placements (ACM 2.16 format).
-#     Ported from clc-ui-e2e/build/setup-test-roles.sh for the Playwright framework.
 #     Called by src/tests/fg-rbac/start.sh after gen-rbac.sh.
 
 # Usage:

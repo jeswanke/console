@@ -1,4 +1,6 @@
-/** ALC routes and UI strings (from live hub / Playwriter snapshots). */
+/** ALC routes and UI strings for the Applications console. */
+
+import { PLACEMENT_TOLERATIONS_YAML_PATTERNS } from '@constants/placement-tolerations';
 
 // =============================================================================
 // Routes
@@ -8,11 +10,18 @@ export const APP_ROUTES = {
   list: '/multicloud/applications',
   /** Advanced configuration tab (secondary nav) */
   advanced: '/multicloud/applications/advanced',
+  /** Create application → Argo CD ApplicationSet - Push model */
+  createArgoPush: '/multicloud/applications/create/argo',
+  /** Create application → Argo CD ApplicationSet - Pull model */
+  createArgoPull: '/multicloud/applications/create/argopullmodel',
   /** Base details path (no tab segment). */
   details: (namespace: string, name: string) =>
     `/multicloud/applications/details/${namespace}/${name}`,
   detailsTab: (namespace: string, name: string, tabSlug: AppApplicationDetailsTabSlug) =>
     `/multicloud/applications/details/${namespace}/${name}/${tabSlug}`,
+  /** Post–create push-model ApplicationSet details (hub default: Topology tab). */
+  argoPushTopology: (argoServerNamespace: string, applicationSetName: string) =>
+    `${APP_ROUTES.detailsTab(argoServerNamespace, applicationSetName, APP_APPLICATION_DETAILS.tabs.topology.slug)}?apiVersion=applicationset.argoproj.io`,
 } as const;
 
 /** URL path segment for {@link APP_ROUTES.detailsTab} (lowercase, matches console router). */
@@ -35,11 +44,15 @@ export const APP_APPLICATION_DETAILS = {
     clusterResourceStatus: 'Cluster resource status',
     created: 'Created',
     lastSyncRequested: 'Last sync requested',
+    placement: 'Placement',
   },
   /** Subscription row value observed for **Type** on Details. */
   typeValues: {
     subscription: 'Subscription',
+    applicationSetPush: 'Application set - Push model',
   },
+  /** ApplicationSet details URL query (`?apiVersion=applicationset.argoproj.io`). */
+  applicationSetApiVersionQuery: 'apiVersion=applicationset.argoproj.io',
   /** Repository kind badges/buttons shown inside Details → Repository value and Advanced → Channels **Type** label. */
   repositoryKindLabels: {
     git: 'Git',
@@ -78,7 +91,7 @@ export const APP_APPLICATION_SYNC = {
 export const APP_APPLICATION_TOPOLOGY = {
   /**
    * **`data-test-id`** on the PF topology visualization surface wrapping the `svg` graph (`g[data-kind=node]`,
-   * `data-id` values — see `src/lib/app/topology/graph-ids.ts` / Playwriter hub capture).
+   * `data-id` values — see `src/lib/app/topology/graph-ids.ts`.
    */
   graphSurfaceTestId: 'topology',
   /** Topology / Details tab list lives in this labelled region (PF). */
@@ -100,7 +113,7 @@ export const APP_APPLICATION_TOPOLOGY = {
     /**
      * PF6 **MenuToggle** for topology **subscription scope** (`All Subscriptions` vs each Subscription CR name).
      * Rendered only when the application has **more than one** subscription/repo; absent on single-repo topology.
-     * Same element historically called “channel combo” (Playwriter / PF6 hub).
+     * Subscription scope MenuToggle; rendered only when the app has multiple subscriptions.
      */
     channelCombo: 'comboChannel',
   },
@@ -132,11 +145,11 @@ export const APP_DOCS_MANAGING_APPLICATIONS_HREF_RE =
   /^https:\/\/docs\.redhat\.com\/en\/documentation\/red_hat_advanced_cluster_management_for_kubernetes\/2\.\d+\/html-single\/applications\/index#managing-applications$/;
 
 /**
- * "Learn more" on the Advanced configuration **page deprecation** banner (Placements moving to Infrastructure).
- * Differs from {@link APP_DOCS_MANAGING_APPLICATIONS_HREF_RE} (managing-applications path + anchor).
+ * "Learn more" on the Advanced configuration **page deprecation** banner (RHACM4K-63573).
+ * Matches live hub: release notes → deprecations-removals-acm (not managing-applications).
  */
 export const APP_DOCS_ADVANCED_DEPRECATION_HREF_RE =
-  /^https:\/\/docs\.redhat\.com\/en\/documentation\/red_hat_advanced_cluster_management_for_kubernetes\/2\.\d+\/html-single\/applications\/managing-applications#application-advanced-configuration$/;
+  /^https:\/\/docs\.redhat\.com\/en\/documentation\/red_hat_advanced_cluster_management_for_kubernetes\/2\.\d+\/html-single\/release_notes\/release-notes#deprecations-removals-acm$/;
 
 /**
  * **Placement rule deprecation** inline alert in the subscription wizard (cluster placement section).
@@ -178,10 +191,7 @@ export const APP_TOOLBAR = {
   exportButtonAriaLabel: 'export-search-result',
   /** Compare application types link */
   compareTypesLabel: 'Compare application types',
-  /**
-   * PF link **Clear all filters** on the Applications table toolbar (shown when filters are active).
-   * Validated with Playwriter on `multicloud/applications` (PF6 `role="button"`).
-   */
+  /** PF link Clear all filters on the Applications table toolbar (visible when filters are active). */
   clearAllFiltersButtonName: 'Clear all filters',
 } as const;
 
@@ -258,10 +268,36 @@ export const APP_TABLE_COLUMNS = {
   type: 'Type',
   namespace: 'Namespace',
   clusters: 'Clusters',
+  labels: 'Labels',
   healthStatus: 'Health Status',
   syncStatus: 'Sync Status',
   podStatus: 'Pod Status',
   created: 'Created',
+} as const;
+
+/** Overview table **Manage columns** dialog defaults (RHACM4K-63768). */
+export const APP_TABLE_MANAGE_COLUMNS = {
+  /** Hidden until enabled in the dialog. */
+  defaultUnchecked: [APP_TABLE_COLUMNS.created] as const,
+  /** Required columns — checkbox disabled in the dialog. */
+  required: [APP_TABLE_COLUMNS.name, APP_TABLE_COLUMNS.namespace, APP_TABLE_COLUMNS.clusters] as const,
+  /** Optional columns — can be toggled off. */
+  optional: [
+    APP_TABLE_COLUMNS.type,
+    APP_TABLE_COLUMNS.labels,
+    APP_TABLE_COLUMNS.healthStatus,
+    APP_TABLE_COLUMNS.syncStatus,
+    APP_TABLE_COLUMNS.podStatus,
+  ] as const,
+} as const;
+
+/** RHACM4K-64215 — pre-seeded Placement + legacy PlacementRule for subscription wizard. */
+export const PLACEMENT_TEST_RESOURCES = {
+  namespace: 'placement-test-ns',
+  applicationName: 'placement-wizard-test',
+  placementName: 'placement-test-placement-1',
+  legacyPlacementRuleName: 'test-legacy-placementrule',
+  setupYamlRelativePath: 'src/templates/app/subscription/existing-placement-wizard-setup.yaml',
 } as const;
 
 /** Row action kebab (Overview table); menu items vary by application kind (see Overview rowActionResolver). */
@@ -325,6 +361,24 @@ export const APP_FILTER = {
   },
 } as const;
 
+/** Labels column on Applications Overview (extension column; PF overflow label + popover). */
+export const APP_TABLE_LABELS_CELL = {
+  /** Cell button summarizing resource labels, e.g. "6 labels". */
+  countButtonNamePattern: /\d+\s+labels?/i,
+  popoverContentSelector: '.pf-v6-c-popover__content, .pf-v5-c-popover__content',
+} as const;
+
+/** Applications list — dedicated Label filter (`#acm-table-filter-select-Label`). */
+export const APP_LABEL_FILTER = {
+  toggleId: 'acm-table-filter-select-Label',
+  groupTitle: 'Label',
+  searchAriaLabel: 'Search',
+  /** MenuToggle shows "Label" with a badge when filters are active (e.g. "Label 1"). */
+  toggleNamePattern: /^Label(\s+\d+)?$/i,
+  operatorEquals: '=',
+  operatorNotEquals: '!=',
+} as const;
+
 // =============================================================================
 // Advanced Configuration tab: **Subscriptions** and **Channels** toggles only (`#subscriptions`, `#channels`).
 // Placements and Placement rules UIs were removed from this page (see deprecation; use Infrastructure / app views).
@@ -333,12 +387,18 @@ export const APP_FILTER = {
 /** Terminology card and resource-type toggle (Advanced configuration tab only). */
 export const APP_ADVANCED_CONFIG = {
   /**
-   * Inline alert above Advanced content: page removal / Placements relocation (PatternFly alert).
-   * Omit on consoles that have not shipped this banner yet.
+   * Inline alert above Advanced content. Omit on consoles that have not shipped this banner yet.
    */
   deprecationBanner: {
-    bodyPattern:
-      /Placements will move to a central location under Infrastructure > Clusters > Placements/i,
+    alertTitle: 'Page deprecation',
+    bodySnippets: {
+      deprecatedLabel: /Deprecated:/i,
+      placementsManagedFromInfrastructure:
+        /Placements are managed from the Placements tab of the Infrastructure page/i,
+      selectInfrastructurePlacementsPath: /Select Infrastructure > Clusters > Placements/i,
+      placementDetailsInApps:
+        /view placement details directly within individual applications or policies/i,
+    },
     learnMoreLinkName: 'Learn more',
   },
   /** Expandable card id and title */
@@ -350,6 +410,10 @@ export const APP_ADVANCED_CONFIG = {
       subscriptions: 'Subscriptions',
       channels: 'Channels',
     },
+    /** RHACM4K-63573 — Placements term removed from the terminology card. */
+    removedPlacementsTermTitlePattern: /^Placements$/i,
+    /** RHACM4K-64170 — PlacementRule(s) term removed from the terminology card. */
+    removedTermTitlePattern: /Placement\s*Rules?/i,
     /** Deprecated label shown next to some terms */
     deprecatedLabel: 'Deprecated',
     viewDocsLinkText: 'View documentation',
@@ -365,6 +429,14 @@ export const APP_ADVANCED_CONFIG = {
       subscriptions: 'Subscriptions',
       channels: 'Channels',
     },
+    /** RHACM4K-63573 — legacy Placements toggle id if the console still emits a hidden control. */
+    removedPlacementsToggleIds: ['placements'] as const,
+    /** RHACM4K-63573 — removed Placements sub-tab label. */
+    removedPlacementsTabLabelPattern: /^Placements$/i,
+    /** RHACM4K-64170 — legacy PlacementRule toggle ids if the console still emits hidden controls. */
+    removedToggleIds: ['placementrules', 'placement-rules'] as const,
+    /** RHACM4K-64170 — removed PlacementRule sub-tab label. */
+    removedTabLabelPattern: /Placement\s*Rules?/i,
   },
   /** Same toolbar search/export/pagination ids as Overview; table uses APP_TABLE. */
   /** Empty state (when no resources). Verify title, body, and actions. */
@@ -411,6 +483,146 @@ export const APP_ADVANCED_TABLE_COLUMNS_CHANNELS = {
   clusters: 'Clusters',
   created: 'Created',
 } as const;
+
+// =============================================================================
+// Argo CD ApplicationSet create wizards (pull + push)
+// =============================================================================
+// Argo wizards: PF Form Wizard (`nav[aria-label="Argo application steps"]`), six steps, split YAML panel.
+// Prefer placeholders and combobox accessible names over path-based field ids where possible.
+// =============================================================================
+
+/** Shared chrome for pull and push ApplicationSet create wizards. */
+export const APP_ARGO_CREATE_WIZARD_SHARED = {
+  navAccessibleName: 'Argo application steps',
+  steps: {
+    general: 'general',
+    generators: 'generators',
+    template: 'repository',
+    syncPolicy: 'sync-policy',
+    placement: 'placement',
+    review: 'review-step',
+  } as const,
+  stepLabels: {
+    general: 'General',
+    generators: 'Generators',
+    template: 'Template',
+    syncPolicy: 'Sync policy',
+    placement: 'Placement',
+    review: 'Review',
+  } as const,
+  footer: {
+    next: 'Next',
+    back: 'Back',
+    cancel: 'Cancel',
+    submit: 'Submit',
+  },
+  yamlSwitchId: 'yaml-switch',
+  syncCheckboxSuffixIds: {
+    pruneLast: 'prune-last',
+    replace: 'replace',
+    applyOutOfSyncOnly: 'apply-out-of-sync-only',
+    createNamespace: 'create-namespace',
+    validate: 'validate',
+    propagationPolicy: 'propagation-policy',
+  },
+  general: {
+    nameInputIdSuffix: ';id=name',
+    namePlaceholder: 'Enter the application set name',
+    argoServerComboboxLabel: 'Select the Argo server',
+    addArgoServerButtonLabel: 'Add Argo Server',
+    requeueTimeComboboxLabel: 'Select the requeue time',
+  },
+  template: {
+    gitRepositoryTypeCardText: 'Git',
+    helmRepositoryTypeCardText: 'Helm',
+    gitUrlComboboxLabel: 'Enter or select a Git URL',
+    gitRevisionComboboxLabel: 'Enter or select a tracking revision',
+    gitPathComboboxLabel: 'Enter or select a repository path',
+    destinationNamespacePlaceholder: 'Enter the destination namespace',
+    destinationInputIdSuffix: ';id=destination',
+    /** RHACM4K-63608: info alert on **Template** when using push-model ApplicationSet wizard. */
+    privateRepoCredentialsAlert: {
+      title: 'Private repository credentials required',
+      messageSnippet:
+        'When using private repositories, credentials are required on the hub cluster to create an application set push model type.',
+      configureCredentialsButtonLabel: 'Configure repository credentials',
+      /** Argo CD server settings path opened from the alert action (host is cluster-specific). */
+      gitOpsRepoSettingsPathSuffix: '/settings/repos',
+    },
+  },
+  placement: {
+    clusterSetsComboboxLabel: 'Select the cluster sets',
+    newPlacementButtonLabel: 'New placement',
+    existingPlacementButtonLabel: 'Existing placement',
+    addLabelExpressionButtonLabel: 'Add label expression',
+    addLabelExpressionButtonAriaLabel: 'Action',
+    labelExpressionsRegionLabel: 'Label expressions',
+    labelComboboxLabel: /Select the label/i,
+    operatorButtonLabel: /equals any of|does not equal any of|exists|does not exist/i,
+    operatorComboboxLabel: /Select the operator/i,
+    valuesComboboxLabel: /Select the values/i,
+    operatorInMenuLabel: /equals any of/i,
+  },
+  review: {
+    panelId: 'review',
+    searchPlaceholder: 'Search review details',
+    collapseAllButtonLabel: 'Collapse all',
+    expandAllButtonLabel: 'Expand all',
+    highlightYamlButtonLabel: 'Highlight in YAML',
+    editFieldButtonLabel: 'Edit',
+    reviewRowClass: 'wizard-review-pen-hover-zone',
+    editButtonClass: 'wizard-review-edit-btn',
+    syncEditorContainerSelector: '.sync-editor__container',
+    syncEditorMonacoTextareaSelector: '.monaco-editor textarea.inputarea',
+    syncEditorToolbarSearchButtonId: 'search-button',
+    expandableSectionClass: 'wizard-review-expandable-section',
+    sectionIds: {
+      General: 'general',
+      Generators: 'generators',
+      Template: 'repository',
+      'Sync policy': 'sync-policy',
+      Placement: 'placement',
+    },
+    monacoFoldExpandedSelector: '.monaco-editor .codicon-folding-expanded',
+  },
+  /** Add Argo server modal — GitOps form only; Placement tolerations in multi-doc YAML (modal Copy). */
+  addArgoServerModal: {
+    titlePattern: /Add Argo Server/i,
+    cancelButtonLabel: 'Cancel',
+    modalSelector: '.pf-v6-c-modal-box',
+  },
+  postSubmitOverviewQuery: 'apiVersion=applicationset.argoproj.io',
+} as const;
+
+/** Shared RHACM4K-61724 YAML patterns (pull + push); modal uses GitOpsCluster from CreateArgoResources. */
+const APP_ARGO_PLACEMENT_TOLERATIONS_YAML_PATTERNS = {
+  modalGitOpsPlacementTolerations:
+    /kind:\s*GitOpsCluster[\s\S]*kind:\s*Placement[\s\S]*tolerations:[\s\S]*cluster\.open-cluster-management\.io\/unreachable[\s\S]*operator:\s*Exists[\s\S]*cluster\.open-cluster-management\.io\/unavailable[\s\S]*operator:\s*Exists[\s\S]*clusterSets:\s*\n\s*-\s*default/,
+  wizardApplicationSetPlacementTolerations:
+    /kind:\s*ApplicationSet[\s\S]*kind:\s*Placement[\s\S]*tolerations:[\s\S]*cluster\.open-cluster-management\.io\/unreachable[\s\S]*operator:\s*Exists[\s\S]*cluster\.open-cluster-management\.io\/unavailable[\s\S]*operator:\s*Exists/,
+  ...PLACEMENT_TOLERATIONS_YAML_PATTERNS,
+} as const;
+
+export const APP_ARGO_PUSH_CREATE_WIZARD = {
+  ...APP_ARGO_CREATE_WIZARD_SHARED,
+  routePath: '/multicloud/applications/create/argo',
+  pageTitle: 'Create application set - push model',
+  yamlPatterns: APP_ARGO_PLACEMENT_TOLERATIONS_YAML_PATTERNS,
+} as const;
+
+export type AppArgoPushCreateWizardStepId =
+  (typeof APP_ARGO_PUSH_CREATE_WIZARD.steps)[keyof typeof APP_ARGO_PUSH_CREATE_WIZARD.steps];
+
+// Pull model — `{consoleOrigin}/multicloud/applications/create/argopullmodel`, `#create-argo-pull-model`
+export const APP_ARGO_PULL_CREATE_WIZARD = {
+  ...APP_ARGO_CREATE_WIZARD_SHARED,
+  routePath: '/multicloud/applications/create/argopullmodel',
+  pageTitle: /^Create application set - Pull model$/i,
+  yamlPatterns: APP_ARGO_PLACEMENT_TOLERATIONS_YAML_PATTERNS,
+} as const;
+
+export type AppArgoPullCreateWizardStepId =
+  (typeof APP_ARGO_PULL_CREATE_WIZARD.steps)[keyof typeof APP_ARGO_PULL_CREATE_WIZARD.steps];
 
 // =============================================================================
 // Subscription application create wizard (Create application → Subscription)
@@ -493,6 +705,8 @@ export const APP_SUBSCRIPTION_CREATE_WIZARD = {
       labelOperator: 'Operator',
       labelValue: 'Value',
       addAnotherLabel: 'Add another label',
+      /** PF radio — replaces legacy **existing placement rule** checkbox on current hubs. */
+      existingPlacementConfiguration: 'Select an existing placement configuration',
     },
   },
   /**
@@ -683,8 +897,14 @@ export const APP_SUBSCRIPTION_CREATE_WIZARD = {
     },
     /** Placement (partial; dynamic PF select toggles also appear without data-testid) */
     placement: {
+      /** Legacy — checkbox on older hubs. */
       existingRuleCheckbox: 'checkbox-existingrule-checkbox',
+      /** Current hub — PF radio (`input[type=radio]`) despite `checkbox-*` test id prefix. */
+      existingPlacementRadio: 'checkbox-existing-placement-checkbox',
+      /** Legacy placement rule typeahead. */
       placementRuleCombo: 'combo-placementrulecombo',
+      /** Current hub — existing **Placement** resource dropdown. */
+      placementCombo: 'placementcombo',
     },
     actions: {
       create: 'create-button-portal-id',
@@ -971,3 +1191,14 @@ export function subscriptionAutomationAnsibleSecretNameLabelId(blockIndex: numbe
   if (blockIndex <= 0) return undefined;
   return `ansibleSecretName${blockIndex}-label`;
 }
+
+/** RHACM4K-64417 — pre-seeded push-model ApplicationSet + Placement (Helm chart generator). */
+export const APP_ARGO_HELM_APPSET = {
+  applicationSetName: 'test-api-argo-helm',
+  placementName: 'test-api-argo-helm-placement',
+  placementDecisionName: 'test-api-argo-helm-placement-decision-1',
+  namespace: 'openshift-gitops',
+  clusterSet: 'auto-gitops-cluster-set',
+  targetCluster: 'local-cluster',
+  setupYamlRelativePath: 'src/templates/app/argo-helm-appset-setup.yaml',
+} as const;

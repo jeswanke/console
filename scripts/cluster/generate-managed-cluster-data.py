@@ -1,8 +1,8 @@
 """
 Generate managedClusters.json from the hub API (oc get managedclusters).
 
-Ported from application-ui-test (Cypress). Run with cwd set to the output directory
-so managedClusters.json is written there (e.g. .auth/ from Playwright globalSetup).
+Run with cwd set to the output directory so managedClusters.json is written there
+(e.g. .auth/ from Playwright globalSetup).
 
 Requires: python3, oc logged into the hub, clusters with expected annotations.
 """

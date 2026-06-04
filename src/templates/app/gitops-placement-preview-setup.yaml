@@ -1,0 +1,24 @@
+# RHACM4K-64219 — Existing placement for Argo ApplicationSet push wizard placement preview.
+# Prereq: GitOps prep (auto-gitops-cluster-set, openshift-gitops namespace).
+apiVersion: cluster.open-cluster-management.io/v1beta1
+kind: Placement
+metadata:
+  name: gitops-placement-preview-test
+  namespace: openshift-gitops
+spec:
+  tolerations:
+    - key: cluster.open-cluster-management.io/unreachable
+      operator: Exists
+    - key: cluster.open-cluster-management.io/unavailable
+      operator: Exists
+  numberOfClusters: 1
+  clusterSets:
+    - auto-gitops-cluster-set
+  predicates:
+    - requiredClusterSelector:
+        labelSelector:
+          matchExpressions:
+            - key: name
+              operator: In
+              values:
+                - local-cluster

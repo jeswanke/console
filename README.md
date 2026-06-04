@@ -37,21 +37,25 @@ npx playwright install chromium
 
 ### Playwright projects
 
-| Project        | Scope                                                                              |
-| -------------- | ---------------------------------------------------------------------------------- |
-| **`setup`**    | Auth (`auth.setup.ts`) → **`.auth/user.json`**                                     |
-| **`alc`**      | **Application Lifecycle** — `src/tests/app/**/*.spec.ts` (use **`--project alc`**) |
-| **`chromium`** | Other UI tests (e.g. **`src/tests/cluster/**`**) — excludes **`app/**`**           |
-| **`unit`**     | YAML / loader tests — `src/tests/unit/**/*.unit.spec.ts` (no hub)                  |
+| Project          | Scope                                                                                       |
+| ---------------- | ------------------------------------------------------------------------------------------- |
+| **`setup`**      | Auth (`auth.setup.ts`) → **`.auth/admin.json`**                                             |
+| **`rbac-setup`** | RBAC user auth (`rbac-auth.setup.ts`) — used by **`fg-rbac`** and **`fleet-virt`**          |
+| **`cluster`**    | Cluster lifecycle — `src/tests/cluster/**` (**`./start.sh clc`** → **`--project cluster`**) |
+| **`governance`** | Governance — `src/tests/governance/**` (**`./start.sh grc`** → **`--project governance`**)  |
+| **`alc`**        | Application lifecycle — `src/tests/app/**` (**`./start.sh alc`** → **`--project alc`**)     |
+| **`fg-rbac`**    | Fine-grained RBAC — `src/tests/fg-rbac/**`                                                  |
+| **`fleet-virt`** | Fleet virtualization — `src/tests/fleet-virt/**`                                            |
+| **`unit`**       | YAML / loader tests — `src/tests/unit/**` (no hub)                                          |
 
-**GitOps prep** in **`src/global-setup/gitOpsPrep.ts`** runs only when **`E2E_GITOPS_PREP`** is enabled (**`1/true/yes`**, set to `1` by default in **`./start.sh alc`**) **and** **`--project`** includes **`alc`** (and the run is not unit-only). Use **`E2E_GITOPS_PREP=0`** to disable. Non-ALC runs (e.g. **`--project chromium`**) skip GitOps even if the env is set.
+**GitOps prep** in **`src/global-setup/gitOpsPrep.ts`** runs only when **`E2E_GITOPS_PREP`** is enabled (**`1/true/yes`**, set to `1` by default in **`./start.sh alc`**) **and** **`--project`** includes **`alc`** (and the run is not unit-only). Use **`E2E_GITOPS_PREP=0`** to disable. Non-ALC runs (e.g. **`--project cluster`**, **`--project governance`**) skip GitOps even if the env is set.
 
 ### Managed cluster context
 
 By default, **`globalSetup`** runs managed-cluster prep for any non-unit run:
 
 - **`scripts/cluster/generate-managed-cluster-data.py`** writes **`.auth/managedClusters.json`**
-- **`scripts/cluster/setup-managed-cluster-kubeconfig.sh`** writes **`.auth/MC_MERGED_kubeconfig`** and prepares spoke contexts named like `ManagedCluster` resources (same pattern as application-ui-test)
+- **`scripts/cluster/setup-managed-cluster-kubeconfig.sh`** writes **`.auth/MC_MERGED_kubeconfig`** and renames spoke contexts to match `ManagedCluster` resource names
 
 Managed-cluster prep is **skipped** when you run **only** the **`unit`** project (e.g. **`--project=unit`**) or when **`E2E_SKIP_MANAGED_CLUSTER_PREP=1`**.
 
@@ -98,8 +102,13 @@ export HUB_PASSWORD='<kubeadmin-password>'
 # or: export HUB_TOKEN='<token>'
 
 ./start.sh alc                          # ALC entrypoint: default --grep @alc, --project alc
-./start.sh alc --grep @app --headed     # override defaults via CLI
+./start.sh alc --grep @RHACM4K-64219    # single Polarion ticket
+./start.sh alc --grep @sample           # exploratory specs only
+./start.sh clc                          # CLC: default --grep @clc, --project cluster
+./start.sh grc                          # GRC: default --grep @grc, --project governance
 ```
+
+**Integration mode** (`TEST_MODE=integration` in `.env`): sample specs (`@sample`) are excluded (`PLAYWRIGHT_GREP_INVERT` and ignores in `playwright.config.ts`).
 
 ### ALC environment (no `CYPRESS_*` prefix)
 
@@ -167,7 +176,8 @@ console-e2e/
 │   ├── tests/
 │   │   ├── auth.setup.ts
 │   │   ├── app/             # ALC UI (`--project alc`)
-│   │   ├── cluster/         # Other UI (`--project chromium`)
+│   │   ├── cluster/         # CLC UI (`--project cluster`)
+│   │   ├── governance/      # GRC UI (`--project governance`)
 │   │   └── unit/            # Config / lib unit tests (`--project unit`)
 │   └── utils/
 ├── .auth/                   # Auth state (gitignored)

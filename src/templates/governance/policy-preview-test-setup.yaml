@@ -1,0 +1,32 @@
+# RHACM4K policy placement preview E2E — namespace, cluster set, binding, existing placement.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: policy-preview-test-ns
+---
+apiVersion: cluster.open-cluster-management.io/v1beta2
+kind: ManagedClusterSet
+metadata:
+  name: policy-test-cluster-set
+---
+apiVersion: cluster.open-cluster-management.io/v1beta2
+kind: ManagedClusterSetBinding
+metadata:
+  name: policy-test-cluster-set
+  namespace: policy-preview-test-ns
+spec:
+  clusterSet: policy-test-cluster-set
+---
+apiVersion: cluster.open-cluster-management.io/v1beta1
+kind: Placement
+metadata:
+  name: policy-preview-test-placement
+  namespace: policy-preview-test-ns
+spec:
+  tolerations:
+    - key: cluster.open-cluster-management.io/unreachable
+      operator: Exists
+    - key: cluster.open-cluster-management.io/unavailable
+      operator: Exists
+  clusterSets:
+    - policy-test-cluster-set

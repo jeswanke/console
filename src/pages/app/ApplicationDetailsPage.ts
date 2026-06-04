@@ -219,9 +219,13 @@ export class ApplicationDetailsPage extends BasePage {
     await expect(toggle).toHaveAttribute('aria-label', subscriptionCrName);
   }
 
-  /** Details DescriptionList (`dl` after `h1`) — avoids page-level `dt.first()` mismatches. */
+  /**
+   * Details tab description lists. ApplicationSet (and subscription) Details use a
+   * multi-column PF layout with more than one `dl`; scoping to `following::dl[1]` misses
+   * right-column terms such as Placement and Cluster resource status.
+   */
   getDetailsDescriptionList(): Locator {
-    return this.getApplicationHeading().locator('xpath=following::dl[1]');
+    return this.getApplicationHeading().locator('xpath=following::dl');
   }
 
   /** Description list **term** (`dt` / `role="term"`) on the Details tab. */
@@ -235,7 +239,10 @@ export class ApplicationDetailsPage extends BasePage {
   }
 
   getDescriptionValue(term: keyof typeof APP_APPLICATION_DETAILS.descriptionTerms): Locator {
-    return this.getDescriptionTerm(term).locator('xpath=following-sibling::dd[1]');
+    const termEl = this.getDescriptionTerm(term);
+    return termEl
+      .locator('xpath=following-sibling::dd[1] | following-sibling::*[@role="definition"][1]')
+      .first();
   }
 
   /** Breadcrumb back to Applications list. */
