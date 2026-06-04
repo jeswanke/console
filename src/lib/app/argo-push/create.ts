@@ -11,11 +11,10 @@ import type { CreateArgoPushApplicationOptions } from './types';
 async function fillGeneralStep(
   wizard: ArgoPushApplicationCreateWizardPage,
   options: CreateArgoPushApplicationOptions
-): Promise<string> {
+): Promise<void> {
   const { applicationName, argoServerLabel } = options;
   await wizard.getApplicationNameInput().fill(applicationName);
   await wizard.pickComboboxOption(wizard.getArgoServerCombobox(), argoServerLabel);
-  return argoServerLabel;
 }
 
 async function fillGeneratorsStep(

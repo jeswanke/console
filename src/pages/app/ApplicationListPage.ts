@@ -93,7 +93,7 @@ export class ApplicationListPage extends BasePage {
     const { alertTitle } = APP_ADVANCED_CONFIG.deprecationBanner;
     return this.page
       .locator('[class*="c-alert"]')
-      .filter({ hasText: new RegExp(alertTitle, 'i') })
+      .filter({ hasText: new RegExp(escapeRegExp(alertTitle), 'i') })
       .first();
   }
 

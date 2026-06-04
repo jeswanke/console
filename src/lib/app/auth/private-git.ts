@@ -137,15 +137,17 @@ export async function applyPrivateGitRepoSecretToArgo(
 ): Promise<void> {
   const secretName = options?.secretName ?? PRIVATE_GIT_ARGO_REPO_SECRET_NAME;
   const manifest = buildPrivateGitArgoRepoSecretYaml(auth, repoUrl, secretName);
-  const tmpPath = path.join(
-    os.tmpdir(),
-    `e2e-${secretName}-${Date.now()}.yaml`
-  );
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'e2e-private-git-'));
+  const tmpPath = path.join(tmpDir, `${secretName}.yaml`);
   try {
-    fs.writeFileSync(tmpPath, manifest, 'utf8');
+    fs.writeFileSync(tmpPath, manifest, { encoding: 'utf8', mode: 0o600 });
     await oc.applyYaml(tmpPath);
   } finally {
-    fs.unlinkSync(tmpPath);
+    try {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    } catch {
+      /* best-effort cleanup */
+    }
   }
 }
 
@@ -154,9 +156,7 @@ export async function deletePrivateGitRepoSecretFromArgo(
   oc: OcCliService,
   secretName = PRIVATE_GIT_ARGO_REPO_SECRET_NAME
 ): Promise<void> {
-  await oc.run(
-    `oc delete secret ${secretName} -n ${PRIVATE_GIT_ARGO_NAMESPACE} --ignore-not-found`
-  );
+  await oc.deleteSecret(PRIVATE_GIT_ARGO_NAMESPACE, secretName, { ignoreNotFound: true });
 }
 
 /** `test.skip()` when credentials are missing; returns auth when configured. */

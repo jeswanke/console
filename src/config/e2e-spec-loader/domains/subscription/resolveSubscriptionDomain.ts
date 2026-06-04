@@ -8,6 +8,26 @@ import {
   scenarioUsesBlocks,
 } from '../blocks/expandComposer';
 
+/** True when the scenario is meant to resolve subscription (not argo-only block noise). */
+function hasSubscriptionDomainIntent(
+  merged: Record<string, unknown>,
+  scenarioOverlay: Record<string, unknown>
+): boolean {
+  if (Object.keys(scenarioOverlay).length > 0) {
+    return true;
+  }
+  if (typeof merged.applicationName === 'string' && merged.applicationName.length > 0) {
+    return true;
+  }
+  if (typeof merged.namespace === 'string' && merged.namespace.length > 0) {
+    return true;
+  }
+  if (Array.isArray(merged.repositories) && merged.repositories.length > 0) {
+    return true;
+  }
+  return false;
+}
+
 /** Merges composer blocks, profiles, and `specDomains.subscription`; validates merged payload. */
 export function resolveSubscriptionDomain(
   spec: E2eSpecData,
@@ -43,7 +63,12 @@ export function resolveSubscriptionDomain(
   }
   const parsed = subscriptionDomainPayloadSchema.safeParse(merged);
   if (!parsed.success) {
-    return undefined;
+    if (!hasSubscriptionDomainIntent(merged, scenarioOverlay)) {
+      return undefined;
+    }
+    throw new Error(
+      `e2e-spec-data: invalid subscription domain for scenario "${scenarioId}": ${parsed.error.message}\n${JSON.stringify(parsed.error.format(), null, 2)}`
+    );
   }
   return parsed.data as unknown as CreateSubscriptionOptions;
 }

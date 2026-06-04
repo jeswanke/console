@@ -280,7 +280,7 @@ export function buildMergedTopologyDrawerSpotChecksForSubscriptionBlocks(params:
   return out;
 }
 
-function regexEscapePathSegment(s: string): string {
+export function regexEscapePathSegment(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 

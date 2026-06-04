@@ -5,7 +5,7 @@
  */
 import { test } from '@fixtures/acm-test';
 import { resolvePlacementScenarioByTestId } from '@config';
-import { loadManagedClusterContext } from '@lib/cluster/managedClusterContext';
+import { managedClusterNamesForPreview } from '@lib/cluster/managedClusterContext';
 import {
   applyPlacementCreatePreviewSetup,
   labelClustersForPlacementCreatePreview,
@@ -23,13 +23,9 @@ test.describe(
   () => {
     test.beforeAll(async ({ oc }) => {
       await applyPlacementCreatePreviewSetup(oc, placementPreviewScenario.placement);
-      const names = new Set<string>(['local-cluster']);
-      for (const entry of loadManagedClusterContext()?.managedClusters ?? []) {
-        if (entry?.name) names.add(entry.name);
-      }
       await labelClustersForPlacementCreatePreview(
         oc,
-        [...names],
+        managedClusterNamesForPreview(),
         placementPreviewScenario.placement.clusterSet
       );
     });

@@ -18,7 +18,8 @@ function getOpenSelectMenu(page: Page): Locator {
 }
 
 function getOpenSelectMenuOptionMatches(page: Page, optionText: string): Locator {
-  const nameRe = new RegExp(escapeRegExpForMenuLabel(optionText), 'i');
+  const escaped = escapeRegExpForMenuLabel(optionText.trim());
+  const nameRe = new RegExp(`^\\s*${escaped}\\s*$`, 'i');
   const menu = getOpenSelectMenu(page);
   return menu
     .locator('.pf-v6-c-menu__item')

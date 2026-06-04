@@ -3,8 +3,10 @@ import './src/config/index';
 import { defineConfig, devices } from '@playwright/test';
 
 /** Sample / exploratory specs — not run when TEST_MODE=integration (see docs/testing-conventions.md). */
+const integrationTestMode =
+  process.env.TEST_MODE ?? process.env.PLAYWRIGHT_TEST_MODE;
 const sampleSpecIgnoreWhenIntegration =
-  process.env.PLAYWRIGHT_TEST_MODE === 'integration'
+  integrationTestMode === 'integration'
     ? ['**/applications-list.spec.ts', '**/cluster-list.spec.ts']
     : [];
 

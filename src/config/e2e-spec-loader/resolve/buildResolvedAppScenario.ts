@@ -31,19 +31,14 @@ export function buildResolvedAppScenario(spec: E2eSpecData, scenarioId: string):
       `e2e-spec-data: scenario "${scenarioId}" must not define both subscription and argoPush domains`
     );
   }
-  if (hasArgoPush) {
-    if (!argoPush) {
-      throw new Error(`e2e-spec-data: scenario "${scenarioId}" has invalid argoPush domain payload`);
-    }
-  } else if (hasSubscription) {
-    if (applicationExpectations === undefined) {
-      throw new Error(
-        `e2e-spec-data: scenario "${scenarioId}" has no applicationExpectations domain payload`
-      );
-    }
-  } else {
+  if (!hasArgoPush && !hasSubscription) {
     throw new Error(
       `e2e-spec-data: scenario "${scenarioId}" has no subscription or argoPush domain payload`
+    );
+  }
+  if (hasSubscription && applicationExpectations === undefined) {
+    throw new Error(
+      `e2e-spec-data: scenario "${scenarioId}" has no applicationExpectations domain payload`
     );
   }
 

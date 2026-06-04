@@ -52,7 +52,8 @@ export function getPlacementTolerations(yamlText: string): PlacementTolerationDo
 }
 
 export function syncYamlContainsKind(yamlText: string, kind: string): boolean {
-  return new RegExp(`kind:\\s*${kind}\\b`).test(yamlText);
+  const safeKind = kind.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`kind:\\s*${safeKind}\\b`).test(yamlText);
 }
 
 /** Matches `kind: Policy` document only (not PolicySet). */

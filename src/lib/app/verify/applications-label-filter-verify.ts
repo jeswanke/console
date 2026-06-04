@@ -113,10 +113,11 @@ export async function verifyApplicationsFilteredByLabel(
   );
   await expect(table.getClearAllFiltersButton()).toBeVisible();
 
+  // getDataRowCount() and initialRowCount count visible table rows on the current page only.
   const filteredRows = await table.getDataRowCount();
   expect(filteredRows).toBeLessThanOrEqual(initialRowCount);
   expect(filteredRows).toBeGreaterThan(0);
-  // When all matches fit on one page, row count matches the badge on the filter option.
+  // When option.expectedCount fits on this page, assert equality (not total matches cluster-wide).
   if (option.expectedCount <= initialRowCount) {
     expect(filteredRows).toBe(option.expectedCount);
   }

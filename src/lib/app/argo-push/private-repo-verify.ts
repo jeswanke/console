@@ -10,7 +10,7 @@ import type { OcCliService } from '@services/OcCliService';
 
 import type { CreateArgoPushApplicationOptions } from './types';
 import { verifyArgoPushAppTopologyTab } from '../verify/argo-push-topology-tab';
-import type { TopologyClusterResourceRef } from '../topology/graph-ids';
+import { regexEscapePathSegment, type TopologyClusterResourceRef } from '../topology/graph-ids';
 
 /** Assert the private repository credentials info alert on the **Template** step. */
 export async function verifyPrivateRepoCredentialsAlertOnTemplate(
@@ -31,7 +31,7 @@ export async function verifyConfigureRepositoryCredentialsOpensGitOpsSettings(
   const gitOpsHost = await oc.run(
     'oc get route openshift-gitops-server -n openshift-gitops -o jsonpath="{.spec.host}"'
   );
-  const expectedPath = `${gitOpsRepoSettingsPathSuffix}`;
+  const expectedPath = gitOpsRepoSettingsPathSuffix;
 
   const configureButton = wizard.getConfigureRepositoryCredentialsButton();
   await expect(configureButton).toBeEnabled({ timeout: 60_000 });
@@ -109,7 +109,7 @@ export async function expectArgoPushApplicationDetailsTabUrl(
   const slug = APP_APPLICATION_DETAILS.tabs.details.slug;
   await expect(page).toHaveURL(
     new RegExp(
-      `/multicloud/applications/details/${argoServerNamespace.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}/${applicationSetName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}/${slug}(\\?|$)`
+      `/multicloud/applications/details/${regexEscapePathSegment(argoServerNamespace)}/${regexEscapePathSegment(applicationSetName)}/${slug}(\\?|$)`
     )
   );
 }

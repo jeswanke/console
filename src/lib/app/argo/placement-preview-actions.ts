@@ -119,7 +119,7 @@ export class ArgoPlacementPreviewActions implements PlacementPreviewWizardHost {
     const btn = this.getNewPlacementButton();
     await btn.waitFor({ state: 'visible', timeout: 30_000 });
     if ((await btn.getAttribute('aria-pressed')) !== 'true') {
-      await btn.click({ force: true });
+      await btn.click();
     }
     await expect(btn).toHaveAttribute('aria-pressed', 'true');
   }
@@ -128,7 +128,7 @@ export class ArgoPlacementPreviewActions implements PlacementPreviewWizardHost {
     const btn = this.getExistingPlacementButton();
     await btn.waitFor({ state: 'visible', timeout: 30_000 });
     if ((await btn.getAttribute('aria-pressed')) !== 'true') {
-      await btn.click({ force: true });
+      await btn.click();
     }
     await expect(btn).toHaveAttribute('aria-pressed', 'true');
   }

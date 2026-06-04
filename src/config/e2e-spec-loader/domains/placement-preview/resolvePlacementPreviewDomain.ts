@@ -4,14 +4,6 @@ import {
   type PlacementPreviewSetupPayload,
 } from './placementPreviewSchema';
 
-const PLACEMENT_PREVIEW_KEYS = [
-  'setupYamlRelativePath',
-  'namespace',
-  'clusterSet',
-  'namePrefix',
-  'existingPlacementName',
-] as const;
-
 function extractDomainOverlay(
   record: Record<string, unknown>,
   domainKey: string
@@ -23,13 +15,7 @@ function extractDomainOverlay(
       return overlay as Record<string, unknown>;
     }
   }
-  const flat: Record<string, unknown> = {};
-  for (const key of PLACEMENT_PREVIEW_KEYS) {
-    if (record[key] !== undefined) {
-      flat[key] = record[key];
-    }
-  }
-  return flat;
+  return {};
 }
 
 /** Merges profiles and `specDomains.<domainKey>` for placement-preview setup payloads. */

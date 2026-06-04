@@ -4,8 +4,14 @@
 import { PLACEMENT_CLUSTER_PREVIEW } from '@constants/placement-preview';
 import { PLACEMENT_TOLERATIONS_YAML_PATTERNS } from '@constants/placement-tolerations';
 
+export const GOV_ROUTES = {
+  governance: '/multicloud/governance',
+  policyDetails: (namespace: string, name: string) =>
+    `/multicloud/governance/policies/details/${namespace}/${name}`,
+} as const;
+
 export const GOVERNANCE_ROUTES = {
-  governanceOverview: '/multicloud/governance',
+  governanceOverview: GOV_ROUTES.governance,
   policiesList: '/multicloud/governance/policies',
   createPolicy: '/multicloud/governance/policies/create',
   policySetsList: '/multicloud/governance/policy-sets',
@@ -106,12 +112,6 @@ export const POLICY_SET_CREATE_WIZARD = {
 // =============================================================================
 // Routes (governance detail pages — from main)
 // =============================================================================
-
-export const GOV_ROUTES = {
-  governance: '/multicloud/governance',
-  policyDetails: (namespace: string, name: string) =>
-    `/multicloud/governance/policies/details/${namespace}/${name}`,
-} as const;
 
 export const GOV_PLACEMENT_ROUTES = {
   details: (namespace: string, name: string) =>

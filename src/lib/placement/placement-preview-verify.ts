@@ -91,6 +91,10 @@ export async function verifyPlacementPreviewModal(
 
   if (options.expectedCounts) {
     const titleCounts = parsePlacementPreviewModalTitle(title);
+    expect(
+      titleCounts,
+      `Could not parse placement preview modal title: ${JSON.stringify(title)}`
+    ).not.toBeNull();
     expect(titleCounts).toEqual(options.expectedCounts);
   }
 

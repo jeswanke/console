@@ -85,7 +85,6 @@ export async function verifyDefaultArgoPlacementTolerationsInYaml(
   wizard: ArgoPlacementTolerationsWizardHost,
   patterns: ArgoPlacementTolerationsYamlPatterns
 ): Promise<void> {
-  await wizard.syncEditor.enableYamlEditor();
   const yamlText = await wizard.syncEditor.waitForYamlMatching(
     patterns.wizardApplicationSetPlacementTolerations,
     60_000

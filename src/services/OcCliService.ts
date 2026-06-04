@@ -171,6 +171,40 @@ export class OcCliService {
     );
   }
 
+  /**
+   * `oc label managedcluster <name> <key>=<value> --overwrite` (argv-only, no shell).
+   */
+  async labelManagedCluster(
+    clusterName: string,
+    labelKey: string,
+    labelValue: string
+  ): Promise<void> {
+    assertSafeOcContextName(clusterName, 'clusterName');
+    assertSafeOcSingleArg(labelValue, 'labelValue');
+    if (!/^[a-zA-Z0-9._/-]+$/.test(labelKey) || labelKey.length > 253) {
+      throw new Error(`OcCliService: invalid labelKey for oc argv (${JSON.stringify(labelKey)})`);
+    }
+    await execFilePromise(
+      'oc',
+      ['label', 'managedcluster', clusterName, `${labelKey}=${labelValue}`, '--overwrite'],
+      { encoding: 'utf8', maxBuffer: 1024 * 1024 }
+    );
+  }
+
+  async deleteSecret(
+    namespace: string,
+    secretName: string,
+    options?: { ignoreNotFound?: boolean }
+  ): Promise<void> {
+    assertSafeOcSingleArg(namespace, 'namespace');
+    assertSafeOcSingleArg(secretName, 'secretName');
+    const args = ['delete', 'secret', secretName, '-n', namespace];
+    if (options?.ignoreNotFound) {
+      args.push('--ignore-not-found');
+    }
+    await execFilePromise('oc', args, { encoding: 'utf8', maxBuffer: 1024 * 1024 });
+  }
+
   private async deleteNamespacedResource(
     resource: string,
     namespace: string,

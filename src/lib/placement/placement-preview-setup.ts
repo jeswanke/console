@@ -23,14 +23,35 @@ export async function cleanupPlacementPreviewSetup(
   await oc.deleteYaml(setupYamlPath(setup.setupYamlRelativePath)).catch(() => undefined);
 }
 
+function assertSafeManagedClusterName(name: string): void {
+  if (
+    !name ||
+    name.length > 253 ||
+    !/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/.test(name)
+  ) {
+    throw new Error(
+      `labelClustersForPlacementPreview: invalid cluster name (${JSON.stringify(name)})`
+    );
+  }
+}
+
+function assertSafeClusterSet(clusterSet: string): void {
+  const set = clusterSet.trim();
+  if (!set || set.length > 63 || !/^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/.test(set)) {
+    throw new Error(
+      `labelClustersForPlacementPreview: invalid clusterSet (${JSON.stringify(clusterSet)})`
+    );
+  }
+}
+
 export async function labelClustersForPlacementPreview(
   oc: OcCliService,
   clusterNames: string[],
   clusterSet: string
 ): Promise<void> {
+  assertSafeClusterSet(clusterSet);
   for (const name of clusterNames) {
-    await oc.run(
-      `oc label managedcluster ${name} ${CLUSTER_SET_LABEL}=${clusterSet} --overwrite`
-    );
+    assertSafeManagedClusterName(name);
+    await oc.labelManagedCluster(name, CLUSTER_SET_LABEL, clusterSet);
   }
 }

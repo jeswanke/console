@@ -8,7 +8,7 @@ import {
   resolvePolicyScenarioByTestId,
   resolvePolicySetScenarioByTestId,
 } from '@config';
-import { loadManagedClusterContext } from '@lib/cluster/managedClusterContext';
+import { managedClusterNamesForPreview } from '@lib/cluster/managedClusterContext';
 import {
   applyPolicyPlacementPreviewSetup,
   cleanupPolicyPlacementPreviewSetup,
@@ -27,14 +27,6 @@ import {
   runPolicySetPlacementPreviewFlow,
   verifyCreatePolicySetWizardTitle,
 } from '@lib/governance/policy-set-placement-preview-verify';
-
-function managedClusterNamesForPreview(): string[] {
-  const names = new Set<string>(['local-cluster']);
-  for (const entry of loadManagedClusterContext()?.managedClusters ?? []) {
-    if (entry?.name) names.add(entry.name);
-  }
-  return [...names];
-}
 
 const policyPreviewScenario = resolvePolicyScenarioByTestId('RHACM4K-64221');
 const policySetPreviewScenario = resolvePolicySetScenarioByTestId('RHACM4K-64222');

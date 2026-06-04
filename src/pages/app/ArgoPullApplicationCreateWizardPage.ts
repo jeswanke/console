@@ -106,9 +106,7 @@ export class ArgoPullApplicationCreateWizardPage extends BasePage implements Pla
   }
 
   async expectOnCreateRoute(): Promise<void> {
-    await expect(this.page).toHaveURL(
-      new RegExp(`${APP_ROUTES.createArgoPull.replace(/\//g, '\\/')}$`)
-    );
+    await expect(this.page).toHaveURL(`**${APP_ROUTES.createArgoPull}`);
   }
 
   /** General → Sync policy, then **Placement** (RHACM4K-64219). */

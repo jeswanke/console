@@ -50,7 +50,7 @@ export class PlacementDetailsPage extends BasePage {
       .locator(`.${PLACEMENT_DETAILS.sectionCardClass}`)
       .filter({
         has: this.page.locator(`.${PLACEMENT_DETAILS.sectionCardTitleClass}`, {
-          hasText: new RegExp(`^${label}$`),
+          hasText: new RegExp(`^${escapeRegExp(label)}$`),
         }),
       });
   }
