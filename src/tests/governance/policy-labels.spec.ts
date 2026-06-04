@@ -15,7 +15,10 @@
  */
 
 import { test, expect } from '@fixtures/governance-test';
-import { OcCliService } from '@services/OcCliService';
+import {
+  ensurePolicyLabelsClean,
+  cleanupPolicyLabels,
+} from '@lib/governance/policy-labels-setup';
 
 import {
   GOV_LABELS,
@@ -29,7 +32,6 @@ const TEST_LABELS = {
 } as const;
 
 const { clusterName } = GOV_CLUSTER_BACKUP;
-const ocSvc = new OcCliService();
 
 test.describe(
   'Governance - Labels on Individual Policy Details Page',
@@ -41,15 +43,7 @@ test.describe(
     let hasClusterBackup = false;
 
     test.beforeAll(async () => {
-
-      hasClusterBackup = await ocSvc.policyExists(
-        GOV_CLUSTER_BACKUP.discoveredPolicy,
-        clusterName,
-      );
-
-      if (!hasClusterBackup) return;
-
-      await ocSvc.policyRemoveLabels(
+      hasClusterBackup = await ensurePolicyLabelsClean(
         GOV_CLUSTER_BACKUP.discoveredPolicy,
         clusterName,
         labelKeys,
@@ -65,8 +59,7 @@ test.describe(
 
     test.afterAll(async () => {
       if (!hasClusterBackup) return;
-
-      await ocSvc.policyRemoveLabels(
+      await cleanupPolicyLabels(
         GOV_CLUSTER_BACKUP.discoveredPolicy,
         clusterName,
         labelKeys,
