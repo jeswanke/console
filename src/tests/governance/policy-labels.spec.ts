@@ -75,6 +75,7 @@ test.describe(
 
     test('RHACM4K-63381: Labels on discovered and managed policy template details', async ({
       governancePage,
+      discoveredPolicyDetailsPage,
       policyTemplateDetailsPage,
       oc,
       page,
@@ -96,7 +97,7 @@ test.describe(
       await test.step(
         '2: Verify Labels column shows dash on Clusters tab',
         async () => {
-          await governancePage.clickClustersTab();
+          await discoveredPolicyDetailsPage.openClustersTab();
 
           await expect(async () => {
             await governancePage.navigateToDiscoveredPolicyClusters(
@@ -107,7 +108,7 @@ test.describe(
             );
             await governancePage.waitForLoad();
             const labelsCell =
-              await governancePage.getClusterLabelsCell(
+              await discoveredPolicyDetailsPage.getClusterLabelsCell(
                 clusterName,
               );
             await expect(labelsCell).toHaveText(
@@ -165,7 +166,7 @@ test.describe(
             );
             await governancePage.waitForLoad();
             const labelsCell =
-              await governancePage.getClusterLabelsCell(
+              await discoveredPolicyDetailsPage.getClusterLabelsCell(
                 clusterName,
               );
             await expect(labelsCell).not.toHaveText(
@@ -177,14 +178,14 @@ test.describe(
           });
 
           const labelsCell =
-            await governancePage.getClusterLabelsCell(
+            await discoveredPolicyDetailsPage.getClusterLabelsCell(
               clusterName,
             );
           const labelButton = labelsCell.getByRole('button');
           await expect(labelButton).toContainText(/\d+ labels?/);
 
           await labelButton.click();
-          const popover = governancePage.getLabelsPopover();
+          const popover = discoveredPolicyDetailsPage.getLabelPopover();
           await expect(popover).toBeVisible();
           await expect(popover).toContainText(
             `environment=${TEST_LABELS.environment}`,
@@ -266,32 +267,32 @@ test.describe(
           );
 
           const labelFilterBtn =
-            governancePage.getLabelFilterButton();
+            discoveredPolicyDetailsPage.getLabelFilterButton();
           await expect(labelFilterBtn).toBeVisible({
             timeout: 30_000,
           });
 
-          await governancePage.openLabelFilter();
-          await governancePage.selectLabelFilterValue(
+          await discoveredPolicyDetailsPage.getLabelFilterButton().click();
+          await discoveredPolicyDetailsPage.getLabelFilterOption(
             `environment=${TEST_LABELS.environment}`,
           );
           await governancePage.waitForLoad();
 
           const clusterRow =
-            governancePage.getClusterRow(clusterName);
+            discoveredPolicyDetailsPage.getClusterRow(clusterName);
           await expect(clusterRow).toBeVisible();
 
-          await governancePage.clearAllFilters();
+          await discoveredPolicyDetailsPage.clearFilters();
           await expect(clusterRow).toBeVisible();
 
-          await governancePage.openLabelFilter();
-          await governancePage.toggleLabelFilterInequality(
+          await discoveredPolicyDetailsPage.getLabelFilterButton().click();
+          await discoveredPolicyDetailsPage.getLabelFilterOption(
             `environment=${TEST_LABELS.environment}`,
           );
           await governancePage.waitForLoad();
           await expect(clusterRow).toBeHidden();
 
-          await governancePage.clearAllFilters();
+          await discoveredPolicyDetailsPage.clearFilters();
         },
       );
     });

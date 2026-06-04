@@ -1,30 +1,88 @@
-import { Page, Locator } from '@playwright/test';
+import { Page, Locator, expect } from '@playwright/test';
 import { BasePage } from '@pages/BasePage';
 import { OcCliService } from '@services/OcCliService';
-import {
-  GOV_ROUTES,
-  GOV_DISCOVERED_DETAILS,
-  GOV_LABELS,
-} from '@constants/governance';
+import { SELECTORS } from '@constants/selectors';
+import { GOV_ROUTES, GOV_PAGE } from '@constants/governance';
 
 /**
- * Governance page — navigates tabs, discovered policies list, Clusters tab,
- * and label filter interactions.
+ * Governance main page (Policies list, Policy sets list).
+ *
+ * Route: /multicloud/governance
+ * Contains: Overview, Policy sets, Policies, Discovered policies tabs.
  */
 export class GovernancePage extends BasePage {
   constructor(
     page: Page,
-    private readonly oc: OcCliService,
+    private readonly oc: OcCliService
   ) {
     super(page);
   }
 
-  async gotoDiscoveredPolicies(): Promise<void> {
+  async goto(): Promise<void> {
     const consoleUrl = await this.oc.getConsoleUrl();
-    await this.page.goto(
-      `${consoleUrl}${GOV_ROUTES.discoveredPolicies}`,
-    );
-    await this.waitForLoad();
+    await this.page.goto(`${consoleUrl}${GOV_ROUTES.governance}`);
+    await expect(this.getPageTitle()).toBeVisible({ timeout: 60_000 });
+  }
+
+  async openPoliciesTab(): Promise<void> {
+    await this.page
+      .getByRole('tab', { name: GOV_PAGE.tabs.policies, exact: true })
+      .click();
+    await this.waitForLoad(30_000);
+  }
+
+  async openPolicySetsTab(): Promise<void> {
+    await this.page.getByRole('tab', { name: GOV_PAGE.tabs.policySets }).click();
+    await this.waitForLoad(30_000);
+  }
+
+  getPageTitle(): Locator {
+    return this.page.getByRole('heading', { name: GOV_PAGE.title, level: 1 });
+  }
+
+  getSearchInput(): Locator {
+    return this.page.locator(SELECTORS.common.searchInput);
+  }
+
+  async searchPolicies(text: string): Promise<void> {
+    const input = this.getSearchInput();
+    await input.clear();
+    await input.fill(text);
+    await this.waitForLoad(30_000);
+  }
+
+  getPolicyRow(policyName: string): Locator {
+    return this.page.getByRole('link', { name: policyName, exact: true });
+  }
+
+  async openDiscoveredPoliciesTab(): Promise<void> {
+    await this.page
+      .getByRole('tab', { name: GOV_PAGE.tabs.discoveredPolicies })
+      .click();
+    await this.waitForLoad(30_000);
+  }
+
+  getPolicySetCard(policySetName: string): Locator {
+    return this.page.getByText(policySetName, { exact: true });
+  }
+
+  getDiscoveredPolicyRow(policyName: string): Locator {
+    return this.page.getByRole('link', { name: policyName, exact: true });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Policy labels test helpers (RHACM4K-63381)
+  // ---------------------------------------------------------------------------
+
+  getPolicyLink(policyName: string): Locator {
+    return this.page.getByRole('link', {
+      name: policyName,
+    }).first();
+  }
+
+  async gotoDiscoveredPolicies(): Promise<void> {
+    await this.goto();
+    await this.openDiscoveredPoliciesTab();
   }
 
   async gotoDiscoveredPolicyClusters(
@@ -34,21 +92,12 @@ export class GovernancePage extends BasePage {
     policyName: string,
   ): Promise<void> {
     const consoleUrl = await this.oc.getConsoleUrl();
-    const route = GOV_ROUTES.discoveredByCluster(
-      apiGroup,
-      apiVersion,
-      kind,
-      policyName,
+    await this.page.goto(
+      `${consoleUrl}/multicloud/governance/discovered-policies/details/local-cluster/${apiGroup}/${apiVersion}/${kind}/${policyName}`,
     );
-    await this.page.goto(`${consoleUrl}${route}`);
-    await this.waitForLoad();
+    await this.waitForLoad(30_000);
   }
 
-  /**
-   * Navigate to the discovered policy clusters tab without waitForLoad.
-   * Designed for use inside toPass() retry loops where the caller
-   * controls when to assert load state.
-   */
   async navigateToDiscoveredPolicyClusters(
     apiGroup: string,
     apiVersion: string,
@@ -56,18 +105,16 @@ export class GovernancePage extends BasePage {
     policyName: string,
   ): Promise<void> {
     const consoleUrl = await this.oc.getConsoleUrl();
-    const route = GOV_ROUTES.discoveredByCluster(
-      apiGroup,
-      apiVersion,
-      kind,
-      policyName,
-    );
-    await this.page.goto(`${consoleUrl}${route}`).catch(() => {});
+    await this.page
+      .goto(
+        `${consoleUrl}/multicloud/governance/discovered-policies/details/local-cluster/${apiGroup}/${apiVersion}/${kind}/${policyName}`,
+      )
+      .catch(() => {});
   }
 
   async gotoPolicyTemplateDetails(
     namespace: string,
-    name: string,
+    policyName: string,
     clusterName: string,
     apiGroup: string,
     apiVersion: string,
@@ -75,134 +122,13 @@ export class GovernancePage extends BasePage {
     templateName: string,
   ): Promise<void> {
     const consoleUrl = await this.oc.getConsoleUrl();
-    const route = GOV_ROUTES.policyTemplateDetails(
-      namespace,
-      name,
-      clusterName,
-      apiGroup,
-      apiVersion,
-      kind,
-      templateName,
+    await this.page.goto(
+      `${consoleUrl}/multicloud/governance/policies/details/${namespace}/${policyName}/template/${clusterName}/${apiGroup}/${apiVersion}/${kind}/${templateName}`,
     );
-    await this.page.goto(`${consoleUrl}${route}`);
-    await this.waitForLoad();
-  }
-
-  // ----- Tab / secondary nav -----
-
-  async clickClustersTab(): Promise<void> {
-    await this.page
-      .getByRole('tab', {
-        name: GOV_DISCOVERED_DETAILS.tabs.clusters,
-        exact: true,
-      })
-      .click();
-    await this.waitForLoad();
-  }
-
-  // ----- Table interactions -----
-
-  getPolicyLink(policyName: string): Locator {
-    return this.page.getByRole('link', {
-      name: policyName,
-      exact: true,
-    });
-  }
-
-  getClusterRow(clusterName: string): Locator {
-    return this.page.getByRole('row').filter({
-      has: this.page.getByRole('link', {
-        name: clusterName,
-        exact: true,
-      }),
-    });
-  }
-
-  /**
-   * Resolve a table cell by column header text within a data row.
-   * Finds the column index from the header row at call time, then
-   * returns the td at that index. Resilient to column reordering.
-   */
-  private async getCellByColumnHeader(
-    row: Locator,
-    columnName: string,
-  ): Promise<Locator> {
-    const headers = this.page
-      .getByRole('grid')
-      .getByRole('columnheader');
-    const count = await headers.count();
-    let colIndex = -1;
-    for (let i = 0; i < count; i++) {
-      const text = await headers.nth(i).textContent();
-      if (text?.trim() === columnName) {
-        colIndex = i;
-        break;
-      }
-    }
-    if (colIndex < 0) {
-      throw new Error(
-        `Column "${columnName}" not found in table headers`,
-      );
-    }
-    return row.locator('td').nth(colIndex);
-  }
-
-  async getClusterLabelsCell(
-    clusterName: string,
-  ): Promise<Locator> {
-    const row = this.getClusterRow(clusterName);
-    return this.getCellByColumnHeader(row, 'Labels');
+    await this.waitForLoad(30_000);
   }
 
   getClusterLink(clusterName: string): Locator {
-    return this.page.getByRole('link', {
-      name: clusterName,
-      exact: true,
-    });
-  }
-
-  // ----- Labels popover -----
-
-  getLabelsPopover(): Locator {
-    return this.page.locator(
-      '[aria-describedby*="popover-labels"]',
-    );
-  }
-
-  // ----- Label filter -----
-
-  getLabelFilterButton(): Locator {
-    return this.page.getByRole('button', {
-      name: GOV_LABELS.filterButtonName,
-      exact: true,
-    });
-  }
-
-  async openLabelFilter(): Promise<void> {
-    await this.getLabelFilterButton().click();
-  }
-
-  async selectLabelFilterValue(label: string): Promise<void> {
-    const option = this.page
-      .getByRole('menuitem')
-      .filter({ hasText: label });
-    await option.getByRole('checkbox').click();
-  }
-
-  async toggleLabelFilterInequality(label: string): Promise<void> {
-    const option = this.page
-      .getByRole('menuitem')
-      .filter({ hasText: label });
-    await option.getByRole('button', { name: '=' }).click();
-  }
-
-  async clearAllFilters(): Promise<void> {
-    const clearButton = this.page.getByRole('button', {
-      name: /clear all filters/i,
-    });
-    if (await clearButton.isVisible().catch(() => false)) {
-      await clearButton.click();
-      await this.waitForLoad();
-    }
+    return this.page.getByRole('link', { name: clusterName, exact: true });
   }
 }
