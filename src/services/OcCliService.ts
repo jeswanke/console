@@ -181,12 +181,15 @@ export class OcCliService {
   ): Promise<void> {
     assertSafeOcContextName(clusterName, 'clusterName');
     assertSafeOcSingleArg(labelValue, 'labelValue');
-    if (!/^[a-zA-Z0-9._/-]+$/.test(labelKey) || labelKey.length > 253) {
-      throw new Error(`OcCliService: invalid labelKey for oc argv (${JSON.stringify(labelKey)})`);
+    const safeClusterName = clusterName.trim();
+    const safeLabelKey = labelKey.trim();
+    const safeLabelValue = labelValue.trim();
+    if (!/^[a-zA-Z0-9._/-]+$/.test(safeLabelKey) || safeLabelKey.length > 253) {
+      throw new Error(`OcCliService: invalid labelKey for oc argv (${JSON.stringify(safeLabelKey)})`);
     }
     await execFilePromise(
       'oc',
-      ['label', 'managedcluster', clusterName, `${labelKey}=${labelValue}`, '--overwrite'],
+      ['label', 'managedcluster', safeClusterName, `${safeLabelKey}=${safeLabelValue}`, '--overwrite'],
       { encoding: 'utf8', maxBuffer: 1024 * 1024 }
     );
   }
@@ -198,7 +201,9 @@ export class OcCliService {
   ): Promise<void> {
     assertSafeOcSingleArg(namespace, 'namespace');
     assertSafeOcSingleArg(secretName, 'secretName');
-    const args = ['delete', 'secret', secretName, '-n', namespace];
+    const safeNamespace = namespace.trim();
+    const safeSecretName = secretName.trim();
+    const args = ['delete', 'secret', safeSecretName, '-n', safeNamespace];
     if (options?.ignoreNotFound) {
       args.push('--ignore-not-found');
     }

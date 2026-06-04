@@ -3,6 +3,7 @@
 import { expect, type Locator, type Page } from '@playwright/test';
 
 import { APP_APPLICATION_DETAILS, APP_APPLICATION_TOPOLOGY } from '@constants/app';
+import { escapePathSegment } from '@lib/utils';
 /** Re-export for callers that need the raw test id string. */
 export const TOPOLOGY_GRAPH_SURFACE_TEST_ID = APP_APPLICATION_TOPOLOGY.graphSurfaceTestId;
 
@@ -280,10 +281,6 @@ export function buildMergedTopologyDrawerSpotChecksForSubscriptionBlocks(params:
   return out;
 }
 
-export function regexEscapePathSegment(s: string): string {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
 /**
  * Asserts the browser is on the application **Details** tab URL (path segment `details`, optional query).
  */
@@ -295,7 +292,7 @@ export async function expectApplicationDetailsUrl(
 ): Promise<void> {
   const slug = APP_APPLICATION_DETAILS.tabs.details.slug;
   const re = new RegExp(
-    `/multicloud/applications/details/${regexEscapePathSegment(namespace)}/${regexEscapePathSegment(applicationName)}/${slug}(\\?|$)`
+    `/multicloud/applications/details/${escapePathSegment(namespace)}/${escapePathSegment(applicationName)}/${slug}(\\?|$)`
   );
   await expect(page).toHaveURL(re, options);
 }
@@ -310,7 +307,7 @@ export async function expectApplicationTopologyUrl(
 ): Promise<void> {
   const slug = APP_APPLICATION_DETAILS.tabs.topology.slug;
   const re = new RegExp(
-    `/multicloud/applications/details/${regexEscapePathSegment(namespace)}/${regexEscapePathSegment(applicationName)}/${slug}(\\?|$)`
+    `/multicloud/applications/details/${escapePathSegment(namespace)}/${escapePathSegment(applicationName)}/${slug}(\\?|$)`
   );
   await expect(page).toHaveURL(re);
 }

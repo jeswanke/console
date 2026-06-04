@@ -107,10 +107,11 @@ export function buildComposerSyntheticSubscriptionLayer(
     }
   }
 
-  return {
-    repositories: allRepositories,
-    perBlock: perBlockOut,
-  };
+  const out: Record<string, unknown> = { perBlock: perBlockOut };
+  if (allRepositories.length > 0) {
+    out.repositories = allRepositories;
+  }
+  return out;
 }
 
 export function mergeExpectationsRowsForComposerBlock(

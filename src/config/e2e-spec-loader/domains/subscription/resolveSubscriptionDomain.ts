@@ -16,13 +16,11 @@ function hasSubscriptionDomainIntent(
   if (Object.keys(scenarioOverlay).length > 0) {
     return true;
   }
-  if (typeof merged.applicationName === 'string' && merged.applicationName.length > 0) {
-    return true;
-  }
-  if (typeof merged.namespace === 'string' && merged.namespace.length > 0) {
-    return true;
-  }
-  if (Array.isArray(merged.repositories) && merged.repositories.length > 0) {
+  if (
+    Object.prototype.hasOwnProperty.call(merged, 'applicationName') ||
+    Object.prototype.hasOwnProperty.call(merged, 'namespace') ||
+    Object.prototype.hasOwnProperty.call(merged, 'repositories')
+  ) {
     return true;
   }
   return false;

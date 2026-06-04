@@ -1,6 +1,6 @@
-import { Page, Locator, expect } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 import { BasePage } from '@pages/BasePage';
-import { OcCliService } from '@services/OcCliService';
+import type { OcCliService } from '@services/OcCliService';
 import { APP_ARGO_PULL_CREATE_WIZARD, APP_CREATE_MENU, APP_ROUTES } from '@constants/app';
 import type { ApplicationListPage } from '@pages/app/ApplicationListPage';
 import {
