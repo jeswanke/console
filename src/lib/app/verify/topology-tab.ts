@@ -1,4 +1,15 @@
-/** Topology tab: graph nodes, `#comboChannel` scope, drawer checks. Caller opens Topology first. */
+/**
+ * Topology tab assertions for subscription applications.
+ *
+ * **Which helper to use**
+ * - {@link verifySubscriptionAppTopologyTab} — URL/shell, graph hydration (`data-id`), optional drawers; set
+ *   `assertGraphNodesSuccessStatus` for RHACM4K-41356-style green-node checks.
+ * - {@link verifyTopologyGraphNodesSuccessStatus} — `pf-m-success` on known `data-id` nodes only (caller hydrates or
+ *   passes ids from {@link buildTopologyNodeDataIdsForSubscriptionBlock}).
+ * - {@link expectTopologyShowsDeployableTypes} — `#nodeIcon_*` or label presence (e.g. RHACM4K-10668 CRD), not status.
+ *
+ * Caller opens the Topology tab first unless the helper navigates via `page` + `detailsPage`.
+ */
 
 import { expect, type Locator, type Page } from '@playwright/test';
 
@@ -78,6 +89,10 @@ export type VerifySubscriptionAppTopologyTabParams = {
   subscriptionScope?: TopologySubscriptionScopeParam;
   nodeHydrationTimeout?: number;
   drawerSpotChecks?: TopologyDrawerSpotCheck[];
+  /** RHACM4K-41356: assert each graph node has `pf-m-success` after hydration. */
+  assertGraphNodesSuccessStatus?: boolean;
+  /** Timeout for {@link verifyTopologyGraphNodesSuccessStatus} (defaults to `nodeHydrationTimeout`). */
+  graphNodesSuccessTimeout?: number;
 };
 
 /** Asserts Topology URL, graph nodes, optional `#comboChannel`, and drawer spot checks. */
@@ -92,6 +107,8 @@ export async function verifySubscriptionAppTopologyTab(
     nodeHydrationTimeout = 120_000,
     drawerSpotChecks: drawerSpotChecksParam,
     subscriptionScope,
+    assertGraphNodesSuccessStatus,
+    graphNodesSuccessTimeout,
   } = params;
 
   const merged = params.mergedSubscriptionBlocks;
@@ -185,6 +202,39 @@ export async function verifySubscriptionAppTopologyTab(
   for (const { nodeDataId, drawerContains } of drawerSpotChecks) {
     await detailsPage.clickTopologyGraphNodeByDataId(nodeDataId);
     await detailsPage.expectVisibleTopologyDrawerContains(drawerContains);
+  }
+
+  if (assertGraphNodesSuccessStatus) {
+    await verifyTopologyGraphNodesSuccessStatus(detailsPage, topologyDataIds, {
+      timeout: graphNodesSuccessTimeout ?? nodeHydrationTimeout,
+    });
+  }
+}
+
+/**
+ * RHACM4K-41356: each topology graph node reports success (`pf-m-success` on inner `.pf-topology__node`).
+ * PF6 does not reliably expose `<use href="#nodeIcon_*">` (zoom / icon id drift).
+ */
+export async function verifyTopologyGraphNodesSuccessStatus(
+  detailsPage: ApplicationDetailsPage,
+  nodeDataIds: string[],
+  options?: { timeout?: number }
+): Promise<void> {
+  const timeout = options?.timeout ?? 120_000;
+  const successModifier = APP_APPLICATION_TOPOLOGY.topologyNodeSuccessModifier;
+
+  await expect(detailsPage.getTopologySurface()).toBeVisible({ timeout: 60_000 });
+
+  for (const dataId of nodeDataIds) {
+    const node = detailsPage.getTopologyGraphNodeByDataId(dataId);
+    const successNode = node.locator(`.pf-topology__node.${successModifier}`);
+    await expect
+      .poll(async () => (await successNode.count()) > 0, {
+        timeout,
+        intervals: [2_000, 5_000, 10_000],
+      })
+      .toBe(true);
+    await expect(successNode).toBeVisible({ timeout: 10_000 });
   }
 }
 

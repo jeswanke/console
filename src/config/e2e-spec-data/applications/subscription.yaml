@@ -78,11 +78,12 @@ scenarios:
         applicationName: auto-git-helloworld
         namespace: auto-git-helloworld-ns
 
-  # RHACM4K-39232: helloworld + label placement (local-cluster).
+  # RHACM4K-39232 / RHACM4K-41356: helloworld + label placement (local-cluster).
   auto_git_placement_topology:
     enabled: true
     tests:
       - RHACM4K-39232
+      - RHACM4K-41356
     blocks:
       - use:
           - git_helloworld

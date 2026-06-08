@@ -128,6 +128,8 @@ export const APP_APPLICATION_TOPOLOGY = {
     clusterSet: 'ClusterSet',
     labelSelector: 'LabelSelector',
   },
+  /** PF topology node modifier when deploy status is healthy (`pf-m-success`). */
+  topologyNodeSuccessModifier: 'pf-m-success',
 } as const;
 
 // =============================================================================

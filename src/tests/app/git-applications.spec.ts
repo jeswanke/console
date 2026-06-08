@@ -592,6 +592,59 @@ test.describe('Git Applications', {
   });
 
   test(
+    'RHACM4K-41356: ALC: Verify each topology node has correct status',
+    { tag: ['@e2e-common', '@RHACM4K-41356', '@create', '@UI'] },
+    async ({
+      page,
+      oc,
+      applicationListPage,
+      applicationDetailsPage,
+      subscriptionApplicationCreateWizardPage,
+    }) => {
+      test.setTimeout(300_000);
+      const { subscription: options, applicationExpectations: expectations } =
+        resolveSubscriptionScenarioByTestId('RHACM4K-41356');
+
+      await oc.deleteNamespace(options.namespace);
+      await applicationListPage.goto();
+      await createSubscription(
+        applicationListPage,
+        subscriptionApplicationCreateWizardPage,
+        options
+      );
+      await oc.ensureManagedClusterSetBinding(options.namespace, 'global');
+
+      await expectSubscriptionAppResourcesViaOc({
+        oc,
+        applicationName: options.applicationName,
+        namespace: options.namespace,
+        applicationExpectations: expectations,
+      });
+
+      const { applicationName, namespace } = options;
+      const clusterResourceRows = expectations.topologyClusterResourceBlocks[0]!;
+      await applicationDetailsPage.navigateToApplicationTab(namespace, applicationName, 'topology');
+      await verifySubscriptionAppTopologyTab({
+        page,
+        detailsPage: applicationDetailsPage,
+        applicationName,
+        namespace,
+        blockIndex: 1,
+        clusterResourceRows,
+        drawerSpotChecks: [],
+        assertGraphNodesSuccessStatus: true,
+      });
+
+      await applicationListPage.goto();
+      await applicationListPage.deleteApplicationFromOverviewViaSearch({
+        applicationName,
+        namespace,
+        removeRelatedResources: true,
+      });
+    }
+  );
+
+  test(
     'RHACM4K-39666: ALC: Create an appsub with repo urls contains underscore',
     { tag: ['@e2e-common', '@RHACM4K-39666', '@create', '@UI'] },
     async ({

@@ -242,6 +242,12 @@ test.describe('e2e-spec-data YAML processing', () => {
     });
   });
 
+  test('auto_git_placement_topology: RHACM4K-41356 resolves by Polarion id', () => {
+    const resolved = resolveSubscriptionScenarioByTestId('RHACM4K-41356', E2E_SPEC_DATA_DIR);
+    expect(resolved.scenarioId).toBe('auto_git_placement_topology');
+    expect(resolved.subscription.applicationName).toBe('api-git-local');
+  });
+
   test('auto_git_placement_topology: helloworld + local placement (RHACM4K-39232)', () => {
     const spec = loadE2eSpecData(E2E_SPEC_DATA_DIR);
     expect(spec.scenarios.auto_git_placement_topology?.blocks?.[0]?.use).toContain('placement_label_local');
