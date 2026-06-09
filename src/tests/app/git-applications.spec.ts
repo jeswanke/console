@@ -4,11 +4,14 @@ import {
   resolveSubscriptionScenarioByTestId,
   resolveSubscriptionScenarioPair,
 } from '@config';
+import { GIT_PLACEMENTRULE_NO_NAME_TEST } from '@constants/app';
+import { applyGitPlacementRuleNoNameFixture } from '@lib/app/setup/git-placementrule-no-placementref-name';
 import {
   addSubscriptionToExistingApplication,
   buildGlobalClusterLabelDeployment,
   createSubscription,
   deleteSubscriptionFromExistingApplication,
+  editSubscriptionBrokenPlacementRuleRef,
   editSubscriptionInExistingApplication,
   syncSubscriptionApplication,
 } from '@lib/app/subscription';
@@ -24,7 +27,11 @@ import {
   applyPrivateGitAuthToSubscriptionOptions,
   skipUnlessPrivateGitAuthConfigured,
 } from '@lib/app/auth/private-git';
-import { defaultSubscriptionCrName } from '@lib/app/topology/graph-ids';
+import { resolvePlacementCrNameForSubscriptionBlock } from '@lib/app/placement/resolve';
+import {
+  buildTopologyNodeDataIdsForSubscriptionBlock,
+  defaultSubscriptionCrName,
+} from '@lib/app/topology/graph-ids';
 import { skipUnlessPrimaryManagedCluster } from '@lib/cluster/managedClusterContext';
 import {
   expectApplicationDetailsMinSuccessResourceCount,
@@ -35,6 +42,7 @@ import {
   verifyCrdGitApplicationTopologyStatus,
   verifyPlacementDecisionTopologyDrawer,
   verifySubscriptionAppTopologyTab,
+  verifyTopologyGraphNodesSuccessStatus,
 } from '@lib/app/verify/topology-tab';
 import { expect, test } from '@fixtures/app-test';
 
@@ -634,6 +642,87 @@ test.describe('Git Applications', {
         drawerSpotChecks: [],
         assertGraphNodesSuccessStatus: true,
       });
+
+      await applicationListPage.goto();
+      await applicationListPage.deleteApplicationFromOverviewViaSearch({
+        applicationName,
+        namespace,
+        removeRelatedResources: true,
+      });
+    }
+  );
+
+  test(
+    'RHACM4K-49630: ALC: Enable to deploy and edit an appsub with no placementrule name in subscription and edit without error',
+    { tag: ['@e2e-common', '@RHACM4K-49630', '@edit', '@UI'] },
+    async ({
+      page,
+      oc,
+      applicationListPage,
+      applicationDetailsPage,
+      subscriptionApplicationCreateWizardPage,
+    }) => {
+      test.setTimeout(300_000);
+      const { applicationName, namespace, placementRuleName } = GIT_PLACEMENTRULE_NO_NAME_TEST;
+      const { applicationExpectations } = resolveSubscriptionScenarioByTestId('RHACM4K-41356');
+      const clusterResourceRows = applicationExpectations.clusterResources[0]!;
+
+      await applyGitPlacementRuleNoNameFixture(oc);
+      await applicationListPage.goto();
+
+      await editSubscriptionBrokenPlacementRuleRef(
+        applicationListPage,
+        subscriptionApplicationCreateWizardPage,
+        { applicationName, namespace, placementRuleName, entry: 'list' }
+      );
+
+      const subscriptionCrName = defaultSubscriptionCrName(applicationName, 1);
+      await expect
+        .poll(
+          () => oc.getSubscriptionPlacementRefName(namespace, subscriptionCrName),
+          { timeout: 60_000, intervals: [2_000, 5_000] }
+        )
+        .toBe(placementRuleName);
+
+      await oc.ensureManagedClusterSetBinding(namespace, 'global');
+
+      await applicationDetailsPage.navigateToApplicationTab(namespace, applicationName, 'details');
+      await syncSubscriptionApplication({
+        detailsPage: applicationDetailsPage,
+        timeout: 120_000,
+      });
+
+      const placementCrName = await resolvePlacementCrNameForSubscriptionBlock(
+        oc,
+        namespace,
+        applicationName,
+        1
+      );
+
+      await applicationDetailsPage.navigateToApplicationTab(namespace, applicationName, 'topology');
+      await verifySubscriptionAppTopologyTab({
+        page,
+        detailsPage: applicationDetailsPage,
+        applicationName,
+        namespace,
+        blockIndex: 1,
+        clusterResourceRows,
+        placementCrName,
+        drawerSpotChecks: [],
+      });
+
+      const topologyDataIds = buildTopologyNodeDataIdsForSubscriptionBlock({
+        applicationName,
+        namespace,
+        blockIndex: 1,
+        clusterResourceRows,
+        placementCrName,
+      });
+      await verifyTopologyGraphNodesSuccessStatus(
+        applicationDetailsPage,
+        topologyDataIds.slice(0, 4),
+        { timeout: 90_000 }
+      );
 
       await applicationListPage.goto();
       await applicationListPage.deleteApplicationFromOverviewViaSearch({

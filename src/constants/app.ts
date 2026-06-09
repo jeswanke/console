@@ -293,6 +293,14 @@ export const APP_TABLE_MANAGE_COLUMNS = {
   ] as const,
 } as const;
 
+/** RHACM4K-49630 — appsub with PlacementRule ref missing `name` (CLI apply + edit existing rule). */
+export const GIT_PLACEMENTRULE_NO_NAME_TEST = {
+  namespace: 'git-placementrule',
+  applicationName: 'git-placementrule',
+  placementRuleName: 'git-placementrule-placement-1',
+  setupYamlRelativePath: 'src/templates/app/subscription/git-no-placementrule-name.yaml',
+} as const;
+
 /** RHACM4K-64215 — pre-seeded Placement + legacy PlacementRule for subscription wizard. */
 export const PLACEMENT_TEST_RESOURCES = {
   namespace: 'placement-test-ns',

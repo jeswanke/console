@@ -93,6 +93,9 @@ export type VerifySubscriptionAppTopologyTabParams = {
   assertGraphNodesSuccessStatus?: boolean;
   /** Timeout for {@link verifyTopologyGraphNodesSuccessStatus} (defaults to `nodeHydrationTimeout`). */
   graphNodesSuccessTimeout?: number;
+  /** Active placement name when edit creates non-default CR (e.g. RHACM4K-49630 `placement-3`). */
+  placementCrName?: string;
+  subscriptionCrName?: string;
 };
 
 /** Asserts Topology URL, graph nodes, optional `#comboChannel`, and drawer spot checks. */
@@ -109,6 +112,8 @@ export async function verifySubscriptionAppTopologyTab(
     subscriptionScope,
     assertGraphNodesSuccessStatus,
     graphNodesSuccessTimeout,
+    placementCrName,
+    subscriptionCrName,
   } = params;
 
   const merged = params.mergedSubscriptionBlocks;
@@ -125,6 +130,8 @@ export async function verifySubscriptionAppTopologyTab(
         namespace,
         blockIndex: only.blockIndex,
         clusterResourceRows: only.clusterResourceRows,
+        placementCrName,
+        subscriptionCrName,
       });
       drawerSpotChecks =
         drawerSpotChecksParam ??
@@ -160,6 +167,8 @@ export async function verifySubscriptionAppTopologyTab(
       namespace,
       blockIndex,
       clusterResourceRows,
+      placementCrName,
+      subscriptionCrName,
     });
     drawerSpotChecks =
       drawerSpotChecksParam ??
@@ -168,6 +177,8 @@ export async function verifySubscriptionAppTopologyTab(
         namespace,
         blockIndex,
         clusterResourceRows,
+        placementCrName,
+        subscriptionCrName,
       });
   }
 

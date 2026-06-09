@@ -18,6 +18,7 @@ import type {
   SubscriptionRepositorySpec,
   TimeWindowSpec,
 } from './types';
+import { enableExistingPlacementConfigurationInRepositoryBlock } from './placement-wizard-verify';
 
 
 async function fillIfDefined(locator: Locator, value: string | undefined): Promise<void> {
@@ -115,17 +116,16 @@ async function fillClusterDeployment(
 ): Promise<void> {
   await wizard.expandClusterDeploymentSectionForRepositoryBlock(blockIndex);
 
-  // Legacy placement-rule checkbox may be absent; false is applied via setCheckboxIfDefined (no blind setChecked).
-
-  await setCheckboxIfDefined(
-    wizard.getExistingPlacementRuleCheckboxInRepositoryBlock(blockIndex),
-    spec.useExistingPlacementRule
-  );
-
   if (spec.useExistingPlacementRule === true) {
+    await enableExistingPlacementConfigurationInRepositoryBlock(wizard, blockIndex);
     await fillIfDefined(
-      wizard.getPlacementRuleComboInRepositoryBlock(blockIndex),
+      wizard.getExistingPlacementComboInRepositoryBlock(blockIndex),
       spec.placementRuleComboText
+    );
+  } else if (spec.useExistingPlacementRule === false) {
+    await setCheckboxIfDefined(
+      wizard.getExistingPlacementRuleCheckboxInRepositoryBlock(blockIndex),
+      false
     );
   }
 

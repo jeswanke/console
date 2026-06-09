@@ -120,13 +120,17 @@ export function buildTopologyNodeDataIdsForSubscriptionBlock(params: {
   blockIndex: number;
   /** Spoke cluster name in the graph (default `local-cluster`). */
   clusterName?: string;
+  /** Override when wizard edit creates `placement-3` etc. (from `resolvePlacementCrNameForSubscriptionBlock`). */
+  placementCrName?: string;
+  /** Override when subscription CR name differs from wizard default. */
+  subscriptionCrName?: string;
   /** Rows from `applicationExpectations.clusterResources[blockIndex - 1]` (Route, Deployment, …). */
   clusterResourceRows: TopologyClusterResourceRef[];
 }): string[] {
   const cluster = params.clusterName ?? 'local-cluster';
   const i = params.blockIndex;
-  const subName = defaultSubscriptionCrName(params.applicationName, i);
-  const placementName = defaultPlacementCrName(params.applicationName, i);
+  const subName = params.subscriptionCrName ?? defaultSubscriptionCrName(params.applicationName, i);
+  const placementName = params.placementCrName ?? defaultPlacementCrName(params.applicationName, i);
 
   const ids: string[] = [
     topologyApplicationDataId(params.applicationName),

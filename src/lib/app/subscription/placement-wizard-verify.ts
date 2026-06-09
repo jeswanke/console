@@ -50,7 +50,9 @@ export async function enableExistingPlacementConfigurationInRepositoryBlock(
 ): Promise<void> {
   const radio = wizard.getExistingPlacementConfigurationRadioForRepositoryBlock(blockIndex);
   if (await radio.count()) {
-    if (!(await radio.isChecked())) {
+    const checked = await radio.isChecked();
+    const disabled = await radio.isDisabled();
+    if (!checked && !disabled) {
       await radio.click();
     }
   } else {
