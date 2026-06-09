@@ -4,7 +4,7 @@ import {
   resolveSubscriptionScenarioByTestId,
   resolveSubscriptionScenarioPair,
 } from '@config';
-import { GIT_PLACEMENTRULE_NO_NAME_TEST } from '@constants/app';
+import { GIT_COMMIT_HASH_TEST7513, GIT_PLACEMENTRULE_NO_NAME_TEST } from '@constants/app';
 import { applyGitPlacementRuleNoNameFixture } from '@lib/app/setup/git-placementrule-no-placementref-name';
 import {
   addSubscriptionToExistingApplication,
@@ -641,6 +641,90 @@ test.describe('Git Applications', {
         clusterResourceRows,
         drawerSpotChecks: [],
         assertGraphNodesSuccessStatus: true,
+      });
+
+      await applicationListPage.goto();
+      await applicationListPage.deleteApplicationFromOverviewViaSearch({
+        applicationName,
+        namespace,
+        removeRelatedResources: true,
+      });
+    }
+  );
+
+  test(
+    'RHACM4K-7513: ALC: Update Git application to use a different commit hash Test',
+    { tag: ['@e2e-common', '@RHACM4K-7513', '@edit'] },
+    async ({
+      oc,
+      applicationListPage,
+      applicationDetailsPage,
+      subscriptionApplicationCreateWizardPage,
+    }) => {
+      test.setTimeout(420_000);
+      const { subscription: options } = resolveSubscriptionScenarioByTestId('RHACM4K-7513');
+      const { applicationName, namespace } = options;
+      const baseRepo = options.repositories![0]!;
+      if (baseRepo.kind !== 'git') {
+        throw new Error('RHACM4K-7513: expected a single Git repository block');
+      }
+
+      await oc.deleteNamespace(namespace);
+      await applicationListPage.goto();
+      await createSubscription(
+        applicationListPage,
+        subscriptionApplicationCreateWizardPage,
+        options
+      );
+      await oc.ensureManagedClusterSetBinding(namespace, 'global');
+
+      await applicationDetailsPage.navigateToApplicationTab(namespace, applicationName, 'details');
+      await expectApplicationDetailsMinSuccessResourceCount(applicationDetailsPage, 2);
+
+      const subscriptionCrName = defaultSubscriptionCrName(applicationName, 1);
+      const gitDesiredCommitKey = 'apps.open-cluster-management.io/git-desired-commit';
+
+      await editSubscriptionInExistingApplication(
+        applicationListPage,
+        subscriptionApplicationCreateWizardPage,
+        {
+          applicationName,
+          namespace,
+          repositories: [{ ...baseRepo, desiredCommit: GIT_COMMIT_HASH_TEST7513.broken }],
+          entry: 'details',
+        }
+      );
+      await expect
+        .poll(
+          () => oc.getSubscriptionAnnotation(namespace, subscriptionCrName, gitDesiredCommitKey),
+          { timeout: 60_000, intervals: [2_000, 5_000] }
+        )
+        .toBe(GIT_COMMIT_HASH_TEST7513.broken);
+
+      await editSubscriptionInExistingApplication(
+        applicationListPage,
+        subscriptionApplicationCreateWizardPage,
+        {
+          applicationName,
+          namespace,
+          repositories: [{ ...baseRepo, desiredCommit: GIT_COMMIT_HASH_TEST7513.fixed }],
+          entry: 'details',
+        }
+      );
+      await expect
+        .poll(
+          () => oc.getSubscriptionAnnotation(namespace, subscriptionCrName, gitDesiredCommitKey),
+          { timeout: 60_000, intervals: [2_000, 5_000] }
+        )
+        .toBe(GIT_COMMIT_HASH_TEST7513.fixed);
+
+      await applicationDetailsPage.navigateToApplicationTab(namespace, applicationName, 'details');
+      await syncSubscriptionApplication({
+        detailsPage: applicationDetailsPage,
+        timeout: 120_000,
+      });
+      await expectApplicationDetailsMinSuccessResourceCount(applicationDetailsPage, 1, {
+        timeout: 300_000,
       });
 
       await applicationListPage.goto();

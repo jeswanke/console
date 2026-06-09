@@ -168,6 +168,24 @@ scenarios:
         applicationName: auto-git-mortgage
         namespace: auto-git-mortgage-ns
 
+  # RHACM4K-7513: Git app on `test7513` / `example-k8s-app`; edit desired commit hash twice.
+  auto_git_commit_hash_test7513:
+    enabled: true
+    tests:
+      - RHACM4K-7513
+    blocks:
+      - use:
+          - git_example_k8s_test7513
+          - skip_automation_ansible
+          - placement_label_local
+          - timewindow_default
+    extends:
+      - subscription_submit
+    specDomains:
+      subscription:
+        applicationName: ui-git-commit
+        namespace: ui-git-commit-ns
+
   # Isolated baseline app for RHACM4K-7554 add-subscription edit flow (single existing subscription).
   auto_git_add_subscription_base:
     enabled: true

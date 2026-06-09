@@ -242,6 +242,18 @@ test.describe('e2e-spec-data YAML processing', () => {
     });
   });
 
+  test('auto_git_commit_hash_test7513: RHACM4K-7513 resolves by Polarion id', () => {
+    const resolved = resolveSubscriptionScenarioByTestId('RHACM4K-7513', E2E_SPEC_DATA_DIR);
+    expect(resolved.scenarioId).toBe('auto_git_commit_hash_test7513');
+    expect(resolved.subscription.applicationName).toBe('ui-git-commit');
+    expect(resolved.subscription.repositories?.[0]).toMatchObject({
+      kind: 'git',
+      branch: 'test7513',
+      path: 'example-k8s-app',
+      desiredCommit: '741bd4220fc932186122890f85cb5d0aaf8415f5',
+    });
+  });
+
   test('auto_git_placement_topology: RHACM4K-41356 resolves by Polarion id', () => {
     const resolved = resolveSubscriptionScenarioByTestId('RHACM4K-41356', E2E_SPEC_DATA_DIR);
     expect(resolved.scenarioId).toBe('auto_git_placement_topology');

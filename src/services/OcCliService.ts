@@ -25,6 +25,7 @@ type PlacementDecisionJson = {
 };
 
 type SubscriptionJson = {
+  metadata?: { annotations?: Record<string, string> };
   spec?: {
     placement?: {
       placementRef?: { kind?: string; name?: string };
@@ -441,6 +442,32 @@ export class OcCliService {
       );
       const parsed = JSON.parse(stdout) as SubscriptionJson;
       return parsed.spec?.placement?.placementRef?.name?.trim() || undefined;
+    } catch (err: unknown) {
+      const stderr =
+        err && typeof err === 'object' && 'stderr' in err ? String((err as { stderr?: unknown }).stderr) : '';
+      if (/NotFound|not found/i.test(stderr)) {
+        return undefined;
+      }
+      throw err;
+    }
+  }
+
+  /** Read a Subscription metadata annotation (undefined when missing or not found). */
+  async getSubscriptionAnnotation(
+    namespace: string,
+    subscriptionName: string,
+    annotationKey: string
+  ): Promise<string | undefined> {
+    assertSafeOcSingleArg(namespace, 'namespace');
+    assertSafeOcSingleArg(subscriptionName, 'subscriptionName');
+    try {
+      const { stdout } = await execFilePromise(
+        'oc',
+        ['get', 'subscription', subscriptionName, '-n', namespace, '-o', 'json'],
+        { encoding: 'utf8', maxBuffer: 1024 * 1024 }
+      );
+      const parsed = JSON.parse(stdout) as SubscriptionJson;
+      return parsed.metadata?.annotations?.[annotationKey]?.trim() || undefined;
     } catch (err: unknown) {
       const stderr =
         err && typeof err === 'object' && 'stderr' in err ? String((err as { stderr?: unknown }).stderr) : '';

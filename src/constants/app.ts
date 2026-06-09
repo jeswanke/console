@@ -293,6 +293,12 @@ export const APP_TABLE_MANAGE_COLUMNS = {
   ] as const,
 } as const;
 
+/** RHACM4K-7513 — commit-hash edits on `test7513` / `example-k8s-app` (initial hash lives in e2e-spec). */
+export const GIT_COMMIT_HASH_TEST7513 = {
+  broken: '50282bd38921cadc90d5cde01dd5bfd67c585d97',
+  fixed: '1a537cd90c1a8d619a7b922fd147ce3394b29132',
+} as const;
+
 /** RHACM4K-49630 — appsub with PlacementRule ref missing `name` (CLI apply + edit existing rule). */
 export const GIT_PLACEMENTRULE_NO_NAME_TEST = {
   namespace: 'git-placementrule',

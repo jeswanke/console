@@ -102,6 +102,27 @@ fragments:
           channelDisplaySubstring: stolostron-application-lifecycle-samples
           channelRepositoryUrl: *stolostron-app-lifecycle-samples-git
 
+  # RHACM4K-7513: `test7513` branch / `example-k8s-app` with pinned initial commit hash.
+  git_example_k8s_test7513:
+    repositories:
+      - kind: git
+        url: *stolostron-app-lifecycle-samples-git
+        branch: test7513
+        path: example-k8s-app
+        desiredCommit: 741bd4220fc932186122890f85cb5d0aaf8415f5
+        reconcileOption: merge
+        reconcileRate: medium
+    specDomains:
+      applicationExpectations:
+        clusterResources:
+          - - kind: Deployment
+              name: example
+            - kind: ReplicaSet
+              name: example
+        advancedConfiguration:
+          channelDisplaySubstring: stolostron-application-lifecycle-samples
+          channelRepositoryUrl: *stolostron-app-lifecycle-samples-git
+
   # Private Git repo (RHACM4K-1071): URL in YAML; username/token from env/alc.local.env at test runtime.
   git_private_mortgage:
     repositories:

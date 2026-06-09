@@ -64,9 +64,7 @@ export async function expectApplicationDetailsMinSuccessResourceCount(
   options?: { timeout?: number }
 ): Promise<void> {
   const timeout = options?.timeout ?? 300_000;
-  await detailsPage.expectDetailTabSelected('details', { timeout });
-  const statusValue = detailsPage.getDescriptionValue('clusterResourceStatus');
-  await expect(statusValue).toBeVisible({ timeout });
+  const statusValue = await expectClusterResourceStatusVisible(detailsPage, timeout);
 
   await expect
     .poll(
@@ -78,6 +76,37 @@ export async function expectApplicationDetailsMinSuccessResourceCount(
       }
     )
     .toBeGreaterThanOrEqual(minCount);
+}
+
+/** Details **Cluster resource status** green label count ≤ `maxCount` (RHACM4K-7513 broken commit). */
+export async function expectApplicationDetailsMaxSuccessResourceCount(
+  detailsPage: ApplicationDetailsPage,
+  maxCount: number,
+  options?: { timeout?: number }
+): Promise<void> {
+  const timeout = options?.timeout ?? 300_000;
+  const statusValue = await expectClusterResourceStatusVisible(detailsPage, timeout);
+
+  await expect
+    .poll(
+      async () => largestNumericLabelInClusterResourceStatus(statusValue),
+      {
+        timeout,
+        intervals: [5_000, 10_000, 15_000],
+        message: `Cluster resource status success count ≤ ${maxCount}`,
+      }
+    )
+    .toBeLessThanOrEqual(maxCount);
+}
+
+async function expectClusterResourceStatusVisible(
+  detailsPage: ApplicationDetailsPage,
+  timeout: number
+): Promise<Locator> {
+  await detailsPage.expectDetailTabSelected('details', { timeout });
+  const statusValue = detailsPage.getDescriptionValue('clusterResourceStatus');
+  await expect(statusValue).toBeVisible({ timeout });
+  return statusValue;
 }
 
 async function largestNumericLabelInClusterResourceStatus(statusValue: Locator): Promise<number> {
