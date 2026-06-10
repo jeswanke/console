@@ -71,6 +71,9 @@ case "${COMPONENT}" in
   grc | GRC)
     exec bash "${CONSOLE_E2E_ROOT}/src/tests/governance/start.sh" "$@"
     ;;
+  search | SEARCH)
+    exec bash "${CONSOLE_E2E_ROOT}/src/tests/search/start.sh" "$@"
+    ;;
   fg-rbac | FG-RBAC)
     exec bash "${CONSOLE_E2E_ROOT}/src/tests/fg-rbac/start.sh" "$@"
     ;;

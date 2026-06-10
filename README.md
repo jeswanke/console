@@ -43,6 +43,7 @@ npx playwright install chromium
 | **`rbac-setup`** | RBAC user auth (`rbac-auth.setup.ts`) — used by **`fg-rbac`** and **`fleet-virt`**          |
 | **`cluster`**    | Cluster lifecycle — `src/tests/cluster/**` (**`./start.sh clc`** → **`--project cluster`**) |
 | **`governance`** | Governance — `src/tests/governance/**` (**`./start.sh grc`** → **`--project governance`**)  |
+| **`search`**     | Search - `src/tests/search/**` (**`./start.sh search`** → **`--project search`**)           |
 | **`alc`**        | Application lifecycle — `src/tests/app/**` (**`./start.sh alc`** → **`--project alc`**)     |
 | **`fg-rbac`**    | Fine-grained RBAC — `src/tests/fg-rbac/**`                                                  |
 | **`fleet-virt`** | Fleet virtualization — `src/tests/fleet-virt/**`                                            |
