@@ -1,3 +1,5 @@
+import { AcmTable } from '@components/patternfly/AcmTable';
+import { ManageColumnsDialog } from '@components/patternfly/ManageColumnsDialog';
 import { SEARCH_PAGE, SEARCH_ROUTES } from '@constants/search';
 import { pageUrlPathnameEquals } from '@lib/navigation';
 import { BasePage } from '@pages/BasePage';
@@ -6,11 +8,16 @@ import { OcCliService } from '@services/OcCliService';
 
 /** ACM Search page (`/multicloud/search`). */
 export class SearchPage extends BasePage {
+  readonly table: AcmTable;
+  readonly manageColumns: ManageColumnsDialog;
+
   constructor(
     page: Page,
     private readonly oc: OcCliService
   ) {
     super(page);
+    this.table = new AcmTable(page);
+    this.manageColumns = new ManageColumnsDialog(page);
   }
 
   async goto(): Promise<void> {
@@ -57,5 +64,21 @@ export class SearchPage extends BasePage {
 
   getWorkloadSuggestedCard(): Locator {
     return this.page.getByText(SEARCH_PAGE.workloadSuggestedCardHeader, { exact: true });
+  }
+  
+  async filterByKind(kind: string): Promise<void> {
+    await this.getSearchInput().clear();
+    await this.getSearchInput().fill('kind');
+    await this.getSearchInput().press('Enter');
+    await this.getSearchInput().fill(kind);
+    await this.getSearchInput().press('Enter');
+    await this.getRunSearchButton().click();
+    await this.waitForLoad();
+  }
+
+  /** Wait for at least one results table to appear in the DOM. */
+  async waitForResultsTable(): Promise<void> {
+    await expect(this.page.locator('table')).toBeVisible();
+    await this.waitForLoad();
   }
 }
