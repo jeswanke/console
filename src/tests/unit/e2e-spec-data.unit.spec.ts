@@ -11,6 +11,8 @@ import {
   mergeExpectationsRowsForComposerBlock,
   resolveArgoPushScenarioById,
   resolveArgoPushScenarioByTestId,
+  resolveAnsibleScaleScenarioByTestId,
+  resolveAnsibleScaleSuiteConfig,
   resolvePlacementScenarioByTestId,
   resolvePolicyScenarioByTestId,
   resolvePolicySetScenarioByTestId,
@@ -441,6 +443,45 @@ test.describe('e2e-spec-data YAML processing', () => {
       namespace: 'preview-test-ns',
       clusterSet: 'preview-test-cluster-set',
       namePrefix: 'placement-preview',
+    });
+  });
+
+  test('applications ansible-scale.yaml: RHACM4K-42375 prehook scenario', () => {
+    const resolved = resolveAnsibleScaleScenarioByTestId('RHACM4K-42375', E2E_SPEC_DATA_DIR);
+    expect(resolved.scenarioId).toBe('ansible_scale_1_prehook_42375');
+    expect(resolved.ansibleScale).toMatchObject({
+      namespace: 'ansible-scale-1-prehook',
+      applicationName: 'ansible-scale-1-prehook',
+      firstJobSubstring: 'ztp-day2-automation-1',
+      syncTiming: 'beforePatch',
+      jobCountBeforePatch: 1,
+      jobCountAfterPatch: 2,
+      pollTimeoutMs: 300_000,
+    });
+  });
+
+  test('applications ansible-scale.yaml: RHACM4K-42376 posthook scenario', () => {
+    const resolved = resolveAnsibleScaleScenarioByTestId('RHACM4K-42376', E2E_SPEC_DATA_DIR);
+    expect(resolved.scenarioId).toBe('ansible_scale_1_posthook_42376');
+    expect(resolved.ansibleScale).toMatchObject({
+      namespace: 'ansible-scale-1-posthook',
+      applicationName: 'ansible-scale-1-posthook',
+      firstJobSubstring: 'posthook',
+      syncTiming: 'afterPatch',
+      afterPatchPollTimeoutMs: 500_000,
+      managedClusterVerify: {
+        resource: 'configmap',
+        expectedSubstring: 'guestbook-cfgmap',
+      },
+    });
+  });
+
+  test('applications ansible-scale.yaml: suite prep profile', () => {
+    const suite = resolveAnsibleScaleSuiteConfig(E2E_SPEC_DATA_DIR);
+    expect(suite).toMatchObject({
+      fakeSecretYamlRelativePath: 'src/templates/app/ansible-scale/ansible-fake-secret.yaml',
+      ansibleJobCrdYamlRelativePath: 'src/templates/app/ansible-scale/ansiblejob.crd.yaml',
+      clusterNamePlaceholder: '{CLUSTER_NAME}',
     });
   });
 });

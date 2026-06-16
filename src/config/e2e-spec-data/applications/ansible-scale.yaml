@@ -1,0 +1,60 @@
+# Ansible large-scale ALC integration — CLI apply + AnsibleJob hook flows (managed cluster).
+
+version: 1
+
+profiles:
+  ansible_scale_suite:
+    specDomains:
+      ansibleScaleSuite:
+        fakeSecretYamlRelativePath: src/templates/app/ansible-scale/ansible-fake-secret.yaml
+        ansibleJobCrdYamlRelativePath: src/templates/app/ansible-scale/ansiblejob.crd.yaml
+        clusterNamePlaceholder: '{CLUSTER_NAME}'
+
+  ansible_scale_defaults:
+    specDomains:
+      ansibleScale:
+        pollTimeoutMs: 300000
+        syncTiming: none
+        jobCountBeforePatch: 1
+        jobCountAfterPatch: 2
+
+scenarios:
+  ansible_scale_1_prehook_42375:
+    enabled: true
+    tests:
+      - RHACM4K-42375
+    extends:
+      - ansible_scale_defaults
+    specDomains:
+      ansibleScale:
+        namespace: ansible-scale-1-prehook
+        applicationName: ansible-scale-1-prehook
+        channelNamespaces:
+          - ansible-scale-prehook
+        setupYamlRelativePath: src/templates/app/ansible-scale/RHACM4K-42375-ansible-1-prehook.yaml
+        firstJobSubstring: ztp-day2-automation-1
+        syncTiming: beforePatch
+        firstJobWaitErrorMessage: Ansible prehook is not triggered within time limit
+        afterPatchJobCountErrorMessage: Second ansible prehook is not triggered within time limit
+
+  ansible_scale_1_posthook_42376:
+    enabled: true
+    tests:
+      - RHACM4K-42376
+    extends:
+      - ansible_scale_defaults
+    specDomains:
+      ansibleScale:
+        namespace: ansible-scale-1-posthook
+        applicationName: ansible-scale-1-posthook
+        channelNamespaces:
+          - ansible-scale-posthook
+        setupYamlRelativePath: src/templates/app/ansible-scale/RHACM4K-42376-ansible-1-posthook.yaml
+        firstJobSubstring: posthook
+        syncTiming: afterPatch
+        afterPatchPollTimeoutMs: 500000
+        firstJobWaitErrorMessage: Ansible posthook is not triggered within time limit
+        afterPatchJobCountErrorMessage: Second ansible posthook is not triggered within time limit
+        managedClusterVerify:
+          resource: configmap
+          expectedSubstring: guestbook-cfgmap
