@@ -15,3 +15,8 @@ export const SEARCH_PAGE = {
   suggestedCardSectionHeader: 'Suggested search templates',
   workloadSuggestedCardHeader: 'Workloads',
 } as const;
+
+export const SEARCH_RESULTS = {
+  deploymentSearchQuery: 'kind:Deployment',
+  desiredColumn: 'Desired',
+} as const;
