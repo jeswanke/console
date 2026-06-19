@@ -2,14 +2,12 @@
  * RHACM4K-61727, 61728, 61729: RBAC UI - Cluster Set Scope Role Assignments
  *
  * Login is handled by the setup project (auth.setup.ts) via storageState.
- * Each test uses a dedicated user (matching Polarion ID suffix) from
- * rbacConfig.users, populated dynamically from presets.ts.
+ * Cleanup runs in afterEach so retries start clean.
  *
  * Roles used: acm-vm-* roles (always available when FG-RBAC is enabled).
  * kubevirt.io:* roles require CNV and may not exist on all clusters.
  */
 
-import path from 'path';
 import { test, expect } from '@fixtures/fg-rbac-test';
 import {
   RBAC_WIZARD,
@@ -18,13 +16,19 @@ import {
   GRANULARITY_OPTIONS,
 } from '@constants/fg-rbac';
 
-const TEMPLATES_DIR = path.resolve(__dirname, '../../templates/fg-rbac');
-const TEST_CLUSTERSET_YAML = path.join(TEMPLATES_DIR, 'test-clusterset.yaml');
-
 const CLUSTER_SET = 'default';
 
 test.describe('Role Assignment - Cluster Set Scope', { tag: ['@fg-rbac'] }, () => {
+  test.describe.configure({ mode: 'serial' });
   test.setTimeout(240000);
+
+  test.beforeEach(async ({ oc, rbacConfig }) => {
+    await oc.mcraDeleteAllForUser(rbacConfig.testUser);
+  });
+
+  test.afterEach(async ({ oc, rbacConfig }) => {
+    await oc.mcraDeleteAllForUser(rbacConfig.testUser);
+  });
 
   test('RHACM4K-61727: Create Role Assignment with single cluster set - full access', async ({
     userDetailsPage,
@@ -32,10 +36,8 @@ test.describe('Role Assignment - Cluster Set Scope', { tag: ['@fg-rbac'] }, () =
     oc,
     rbacConfig,
   }) => {
-    const user = rbacConfig.users['csfull-61727'];
+    const user = rbacConfig.testUser;
     const role = 'acm-vm-fleet:view';
-
-    await oc.mcraDeleteAllForUser(user);
 
     await test.step('1: Navigate to Role Assignment creation', async () => {
       await userDetailsPage.gotoRoleAssignments(user);
@@ -113,21 +115,16 @@ test.describe('Role Assignment - Cluster Set Scope', { tag: ['@fg-rbac'] }, () =
       const applied = conditions.find((c) => c.type === 'Applied');
       expect(applied?.status).toBe('True');
     });
-
-    await oc.mcraDeleteAllForUser(user);
   });
 
   test('RHACM4K-61728: Create Role Assignment with single cluster set - project access', async ({
     userDetailsPage,
     roleAssignmentWizardPage,
-    oc,
     rbacConfig,
   }) => {
-    const user = rbacConfig.users['csproj-61728'];
+    const user = rbacConfig.testUser;
     const role = 'acm-vm-extended:view';
     const projectNames = ['default'];
-
-    await oc.mcraDeleteAllForUser(user);
 
     await test.step('1: Navigate and open wizard', async () => {
       await userDetailsPage.gotoRoleAssignments(user);
@@ -173,10 +170,8 @@ test.describe('Role Assignment - Cluster Set Scope', { tag: ['@fg-rbac'] }, () =
       }).toPass({ intervals: [5_000, 10_000, 15_000], timeout: 120_000 });
 
       const row = userDetailsPage.roleAssignmentsTable.getRowByRole(role);
-      await expect(row.getByText(CLUSTER_SET).first()).toBeVisible();
+      await expect(row.getByText(CLUSTER_SET)).toBeVisible();
     });
-
-    await oc.mcraDeleteAllForUser(user);
   });
 
   test('RHACM4K-61729: Create Role Assignment with multiple cluster sets - full access', async ({
@@ -185,14 +180,22 @@ test.describe('Role Assignment - Cluster Set Scope', { tag: ['@fg-rbac'] }, () =
     oc,
     rbacConfig,
   }) => {
-    const user = rbacConfig.users['csfull-61729'];
+    const user = rbacConfig.testUser;
     const role = 'acm-vm-fleet:admin';
     const testClusterSet = 'e2e-test-clusterset';
 
-    await oc.mcraDeleteAllForUser(user);
-
     await test.step('0: Create test cluster set for multi-select', async () => {
-      await oc.applyYaml(TEST_CLUSTERSET_YAML);
+      await oc.run(
+        `oc apply -f - <<'EOF'
+apiVersion: cluster.open-cluster-management.io/v1beta2
+kind: ManagedClusterSet
+metadata:
+  name: ${testClusterSet}
+spec:
+  clusterSelector:
+    selectorType: ExclusiveClusterSetLabel
+EOF`
+      );
     });
 
     const clusterSets = [CLUSTER_SET, testClusterSet];
@@ -245,8 +248,7 @@ test.describe('Role Assignment - Cluster Set Scope', { tag: ['@fg-rbac'] }, () =
     });
 
     await test.step('7: Cleanup test cluster set', async () => {
-      await oc.mcraDeleteAllForUser(user);
-      await oc.deleteYaml(TEST_CLUSTERSET_YAML);
+      await oc.run(`oc delete managedclusterset ${testClusterSet} --ignore-not-found`);
     });
   });
 });
