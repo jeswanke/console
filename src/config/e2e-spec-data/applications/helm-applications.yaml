@@ -1,0 +1,103 @@
+# Helm subscription applications (Cypress: `Helm_Application_Test_Suite.cy.js`).
+# Managed-cluster placement is injected at runtime via `applyManagedClusterPlacementToBlocks`.
+
+version: 1
+
+scenarios:
+  auto_helm_helloworld_managed:
+    enabled: true
+    tests:
+      - RHACM4K-7486
+      - RHACM4K-7489
+    blocks:
+      - use:
+          - helm_helloworld_30
+          - skip_automation_ansible
+          - timewindow_default
+    extends:
+      - subscription_submit
+    specDomains:
+      subscription:
+        applicationName: auto-helm-helloworld
+        namespace: auto-helm-helloworld-ns
+
+  auto_helm_nginx_managed:
+    enabled: true
+    tests:
+      - RHACM4K-46737
+    blocks:
+      - use:
+          - helm_nginx_bitnami
+          - skip_automation_ansible
+          - timewindow_default
+    extends:
+      - subscription_submit
+    specDomains:
+      subscription:
+        applicationName: auto-helm-nginx
+        namespace: auto-helm-nginx-ns
+
+  auto_helm_multi:
+    enabled: true
+    tests:
+      - RHACM4K-7560
+      - RHACM4K-7563
+      - RHACM4K-7564
+    blocks:
+      - use:
+          - helm_helloworld_02
+          - skip_automation_ansible
+          - timewindow_default
+      - use:
+          - helm_mortgage_01
+          - skip_automation_ansible
+          - placement_label_local
+          - timewindow_blocked_monday_0810
+    extends:
+      - subscription_submit
+    specDomains:
+      subscription:
+        applicationName: auto-helm-multi
+        namespace: auto-helm-multi-ns
+      applicationExpectations:
+        successMinResourceCount: 3
+
+  auto_helm_add_second_subscription:
+    enabled: true
+    tests:
+      - RHACM4K-7562
+    blocks:
+      - use:
+          - helm_helloworld_02
+          - skip_automation_ansible
+          - placement_use_existing_rule
+          - timewindow_default
+    extends:
+      - subscription_submit
+    specDomains:
+      subscription:
+        applicationName: auto-helm-multi
+        namespace: auto-helm-multi-ns
+
+  auto_helm_multi_restore:
+    enabled: true
+    tests:
+      - RHACM4K-45791
+    blocks:
+      - use:
+          - helm_helloworld_02
+          - skip_automation_ansible
+          - timewindow_default
+      - use:
+          - helm_mortgage_01
+          - skip_automation_ansible
+          - placement_label_local
+          - timewindow_blocked_monday_0810
+    extends:
+      - subscription_submit
+    specDomains:
+      subscription:
+        applicationName: auto-helm-multi-restore
+        namespace: auto-helm-multi-restore-ns
+      applicationExpectations:
+        successMinResourceCount: 3

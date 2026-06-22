@@ -1,16 +1,20 @@
-/** Application lifecycle (ALC) — resolve API for subscription and argoPush scenarios. */
+/** Application lifecycle (ALC) — resolve API for subscription, argoPush, and flux scenarios. */
 import { loadE2eSpecData } from './io/loadSpec';
 import { findScenarioIdsByTestId } from './lookup/findScenarioIds';
 import { buildResolvedAppScenario } from './resolve/buildResolvedAppScenario';
 import type {
   ResolvedAppScenario,
   ResolvedArgoPushAppScenario,
+  ResolvedFluxAppScenario,
+  ResolvedOpenshiftAppScenario,
   ResolvedSubscriptionAppScenario,
 } from './types';
 
 export type {
   ResolvedAppScenario,
   ResolvedArgoPushAppScenario,
+  ResolvedFluxAppScenario,
+  ResolvedOpenshiftAppScenario,
   ResolvedSubscriptionAppScenario,
 } from './types';
 
@@ -30,6 +34,26 @@ function requireArgoPushScenario(
 ): ResolvedArgoPushAppScenario {
   if (resolved.domain !== 'argoPush') {
     throw new Error(`e2e-spec-data: expected argoPush scenario for ${context}, got "${resolved.domain}"`);
+  }
+  return resolved;
+}
+
+function requireOpenshiftScenario(
+  resolved: ResolvedAppScenario,
+  context: string
+): ResolvedOpenshiftAppScenario {
+  if (resolved.domain !== 'openshift') {
+    throw new Error(`e2e-spec-data: expected openshift scenario for ${context}, got "${resolved.domain}"`);
+  }
+  return resolved;
+}
+
+function requireFluxScenario(
+  resolved: ResolvedAppScenario,
+  context: string
+): ResolvedFluxAppScenario {
+  if (resolved.domain !== 'flux') {
+    throw new Error(`e2e-spec-data: expected flux scenario for ${context}, got "${resolved.domain}"`);
   }
   return resolved;
 }
@@ -123,6 +147,65 @@ export function resolveArgoPushScenarioByTestId(
     resolveScenarioByTestIdInternal(testId, configPath),
     `test id "${testId}"`
   );
+}
+
+/** Flux CD variant of {@link resolveScenarioById}. */
+export function resolveFluxScenarioById(
+  scenarioId: string,
+  configPath?: string
+): ResolvedFluxAppScenario {
+  return requireFluxScenario(
+    resolveScenarioByIdInternal(scenarioId, configPath),
+    `scenario id "${scenarioId}"`
+  );
+}
+
+/** Flux CD variant of {@link resolveScenarioByTestId}. */
+export function resolveFluxScenarioByTestId(
+  testId: string,
+  configPath?: string
+): ResolvedFluxAppScenario {
+  return requireFluxScenario(
+    resolveScenarioByTestIdInternal(testId, configPath),
+    `test id "${testId}"`
+  );
+}
+
+/** OpenShift native app variant of {@link resolveScenarioByTestId}. */
+export function resolveOpenshiftScenarioByTestId(
+  testId: string,
+  configPath?: string
+): ResolvedOpenshiftAppScenario {
+  return requireOpenshiftScenario(
+    resolveScenarioByTestIdInternal(testId, configPath),
+    `test id "${testId}"`
+  );
+}
+
+/** OpenShift edit flows: base helloworld scenario + mortgage edit scenario by Polarion test id. */
+export function resolveOpenshiftScenarioPair(params: {
+  baseTestId: string;
+  editTestId: string;
+  configPath?: string;
+}): { base: ResolvedOpenshiftAppScenario; edit: ResolvedOpenshiftAppScenario } {
+  const { baseTestId, editTestId, configPath } = params;
+  return {
+    base: resolveOpenshiftScenarioByTestId(baseTestId, configPath),
+    edit: resolveOpenshiftScenarioByTestId(editTestId, configPath),
+  };
+}
+
+/** Flux edit flows: base scenario by id + edited scenario by Polarion test id. */
+export function resolveFluxScenarioPair(params: {
+  baseScenarioId: string;
+  testId: string;
+  configPath?: string;
+}): { base: ResolvedFluxAppScenario; delta: ResolvedFluxAppScenario } {
+  const { baseScenarioId, testId, configPath } = params;
+  return {
+    base: resolveFluxScenarioById(baseScenarioId, configPath),
+    delta: resolveFluxScenarioByTestId(testId, configPath),
+  };
 }
 
 /** Base scenario by id + delta scenario by Polarion test id (add/edit flows). */

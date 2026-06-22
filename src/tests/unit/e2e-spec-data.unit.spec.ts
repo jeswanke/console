@@ -11,6 +11,10 @@ import {
   mergeExpectationsRowsForComposerBlock,
   resolveArgoPushScenarioById,
   resolveArgoPushScenarioByTestId,
+  resolveFluxScenarioById,
+  resolveFluxScenarioByTestId,
+  resolveFluxScenarioPair,
+  resolveOpenshiftScenarioByTestId,
   resolveAnsibleScaleScenarioByTestId,
   resolveAnsibleScaleSuiteConfig,
   resolvePlacementScenarioByTestId,
@@ -262,6 +266,105 @@ test.describe('e2e-spec-data YAML processing', () => {
     expect(resolved.subscription.applicationName).toBe('api-git-local');
   });
 
+  test('auto_git_ansible_cred_wizard_20541: RHACM4K-20541 resolves ansible credential wizard scenario', () => {
+    const resolved = resolveSubscriptionScenarioByTestId('RHACM4K-20541', E2E_SPEC_DATA_DIR);
+    expect(resolved.scenarioId).toBe('auto_git_ansible_cred_wizard_20541');
+    expect(resolved.subscription.applicationName).toBe('auto-git-ansible-cred-wizard');
+    expect(resolved.subscription.namespace).toBe('auto-git-ansible-cred-wizard-ns');
+    expect(resolved.subscription.repositories?.[0]).toMatchObject({
+      kind: 'git',
+      path: 'ansible',
+      branch: 'main',
+    });
+    expect(resolved.subscription.perBlock?.[0]?.automation?.addCredentialWizard).toEqual({
+      secretName: 'ansible-tower-wizard',
+      secretNamespace: 'default',
+    });
+    expect(resolved.applicationExpectations?.detailsClustersSummary).toEqual({ variant: 'localOnly' });
+    expect(resolved.applicationExpectations?.successMinResourceCount).toBe(2);
+    expect(resolved.applicationExpectations?.topologyDeployableResourceTypes).toEqual([
+      'configmap',
+      'ansiblejob',
+    ]);
+    expect(resolved.applicationExpectations?.localClusterPlacement).toBe(true);
+    expect(resolved.applicationExpectations?.clusterResources[0]).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ kind: 'ConfigMap', name: 'guestbook-cfgmap' }),
+        expect.objectContaining({ kind: 'AnsibleJob', name: 'prehook-test' }),
+      ])
+    );
+  });
+
+  test('auto_git_ansible_1560: RHACM4K-1560 resolves pre/post ansible subscription scenario', () => {
+    const resolved = resolveSubscriptionScenarioByTestId('RHACM4K-1560', E2E_SPEC_DATA_DIR);
+    expect(resolved.scenarioId).toBe('auto_git_ansible_1560');
+    expect(resolved.subscription.applicationName).toBe('auto-git-ansible');
+    expect(resolved.subscription.namespace).toBe('auto-git-ansible-ns');
+    expect(resolved.subscription.repositories?.[0]).toMatchObject({
+      kind: 'git',
+      path: 'ansible',
+      branch: 'main',
+    });
+    expect(resolved.subscription.perBlock?.[0]?.automation?.existingAnsibleSecret).toBe(
+      'alc-ansible-secret'
+    );
+    expect(resolved.applicationExpectations?.successMinResourceCount).toBe(2);
+    expect(resolved.applicationExpectations?.localClusterPlacement).toBe(true);
+  });
+
+  test('argo_app_table_helloworld_argo_auto: RHACM4K-6902 / 6903 argo push scenario', () => {
+    const resolved = resolveArgoPushScenarioById('argo_app_table_helloworld_argo_auto', E2E_SPEC_DATA_DIR);
+    expect(resolved.argoPush.applicationName).toBe('helloworld-argo-app-auto');
+    expect(resolved.argoPush.argoServerLabel).toBe('openshift-gitops');
+    expect(resolved.argoPush.destinationNamespace).toBe('helloworld-argo-auto-ns');
+    expect(resolved.argoPush.git).toMatchObject({
+      path: 'helloworld-argo',
+      branch: 'main',
+    });
+    expect(resolved.argoPush.placementLabelExpression).toEqual({
+      labelName: 'test',
+      labelValues: ['auto'],
+    });
+  });
+
+  test('argo_appset_owned_app_4043: owned ApplicationSet list scenario', () => {
+    const resolved = resolveArgoPushScenarioById('argo_appset_owned_app_4043', E2E_SPEC_DATA_DIR);
+    expect(resolved.argoPush.applicationName).toBe('helloworld-argo-app-mc-auto');
+    expect(resolved.argoPush.postCreateWaitMs).toBe(180_000);
+    expect(resolved.argoPush.placementLabelExpression).toEqual({
+      labelName: 'feature.open-cluster-management.io/addon-application-manager',
+      labelValues: ['available'],
+    });
+  });
+
+  test('argo_multisource_git_helm_37185: Git + Helm multi-source scenario', () => {
+    const resolved = resolveArgoPushScenarioById('argo_multisource_git_helm_37185', E2E_SPEC_DATA_DIR);
+    expect(resolved.argoPush.multiSource).toBe(true);
+    expect(resolved.argoPush.helm).toMatchObject({
+      chartName: 'helloworld-helm',
+      packageVersion: '0.2.0',
+    });
+  });
+
+  test('argo_empty_placement_40996: empty-placement GitOpsCluster scenario', () => {
+    const resolved = resolveArgoPushScenarioById('argo_empty_placement_40996', E2E_SPEC_DATA_DIR);
+    expect(resolved.argoPush.argoServerLabel).toBe('empty-placement-cluster');
+    expect(resolved.argoPush.applicationSetNamespace).toBe('openshift-gitops');
+    expect(resolved.argoPush.setupYamlRelativePath).toBe('src/templates/app/gitops/empty-placement.yaml');
+  });
+
+  test('auto_git_multi: RHACM4K-6902 subscription side uses auto-git-multi', () => {
+    const resolved = resolveSubscriptionScenarioByTestId('RHACM4K-6902', E2E_SPEC_DATA_DIR);
+    expect(resolved.scenarioId).toBe('auto_git_multi');
+    expect(resolved.subscription.applicationName).toBe('auto-git-multi');
+    expect(resolved.subscription.namespace).toBe('auto-git-multi-ns');
+  });
+
+  test('auto_git_multi: RHACM4K-6903 resolves uniquely to auto-git-multi', () => {
+    const resolved = resolveSubscriptionScenarioByTestId('RHACM4K-6903', E2E_SPEC_DATA_DIR);
+    expect(resolved.scenarioId).toBe('auto_git_multi');
+  });
+
   test('auto_git_placement_topology: helloworld + local placement (RHACM4K-39232)', () => {
     const spec = loadE2eSpecData(E2E_SPEC_DATA_DIR);
     expect(spec.scenarios.auto_git_placement_topology?.blocks?.[0]?.use).toContain('placement_label_local');
@@ -409,6 +512,232 @@ test.describe('e2e-spec-data YAML processing', () => {
         path: 'helloworld',
       },
     });
+  });
+
+  test('argo_row_action_helloworld_auto: RHACM4K-6772 row action scenario', () => {
+    const resolved = resolveArgoPushScenarioByTestId('RHACM4K-6772', E2E_SPEC_DATA_DIR);
+    expect(resolved.scenarioId).toBe('argo_row_action_helloworld_auto');
+    expect(resolved.argoPush.applicationName).toBe('helloworld-argo-app-auto');
+    expect(resolved.argoPush.placementLabelExpression).toEqual({
+      labelName: 'test',
+      labelValues: ['auto'],
+    });
+  });
+
+  test('argo_push_manual_sync_61942: RHACM4K-61942 manual sync scenario', () => {
+    const resolved = resolveArgoPushScenarioByTestId('RHACM4K-61942', E2E_SPEC_DATA_DIR);
+    expect(resolved.scenarioId).toBe('argo_push_manual_sync_61942');
+    expect(resolved.argoPush.applicationName).toBe('push-model-manual-sync');
+    expect(resolved.argoPush.disableAutomatedSync).toBe(true);
+  });
+
+  test('argo_wizard_edit_xj: RHACM4K-6735 wizard edit scenario', () => {
+    const resolved = resolveArgoPushScenarioByTestId('RHACM4K-6735', E2E_SPEC_DATA_DIR);
+    expect(resolved.scenarioId).toBe('argo_wizard_edit_xj');
+    expect(resolved.argoPush.applicationName).toBe('xj-argoset1');
+  });
+
+  test('argo_long_lived_secret: RHACM4K-54897 long-lived secret scenario', () => {
+    const resolved = resolveArgoPushScenarioByTestId('RHACM4K-54897', E2E_SPEC_DATA_DIR);
+    expect(resolved.scenarioId).toBe('argo_long_lived_secret');
+    expect(resolved.argoPush.git?.path).toBe('helloworld-argo');
+    expect(resolved.argoPush.postCreateWaitMs).toBe(180_000);
+  });
+
+  test('argo_pull_topology_38202: RHACM4K-38202 pull topology scenario', () => {
+    const resolved = resolveArgoPushScenarioByTestId('RHACM4K-38202', E2E_SPEC_DATA_DIR);
+    expect(resolved.scenarioId).toBe('argo_pull_topology_38202');
+    expect(resolved.argoPush.applicationName).toBe('auto-git-pm-topology');
+    expect(resolved.argoPush.git?.path).toBe('mortgage');
+    expect(resolved.argoPush.successNumber).toBe(3);
+  });
+
+  test('argo_pull_git_wizard_42703: RHACM4K-42703 git pull wizard scenario', () => {
+    const resolved = resolveArgoPushScenarioByTestId('RHACM4K-42703', E2E_SPEC_DATA_DIR);
+    expect(resolved.scenarioId).toBe('argo_pull_git_wizard_42703');
+    expect(resolved.argoPush.applicationName).toBe('auto-git-pm-wizard');
+    expect(resolved.argoPush.git?.path).toBe('mortgage-pm-argo');
+    expect(resolved.argoPush.placementLabelExpression).toBeUndefined();
+  });
+
+  test('argo_pull_helm_wizard_42705: RHACM4K-42705 helm pull wizard scenario', () => {
+    const resolved = resolveArgoPushScenarioByTestId('RHACM4K-42705', E2E_SPEC_DATA_DIR);
+    expect(resolved.scenarioId).toBe('argo_pull_helm_wizard_42705');
+    expect(resolved.argoPush.applicationName).toBe('auto-helm-pm-wizard');
+    expect(resolved.argoPush.helm).toEqual({
+      url: 'https://raw.githubusercontent.com/stolostron/application-lifecycle-samples/main',
+      chartName: 'mortgage-helm',
+      packageVersion: '0.1.0',
+    });
+    expect(resolved.argoPush.git?.path).toBeUndefined();
+  });
+
+  test('argo_pull_manual_sync_60049: RHACM4K-60049 pull manual sync scenario', () => {
+    const resolved = resolveArgoPushScenarioByTestId('RHACM4K-60049', E2E_SPEC_DATA_DIR);
+    expect(resolved.scenarioId).toBe('argo_pull_manual_sync_60049');
+    expect(resolved.argoPush.applicationName).toBe('test-appset-pm-sync');
+    expect(resolved.argoPush.destinationNamespace).toBe('test-appset-pm-sync-ns');
+  });
+
+  test('flux_git_local_16762: RHACM4K-16762 Flux git local scenario', () => {
+    const resolved = resolveFluxScenarioByTestId('RHACM4K-16762', E2E_SPEC_DATA_DIR);
+    expect(resolved.scenarioId).toBe('flux_git_local_16762');
+    expect(resolved.domain).toBe('flux');
+    expect(resolved.flux).toMatchObject({
+      kind: 'git',
+      applicationName: 'auto-flux-git-local',
+      namespace: 'auto-flux-git-local-ns',
+      clusterName: 'local-cluster',
+      deployment: 'helloworld-app-deploy',
+      git: { path: 'helloworld' },
+      topologyIcons: ['route', 'service', 'replicaset', 'other'],
+    });
+  });
+
+  test('flux_helm_local_16763: RHACM4K-16763 Flux helm local scenario', () => {
+    const resolved = resolveFluxScenarioByTestId('RHACM4K-16763', E2E_SPEC_DATA_DIR);
+    expect(resolved.flux.kind).toBe('helm');
+    expect(resolved.flux.helm).toEqual({
+      chartName: 'helloworld-helm',
+      packageVersion: '0.2.0',
+    });
+  });
+
+  test('flux_git_edit: RHACM4K-16764 edit pair resolves base + mortgage delta', () => {
+    const { base, delta } = resolveFluxScenarioPair({
+      baseScenarioId: 'flux_git_edit_local_initial',
+      testId: 'RHACM4K-16764',
+      configPath: E2E_SPEC_DATA_DIR,
+    });
+    expect(base.flux.git?.path).toBe('helloworld');
+    expect(delta.flux.git?.path).toBe('mortgage');
+    expect(delta.flux.deployment).toBe('mortgage-app-deploy');
+  });
+
+  test('flux_git_edit_local_initial: resolves by scenario id without Polarion test', () => {
+    const resolved = resolveFluxScenarioById('flux_git_edit_local_initial', E2E_SPEC_DATA_DIR);
+    expect(resolved.domain).toBe('flux');
+    expect(resolved.flux.applicationName).toBe('auto-flux-git-edit-local');
+  });
+
+  test('flux_git_managed_16783: RHACM4K-16783 Flux git managed scenario', () => {
+    const resolved = resolveFluxScenarioByTestId('RHACM4K-16783', E2E_SPEC_DATA_DIR);
+    expect(resolved.scenarioId).toBe('flux_git_managed_16783');
+    expect(resolved.flux).toMatchObject({
+      kind: 'git',
+      applicationName: 'auto-flux-git-managed',
+      namespace: 'auto-flux-git-managed-ns',
+      deployment: 'helloworld-app-deploy',
+      git: { path: 'helloworld' },
+    });
+    expect(resolved.flux.clusterName).toBeUndefined();
+  });
+
+  test('flux_git_edit_managed: RHACM4K-16785 edit pair resolves base + mortgage delta', () => {
+    const { base, delta } = resolveFluxScenarioPair({
+      baseScenarioId: 'flux_git_edit_managed_initial',
+      testId: 'RHACM4K-16785',
+      configPath: E2E_SPEC_DATA_DIR,
+    });
+    expect(base.flux.applicationName).toBe('auto-flux-git-edit-managed');
+    expect(base.flux.git?.path).toBe('helloworld');
+    expect(delta.flux.git?.path).toBe('mortgage');
+    expect(delta.flux.deployment).toBe('mortgage-app-deploy');
+  });
+
+  test('flux_helm_del_managed_16788: RHACM4K-16788 Flux helm delete managed scenario', () => {
+    const resolved = resolveFluxScenarioByTestId('RHACM4K-16788', E2E_SPEC_DATA_DIR);
+    expect(resolved.flux.applicationName).toBe('auto-flux-helm-del-managed');
+    expect(resolved.flux.namespace).toBe('auto-flux-helm-del-managed-ns');
+  });
+
+  test('auto_helm_helloworld_managed: RHACM4K-7486 helm managed scenario', () => {
+    const resolved = resolveSubscriptionScenarioByTestId('RHACM4K-7486', E2E_SPEC_DATA_DIR);
+    expect(resolved.scenarioId).toBe('auto_helm_helloworld_managed');
+    expect(resolved.subscription.applicationName).toBe('auto-helm-helloworld');
+    expect(resolved.subscription.repositories[0]).toMatchObject({
+      kind: 'helm',
+      chartName: 'helloworld-helm',
+      packageVersion: '3.0.0-stable',
+    });
+    expect(resolved.applicationExpectations.detailsClustersSummary).toEqual({
+      variant: 'remoteOnly',
+      remoteCount: 1,
+    });
+  });
+
+  test('auto_helm_multi: RHACM4K-7560 multi-subscription helm scenario', () => {
+    const resolved = resolveSubscriptionScenarioByTestId('RHACM4K-7560', E2E_SPEC_DATA_DIR);
+    expect(resolved.subscription.repositories).toHaveLength(2);
+    expect(resolved.applicationExpectations.successMinResourceCount).toBe(3);
+  });
+
+  test('auto_helm_multi_restore: RHACM4K-45791 restore scenario uses isolated app name', () => {
+    const resolved = resolveSubscriptionScenarioByTestId('RHACM4K-45791', E2E_SPEC_DATA_DIR);
+    expect(resolved.subscription.applicationName).toBe('auto-helm-multi-restore');
+    expect(resolved.subscription.namespace).toBe('auto-helm-multi-restore-ns');
+  });
+
+  test('auto_obj_minio_mortgage: RHACM4K-7485 object storage online placement scenario', () => {
+    const resolved = resolveSubscriptionScenarioByTestId('RHACM4K-7485', E2E_SPEC_DATA_DIR);
+    expect(resolved.scenarioId).toBe('auto_obj_minio_mortgage');
+    expect(resolved.subscription.applicationName).toBe('auto-obj-minio-mortgage');
+    expect(resolved.subscription.repositories[0]).toMatchObject({
+      kind: 'objectStorage',
+      subfolder: 'mortgage',
+    });
+    expect(resolved.subscription.repositories).toHaveLength(1);
+  });
+
+  test('auto_obj_multi: RHACM4K-7814 multi-subscription object storage scenario', () => {
+    const resolved = resolveSubscriptionScenarioByTestId('RHACM4K-7814', E2E_SPEC_DATA_DIR);
+    expect(resolved.subscription.repositories).toHaveLength(2);
+    expect(resolved.subscription.repositories[0]).toMatchObject({
+      kind: 'objectStorage',
+      subfolder: 'helloworld',
+    });
+    expect(resolved.applicationExpectations.successMinResourceCount).toBe(3);
+  });
+
+  test('auto_obj_add_subscription: RHACM4K-7812 add subscription reuses auto-obj-multi app', () => {
+    const resolved = resolveSubscriptionScenarioByTestId('RHACM4K-7812', E2E_SPEC_DATA_DIR);
+    expect(resolved.subscription.applicationName).toBe('auto-obj-multi');
+    expect(resolved.subscription.repositories[0]).toMatchObject({
+      kind: 'objectStorage',
+      subfolder: 'helloworld',
+    });
+  });
+
+  test('ocp_helloworld_local: RHACM4K-16793 OpenShift local cluster scenario', () => {
+    const resolved = resolveOpenshiftScenarioByTestId('RHACM4K-16793', E2E_SPEC_DATA_DIR);
+    expect(resolved.scenarioId).toBe('ocp_helloworld_local');
+    expect(resolved.openshift.applicationName).toBe('helloworld-app-ocp');
+    expect(resolved.openshift.clusterName).toBe('local-cluster');
+    expect(resolved.openshift.topologyIcons).toEqual(['route', 'service', 'replicaset']);
+  });
+
+  test('ocp_mortgage_edit_local: RHACM4K-16794 mortgage part-of edit scenario', () => {
+    const resolved = resolveOpenshiftScenarioByTestId('RHACM4K-16794', E2E_SPEC_DATA_DIR);
+    expect(resolved.openshift.nameEdit).toBe('mortgage-app-ocp');
+    expect(resolved.openshift.deployment).toBe('mortgage-app-ocp');
+    expect(resolved.openshift.successNumber).toBe(7);
+  });
+
+  test('ocp_helloworld_managed: RHACM4K-16796 managed cluster scenario omits clusterName', () => {
+    const resolved = resolveOpenshiftScenarioByTestId('RHACM4K-16796', E2E_SPEC_DATA_DIR);
+    expect(resolved.openshift.clusterName).toBeUndefined();
+  });
+
+  test('namespace_length_git_base: RHACM4K-6883 git example-k8s-app scenario', () => {
+    const resolved = resolveSubscriptionScenarioById('namespace_length_git_base', E2E_SPEC_DATA_DIR);
+    expect(resolved.subscription.repositories[0]).toMatchObject({
+      kind: 'git',
+      path: 'example-k8s-app',
+      branch: 'main',
+    });
+    expect(resolved.applicationExpectations.clusterResources[0]!.some((r) => r.namespace === 'lars-sandbox')).toBe(
+      true
+    );
   });
 
   test('governance placement-preview.yaml: RHACM4K-64221 policy scenario', () => {

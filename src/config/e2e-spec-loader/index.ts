@@ -10,6 +10,11 @@ export {
 export {
   resolveArgoPushScenarioById,
   resolveArgoPushScenarioByTestId,
+  resolveFluxScenarioById,
+  resolveFluxScenarioByTestId,
+  resolveFluxScenarioPair,
+  resolveOpenshiftScenarioByTestId,
+  resolveOpenshiftScenarioPair,
   resolveScenarioById,
   resolveScenarioByTestId,
   resolveScenarioPair,
@@ -18,6 +23,8 @@ export {
   resolveSubscriptionScenarioPair,
   type ResolvedAppScenario,
   type ResolvedArgoPushAppScenario,
+  type ResolvedFluxAppScenario,
+  type ResolvedOpenshiftAppScenario,
   type ResolvedSubscriptionAppScenario,
 } from './app-api';
 

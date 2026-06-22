@@ -1,0 +1,38 @@
+# Ansible subscription wizard flows (credential pop-up, pre/post hooks). Scenarios use `subscription` domain + `_shared` fragments.
+
+scenarios:
+  # RHACM4K-20541: create AAP secret via **Add credential** modal on subscription create wizard.
+  auto_git_ansible_cred_wizard_20541:
+    enabled: true
+    tests:
+      - RHACM4K-20541
+    blocks:
+      - use:
+          - git_ansible_samples
+          - ansible_cred_wizard_add_credential
+          - placement_label_local
+          - timewindow_default
+    extends:
+      - subscription_submit
+    specDomains:
+      subscription:
+        applicationName: auto-git-ansible-cred-wizard
+        namespace: auto-git-ansible-cred-wizard-ns
+
+  # RHACM4K-1560: pre/post subscription hooks with existing `alc-ansible-secret` (no delete).
+  auto_git_ansible_1560:
+    enabled: true
+    tests:
+      - RHACM4K-1560
+    blocks:
+      - use:
+          - git_ansible_samples
+          - ansible_existing_alc_secret
+          - placement_label_local
+          - timewindow_default
+    extends:
+      - subscription_submit
+    specDomains:
+      subscription:
+        applicationName: auto-git-ansible
+        namespace: auto-git-ansible-ns

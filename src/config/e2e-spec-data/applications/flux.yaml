@@ -1,0 +1,329 @@
+# Flux CD applications (`specDomains.flux`).
+# Cypress: `Flux_Application_Local_Test_Suite.cy.js`, `Flux_Application_Managed_Test_Suite.cy.js`.
+# Managed scenarios omit `clusterName`; specs inject it from `E2E_MANAGED_CLUSTER_NAME` / managedClusters.json.
+
+version: 1
+
+fragments:
+  flux_local_cluster:
+    clusterName: local-cluster
+
+  flux_git_helloworld_deploy:
+    deployment: helloworld-app-deploy
+    service: helloworld-app-svc
+    route: helloworld-app-route
+    successNumber: 6
+    topologyIcons:
+      - route
+      - service
+      - replicaset
+      - other
+
+  flux_helm_helloworld_deploy:
+    deployment: helloworld-app-deploy
+    service: helloworld-app-svc
+    route: helloworld-app-route
+    successNumber: 6
+    topologyIcons:
+      - route
+      - service
+      - replicaset
+      - other
+      - chart
+
+  flux_git_mortgage_deploy:
+    deployment: mortgage-app-deploy
+    service: mortgage-app-svc
+    successNumber: 5
+    topologyIcons:
+      - service
+      - replicaset
+      - other
+
+  flux_helm_mortgage_deploy:
+    deployment: mortgage-app-deploy
+    service: mortgage-app-svc
+    successNumber: 5
+    topologyIcons:
+      - service
+      - replicaset
+      - other
+      - chart
+
+profiles:
+  flux_git_app:
+    specDomains:
+      flux:
+        kind: git
+        gitAppTemplateRelativePath: src/templates/app/flux/flux-git-template.yaml
+
+  flux_helm_app:
+    specDomains:
+      flux:
+        kind: helm
+        helmAppTemplateRelativePath: src/templates/app/flux/flux-helm-template.yaml
+
+scenarios:
+  flux_git_local_16762:
+    enabled: true
+    tests:
+      - RHACM4K-16762
+    blocks:
+      - use:
+          - flux_local_cluster
+          - flux_git_helloworld_deploy
+    extends:
+      - flux_git_app
+    specDomains:
+      flux:
+        applicationName: auto-flux-git-local
+        namespace: auto-flux-git-local-ns
+        git:
+          path: helloworld
+
+  flux_helm_local_16763:
+    enabled: true
+    tests:
+      - RHACM4K-16763
+    blocks:
+      - use:
+          - flux_local_cluster
+          - flux_helm_helloworld_deploy
+    extends:
+      - flux_helm_app
+    specDomains:
+      flux:
+        applicationName: auto-flux-helm-local
+        namespace: auto-flux-helm-local-ns
+        helm:
+          chartName: helloworld-helm
+          packageVersion: "0.2.0"
+
+  flux_git_edit_local_initial:
+    enabled: true
+    blocks:
+      - use:
+          - flux_local_cluster
+          - flux_git_helloworld_deploy
+    extends:
+      - flux_git_app
+    specDomains:
+      flux:
+        applicationName: auto-flux-git-edit-local
+        namespace: auto-flux-git-edit-local-ns
+        git:
+          path: helloworld
+
+  flux_git_edit_mortgage_16764:
+    enabled: true
+    tests:
+      - RHACM4K-16764
+    blocks:
+      - use:
+          - flux_local_cluster
+          - flux_git_mortgage_deploy
+    extends:
+      - flux_git_app
+    specDomains:
+      flux:
+        applicationName: auto-flux-git-edit-local
+        namespace: auto-flux-git-edit-local-ns
+        git:
+          path: mortgage
+
+  flux_helm_edit_local_initial:
+    enabled: true
+    blocks:
+      - use:
+          - flux_local_cluster
+          - flux_helm_helloworld_deploy
+    extends:
+      - flux_helm_app
+    specDomains:
+      flux:
+        applicationName: auto-flux-helm-edit-local
+        namespace: auto-flux-helm-edit-local-ns
+        helm:
+          chartName: helloworld-helm
+          packageVersion: "0.2.0"
+
+  flux_helm_edit_mortgage_16769:
+    enabled: true
+    tests:
+      - RHACM4K-16769
+    blocks:
+      - use:
+          - flux_local_cluster
+          - flux_helm_mortgage_deploy
+    extends:
+      - flux_helm_app
+    specDomains:
+      flux:
+        applicationName: auto-flux-helm-edit-local
+        namespace: auto-flux-helm-edit-local-ns
+        helm:
+          chartName: mortgage-helm
+          packageVersion: "0.1.0"
+
+  flux_git_del_16779:
+    enabled: true
+    tests:
+      - RHACM4K-16779
+    blocks:
+      - use:
+          - flux_local_cluster
+          - flux_git_helloworld_deploy
+    extends:
+      - flux_git_app
+    specDomains:
+      flux:
+        applicationName: auto-flux-git-del-local
+        namespace: auto-flux-git-del-local-ns
+        git:
+          path: helloworld
+
+  flux_helm_del_16781:
+    enabled: true
+    tests:
+      - RHACM4K-16781
+    blocks:
+      - use:
+          - flux_local_cluster
+          - flux_helm_helloworld_deploy
+    extends:
+      - flux_helm_app
+    specDomains:
+      flux:
+        applicationName: auto-flux-helm-del-local
+        namespace: auto-flux-helm-del-local-ns
+        helm:
+          chartName: helloworld-helm
+          packageVersion: "0.2.0"
+
+  flux_git_managed_16783:
+    enabled: true
+    tests:
+      - RHACM4K-16783
+    blocks:
+      - use:
+          - flux_git_helloworld_deploy
+    extends:
+      - flux_git_app
+    specDomains:
+      flux:
+        applicationName: auto-flux-git-managed
+        namespace: auto-flux-git-managed-ns
+        git:
+          path: helloworld
+
+  flux_helm_managed_16784:
+    enabled: true
+    tests:
+      - RHACM4K-16784
+    blocks:
+      - use:
+          - flux_helm_helloworld_deploy
+    extends:
+      - flux_helm_app
+    specDomains:
+      flux:
+        applicationName: auto-flux-helm-managed
+        namespace: auto-flux-helm-managed-ns
+        helm:
+          chartName: helloworld-helm
+          packageVersion: "0.2.0"
+
+  flux_git_edit_managed_initial:
+    enabled: true
+    blocks:
+      - use:
+          - flux_git_helloworld_deploy
+    extends:
+      - flux_git_app
+    specDomains:
+      flux:
+        applicationName: auto-flux-git-edit-managed
+        namespace: auto-flux-git-edit-managed-ns
+        git:
+          path: helloworld
+
+  flux_git_edit_mortgage_16785:
+    enabled: true
+    tests:
+      - RHACM4K-16785
+    blocks:
+      - use:
+          - flux_git_mortgage_deploy
+    extends:
+      - flux_git_app
+    specDomains:
+      flux:
+        applicationName: auto-flux-git-edit-managed
+        namespace: auto-flux-git-edit-managed-ns
+        git:
+          path: mortgage
+
+  flux_helm_edit_managed_initial:
+    enabled: true
+    blocks:
+      - use:
+          - flux_helm_helloworld_deploy
+    extends:
+      - flux_helm_app
+    specDomains:
+      flux:
+        applicationName: auto-flux-helm-edit-managed
+        namespace: auto-flux-helm-edit-managed-ns
+        helm:
+          chartName: helloworld-helm
+          packageVersion: "0.2.0"
+
+  flux_helm_edit_mortgage_16786:
+    enabled: true
+    tests:
+      - RHACM4K-16786
+    blocks:
+      - use:
+          - flux_helm_mortgage_deploy
+    extends:
+      - flux_helm_app
+    specDomains:
+      flux:
+        applicationName: auto-flux-helm-edit-managed
+        namespace: auto-flux-helm-edit-managed-ns
+        helm:
+          chartName: mortgage-helm
+          packageVersion: "0.1.0"
+
+  flux_git_del_managed_16787:
+    enabled: true
+    tests:
+      - RHACM4K-16787
+    blocks:
+      - use:
+          - flux_git_helloworld_deploy
+    extends:
+      - flux_git_app
+    specDomains:
+      flux:
+        applicationName: auto-flux-git-del-managed
+        namespace: auto-flux-git-del-managed-ns
+        git:
+          path: helloworld
+
+  flux_helm_del_managed_16788:
+    enabled: true
+    tests:
+      - RHACM4K-16788
+    blocks:
+      - use:
+          - flux_helm_helloworld_deploy
+    extends:
+      - flux_helm_app
+    specDomains:
+      flux:
+        applicationName: auto-flux-helm-del-managed
+        namespace: auto-flux-helm-del-managed-ns
+        helm:
+          chartName: helloworld-helm
+          packageVersion: "0.2.0"

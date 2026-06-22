@@ -1,0 +1,67 @@
+# Object storage subscription applications (Cypress: `Object_Storage_Application_Test_Suite.cy.js`).
+# Credentials and bucket URL from `env/alc.local.env` via `applyObjectStoreAuthToSubscriptionOptions`.
+# Managed-cluster placement is injected at runtime via `applyManagedClusterPlacementToBlocks`.
+
+version: 1
+
+scenarios:
+  auto_obj_minio_mortgage:
+    enabled: true
+    tests:
+      - RHACM4K-7485
+      - RHACM4K-7815
+      - RHACM4K-45792
+    blocks:
+      - use:
+          - obj_minio_mortgage
+          - skip_automation_ansible
+          - placement_online_vendor_openshift
+          - timewindow_blocked_weekend_sat_sun
+    extends:
+      - subscription_submit
+    specDomains:
+      subscription:
+        applicationName: auto-obj-minio-mortgage
+        namespace: auto-obj-minio-mortgage-ns
+
+  auto_obj_multi:
+    enabled: true
+    tests:
+      - RHACM4K-7814
+      - RHACM4K-7561
+      - RHACM4K-7813
+    blocks:
+      - use:
+          - obj_minio_helloworld
+          - skip_automation_ansible
+          - timewindow_active_thu_fri_narrow
+      - use:
+          - obj_minio_mortgage
+          - skip_automation_ansible
+          - placement_label_local
+          - timewindow_default
+    extends:
+      - subscription_submit
+    specDomains:
+      subscription:
+        applicationName: auto-obj-multi
+        namespace: auto-obj-multi-ns
+      applicationExpectations:
+        successMinResourceCount: 3
+
+  auto_obj_add_subscription:
+    enabled: true
+    tests:
+      - RHACM4K-7812
+    blocks:
+      - use:
+          - obj_minio_helloworld
+          - skip_automation_ansible
+          - placement_use_existing_rule
+          - timewindow_blocked_thu_fri_evening
+    extends:
+      - subscription_submit
+    specDomains:
+      subscription:
+        applicationName: auto-obj-multi
+        namespace: auto-obj-multi-ns

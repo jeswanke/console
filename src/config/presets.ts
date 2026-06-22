@@ -43,6 +43,14 @@ export const rbacPresets = {
     { role: 'fg-rbac-preauth-61797', username: 'clc-e2e-preauth-61797', domains: ['fg-rbac'] },
     { role: 'fg-rbac-del-60255', username: 'clc-e2e-del-60255', domains: ['fg-rbac'] },
 
+    // --- ALC subscription-admin (Cypress app-test-cluster-manager-admin) ---
+    {
+      role: 'alc-rbac-cluster-manager-admin',
+      username: 'app-test-cluster-manager-admin',
+      domains: ['alc-rbac'],
+      idp: 'app-e2e-htpasswd',
+    },
+
     // --- Tier: vm (Fleet UI tests, needs CNV) ---
     { role: 'fg-rbac-std-view', username: 'clc-e2e-std-view', domains: ['fg-rbac', 'fleet-virt'] },
     { role: 'fg-rbac-std-edit', username: 'clc-e2e-std-edit', domains: ['fg-rbac', 'fleet-virt'] },
