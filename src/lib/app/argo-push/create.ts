@@ -7,6 +7,7 @@ import type { ApplicationListPage } from '@pages/app/ApplicationListPage';
 import type { ArgoPushApplicationCreateWizardPage } from '@pages/app/ArgoPushApplicationCreateWizardPage';
 
 import type { CreateArgoPushApplicationOptions } from './types';
+import { resolveApplicationSetNamespace } from './namespace';
 
 async function fillGeneralStep(
   wizard: ArgoPushApplicationCreateWizardPage,
@@ -28,17 +29,16 @@ async function fillGeneratorsStep(
   );
 }
 
-async function fillGitTemplateStep(
+async function fillSingleGitTemplateStep(
   wizard: ArgoPushApplicationCreateWizardPage,
-  options: CreateArgoPushApplicationOptions
+  options: Pick<CreateArgoPushApplicationOptions, 'git' | 'destinationNamespace'>
 ): Promise<void> {
   const { git, destinationNamespace } = options;
-  await wizard.getGitRepositoryTypeCard().click();
+  await wizard.selectGitRepositoryTypeOnTemplate();
   await wizard.waitForLoad();
-
-  await wizard.pickComboboxOption(wizard.getGitUrlCombobox(), git.url);
+  await wizard.pickGitUrlOption(git.url);
   if (git.branch) {
-    await wizard.pickComboboxOption(wizard.getGitRevisionCombobox(), git.branch);
+    await wizard.pickGitRevisionOption(git.branch);
   } else {
     await wizard.pickFirstComboboxOption(wizard.getGitRevisionCombobox());
   }
@@ -47,7 +47,78 @@ async function fillGitTemplateStep(
   } else {
     await wizard.pickFirstComboboxOption(wizard.getGitPathCombobox());
   }
+  if (destinationNamespace) {
+    await wizard.getDestinationNamespaceInput().clear();
+    await wizard.getDestinationNamespaceInput().fill(destinationNamespace);
+  }
+}
+
+async function fillMultiSourceTemplateStep(
+  wizard: ArgoPushApplicationCreateWizardPage,
+  options: Pick<CreateArgoPushApplicationOptions, 'git' | 'helm' | 'destinationNamespace'>
+): Promise<void> {
+  const { git, helm, destinationNamespace } = options;
+  if (!helm) {
+    throw new Error('fillMultiSourceTemplateStep: helm repository spec is required');
+  }
+
+  await fillSingleGitTemplateStep(wizard, { git, destinationNamespace: '' });
+  await wizard.addTemplateSource();
+  await wizard.fillHelmOnLastTemplateSection(helm);
+  await wizard.getDestinationNamespaceInput().clear();
   await wizard.getDestinationNamespaceInput().fill(destinationNamespace);
+}
+
+async function fillTemplateStep(
+  wizard: ArgoPushApplicationCreateWizardPage,
+  options: CreateArgoPushApplicationOptions
+): Promise<void> {
+  const { git, helm, multiSource, destinationNamespace } = options;
+
+  if (!multiSource) {
+    await fillSingleGitTemplateStep(wizard, { git, destinationNamespace });
+    return;
+  }
+
+  await fillMultiSourceTemplateStep(wizard, { git, helm, destinationNamespace });
+}
+
+async function fillHelmOnlyTemplateStep(
+  wizard: ArgoPushApplicationCreateWizardPage,
+  options: Pick<CreateArgoPushApplicationOptions, 'helm' | 'destinationNamespace'>
+): Promise<void> {
+  const { helm, destinationNamespace } = options;
+  if (!helm) {
+    throw new Error('fillHelmOnlyTemplateStep: helm repository spec is required');
+  }
+  await wizard.selectHelmRepositoryTypeOnTemplate();
+  await wizard.waitForLoad();
+  await wizard.fillHelmOnLastTemplateSection(helm);
+  if (destinationNamespace) {
+    await wizard.getDestinationNamespaceInput().clear();
+    await wizard.getDestinationNamespaceInput().fill(destinationNamespace);
+  }
+}
+
+async function fillTemplateStepForWizard(
+  wizard: ArgoPushApplicationCreateWizardPage,
+  options: CreateArgoPushApplicationOptions
+): Promise<void> {
+  const { git, helm, multiSource, destinationNamespace } = options;
+
+  if (helm && !git?.path && !multiSource) {
+    await fillHelmOnlyTemplateStep(wizard, { helm, destinationNamespace });
+    return;
+  }
+
+  await fillTemplateStep(wizard, options);
+}
+
+async function fillGitTemplateStep(
+  wizard: ArgoPushApplicationCreateWizardPage,
+  options: CreateArgoPushApplicationOptions
+): Promise<void> {
+  await fillTemplateStepForWizard(wizard, options);
 }
 
 async function fillPlacementStep(
@@ -58,6 +129,21 @@ async function fillPlacementStep(
   await wizard.pickComboboxOption(wizard.getClusterSetsCombobox(), clusterSet);
   if (placementLabelExpression) {
     await wizard.fillPlacementLabelExpression(placementLabelExpression);
+  }
+}
+
+async function fillSyncPolicyStep(
+  wizard: ArgoPushApplicationCreateWizardPage,
+  options: Pick<CreateArgoPushApplicationOptions, 'disableAutomatedSync'>
+): Promise<void> {
+  if (!options.disableAutomatedSync) return;
+  const page = wizard.getPage();
+  const automated = page.locator('#spec-template-spec-syncpolicy-automated-enabled input[type="checkbox"]').or(
+    page.locator('input[id="spec-template-spec-syncpolicy-automated-enabled"]')
+  );
+  await automated.scrollIntoViewIfNeeded();
+  if (await automated.isChecked().catch(() => false)) {
+    await automated.click({ force: true });
   }
 }
 
@@ -85,6 +171,7 @@ export async function fillArgoPushWizardToReview(
   await fillGitTemplateStep(wizard, options);
   await wizard.clickNext();
 
+  await fillSyncPolicyStep(wizard, options);
   await wizard.clickNext();
 
   await fillPlacementStep(wizard, options);
@@ -109,7 +196,7 @@ export async function createArgoPushApplication(
     requeueTimeSeconds,
   } = options;
 
-  const argoServerNamespace = options.argoServerLabel;
+  const argoServerNamespace = resolveApplicationSetNamespace(options);
   const exists = await wizard.oc.applicationSetExists(argoServerNamespace, options.applicationName);
   if (exists) {
     if (applicationSetExistsError) {
@@ -136,6 +223,7 @@ export async function createArgoPushApplication(
   await fillGitTemplateStep(wizard, options);
   await wizard.clickNext();
 
+  await fillSyncPolicyStep(wizard, options);
   await wizard.clickNext();
 
   await fillPlacementStep(wizard, options);
@@ -144,6 +232,9 @@ export async function createArgoPushApplication(
   if (submit) {
     await wizard.clickSubmit();
     await waitForArgoPushApplicationAfterCreate(wizard, argoServerNamespace, options.applicationName);
+    if (options.postCreateWaitMs && options.postCreateWaitMs > 0) {
+      await new Promise((resolve) => setTimeout(resolve, options.postCreateWaitMs));
+    }
   }
 
   return { argoServerNamespace };
