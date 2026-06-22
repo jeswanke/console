@@ -13,7 +13,7 @@ export const hubAuthPresets = {
  * vm users added on BM/Azure, cclm users added on Azure only.
  */
 export const rbacPresets = {
-  defaultIdp: 'clc-e2e-htpasswd',
+  idp: 'clc-e2e-htpasswd',
   users: [
     // --- Tier: rbac-ui (RBAC wizard/role tests, no Fleet UI) ---
     { role: 'fg-rbac-edit-test-60303', username: 'clc-e2e-edit-test-60303', domains: ['fg-rbac'] },

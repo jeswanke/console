@@ -20,7 +20,7 @@ export interface RbacUser {
 }
 
 export interface RbacConfig {
-  readonly defaultIdp: string;
+  readonly idpName: string;
   readonly spokeCluster: string;
   readonly users: Readonly<Record<string, string>>;
 }

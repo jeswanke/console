@@ -47,7 +47,7 @@ export function getHubAuth(): HubAuthConfig {
 
 export function getRbacUsers(domain?: string): RbacUser[] {
   const password = process.env.RBAC_TEST_PASSWORD ?? '';
-  const idp = process.env.RBAC_IDP ?? rbacPresets.defaultIdp;
+  const idp = process.env.RBAC_IDP ?? rbacPresets.idp;
 
   return rbacPresets.users
     .filter((u) => !domain || (u.domains as readonly string[]).includes(domain))
@@ -55,7 +55,7 @@ export function getRbacUsers(domain?: string): RbacUser[] {
       role: u.role,
       username: u.username,
       password,
-      idp: ('idp' in u ? (u as { idp: string }).idp : null) ?? idp,
+      idp,
       domains: u.domains,
     }));
 }
@@ -73,7 +73,7 @@ export function getRbacConfig(): RbacConfig {
   }
 
   return {
-    defaultIdp: process.env.RBAC_IDP || rbacPresets.defaultIdp,
+    idpName: process.env.RBAC_IDP || rbacPresets.idp,
     spokeCluster: process.env.RBAC_SPOKE_CLUSTER || process.env.VIRT_SPOKE_CLUSTER || '',
     users,
   };
