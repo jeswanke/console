@@ -4,6 +4,10 @@
  */
 import { expect, type Locator, type Page } from '@playwright/test';
 
+import {
+  APP_SUBSCRIPTION_CREATE_WIZARD,
+  type SubscriptionWizardRepositoryCardKind,
+} from '@constants/app';
 import type { SubscriptionApplicationCreateWizardPage } from '@pages/app/SubscriptionApplicationCreateWizardPage';
 
 function escapeRegExpForMenuLabel(s: string): string {
@@ -41,6 +45,32 @@ export async function verifyPlacementRuleDeprecationAlertNotVisibleInRepositoryB
   blockIndex = 0
 ): Promise<void> {
   await expect(wizard.getPlacementRuleDeprecationAlertInRepositoryBlock(blockIndex)).toBeHidden();
+}
+
+/** RHACM4K-31501 — inline **Placement rule deprecation** alert in cluster placement section. */
+export async function verifyPlacementRuleDeprecationAlertVisibleInRepositoryBlock(
+  wizard: SubscriptionApplicationCreateWizardPage,
+  blockIndex = 0
+): Promise<void> {
+  const copy = APP_SUBSCRIPTION_CREATE_WIZARD.clusterDeployment.placementRuleDeprecation;
+  const alert = wizard.getPlacementRuleDeprecationAlertInRepositoryBlock(blockIndex);
+  await expect(alert).toBeVisible({ timeout: 30_000 });
+  await expect(alert).toContainText(copy.alertTitle);
+  await expect(alert).toContainText(copy.resourceDeprecatedSnippet);
+  await expect(alert).toContainText(copy.bestPracticeSnippet);
+}
+
+/** RHACM4K-31501 — Git, Helm, and Object storage repository blocks each show the deprecation alert. */
+export async function verifyPlacementDeprecationAlertForRepositoryTypes(
+  wizard: SubscriptionApplicationCreateWizardPage
+): Promise<void> {
+  const kinds: SubscriptionWizardRepositoryCardKind[] = ['git', 'helm', 'objectStorage'];
+  await wizard.expandRepositoryTypesSectionForRepositoryBlock(0);
+  for (const kind of kinds) {
+    await wizard.selectRepositoryTypeInBlock(0, kind);
+    await wizard.expandClusterDeploymentSectionForRepositoryBlock(0);
+    await verifyPlacementRuleDeprecationAlertVisibleInRepositoryBlock(wizard, 0);
+  }
 }
 
 /** Select **existing placement configuration** (radio on current hubs, legacy checkbox otherwise). */

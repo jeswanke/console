@@ -18,6 +18,7 @@ import type {
   SubscriptionRepositorySpec,
   TimeWindowSpec,
 } from './types';
+import { addAnsibleCredentialViaWizard } from './ansible-credential-wizard';
 import { enableExistingPlacementConfigurationInRepositoryBlock } from './placement-wizard-verify';
 
 
@@ -238,7 +239,9 @@ async function fillAutomation(
       .getAnsibleCredentialTypeFilterComboboxInRepositoryBlock(blockIndex)
       .fill(spec.credentialTypeFilter);
   }
-  if (spec.existingAnsibleSecret !== undefined) {
+  if (spec.addCredentialWizard) {
+    await addAnsibleCredentialViaWizard(wizard, blockIndex, spec.addCredentialWizard);
+  } else if (spec.existingAnsibleSecret !== undefined) {
     await block
       .getByPlaceholder(APP_SUBSCRIPTION_CREATE_WIZARD.automation.existingSecretPlaceholder)
       .fill(spec.existingAnsibleSecret);
