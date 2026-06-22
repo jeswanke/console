@@ -5,6 +5,7 @@ export const SEARCH_ROUTES = {
 } as const;
 
 export const SEARCH_PAGE = {
+  // Common
   title: 'Search',
   searchInputAriaLabel: 'Search input',
   searchPlaceholder:
@@ -14,9 +15,12 @@ export const SEARCH_PAGE = {
   openNewSearchTab: 'Open new search tab',
   suggestedCardSectionHeader: 'Suggested search templates',
   workloadSuggestedCardHeader: 'Workloads',
-} as const;
 
-export const SEARCH_RESULTS = {
+  //filters
   deploymentSearchQuery: 'kind:Deployment',
+
+  // results
   desiredColumn: 'Desired',
+  searchApiDeploymentName: 'search-api',
+  clusterRelatedResourceLabel: 'Cluster',
 } as const;

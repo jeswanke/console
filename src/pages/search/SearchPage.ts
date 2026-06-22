@@ -76,6 +76,52 @@ export class SearchPage extends BasePage {
     await this.waitForLoad();
   }
 
+  /** Type `kind:<kind> name:<name>` filters and run the search. */
+  async filterByKindAndName(kind: string, name: string): Promise<void> {
+    await this.getSearchInput().clear();
+    await this.getSearchInput().fill('kind');
+    await this.getSearchInput().press('Enter');
+    await this.getSearchInput().fill(kind);
+    await this.getSearchInput().press('Enter');
+    await this.getSearchInput().fill('name');
+    await this.getSearchInput().press('Enter');
+    await this.getSearchInput().fill(name);
+    await this.getSearchInput().press('Enter');
+    await this.getRunSearchButton().click();
+    await this.waitForLoad();
+  }
+
+  /** Click the Workloads suggested search card. */
+  async clickWorkloadSuggestedCard(): Promise<void> {
+    await this.getWorkloadSuggestedCard().click();
+    await this.waitForLoad();
+  }
+
+  /**
+   * Verify that a result row whose name cell matches `resourceName` is visible
+   * in the search results table.
+   */
+  async verifySearchResultRowVisible(resourceName: string): Promise<void> {
+    await expect(
+      this.page.locator('table').getByText(resourceName, { exact: true }).first()
+    ).toBeVisible();
+  }
+
+  async expandRelatedResources(): Promise<void> {
+    await this.page.getByText('Show related resources', { exact: true }).first().click();
+    await this.waitForLoad();
+  }
+
+  /**
+   * Returns the Cluster kind accordion toggle button inside the expanded
+   * related-resources panel.
+   */
+  getClusterRelatedResourceAccordion(): Locator {
+    return this.page
+      .locator('.pf-v6-c-accordion__toggle')
+      .getByText(SEARCH_PAGE.clusterRelatedResourceLabel);
+  }
+
   /** Wait for at least one results table to appear in the DOM. */
   async waitForResultsTable(): Promise<void> {
     await expect(this.page.locator('table')).toBeVisible();
