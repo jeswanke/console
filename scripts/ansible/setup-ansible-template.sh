@@ -248,4 +248,19 @@ else
   log "Skipping AWX bootstrap (E2E_ANSIBLE_AWX_BOOTSTRAP=${BOOTSTRAP_AWX})."
 fi
 
+# Playwright workers do not inherit env from this subprocess — persist resolved credentials for tests.
+write_ansible_aap_context_file() {
+  local dest="./ansible-aap.json"
+  if ! command -v jq >/dev/null 2>&1; then
+    log "jq not available; skipping write of ansible-aap.json for Playwright workers."
+    return 0
+  fi
+  jq -n --arg url "${ANSIBLE_URL}" --arg token "${ANSIBLE_TOKEN}" \
+    '{url: $url, token: $token}' >"${dest}"
+  chmod 600 "${dest}" 2>/dev/null || true
+  log "Wrote AAP credential context to ${dest} (read by @lib/app/auth/ansible-aap)."
+}
+
+write_ansible_aap_context_file
+
 log "Ansible prep — done."
