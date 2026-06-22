@@ -9,6 +9,7 @@
  * kubevirt.io:* roles require CNV and may not exist on all clusters.
  */
 
+import path from 'path';
 import { test, expect } from '@fixtures/fg-rbac-test';
 import {
   RBAC_WIZARD,
@@ -16,6 +17,9 @@ import {
   SCOPE_TYPES,
   GRANULARITY_OPTIONS,
 } from '@constants/fg-rbac';
+
+const TEMPLATES_DIR = path.resolve(__dirname, '../../templates/fg-rbac');
+const TEST_CLUSTERSET_YAML = path.join(TEMPLATES_DIR, 'test-clusterset.yaml');
 
 const CLUSTER_SET = 'default';
 
@@ -188,17 +192,7 @@ test.describe('Role Assignment - Cluster Set Scope', { tag: ['@fg-rbac'] }, () =
     await oc.mcraDeleteAllForUser(user);
 
     await test.step('0: Create test cluster set for multi-select', async () => {
-      await oc.run(
-        `oc apply -f - <<'EOF'
-apiVersion: cluster.open-cluster-management.io/v1beta2
-kind: ManagedClusterSet
-metadata:
-  name: ${testClusterSet}
-spec:
-  clusterSelector:
-    selectorType: ExclusiveClusterSetLabel
-EOF`
-      );
+      await oc.applyYaml(TEST_CLUSTERSET_YAML);
     });
 
     const clusterSets = [CLUSTER_SET, testClusterSet];
@@ -252,7 +246,7 @@ EOF`
 
     await test.step('7: Cleanup test cluster set', async () => {
       await oc.mcraDeleteAllForUser(user);
-      await oc.run(`oc delete managedclusterset ${testClusterSet} --ignore-not-found`);
+      await oc.deleteYaml(TEST_CLUSTERSET_YAML);
     });
   });
 });
