@@ -88,17 +88,29 @@ export default defineConfig({
       testMatch: /governance/,
     },
 
-    // Application Lifecycle (ALC) — `src/tests/app/**`; `./start.sh alc` sets E2E_GITOPS_PREP.
+    // Application Lifecycle (ALC) — `src/tests/app/**` (excludes `app/rbac/`); `./start.sh alc` sets E2E_GITOPS_PREP.
     {
       name: 'alc',
       testMatch: 'app/**/*.spec.ts',
-      testIgnore: alcIntegrationTestIgnore,
+      testIgnore: [...alcIntegrationTestIgnore, 'app/rbac/**'],
       use: {
         ...devices['Desktop Chrome'],
         viewport: { width: 1920, height: 1080 },
         storageState: '.auth/admin.json',
       },
       dependencies: ['setup'],
+    },
+
+    // ALC subscription-admin RBAC — `app-test-cluster-manager-admin` console session.
+    {
+      name: 'alc-rbac',
+      testMatch: 'app/rbac/**/*.spec.ts',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1920, height: 1080 },
+        storageState: '.auth/alc-rbac-cluster-manager-admin.json',
+      },
+      dependencies: ['setup', 'rbac-setup'],
     },
 
     // -- RBAC test projects --

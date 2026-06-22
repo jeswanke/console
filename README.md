@@ -43,7 +43,8 @@ npx playwright install chromium
 | **`rbac-setup`** | RBAC user auth (`rbac-auth.setup.ts`) — used by **`fg-rbac`** and **`fleet-virt`**          |
 | **`cluster`**    | Cluster lifecycle — `src/tests/cluster/**` (**`./start.sh clc`** → **`--project cluster`**) |
 | **`governance`** | Governance — `src/tests/governance/**` (**`./start.sh grc`** → **`--project governance`**)  |
-| **`alc`**        | Application lifecycle — `src/tests/app/**` (**`./start.sh alc`** → **`--project alc`**)     |
+| **`alc`**        | Application lifecycle — `src/tests/app/**` except `app/rbac/` (**`./start.sh alc`** → **`--project alc`**) |
+| **`alc-rbac`**   | ALC subscription-admin RBAC — `src/tests/app/rbac/**` (**`--project alc-rbac`**)                            |
 | **`fg-rbac`**    | Fine-grained RBAC — `src/tests/fg-rbac/**`                                                  |
 | **`fleet-virt`** | Fleet virtualization — `src/tests/fleet-virt/**`                                            |
 | **`unit`**       | YAML / loader tests — `src/tests/unit/**` (no hub)                                          |
@@ -175,7 +176,16 @@ console-e2e/
 │   ├── global-setup/        # clusterPrep, gitOpsPrep, projectArgv, logPrefix
 │   ├── tests/
 │   │   ├── auth.setup.ts
-│   │   ├── app/             # ALC UI (`--project alc`)
+│   │   ├── app/             # ALC UI (`--project alc`; `app/rbac/` → `--project alc-rbac`)
+│   │   │   ├── subscription/   # Git, Helm, Object, Ansible subscription suites
+│   │   │   ├── argo/
+│   │   │   │   ├── push/       # Push-model ApplicationSet suites
+│   │   │   │   ├── pull/       # Pull-model ApplicationSet suites
+│   │   │   │   └── platform/   # Argo CD agent, secrets, tolerations
+│   │   │   ├── flux/           # Flux CD applications
+│   │   │   ├── openshift/      # Native OCP applications
+│   │   │   ├── overview/       # Applications list/table chrome
+│   │   │   └── rbac/           # ALC RBAC (subscription-admin)
 │   │   ├── cluster/         # CLC UI (`--project cluster`)
 │   │   ├── governance/      # GRC UI (`--project governance`)
 │   │   └── unit/            # Config / lib unit tests (`--project unit`)
