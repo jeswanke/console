@@ -27,6 +27,7 @@ type PlacementDecisionJson = {
 type SubscriptionJson = {
   metadata?: { annotations?: Record<string, string> };
   spec?: {
+    channel?: string;
     placement?: {
       placementRef?: { kind?: string; name?: string };
     };
@@ -77,6 +78,64 @@ export class OcCliService {
 
   async deleteYaml(yamlPath: string): Promise<string> {
     return this.run(`oc delete -f ${yamlPath} --ignore-not-found`);
+  }
+
+  /** Marks a namespace for ALC test cleanup (`component=alc`), matching Cypress `labelTestResource`. */
+  async labelNamespaceForAlcTest(namespace: string): Promise<void> {
+    assertSafeOcSingleArg(namespace, 'namespace');
+    await execFilePromise(
+      'oc',
+      ['label', 'ns', namespace, 'component=alc', '--overwrite'],
+      { encoding: 'utf8', maxBuffer: 64 * 1024 }
+    );
+  }
+
+  /** Names of `ansiblejobs` in the namespace (empty when CRD or resources are absent). */
+  async listAnsibleJobNames(namespace: string): Promise<string[]> {
+    assertSafeOcSingleArg(namespace, 'namespace');
+    try {
+      const { stdout } = await execFilePromise(
+        'oc',
+        [
+          'get',
+          'ansiblejob',
+          '-n',
+          namespace,
+          '-o',
+          'custom-columns=name:.metadata.name',
+          '--no-headers',
+        ],
+        { encoding: 'utf8', maxBuffer: 1024 * 1024 }
+      );
+      return stdout
+        .split('\n')
+        .map((line) => line.trim())
+        .filter(Boolean);
+    } catch {
+      return [];
+    }
+  }
+
+  /** Fakes a successful AnsibleJob run (Cypress large-scale scale tests patch status instead of waiting on AAP). */
+  async patchAnsibleJobStatusSuccessful(namespace: string, jobName: string): Promise<void> {
+    assertSafeOcSingleArg(namespace, 'namespace');
+    assertSafeOcSingleArg(jobName, 'jobName');
+    await execFilePromise(
+      'oc',
+      [
+        'patch',
+        'ansiblejobs',
+        jobName,
+        '--subresource=status',
+        '-n',
+        namespace,
+        '--type',
+        'merge',
+        '-p',
+        '{"status":{"ansibleJobResult":{"status":"successful"}}}',
+      ],
+      { encoding: 'utf8', maxBuffer: 1024 * 1024, timeout: 120_000 }
+    );
   }
 
   async getConsoleUrl(): Promise<string> {
@@ -132,6 +191,24 @@ export class OcCliService {
     }
   }
 
+  /** `oc delete applications.app.k8s.io` on the hub (subscription Application CR). */
+  async deleteApplicationsAppK8sIo(namespace: string, applicationName: string): Promise<void> {
+    assertSafeOcSingleArg(namespace, 'namespace');
+    assertSafeOcSingleArg(applicationName, 'applicationName');
+    await execFilePromise(
+      'oc',
+      [
+        'delete',
+        'applications.app.k8s.io',
+        applicationName,
+        '-n',
+        namespace,
+        '--ignore-not-found',
+      ],
+      { encoding: 'utf8', maxBuffer: 1024 * 1024 }
+    );
+  }
+
   /** Whether an **ApplicationSet** exists in the Argo server namespace (push / pull model create). */
   async applicationSetExists(namespace: string, applicationSetName: string): Promise<boolean> {
     assertSafeOcSingleArg(namespace, 'namespace');
@@ -162,6 +239,51 @@ export class OcCliService {
     }
   }
 
+  /**
+   * Git `path` on the ApplicationSet template (`spec.source` or first entry in `spec.sources`).
+   * Undefined when the ApplicationSet is missing or the path field is unset (InvalidSpecError in Argo CD).
+   */
+  async getApplicationSetTemplateGitPath(
+    namespace: string,
+    applicationSetName: string
+  ): Promise<string | undefined> {
+    assertSafeOcSingleArg(namespace, 'namespace');
+    assertSafeOcSingleArg(applicationSetName, 'applicationSetName');
+    for (const jsonPath of [
+      '{.spec.template.spec.source.path}',
+      '{.spec.template.spec.sources[0].path}',
+    ] as const) {
+      const { stdout } = await execFilePromise(
+        'oc',
+        [
+          'get',
+          'applicationset.argoproj.io',
+          applicationSetName,
+          '-n',
+          namespace,
+          '--ignore-not-found',
+          '-o',
+          `jsonpath=${jsonPath}`,
+        ],
+        { encoding: 'utf8', maxBuffer: 1024 * 1024 }
+      );
+      const value = stdout.trim();
+      if (value) {
+        return value;
+      }
+    }
+    return undefined;
+  }
+
+  async applicationSetHasGitSourcePath(
+    namespace: string,
+    applicationSetName: string,
+    expectedPath: string
+  ): Promise<boolean> {
+    const actual = await this.getApplicationSetTemplateGitPath(namespace, applicationSetName);
+    return actual === expectedPath;
+  }
+
   async deleteApplicationSet(namespace: string, applicationSetName: string): Promise<void> {
     assertSafeOcSingleArg(namespace, 'namespace');
     assertSafeOcSingleArg(applicationSetName, 'applicationSetName');
@@ -170,6 +292,204 @@ export class OcCliService {
       ['delete', 'applicationset.argoproj.io', applicationSetName, '-n', namespace, '--ignore-not-found'],
       { encoding: 'utf8', maxBuffer: 1024 * 1024 }
     );
+  }
+
+  async createNamespaceIfNotExists(namespace: string): Promise<void> {
+    assertSafeOcSingleArg(namespace, 'namespace');
+    try {
+      await execFilePromise(
+        'oc',
+        ['create', 'ns', namespace],
+        { encoding: 'utf8', maxBuffer: 1024 * 1024 }
+      );
+    } catch {
+      // Namespace may already exist (Cypress `failOnNonZeroExit: false`).
+    }
+  }
+
+  /** Whether an Argo CD **Application** exists (`applications.argoproj.io`). */
+  async argoCdApplicationExists(namespace: string, applicationName: string): Promise<boolean> {
+    assertSafeOcSingleArg(namespace, 'namespace');
+    assertSafeOcSingleArg(applicationName, 'applicationName');
+    try {
+      const { stdout } = await execFilePromise(
+        'oc',
+        [
+          'get',
+          'applications.argoproj.io',
+          applicationName,
+          '-n',
+          namespace,
+          '--ignore-not-found',
+          '-o',
+          'name',
+        ],
+        { encoding: 'utf8', maxBuffer: 1024 * 1024 }
+      );
+      return stdout.trim().length > 0;
+    } catch (err: unknown) {
+      const stderr =
+        err && typeof err === 'object' && 'stderr' in err ? String((err as { stderr?: unknown }).stderr) : '';
+      if (/NotFound|not found/i.test(stderr)) {
+        return false;
+      }
+      throw err;
+    }
+  }
+
+  async getArgoCdApplicationSyncStatus(namespace: string, applicationName: string): Promise<string> {
+    assertSafeOcSingleArg(namespace, 'namespace');
+    assertSafeOcSingleArg(applicationName, 'applicationName');
+    const { stdout } = await execFilePromise(
+      'oc',
+      [
+        'get',
+        'applications.argoproj.io',
+        applicationName,
+        '-n',
+        namespace,
+        '-o',
+        'jsonpath={.status.sync.status}',
+      ],
+      { encoding: 'utf8', maxBuffer: 1024 * 1024 }
+    );
+    return stdout.trim();
+  }
+
+  /** MCASR cluster sync status for an ApplicationSet on a managed cluster. */
+  async getMulticlusterApplicationSetReportClusterSyncStatus(
+    applicationSetName: string,
+    namespace: string,
+    clusterName: string
+  ): Promise<string> {
+    return this.getMulticlusterApplicationSetReportClusterStatusField(
+      applicationSetName,
+      namespace,
+      clusterName,
+      'syncStatus'
+    );
+  }
+
+  /** MCASR cluster health status for an ApplicationSet on a managed cluster. */
+  async getMulticlusterApplicationSetReportClusterHealthStatus(
+    applicationSetName: string,
+    namespace: string,
+    clusterName: string
+  ): Promise<string> {
+    return this.getMulticlusterApplicationSetReportClusterStatusField(
+      applicationSetName,
+      namespace,
+      clusterName,
+      'healthStatus'
+    );
+  }
+
+  /**
+   * MCASR per-cluster status field. Returns empty string while the report is still being
+   * reconciled (Cypress `failOnNonZeroExit: false` parity for pull-model polls).
+   */
+  private async getMulticlusterApplicationSetReportClusterStatusField(
+    applicationSetName: string,
+    namespace: string,
+    clusterName: string,
+    field: 'syncStatus' | 'healthStatus'
+  ): Promise<string> {
+    assertSafeOcSingleArg(applicationSetName, 'applicationSetName');
+    assertSafeOcSingleArg(namespace, 'namespace');
+    assertSafeOcSingleArg(clusterName, 'clusterName');
+    try {
+      const { stdout } = await execFilePromise(
+        'oc',
+        [
+          'get',
+          'multiclusterapplicationsetreport',
+          applicationSetName,
+          '-n',
+          namespace,
+          '--ignore-not-found',
+          '-o',
+          `jsonpath={.statuses.clusterConditions[?(@.cluster=="${clusterName}")].${field}}`,
+        ],
+        { encoding: 'utf8', maxBuffer: 1024 * 1024 }
+      );
+      return stdout.trim();
+    } catch (err: unknown) {
+      const stderr =
+        err && typeof err === 'object' && 'stderr' in err ? String((err as { stderr?: unknown }).stderr) : '';
+      if (/NotFound|not found/i.test(stderr)) {
+        return '';
+      }
+      throw err;
+    }
+  }
+
+  /** Remove `argocd.argoproj.io/skip-reconcile` so hub local-cluster Argo apps can be deleted. */
+  async removeArgoCdApplicationSkipReconcileAnnotation(
+    namespace: string,
+    applicationName: string
+  ): Promise<void> {
+    assertSafeOcSingleArg(namespace, 'namespace');
+    assertSafeOcSingleArg(applicationName, 'applicationName');
+    await execFilePromise(
+      'oc',
+      [
+        'patch',
+        'applications.argoproj.io',
+        applicationName,
+        '-n',
+        namespace,
+        '--type=json',
+        '-p',
+        '[{"op": "remove", "path": "/metadata/annotations/argocd.argoproj.io~1skip-reconcile"}]',
+      ],
+      { encoding: 'utf8', maxBuffer: 1024 * 1024 }
+    ).catch(() => undefined);
+  }
+
+  /** Delete an Argo CD **Application** (`applications.argoproj.io`). */
+  async deleteArgoCdApplication(namespace: string, applicationName: string): Promise<void> {
+    assertSafeOcSingleArg(namespace, 'namespace');
+    assertSafeOcSingleArg(applicationName, 'applicationName');
+    await execFilePromise(
+      'oc',
+      [
+        'delete',
+        'applications.argoproj.io',
+        applicationName,
+        '-n',
+        namespace,
+        '--ignore-not-found',
+      ],
+      { encoding: 'utf8', maxBuffer: 1024 * 1024 }
+    );
+  }
+
+  /** True when `spec.template.spec.sources` contains `repoURL` (push-model ApplicationSet). */
+  async applicationSetHasSourceRepoUrl(
+    namespace: string,
+    applicationSetName: string,
+    repoUrl: string
+  ): Promise<boolean> {
+    assertSafeOcSingleArg(namespace, 'namespace');
+    assertSafeOcSingleArg(applicationSetName, 'applicationSetName');
+    const { stdout } = await execFilePromise(
+      'oc',
+      [
+        'get',
+        'applicationset.argoproj.io',
+        applicationSetName,
+        '-n',
+        namespace,
+        '-o',
+        'jsonpath={.spec.template.spec.sources[*].repoURL}',
+      ],
+      { encoding: 'utf8', maxBuffer: 1024 * 1024 }
+    );
+    return stdout
+      .split(/\s+/)
+      .map((part) => part.trim())
+      .filter(Boolean)
+      .includes(repoUrl);
   }
 
   /**
@@ -450,6 +770,51 @@ export class OcCliService {
       }
       throw err;
     }
+  }
+
+  /** `spec.channel` as `{ namespace, name }` (`channelNs/channelName`). */
+  async getSubscriptionChannelRef(
+    namespace: string,
+    subscriptionName: string
+  ): Promise<{ namespace: string; name: string } | undefined> {
+    assertSafeOcSingleArg(namespace, 'namespace');
+    assertSafeOcSingleArg(subscriptionName, 'subscriptionName');
+    try {
+      const { stdout } = await execFilePromise(
+        'oc',
+        ['get', 'subscription', subscriptionName, '-n', namespace, '-o', 'json'],
+        { encoding: 'utf8', maxBuffer: 1024 * 1024 }
+      );
+      const parsed = JSON.parse(stdout) as SubscriptionJson;
+      const channel = parsed.spec?.channel?.trim();
+      if (!channel) {
+        return undefined;
+      }
+      const [channelNs, channelName] = channel.split('/');
+      if (!channelNs || !channelName) {
+        return undefined;
+      }
+      return { namespace: channelNs, name: channelName };
+    } catch (err: unknown) {
+      const stderr =
+        err && typeof err === 'object' && 'stderr' in err ? String((err as { stderr?: unknown }).stderr) : '';
+      if (/NotFound|not found/i.test(stderr)) {
+        return undefined;
+      }
+      throw err;
+    }
+  }
+
+  /** Subscription manifest YAML (`oc get subscription -o yaml`). */
+  async getSubscriptionYaml(namespace: string, subscriptionName: string): Promise<string> {
+    assertSafeOcSingleArg(namespace, 'namespace');
+    assertSafeOcSingleArg(subscriptionName, 'subscriptionName');
+    const { stdout } = await execFilePromise(
+      'oc',
+      ['get', 'subscription', subscriptionName, '-n', namespace, '-o', 'yaml'],
+      { encoding: 'utf8', maxBuffer: 1024 * 1024 }
+    );
+    return stdout;
   }
 
   /** Read a Subscription metadata annotation (undefined when missing or not found). */

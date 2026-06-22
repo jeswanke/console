@@ -12,6 +12,9 @@ const CLUSTER_KIND_TO_OC_RESOURCE: Record<string, string> = {
   Deployment: 'deployment',
   ReplicaSet: 'replicaset',
   Pod: 'pod',
+  ConfigMap: 'configmap',
+  AnsibleJob: 'ansiblejob',
+  PersistentVolumeClaim: 'pvc',
 };
 
 function clusterResourceKindToOcResource(kind: string): string {
@@ -130,7 +133,7 @@ export async function expectSubscriptionAppResourcesViaOc(
           oc,
           {
             resource,
-            namespace,
+            namespace: row.namespace || namespace,
             expectedSubstring: row.name,
             ...pollOpts,
           }
