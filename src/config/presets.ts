@@ -60,7 +60,6 @@ export const rbacPresets = {
     { role: 'fg-rbac-operator-60239', username: 'clc-e2e-operator-60239', domains: ['fg-rbac', 'fleet-virt'] },
 
     // --- Tier: full (CCLM tests, Azure only) ---
-    { role: 'fg-rbac-cclm-view', username: 'clc-e2e-cclm-view', domains: ['fg-rbac', 'fleet-virt'] },  // TODO: assign Polarion ID
     { role: 'fg-rbac-cclm-admin-60989', username: 'clc-e2e-cclm-admin-60989', domains: ['fg-rbac', 'fleet-virt'] },
   ],
 } as const;
