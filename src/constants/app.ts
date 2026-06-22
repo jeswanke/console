@@ -8,6 +8,8 @@ import { PLACEMENT_TOLERATIONS_YAML_PATTERNS } from '@constants/placement-tolera
 
 export const APP_ROUTES = {
   list: '/multicloud/applications',
+  /** Fleet Management → Credentials */
+  credentials: '/multicloud/credentials',
   /** Advanced configuration tab (secondary nav) */
   advanced: '/multicloud/applications/advanced',
   /** Create application → Argo CD ApplicationSet - Push model */
@@ -22,6 +24,19 @@ export const APP_ROUTES = {
   /** Post–create push-model ApplicationSet details (hub default: Topology tab). */
   argoPushTopology: (argoServerNamespace: string, applicationSetName: string) =>
     `${APP_ROUTES.detailsTab(argoServerNamespace, applicationSetName, APP_APPLICATION_DETAILS.tabs.topology.slug)}?apiVersion=applicationset.argoproj.io`,
+} as const;
+
+// =============================================================================
+// Credentials (Fleet Management)
+// =============================================================================
+
+export const CREDENTIALS_LIST = {
+  addButtonId: 'add',
+  ansibleCredentialTypeTitleId: 'ansible-title',
+  searchInputAccessibleName: 'Search input',
+  tableAccessibleName: 'Simple Table',
+  deleteCredentialMenuItemAccessibleName: 'Delete credential',
+  deleteConfirmButtonAccessibleName: 'Delete',
 } as const;
 
 /** URL path segment for {@link APP_ROUTES.detailsTab} (lowercase, matches console router). */
@@ -77,6 +92,15 @@ export const APP_APPLICATION_SYNC = {
   modalSelector: '#remove-resource-modal',
   modalTitle: 'Sync application',
   confirmButtonLabel: 'Synchronize',
+} as const;
+
+/** Argo CD ApplicationSet child app **Sync** from Details (`a#sync-argo-app`). */
+export const APP_ARGO_APPLICATION_SYNC = {
+  syncLinkId: 'sync-argo-app',
+  modalSelector: '#sync-argocd-modal',
+  modalTitlePattern: /sync/i,
+  confirmButtonLabel: 'Synchronize',
+  successAlertText: 'ArgoCD app sync initiated',
 } as const;
 
 /**
@@ -277,6 +301,12 @@ export const APP_TABLE_COLUMNS = {
   created: 'Created',
 } as const;
 
+/** **Type** column display strings on the Applications Overview table (RHACM4K-6903). */
+export const APP_TABLE_TYPE_VALUES = {
+  applicationSet: 'Application set',
+  subscription: 'Subscription',
+} as const;
+
 /** Overview table **Manage columns** dialog defaults (RHACM4K-63768). */
 export const APP_TABLE_MANAGE_COLUMNS = {
   /** Hidden until enabled in the dialog. */
@@ -374,7 +404,21 @@ export const APP_FILTER = {
     openshift: 'OpenShift',
     /** Subscription / ALC Git apps. */
     subscription: 'Subscription',
+    /** Argo CD ApplicationSet apps on the hub. */
+    applicationSet: 'Application set',
   },
+} as const;
+
+/**
+ * RHACM4K-61329 — Applications list toolbar state exercised for persistence across navigation.
+ * Search matches apps with `aap` in the name (e.g. ansible/AAP-related apps on integration hubs).
+ */
+export const APP_PERSISTENT_LIST_TOOLBAR = {
+  searchQuery: 'aap',
+  typeFilter: APP_FILTER.typeOptions.openshift,
+  sortColumn: APP_TABLE_COLUMNS.podStatus,
+  /** Cypress double-clicks **Pod Status** to reach descending sort. */
+  sortHeaderClicks: 2,
 } as const;
 
 /** Labels column on Applications Overview (extension column; PF overflow label + popover). */
@@ -498,6 +542,33 @@ export const APP_ADVANCED_TABLE_COLUMNS_CHANNELS = {
   subscriptions: 'Subscriptions',
   clusters: 'Clusters',
   created: 'Created',
+} as const;
+
+/** RHACM4K-32401 — git/helm subscription apps for Advanced configuration channel copy links. */
+export const APP_CONSOLE_UI_CHANNEL_COPY = {
+  git: {
+    applicationName: 'auto-git-copy',
+    namespace: 'auto-git-copy-ns',
+    channelSearch: 'github',
+    channelRepositoryUrl: 'https://github.com/stolostron/application-lifecycle-samples',
+    channelRepositoryTypeLabel: 'Git',
+    templateRelativePath: 'src/templates/app/console/git-app-copy.yaml',
+    branch: 'main',
+    path: 'helloworld',
+    clusterName: 'local-cluster',
+  },
+  helm: {
+    applicationName: 'auto-helm-copy',
+    namespace: 'auto-helm-copy-ns',
+    channelSearch: 'hcontent',
+    channelRepositoryUrl:
+      'https://raw.githubusercontent.com/stolostron/application-lifecycle-samples/main',
+    channelRepositoryTypeLabel: 'Helm',
+    templateRelativePath: 'src/templates/app/console/helm-app-copy.yaml',
+    chartName: 'helloworld-helm',
+    packageVersion: '0.2.0',
+    clusterName: 'local-cluster',
+  },
 } as const;
 
 // =============================================================================
@@ -812,6 +883,8 @@ export const APP_SUBSCRIPTION_CREATE_WIZARD = {
     ansibleTokenInputId: 'ansibleToken',
     /** Namespace combobox on the first step (before **Next** reveals host/token fields). */
     namespacePlaceholder: 'Select a namespace for the credential',
+    /** PF6 **Namespace** combobox accessible name (preferred over placeholder on current console). */
+    namespaceComboboxAccessibleName: 'Namespace',
     nextButtonAccessibleName: 'Next',
     addButtonAccessibleName: 'Add',
   },
@@ -1217,4 +1290,17 @@ export const APP_ARGO_HELM_APPSET = {
   clusterSet: 'auto-gitops-cluster-set',
   targetCluster: 'local-cluster',
   setupYamlRelativePath: 'src/templates/app/argo-helm-appset-setup.yaml',
+} as const;
+
+/** RHACM4K-58916 — matrix ApplicationSet (Git + Cluster Decision) applied via YAML. */
+export const APP_ARGO_MATRIX_APPSET = {
+  applicationSetName: 'argo-appset-matrix',
+  argoServerNamespace: 'openshift-gitops',
+  destinationNamespaces: ['argo-workflows', 'prometheus-operator'] as const,
+  setupYamlRelativePath: 'src/templates/app/argo/applicationset-matrix.yaml',
+  clusterResources: [
+    { kind: 'Service', name: 'helloworld-app-svc' },
+    { kind: 'Deployment', name: 'helloworld-app-deploy' },
+    { kind: 'ReplicaSet', name: 'helloworld-app-deploy' },
+  ],
 } as const;

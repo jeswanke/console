@@ -152,6 +152,53 @@ export class ApplicationsTable extends AcmTable {
     await this.getFilterOption(optionLabel).uncheck();
   }
 
+  /** Column header cell (`th[data-label="…"]`). */
+  getColumnHeaderByDataLabel(columnLabel: string): Locator {
+    return this.table.locator(`th[data-label="${columnLabel}"]`);
+  }
+
+  /** Current `aria-sort` on a sortable column header (null when unsorted). */
+  async getColumnHeaderAriaSort(columnLabel: string): Promise<string | null> {
+    return this.getColumnHeaderByDataLabel(columnLabel).getAttribute('aria-sort');
+  }
+
+  /** Click a sortable column header (button inside `th` when present, else the header cell). */
+  async clickSortableColumnHeader(columnLabel: string): Promise<void> {
+    const th = this.getColumnHeaderByDataLabel(columnLabel);
+    await expect(th).toBeVisible();
+    const sortButton = th.getByRole('button', {
+      name: new RegExp(escapeRegExp(columnLabel)),
+    });
+    if ((await sortButton.count()) > 0) {
+      await sortButton.click();
+    } else {
+      await th.click();
+    }
+  }
+
+  /**
+   * Clicks a column header `clickCount` times (Cypress: double-click **Pod Status** for descending).
+   * Returns final `aria-sort`.
+   */
+  async sortColumnByHeaderClicks(columnLabel: string, clickCount: number): Promise<string | null> {
+    for (let i = 0; i < clickCount; i++) {
+      await this.clickSortableColumnHeader(columnLabel);
+    }
+    return this.getColumnHeaderAriaSort(columnLabel);
+  }
+
+  /** First tbody row whose text contains `text` (e.g. toolbar search match). */
+  getRowContainingText(text: string): Locator {
+    return this.getDataRows().filter({ hasText: text }).first();
+  }
+
+  /** Opens application details via the Name link on the first row matching `text`. */
+  async openApplicationDetailsFromFirstRowContaining(text: string): Promise<void> {
+    const row = this.getRowContainingText(text);
+    await expect(row).toBeVisible({ timeout: 15_000 });
+    await this.getNameLink(row).click();
+  }
+
   getLabelFilterButton(): Locator {
     return this.labelFilterButton;
   }
@@ -375,13 +422,34 @@ export class ApplicationsTable extends AcmTable {
   }
 
   /**
-   * Assumes row actions menu is open. Opens subscription edit flow from list row actions.
-   * Current hub label is "Edit application".
+   * Assumes row actions menu is open. Opens edit flow from list row actions.
+   * Hub label is **Edit application** or **Edit** (ApplicationSet).
    */
   async clickEditApplicationMenuItem(): Promise<void> {
     const menu = this.page.getByRole('menu');
     await expect(menu).toBeVisible();
-    await menu.getByRole('menuitem', { name: /^Edit application$/i }).click();
+    await menu.getByRole('menuitem', { name: /^Edit( application)?$/i }).click();
+  }
+
+  /** Assumes row actions menu is open. Clicks **View** / **View application** (ApplicationSet / Argo apps). */
+  async clickViewApplicationMenuItem(): Promise<void> {
+    const menu = this.page.getByRole('menu');
+    await expect(menu).toBeVisible();
+    await menu.getByRole('menuitem', { name: /^View( application)?$/i }).click();
+  }
+
+  /** Assumes row actions menu is open. Clicks **Search** / **Search application** (opens global search). */
+  async clickSearchApplicationMenuItem(): Promise<void> {
+    const menu = this.page.getByRole('menu');
+    await expect(menu).toBeVisible();
+    await menu.getByRole('menuitem', { name: /^Search( application)?$/i }).click();
+  }
+
+  /** Assumes row actions menu is open. Clicks **Delete** / **Delete application** (ApplicationSet row). */
+  async clickDeleteMenuItem(): Promise<void> {
+    const menu = this.page.getByRole('menu');
+    await expect(menu).toBeVisible();
+    await menu.getByRole('menuitem', { name: /^Delete( application)?$/i }).click();
   }
 
   /**

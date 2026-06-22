@@ -164,6 +164,11 @@ export class ApplicationListPage extends BasePage {
     return acmToolbarSearchLocator(this.page);
   }
 
+  /** Filter label visible in list chrome (active filter chip / toolbar; RHACM4K-61329). */
+  async expectFilterLabelVisibleInToolbar(filterLabel: string): Promise<void> {
+    await expect(this.page.getByText(filterLabel, { exact: false }).first()).toBeVisible();
+  }
+
   /** Toolbar **Manage columns** control (`aria-label="columns-management"`). */
   getManageColumnsButton(): Locator {
     return this.page.getByLabel('columns-management');
@@ -354,6 +359,23 @@ export class ApplicationListPage extends BasePage {
     await expect(copyButton).toBeEnabled();
 
     await this.page.keyboard.press('Escape');
+  }
+
+  /**
+   * RHACM4K-32401 — Advanced configuration → Channels: open **Type** popover and assert repository
+   * URL + **Copy** control (copy instead of redirect).
+   */
+  async verifyAdvancedConfigChannelCopyLink(params: {
+    channelSearchSubstring: string;
+    channelRepositoryUrl: string;
+    channelRepositoryTypeLabel?: string;
+  }): Promise<void> {
+    await this.openAdvancedConfigTab();
+    await this.assertAdvancedConfigChannelRowTypePopoverAndColumns({
+      channelDisplaySubstring: params.channelSearchSubstring,
+      channelRepositoryUrl: params.channelRepositoryUrl,
+      channelRepositoryTypeLabel: params.channelRepositoryTypeLabel,
+    });
   }
 
   /**

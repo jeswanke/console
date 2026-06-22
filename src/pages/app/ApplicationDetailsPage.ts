@@ -4,6 +4,7 @@ import { OcCliService } from '@services/OcCliService';
 import {
   APP_APPLICATION_DETAILS,
   APP_APPLICATION_SYNC,
+  APP_ARGO_APPLICATION_SYNC,
   APP_APPLICATION_TOPOLOGY,
   APP_ROUTES,
   type AppApplicationDetailsTabKey,
@@ -65,6 +66,32 @@ export class ApplicationDetailsPage extends BasePage {
     const consoleUrl = await this.oc.getConsoleUrl();
     const slug = APP_APPLICATION_DETAILS.tabs[tab].slug;
     await this.page.goto(`${consoleUrl}${APP_ROUTES.detailsTab(namespace, name, slug)}`);
+    await this.waitForLoad();
+  }
+
+  /** Flux CD app topology (`?apiVersion=flux&cluster=…`). Cypress local-cluster Flux suite. */
+  async gotoFluxTopology(
+    namespace: string,
+    name: string,
+    clusterName = 'local-cluster'
+  ): Promise<void> {
+    const consoleUrl = await this.oc.getConsoleUrl();
+    const slug = APP_APPLICATION_DETAILS.tabs.topology.slug;
+    const query = `?apiVersion=flux&cluster=${encodeURIComponent(clusterName)}`;
+    await this.page.goto(`${consoleUrl}${APP_ROUTES.detailsTab(namespace, name, slug)}${query}`);
+    await this.waitForLoad();
+  }
+
+  /** Native OpenShift app topology (`?apiVersion=ocp&cluster=…`). Cypress Openshift_Application_Test_Suite. */
+  async gotoOpenshiftTopology(
+    namespace: string,
+    name: string,
+    clusterName = 'local-cluster'
+  ): Promise<void> {
+    const consoleUrl = await this.oc.getConsoleUrl();
+    const slug = APP_APPLICATION_DETAILS.tabs.topology.slug;
+    const query = `?apiVersion=ocp&cluster=${encodeURIComponent(clusterName)}`;
+    await this.page.goto(`${consoleUrl}${APP_ROUTES.detailsTab(namespace, name, slug)}${query}`);
     await this.waitForLoad();
   }
 
@@ -252,6 +279,31 @@ export class ApplicationDetailsPage extends BasePage {
       .getByRole('link', { name: APP_APPLICATION_DETAILS.breadcrumb.applications });
   }
 
+  /** Breadcrumb → Applications list (RHACM4K-61329). */
+  async returnToApplicationsListViaBreadcrumb(): Promise<void> {
+    await this.getBreadcrumbApplicationsLink().click();
+    await pageUrlPathnameEquals(this.page, APP_ROUTES.list);
+    await expect(
+      this.page.getByRole('heading', { name: APP_APPLICATION_DETAILS.breadcrumb.applications, level: 1 })
+    ).toBeVisible({ timeout: 10_000 });
+  }
+
+  /** Topology graph surface visible (opens Topology tab when landing on another details tab). */
+  async expectTopologyGraphVisible(): Promise<void> {
+    const surface = this.getTopologySurface();
+    if (!(await surface.isVisible().catch(() => false))) {
+      await this.openDetailTab('topology');
+    }
+    await expect(surface).toBeVisible({ timeout: 30_000 });
+  }
+
+  /** Assert URL is an application details route (after list row navigation). */
+  async expectOnApplicationDetailsRoute(): Promise<void> {
+    await expect(this.page).toHaveURL(/\/multicloud\/applications\/details\//, {
+      timeout: 30_000,
+    });
+  }
+
   /** Details → **Last sync requested** → **Sync** (`a#sync-app`). */
   getSyncApplicationLink(): Locator {
     return this.page.locator(`a#${APP_APPLICATION_DETAILS.syncActionAnchorId}`);
@@ -292,6 +344,54 @@ export class ApplicationDetailsPage extends BasePage {
     await expect(modal.getByText(APP_APPLICATION_SYNC.modalTitle, { exact: true })).toBeVisible();
     await modal.getByRole('button', { name: APP_APPLICATION_SYNC.confirmButtonLabel }).click();
     await expect(modal).toBeHidden({ timeout: 120_000 });
+    await this.waitForLoad();
+  }
+
+  /** Argo CD ApplicationSet child app sync (`a#sync-argo-app`). */
+  getSyncArgoCdApplicationLink(): Locator {
+    return this.page.locator(`a#${APP_ARGO_APPLICATION_SYNC.syncLinkId}`);
+  }
+
+  async waitForSyncArgoCdApplicationLinkEnabled(options?: { timeout?: number }): Promise<void> {
+    const timeout = options?.timeout ?? 60_000;
+    const link = this.getSyncArgoCdApplicationLink();
+    await expect(link).toBeVisible({ timeout });
+    await expect
+      .poll(
+        async () => {
+          const className = (await link.getAttribute('class')) ?? '';
+          return !className.includes('pf-m-aria-disabled');
+        },
+        { timeout, intervals: [500, 1_000, 2_000] }
+      )
+      .toBe(true);
+  }
+
+  getSyncArgoCdApplicationModal(): Locator {
+    return this.page.locator(APP_ARGO_APPLICATION_SYNC.modalSelector);
+  }
+
+  /** RHACM4K-59973: Details → **Sync** → **Synchronize** → success alert. */
+  async syncArgoCdApplication(options?: { timeout?: number }): Promise<void> {
+    const enableTimeout = options?.timeout ?? 60_000;
+    await this.waitForSyncArgoCdApplicationLinkEnabled({ timeout: enableTimeout });
+    const link = this.getSyncArgoCdApplicationLink();
+    await link.scrollIntoViewIfNeeded();
+    await link.click();
+
+    const modal = this.getSyncArgoCdApplicationModal();
+    await expect(modal).toBeVisible({ timeout: 10_000 });
+    await expect(modal).toHaveAttribute('role', 'dialog');
+    await expect(modal.locator('[class*="c-modal-box__title-text"]')).toContainText(
+      APP_ARGO_APPLICATION_SYNC.modalTitlePattern
+    );
+    await modal.getByRole('button', { name: APP_ARGO_APPLICATION_SYNC.confirmButtonLabel }).click();
+
+    await expect(
+      this.page.locator('[data-ouia-component-type*="Alert"]').filter({
+        hasText: APP_ARGO_APPLICATION_SYNC.successAlertText,
+      })
+    ).toBeVisible({ timeout: 10_000 });
     await this.waitForLoad();
   }
 }

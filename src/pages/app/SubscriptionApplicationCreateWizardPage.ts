@@ -1520,6 +1520,28 @@ export class SubscriptionApplicationCreateWizardPage extends BasePage {
     );
   }
 
+  getAddCredentialNamespaceCombobox(): Locator {
+    return this.getAddCredentialDialog().getByRole('combobox', {
+      name: APP_SUBSCRIPTION_CREATE_WIZARD.addCredentialModal.namespaceComboboxAccessibleName,
+    });
+  }
+
+  /** PF6 namespace picker: type filter then choose menu item (Cypress parity). */
+  async pickAddCredentialNamespace(namespace: string): Promise<void> {
+    const trimmed = namespace.trim();
+    const combobox = this.getAddCredentialNamespaceCombobox();
+    await combobox.waitFor({ state: 'visible', timeout: 30_000 });
+    await combobox.click();
+    await combobox.fill(trimmed);
+    const menuItem = this.page.getByRole('menuitem', { name: trimmed, exact: true });
+    const option = this.page.getByRole('option', { name: trimmed, exact: true });
+    if ((await menuItem.count()) > 0) {
+      await menuItem.first().click();
+    } else {
+      await option.first().click();
+    }
+  }
+
   getAddCredentialDialogNextButton(): Locator {
     return this.getAddCredentialDialog().getByRole('button', {
       name: APP_SUBSCRIPTION_CREATE_WIZARD.addCredentialModal.nextButtonAccessibleName,
