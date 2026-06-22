@@ -2,8 +2,8 @@
  * RHACM4K-61727, 61728, 61729: RBAC UI - Cluster Set Scope Role Assignments
  *
  * Login is handled by the setup project (auth.setup.ts) via storageState.
- * Each test uses a dedicated user (matching Polarion ID suffix) and cleans
- * up its own MCRAs in beforeEach/afterEach.
+ * Each test uses a dedicated user (matching Polarion ID suffix) from
+ * rbacConfig.users, populated dynamically from presets.ts.
  *
  * Roles used: acm-vm-* roles (always available when FG-RBAC is enabled).
  * kubevirt.io:* roles require CNV and may not exist on all clusters.
@@ -19,12 +19,6 @@ import {
 
 const CLUSTER_SET = 'default';
 
-const USERS = {
-  csfull61727: 'clc-e2e-csfull-61727',
-  csproj61728: 'clc-e2e-csproj-61728',
-  csfull61729: 'clc-e2e-csfull-61729',
-} as const;
-
 test.describe('Role Assignment - Cluster Set Scope', { tag: ['@fg-rbac'] }, () => {
   test.setTimeout(240000);
 
@@ -32,8 +26,9 @@ test.describe('Role Assignment - Cluster Set Scope', { tag: ['@fg-rbac'] }, () =
     userDetailsPage,
     roleAssignmentWizardPage,
     oc,
+    rbacConfig,
   }) => {
-    const user = USERS.csfull61727;
+    const user = rbacConfig.users['csfull-61727'];
     const role = 'acm-vm-fleet:view';
 
     await oc.mcraDeleteAllForUser(user);
@@ -122,8 +117,9 @@ test.describe('Role Assignment - Cluster Set Scope', { tag: ['@fg-rbac'] }, () =
     userDetailsPage,
     roleAssignmentWizardPage,
     oc,
+    rbacConfig,
   }) => {
-    const user = USERS.csproj61728;
+    const user = rbacConfig.users['csproj-61728'];
     const role = 'acm-vm-extended:view';
     const projectNames = ['default'];
 
@@ -173,7 +169,7 @@ test.describe('Role Assignment - Cluster Set Scope', { tag: ['@fg-rbac'] }, () =
       }).toPass({ intervals: [5_000, 10_000, 15_000], timeout: 120_000 });
 
       const row = userDetailsPage.roleAssignmentsTable.getRowByRole(role);
-      await expect(row.getByText(CLUSTER_SET)).toBeVisible();
+      await expect(row.getByText(CLUSTER_SET).first()).toBeVisible();
     });
 
     await oc.mcraDeleteAllForUser(user);
@@ -183,8 +179,9 @@ test.describe('Role Assignment - Cluster Set Scope', { tag: ['@fg-rbac'] }, () =
     userDetailsPage,
     roleAssignmentWizardPage,
     oc,
+    rbacConfig,
   }) => {
-    const user = USERS.csfull61729;
+    const user = rbacConfig.users['csfull-61729'];
     const role = 'acm-vm-fleet:admin';
     const testClusterSet = 'e2e-test-clusterset';
 

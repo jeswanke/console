@@ -108,6 +108,7 @@ VIRT_USERS_VM=(
 
 # --- Tier: full (CCLM tests -- added on top of vm) ---
 VIRT_USERS_CCLM=(
+    "clc-e2e-cclm-view"            # CCLM view-only (negative test), RHACM4K-NEW-CCLM-01 (TODO: assign Polarion ID)
     "clc-e2e-cclm-admin-60989"     # CCLM full admin, RHACM4K-60989
 )
 

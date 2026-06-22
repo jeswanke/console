@@ -13,7 +13,7 @@ export const hubAuthPresets = {
  * vm users added on BM/Azure, cclm users added on Azure only.
  */
 export const rbacPresets = {
-  idp: 'clc-e2e-htpasswd',
+  defaultIdp: 'clc-e2e-htpasswd',
   users: [
     // --- Tier: rbac-ui (RBAC wizard/role tests, no Fleet UI) ---
     { role: 'fg-rbac-edit-test-60303', username: 'clc-e2e-edit-test-60303', domains: ['fg-rbac'] },
@@ -60,6 +60,7 @@ export const rbacPresets = {
     { role: 'fg-rbac-operator-60239', username: 'clc-e2e-operator-60239', domains: ['fg-rbac', 'fleet-virt'] },
 
     // --- Tier: full (CCLM tests, Azure only) ---
+    { role: 'fg-rbac-cclm-view', username: 'clc-e2e-cclm-view', domains: ['fg-rbac', 'fleet-virt'] },  // TODO: assign Polarion ID
     { role: 'fg-rbac-cclm-admin-60989', username: 'clc-e2e-cclm-admin-60989', domains: ['fg-rbac', 'fleet-virt'] },
   ],
 } as const;
