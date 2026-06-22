@@ -1,0 +1,8 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: app-sample
+  namespace: flux-system
+spec:
+  interval: 30s
+  url: https://raw.githubusercontent.com/stolostron/application-lifecycle-samples/main

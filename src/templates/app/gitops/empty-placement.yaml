@@ -1,0 +1,28 @@
+apiVersion: apps.open-cluster-management.io/v1beta1
+kind: GitOpsCluster
+metadata:
+  name: empty-placement-cluster
+  namespace: openshift-gitops
+spec:
+  argoServer:
+    argoNamespace: openshift-gitops
+  placementRef:
+    name: empty-placement
+    kind: Placement
+    apiVersion: cluster.open-cluster-management.io/v1beta1
+---
+apiVersion: cluster.open-cluster-management.io/v1beta2
+kind: ManagedClusterSetBinding
+metadata:
+  name: auto-gitops-cluster-set
+  namespace: openshift-gitops
+spec:
+  clusterSet: auto-gitops-cluster-set
+---
+apiVersion: cluster.open-cluster-management.io/v1beta1
+kind: Placement
+metadata:
+  name: empty-placement
+  namespace: openshift-gitops
+spec:
+  clusterSets:

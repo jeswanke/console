@@ -1,0 +1,52 @@
+---
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: test-appset-pm-sync
+  namespace: openshift-gitops
+spec:
+  generators:
+    - clusterDecisionResource:
+        configMapRef: acm-placement
+        labelSelector:
+          matchLabels:
+            cluster.open-cluster-management.io/placement: test-appset-pm-sync-placement
+        requeueAfterSeconds: 180
+  template:
+    metadata:
+      annotations:
+        apps.open-cluster-management.io/ocm-managed-cluster: "{{name}}"
+        apps.open-cluster-management.io/ocm-managed-cluster-app-namespace: openshift-gitops
+        argocd.argoproj.io/skip-reconcile: "true"
+      labels:
+        apps.open-cluster-management.io/pull-to-ocm-managed-cluster: "true"
+        velero.io/exclude-from-backup: "true"
+      name: test-appset-pm-sync-{{name}}
+    spec:
+      destination:
+        namespace: test-appset-pm-sync-ns
+        server: "{{server}}"
+      project: default
+      sources:
+        - path: helloworld-argo
+          repoURL: https://github.com/fxiang1/app-samples
+          targetRevision: main
+      syncPolicy: {}
+---
+apiVersion: cluster.open-cluster-management.io/v1beta1
+kind: Placement
+metadata:
+  name: test-appset-pm-sync-placement
+  namespace: openshift-gitops
+spec:
+  clusterSets:
+    - auto-gitops-cluster-set
+  predicates:
+    - requiredClusterSelector:
+        labelSelector:
+          matchExpressions:
+            - key: 'name'
+              operator: 'NotIn'
+              values: 
+                - 'local-cluster'
+

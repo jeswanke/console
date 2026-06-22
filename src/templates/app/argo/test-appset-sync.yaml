@@ -1,0 +1,48 @@
+---
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: test-appset-sync
+  namespace: openshift-gitops
+spec:
+  generators:
+    - clusterDecisionResource:
+        configMapRef: acm-placement
+        labelSelector:
+          matchLabels:
+            cluster.open-cluster-management.io/placement: test-appset-sync-placement
+        requeueAfterSeconds: 180
+  template:
+    metadata:
+      name: test-appset-sync-{{name}}
+      labels:
+        velero.io/exclude-from-backup: "true"
+    spec:
+      project: default
+      sources:
+        - repositoryType: git
+          repoURL: https://github.com/stolostron/application-lifecycle-samples.git
+          targetRevision: main
+          path: helloworld-argo
+      destination:
+        namespace: test-appset-sync-ns
+        server: "{{server}}"
+      syncPolicy: {}
+---
+apiVersion: cluster.open-cluster-management.io/v1beta1
+kind: Placement
+metadata:
+  name: test-appset-sync-placement
+  namespace: openshift-gitops
+spec:
+  numberOfClusters: 1
+  clusterSets:
+    - auto-gitops-cluster-set
+  predicates:
+    - requiredClusterSelector:
+        labelSelector:
+          matchExpressions:
+            - key: local-cluster
+              operator: In
+              values:
+                - "true"

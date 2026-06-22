@@ -1,0 +1,82 @@
+apiVersion: v1                      
+kind: Namespace
+metadata:
+  name: api-git-placementrules-ns
+---
+apiVersion: app.k8s.io/v1beta1
+kind: Application
+metadata:
+  name: api-git-placementrules
+  namespace: api-git-placementrules-ns
+spec:
+  componentKinds:
+    - group: apps.open-cluster-management.io
+      kind: Subscription
+  descriptor: {}
+  selector:
+    matchExpressions:
+      - key: app
+        operator: In
+        values:
+          - api-git-placementrules
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ggithubcom-fxiang1-app-samples-ns
+---
+apiVersion: apps.open-cluster-management.io/v1
+kind: Channel
+metadata:
+  name: ggithubcom-fxiang1-app-samples
+  namespace: ggithubcom-fxiang1-app-samples-ns
+  annotations:
+    apps.open-cluster-management.io/reconcile-rate: medium
+spec:
+  type: Git
+  pathname: https://github.com/fxiang1/app-samples
+---
+apiVersion: apps.open-cluster-management.io/v1
+kind: Subscription
+metadata:
+  name: api-git-placementrules-subscription-1
+  namespace: api-git-placementrules-ns
+  annotations:
+    apps.open-cluster-management.io/git-branch: main
+    apps.open-cluster-management.io/git-path: placementrules
+    apps.open-cluster-management.io/reconcile-option: merge
+  labels:
+    app: api-git-placementrules
+spec:
+  channel: ggithubcom-fxiang1-app-samples-ns/ggithubcom-fxiang1-app-samples
+  placement:
+    placementRef:
+      name: api-git-placementrules-placement-1
+      kind: Placement
+---
+apiVersion: cluster.open-cluster-management.io/v1beta1
+kind: Placement
+metadata:
+  name: api-git-placementrules-placement-1
+  namespace: api-git-placementrules-ns
+  labels:
+    app: api-git-placementrules
+spec:
+  predicates:
+    - requiredClusterSelector:
+        labelSelector:
+          matchExpressions:
+            - key: name
+              operator: In
+              values:
+                - local-cluster
+  clusterSets:
+    - global
+---
+apiVersion: cluster.open-cluster-management.io/v1beta2
+kind: ManagedClusterSetBinding
+metadata:
+  namespace: api-git-placementrules-ns
+  name: global
+spec:
+  clusterSet: global

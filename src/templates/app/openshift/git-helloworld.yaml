@@ -1,0 +1,71 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: helloworld-app-ocp-ns 
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: helloworld-app-ocp
+  namespace: helloworld-app-ocp-ns
+  labels:
+    app: helloworld-app-ocp
+spec:
+  selector:
+    matchLabels:
+      app: helloworld-app-ocp
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: helloworld-app-ocp
+    spec:
+      containers:
+      - name: helloworld-app-container
+        image: "quay.io/fxiang1/helloworld:0.0.1"
+        imagePullPolicy: IfNotPresent
+        ports:
+          - containerPort: 3002
+        env:
+          - name: "PORT"
+            value: "3002"
+        resources:
+          limits:
+            cpu: 200m
+            memory: 256Mi
+          requests:
+            cpu: 50m
+            memory: 64Mi
+---
+kind: Route
+apiVersion: route.openshift.io/v1
+metadata:
+  name: helloworld-app-ocp-route
+  namespace: helloworld-app-ocp-ns
+  labels:
+    app: helloworld-app-ocp
+spec:
+  to:
+    kind: Service
+    name: helloworld-app-ocp-svc
+    weight: 100
+  port:
+    targetPort: 3002
+  wildcardPolicy: None
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: helloworld-app-ocp-svc
+  namespace: helloworld-app-ocp-ns
+  labels:
+    app: helloworld-app-ocp
+spec:
+  type: NodePort
+  ports:
+    - port: 3002
+      targetPort: 3002
+      protocol: TCP
+  selector:
+    app: helloworld-app-ocp
