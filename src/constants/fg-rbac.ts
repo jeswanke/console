@@ -223,6 +223,33 @@ export const GRANULARITY_OPTIONS = {
 export type GranularityOption = (typeof GRANULARITY_OPTIONS)[keyof typeof GRANULARITY_OPTIONS];
 
 // =============================================================================
+// Roles page (expected roles and permissions keywords)
+// =============================================================================
+
+export const RBAC_ROLES = {
+  expected: [
+    'acm-vm-cluster-migration:view',
+    'acm-vm-extended:admin',
+    'acm-vm-extended:view',
+    'acm-vm-fleet:admin',
+    'acm-vm-fleet:view',
+    'kubevirt.io:admin',
+    'kubevirt.io:edit',
+    'kubevirt.io:view',
+  ],
+  permissions: [
+    { name: 'acm-vm-cluster-migration:view', keywords: ['config.openshift.io', 'operators.coreos.com'] },
+    { name: 'acm-vm-extended:admin', keywords: ['k8s.cni.cncf.io', 'cdi.kubevirt.io'] },
+    { name: 'acm-vm-extended:view', keywords: ['k8s.cni.cncf.io', 'cdi.kubevirt.io'] },
+    { name: 'acm-vm-fleet:admin', keywords: ['forklift.konveyor.io'] },
+    { name: 'acm-vm-fleet:view', keywords: ['clusterview.open-cluster-management.io'] },
+    { name: 'kubevirt.io:admin', keywords: ['subresources.kubevirt.io'] },
+    { name: 'kubevirt.io:edit', keywords: ['subresources.kubevirt.io', 'snapshot.kubevirt.io'] },
+    { name: 'kubevirt.io:view', keywords: ['kubevirt.io'] },
+  ],
+} as const;
+
+// =============================================================================
 // MCRA resource definition (backend)
 // =============================================================================
 
