@@ -38,7 +38,10 @@ test.describe('Role Assignment - Cluster Scope', { tag: ['@fg-rbac'] }, () => {
 
     await test.step('2: Select cluster scope and spoke cluster', async () => {
       await roleAssignmentWizardPage.selectScopeClusters();
+      const nextButton = roleAssignmentWizardPage.getNextButton();
+      await expect(nextButton).toBeDisabled();
       await roleAssignmentWizardPage.selectClusters([spoke]);
+      await expect(nextButton).toBeEnabled();
       await roleAssignmentWizardPage.clickNext();
     });
 
@@ -46,7 +49,9 @@ test.describe('Role Assignment - Cluster Scope', { tag: ['@fg-rbac'] }, () => {
       await roleAssignmentWizardPage.selectGranularity(
         GRANULARITY_OPTIONS.clusterRoleAssignment
       );
-      await expect(roleAssignmentWizardPage.getScopeInfoMessage()).toBeVisible();
+      await expect(roleAssignmentWizardPage.getScopeInfoMessage()).toContainText(
+        /selected cluster\b/
+      );
       await roleAssignmentWizardPage.clickNext();
     });
 
@@ -60,6 +65,7 @@ test.describe('Role Assignment - Cluster Scope', { tag: ['@fg-rbac'] }, () => {
 
     await test.step('5: Review and create', async () => {
       await expect(roleAssignmentWizardPage.getReviewSubject()).toContainText(user);
+      await expect(roleAssignmentWizardPage.getReviewScope()).toContainText(spoke);
       await expect(roleAssignmentWizardPage.getReviewRole()).toContainText(role);
       await roleAssignmentWizardPage.submitCreate();
       await expect(roleAssignmentWizardPage.getSuccessNotification()).toBeVisible({

@@ -10,7 +10,7 @@
  */
 
 import { test, expect } from '@fixtures/fg-rbac-test';
-import { RBAC_USER_DETAIL, RBAC_ROLES } from '@constants/fg-rbac';
+import { RBAC_USER_DETAIL, RBAC_ROLES, RBAC_WIZARD, RBAC_RA_TABLE } from '@constants/fg-rbac';
 
 test.describe('Roles Page Validation', { tag: ['@fg-rbac'] }, () => {
   test.setTimeout(240000);
@@ -51,14 +51,22 @@ test.describe('Roles Page Validation', { tag: ['@fg-rbac'] }, () => {
       await expect(page.getByRole('tab', { name: RBAC_USER_DETAIL.tabs.roleAssignments })).toBeVisible();
     });
 
-    await test.step('4: Verify YAML tab', async () => {
+    await test.step('4: Verify role assignments tab', async () => {
+      await page.getByRole('tab', { name: RBAC_USER_DETAIL.tabs.roleAssignments }).click();
+      await expect(
+        page.getByRole('button', { name: RBAC_WIZARD.title })
+          .or(page.getByText(RBAC_RA_TABLE.emptyState.title))
+      ).toBeVisible({ timeout: 30000 });
+    });
+
+    await test.step('5: Verify YAML tab content', async () => {
       const yamlTab = page.getByRole('tab', { name: 'YAML' });
       await expect(yamlTab).toBeVisible();
       await yamlTab.click();
       await expect(page.locator('.monaco-editor').first()).toBeVisible({ timeout: 15000 });
     });
 
-    await test.step('5: Verify role type via CLI', async () => {
+    await test.step('6: Verify role type via CLI', async () => {
       const result = await oc.run('oc get clusterrole acm-vm-fleet:view -o jsonpath="{.kind}"');
       expect(result).toContain('ClusterRole');
     });

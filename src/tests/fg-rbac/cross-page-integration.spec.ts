@@ -12,8 +12,6 @@
 import { test, expect } from '@fixtures/fg-rbac-test';
 import { RBAC_USER_DETAIL, RBAC_WIZARD } from '@constants/fg-rbac';
 
-const ROLE_NAME = 'kubevirt.io:admin';
-
 test.describe('Cross-Page Integration', { tag: ['@fg-rbac'] }, () => {
   test.setTimeout(240000);
 
@@ -25,6 +23,7 @@ test.describe('Cross-Page Integration', { tag: ['@fg-rbac'] }, () => {
     rbacConfig,
   }) => {
     const user = rbacConfig.users['hub-view-60310'];
+    const roleName = 'kubevirt.io:admin';
 
     await test.step('1: User details → RA tab → wizard opens', async () => {
       await userDetailsPage.goto(user);
@@ -50,8 +49,8 @@ test.describe('Cross-Page Integration', { tag: ['@fg-rbac'] }, () => {
     });
 
     await test.step('2: Role details → RA tab → wizard opens', async () => {
-      await roleDetailsPage.goto(ROLE_NAME);
-      await expect(page.getByRole('heading', { name: ROLE_NAME, level: 1 })).toBeVisible({ timeout: 15000 });
+      await roleDetailsPage.goto(roleName);
+      await expect(page.getByRole('heading', { name: roleName, level: 1 })).toBeVisible({ timeout: 15000 });
 
       const roleGeneralInfo = page.getByRole('heading', {
         name: RBAC_USER_DETAIL.fields.generalInformation, level: 3,
@@ -65,7 +64,7 @@ test.describe('Cross-Page Integration', { tag: ['@fg-rbac'] }, () => {
       await page.getByRole('button', { name: RBAC_WIZARD.title }).click();
 
       await expect(roleAssignmentWizardPage.getModal()).toBeVisible({ timeout: 15000 });
-      await expect(roleAssignmentWizardPage.getWizardTitle()).toContainText(ROLE_NAME);
+      await expect(roleAssignmentWizardPage.getWizardTitle()).toContainText(roleName);
       await roleAssignmentWizardPage.clickCancel();
     });
   });

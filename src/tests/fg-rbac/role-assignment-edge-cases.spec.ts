@@ -16,7 +16,6 @@ import {
 
 const TEMPLATES_DIR = path.resolve(__dirname, '../../templates/fg-rbac');
 const EMPTY_CLUSTERSET_YAML = path.join(TEMPLATES_DIR, 'empty-clusterset.yaml');
-const EMPTY_CS_NAME = 'e2e-empty-clusterset';
 
 test.describe('Role Assignment - Edge Cases', { tag: ['@fg-rbac'] }, () => {
   test.setTimeout(240000);
@@ -28,6 +27,7 @@ test.describe('Role Assignment - Edge Cases', { tag: ['@fg-rbac'] }, () => {
     rbacConfig,
   }) => {
     const user = rbacConfig.users['edgecase-61735'];
+    const emptyCSName = 'e2e-empty-clusterset';
     const spoke = rbacConfig.spokeCluster;
     const role = 'acm-vm-extended:view';
 
@@ -45,7 +45,10 @@ test.describe('Role Assignment - Edge Cases', { tag: ['@fg-rbac'] }, () => {
       await expect(roleAssignmentWizardPage.getModal()).toBeVisible();
 
       await roleAssignmentWizardPage.selectScopeType(SCOPE_TYPES.clusterSets);
-      await roleAssignmentWizardPage.selectClusterSets([EMPTY_CS_NAME]);
+      const nextButton = roleAssignmentWizardPage.getNextButton();
+      await expect(nextButton).toBeDisabled();
+      await roleAssignmentWizardPage.selectClusterSets([emptyCSName]);
+      await expect(nextButton).toBeEnabled();
       await roleAssignmentWizardPage.clickNext();
     });
 
@@ -60,11 +63,13 @@ test.describe('Role Assignment - Edge Cases', { tag: ['@fg-rbac'] }, () => {
     });
 
     await test.step('3: Select role, review, and create', async () => {
+      await expect(roleAssignmentWizardPage.getNextButton()).toBeDisabled();
       await roleAssignmentWizardPage.selectRole(role);
+      await expect(roleAssignmentWizardPage.getNextButton()).toBeEnabled();
       await roleAssignmentWizardPage.clickNext();
 
       await expect(roleAssignmentWizardPage.getReviewSubject()).toContainText(user);
-      await expect(roleAssignmentWizardPage.getReviewScope()).toContainText(EMPTY_CS_NAME);
+      await expect(roleAssignmentWizardPage.getReviewScope()).toContainText(emptyCSName);
       await expect(roleAssignmentWizardPage.getReviewRole()).toContainText(role);
       await roleAssignmentWizardPage.submitCreate();
       await expect(roleAssignmentWizardPage.getSuccessNotification()).toBeVisible({
@@ -82,12 +87,12 @@ test.describe('Role Assignment - Edge Cases', { tag: ['@fg-rbac'] }, () => {
       }).toPass({ intervals: [5_000, 10_000, 15_000], timeout: 90_000 });
 
       const row = userDetailsPage.roleAssignmentsTable.getRowByRole(role);
-      await expect(row.getByText(EMPTY_CS_NAME)).toBeVisible();
+      await expect(row.getByText(emptyCSName)).toBeVisible();
     });
 
     await test.step('5: Move spoke into empty CS -- triggers future-clusters scenario', async () => {
       await oc.run(
-        `oc label managedcluster ${spoke} cluster.open-cluster-management.io/clusterset=${EMPTY_CS_NAME} --overwrite`
+        `oc label managedcluster ${spoke} cluster.open-cluster-management.io/clusterset=${emptyCSName} --overwrite`
       );
 
       await expect(async () => {
@@ -120,7 +125,7 @@ test.describe('Role Assignment - Edge Cases', { tag: ['@fg-rbac'] }, () => {
       await expect(roleAssignmentWizardPage.getModal()).toBeVisible();
 
       await roleAssignmentWizardPage.selectScopeType(SCOPE_TYPES.clusterSets);
-      await roleAssignmentWizardPage.selectClusterSets([EMPTY_CS_NAME, 'default']);
+      await roleAssignmentWizardPage.selectClusterSets([emptyCSName, 'default']);
       await roleAssignmentWizardPage.clickNext();
 
       await roleAssignmentWizardPage.selectGranularity(
@@ -143,7 +148,7 @@ test.describe('Role Assignment - Edge Cases', { tag: ['@fg-rbac'] }, () => {
         await userDetailsPage.gotoRoleAssignments(user);
         const row = userDetailsPage.roleAssignmentsTable.getRowByRole(role);
         await expect(row).toBeVisible();
-        await expect(row.getByText(EMPTY_CS_NAME)).toBeVisible();
+        await expect(row.getByText(emptyCSName)).toBeVisible();
         await expect(row.getByText('default')).toBeVisible();
       }).toPass({ intervals: [5_000, 10_000, 15_000], timeout: 90_000 });
 

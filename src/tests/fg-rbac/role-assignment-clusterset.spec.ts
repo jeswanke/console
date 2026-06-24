@@ -286,17 +286,24 @@ test.describe('Role Assignment - Cluster Set Scope', { tag: ['@fg-rbac'] }, () =
       await roleAssignmentWizardPage.selectGranularity(
         GRANULARITY_OPTIONS.projectRoleAssignment
       );
+      const createProjectBtn = roleAssignmentWizardPage.getModal().locator(`#${RBAC_WIZARD.projects.createButtonId}`);
+      await expect(createProjectBtn).toBeEnabled();
       await roleAssignmentWizardPage.selectProjects(projectNames);
+      await expect(createProjectBtn).toBeDisabled();
       await roleAssignmentWizardPage.clickNext();
     });
 
     await test.step('4: Select role', async () => {
+      const nextButton = roleAssignmentWizardPage.getNextButton();
+      await expect(nextButton).toBeDisabled();
       await roleAssignmentWizardPage.selectRole(role);
+      await expect(nextButton).toBeEnabled();
       await roleAssignmentWizardPage.clickNext();
     });
 
     await test.step('5: Review and create', async () => {
       await expect(roleAssignmentWizardPage.getReviewSubject()).toContainText(user);
+      await expect(roleAssignmentWizardPage.getReviewScope()).toContainText('Projects');
       await expect(roleAssignmentWizardPage.getReviewRole()).toContainText(role);
       await roleAssignmentWizardPage.submitCreate();
       await expect(roleAssignmentWizardPage.getSuccessNotification()).toBeVisible({

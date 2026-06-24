@@ -239,13 +239,40 @@ export const RBAC_ROLES = {
   ],
   permissions: [
     { name: 'acm-vm-cluster-migration:view', keywords: ['config.openshift.io', 'operators.coreos.com'] },
-    { name: 'acm-vm-extended:admin', keywords: ['k8s.cni.cncf.io', 'cdi.kubevirt.io'] },
-    { name: 'acm-vm-extended:view', keywords: ['k8s.cni.cncf.io', 'cdi.kubevirt.io'] },
-    { name: 'acm-vm-fleet:admin', keywords: ['forklift.konveyor.io'] },
-    { name: 'acm-vm-fleet:view', keywords: ['clusterview.open-cluster-management.io'] },
-    { name: 'kubevirt.io:admin', keywords: ['subresources.kubevirt.io'] },
-    { name: 'kubevirt.io:edit', keywords: ['subresources.kubevirt.io', 'snapshot.kubevirt.io'] },
-    { name: 'kubevirt.io:view', keywords: ['kubevirt.io'] },
+    { name: 'acm-vm-extended:admin', keywords: [
+      'cdi.kubevirt.io', 'config.openshift.io', 'events.k8s.io', 'hco.kubevirt.io',
+      'k8s.cni.cncf.io', 'metrics.k8s.io', 'migrations.kubevirt.io', 'monitoring.coreos.com',
+      'observability.open-cluster-management.io', 'project.openshift.io',
+      'snapshot.storage.k8s.io', 'storage.k8s.io', 'template.openshift.io',
+    ] },
+    { name: 'acm-vm-extended:view', keywords: [
+      'cdi.kubevirt.io', 'config.openshift.io', 'events.k8s.io', 'hco.kubevirt.io',
+      'k8s.cni.cncf.io', 'metrics.k8s.io', 'migrations.kubevirt.io', 'monitoring.coreos.com',
+      'observability.open-cluster-management.io', 'project.openshift.io',
+      'snapshot.storage.k8s.io', 'storage.k8s.io', 'template.openshift.io',
+    ] },
+    { name: 'acm-vm-fleet:admin', keywords: [
+      'cluster.open-cluster-management.io', 'clusterview.open-cluster-management.io',
+      'forklift.konveyor.io',
+    ] },
+    { name: 'acm-vm-fleet:view', keywords: [
+      'cluster.open-cluster-management.io', 'clusterview.open-cluster-management.io',
+    ] },
+    { name: 'kubevirt.io:admin', keywords: [
+      'backup.kubevirt.io', 'clone.kubevirt.io', 'export.kubevirt.io',
+      'instancetype.kubevirt.io', 'kubevirt.io', 'migrations.kubevirt.io',
+      'pool.kubevirt.io', 'snapshot.kubevirt.io', 'subresources.kubevirt.io',
+    ] },
+    { name: 'kubevirt.io:edit', keywords: [
+      'backup.kubevirt.io', 'clone.kubevirt.io', 'export.kubevirt.io',
+      'instancetype.kubevirt.io', 'kubevirt.io', 'migrations.kubevirt.io',
+      'pool.kubevirt.io', 'snapshot.kubevirt.io', 'subresources.kubevirt.io',
+    ] },
+    { name: 'kubevirt.io:view', keywords: [
+      'backup.kubevirt.io', 'clone.kubevirt.io', 'export.kubevirt.io',
+      'instancetype.kubevirt.io', 'kubevirt.io', 'migrations.kubevirt.io',
+      'pool.kubevirt.io', 'snapshot.kubevirt.io', 'subresources.kubevirt.io',
+    ] },
   ],
 } as const;
 
