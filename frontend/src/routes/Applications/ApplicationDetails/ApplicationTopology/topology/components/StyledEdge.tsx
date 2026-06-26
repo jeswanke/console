@@ -10,7 +10,6 @@ import {
   observer,
   DefaultConnectorTerminal,
   EdgeTerminalType,
-  NodeStatus,
 } from '@patternfly/react-topology'
 
 type EdgeProps = {
@@ -21,8 +20,8 @@ type EdgeProps = {
   WithRemoveConnectorProps
 
 /** Default is used for spinner, orange (pending), and sync — only dash edges for loading/pending, not git/chart sync. */
-function isPendingEdgeEndpoint(data: { status?: NodeStatus; specs?: { pulse?: string } } | undefined): boolean {
-  return data?.status === NodeStatus.default && data.specs?.pulse !== 'sync'
+function isPendingEdgeEndpoint(data: { statusIcon?: { icon: string } } | undefined): boolean {
+  return data?.statusIcon?.icon === 'pending'
 }
 
 const StyledEdge: React.FunctionComponent<EdgeProps> = ({ element, dragging }) => {

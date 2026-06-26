@@ -25,6 +25,8 @@ import type {
 } from '../types'
 import { ToolbarControl } from '../topology/components/TopologyToolbar'
 import { Service } from '../../../../../resources'
+import { analyzeTopology } from './analyzeTopology'
+import type { TopologyAlert } from './analyzeTopology'
 
 /**
  * Main function to get topology data for different application types.
@@ -156,6 +158,7 @@ export const getDiagramElements = (
   })
 
   // Apply resource status information if available
+  let alerts: TopologyAlert[] = []
   if (resourceStatuses) {
     // Merge search results into topology nodes
     addDiagramDetails(resourceStatuses, allResourcesMap, isClusterGrouped.value, hasHelmReleases, topology)
@@ -164,6 +167,8 @@ export const getDiagramElements = (
     nodes.forEach((node) => {
       computeNodeStatus(node, canUpdateStatuses, t, topology.hubClusterName as string)
     })
+
+    alerts = analyzeTopology(nodes)
   }
 
   return {
@@ -171,6 +176,7 @@ export const getDiagramElements = (
     channels: channelsList,
     links: links,
     nodes: nodes,
+    alerts,
   }
 }
 

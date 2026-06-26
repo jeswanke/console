@@ -9,6 +9,7 @@ import { useApplicationDetailsContext } from '~/routes/Applications/ApplicationD
 import { ISyncArgoCDModalProps, SyncArgoCDModal } from '~/routes/Applications/components/SyncArgoCDModal'
 import { processResourceActionLink } from './helpers/diagram-helpers'
 import { getDiagramElements } from './model/topology'
+import type { TopologyAlert } from './model/analyzeTopology'
 import { DrawerShapes } from './components/DrawerShapes'
 import './ApplicationTopology.css'
 import './topology/css/Drawer.css'
@@ -59,6 +60,7 @@ export function ApplicationTopologyPageContent() {
     nodes: any[]
     links: any[]
   }>({ nodes: [], links: [] })
+  const [alertsState, setAlertsState] = useState<TopologyAlert[]>([])
 
   const [argoAppDetailsContainerData, setArgoAppDetailsContainerData] = useState<ArgoAppDetailsContainerData>({
     page: 1,
@@ -133,7 +135,9 @@ export function ApplicationTopologyPageContent() {
   const canUpdateStatuses = !!statuses
   useEffect(() => {
     if (topology) {
-      setElements(cloneDeep(getDiagramElements(cloneDeep(topology), statuses, canUpdateStatuses, t)))
+      const diagramElements = getDiagramElements(cloneDeep(topology), statuses, canUpdateStatuses, t)
+      setElements({ nodes: diagramElements.nodes, links: diagramElements.links })
+      setAlertsState(diagramElements.alerts ?? [])
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [startup, refreshTime])
@@ -159,6 +163,7 @@ export function ApplicationTopologyPageContent() {
       <DrawerShapes />
       <Topology
         elements={elements}
+        alerts={alertsState}
         processActionLink={processActionLink}
         canUpdateStatuses={canUpdateStatuses}
         argoAppDetailsContainerControl={argoAppDetailsContainerControl}

@@ -25,6 +25,8 @@ import TopologyToolbar, { ToolbarControl } from './components/TopologyToolbar'
 
 import { ArgoAppDetailsContainerData, ClusterDetailsContainerData } from '../ApplicationTopology'
 import TopologyZoomBar from './components/TopologyZoomBar'
+import { TopologyAlerts } from './components/TopologyAlerts'
+import type { TopologyAlert } from '../model/analyzeTopology'
 
 import './css/topology-view.css'
 import { TFunction } from 'react-i18next'
@@ -37,6 +39,7 @@ export interface TopologyProps {
     nodes: any[]
     links: any[]
   }
+  alerts?: TopologyAlert[]
   channelControl: {
     allChannels: string[]
     activeChannel: string | undefined
@@ -85,6 +88,7 @@ export const TopologyViewComponents: React.FC<TopologyViewComponentsProps> = ({ 
     elements,
     nodeDetailsProvider,
     hubClusterName,
+    alerts,
   } = topologyProps
   const [selectedIds, setSelectedIds] = useState<string[]>()
 
@@ -147,8 +151,9 @@ export const TopologyViewComponents: React.FC<TopologyViewComponentsProps> = ({ 
           e.preventDefault()
         }}
         onKeyDown={() => {}}
-        style={{ width: '100%', height: '100%' }}
+        style={{ width: '100%', height: '100%', position: 'relative' }}
       >
+        {alerts && alerts.length > 0 && <TopologyAlerts alerts={alerts} />}
         <VisualizationSurface state={{ selectedIds }} />
       </div>
     </TopologyView>

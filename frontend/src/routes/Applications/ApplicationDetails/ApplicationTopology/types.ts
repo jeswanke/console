@@ -1,4 +1,5 @@
 import { Dispatch, SetStateAction } from 'react'
+import type { TopologyAlert } from './model/analyzeTopology'
 import {
   AnsibleJob,
   Application,
@@ -662,6 +663,7 @@ export interface DiagramElements {
   channels: string[]
   links: TopologyLink[]
   nodes: TopologyNode[]
+  alerts: TopologyAlert[]
 }
 
 // Argo data structure passed to getArgoTopology
