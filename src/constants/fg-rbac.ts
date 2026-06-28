@@ -33,6 +33,15 @@ export const RBAC_ROUTES = {
   roleDetails: (id: string) => `/multicloud/user-management/roles/${id}`,
   roleRoleAssignments: (id: string) =>
     `/multicloud/user-management/roles/${id}/role-assignments`,
+
+  clusterSetDetails: (name: string) =>
+    `/multicloud/infrastructure/clusters/sets/details/${name}`,
+  clusterSetRoleAssignments: (name: string) =>
+    `/multicloud/infrastructure/clusters/sets/details/${name}/role-assignments`,
+  clusterDetails: (namespace: string, name: string) =>
+    `/multicloud/infrastructure/clusters/details/${namespace}/${name}`,
+  clusterRoleAssignments: (namespace: string, name: string) =>
+    `/multicloud/infrastructure/clusters/details/${namespace}/${name}/role-assignments`,
 } as const;
 
 // =============================================================================

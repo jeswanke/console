@@ -120,6 +120,13 @@ export class RoleAssignmentWizardPage extends BasePage {
   getSuccessNotification(): Locator { return this.page.getByText(RBAC_WIZARD.notifications.added); }
   getDuplicateError(): Locator { return this.page.getByText(RBAC_WIZARD.notifications.duplicate); }
 
+  async selectIdentity(username: string): Promise<void> {
+    const searchInput = this.modal.getByRole('textbox', { name: 'Search input' });
+    await searchInput.clear();
+    await searchInput.fill(username);
+    await this.modal.getByRole('radio', { name: `Select ${username}` }).click({ timeout: 30000 });
+  }
+
   getWizardTitle(): Locator { return this.modal.getByRole('heading').first(); }
 
   getModal(): Locator { return this.modal; }
