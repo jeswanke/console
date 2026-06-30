@@ -127,4 +127,15 @@ export class SearchPage extends BasePage {
     await expect(this.page.locator('table')).toBeVisible();
     await this.waitForLoad();
   }
+
+  /**
+   * Search for `kind:Pod name:<podName>`, wait for the results table, then
+   * click the first resource-name link to open the Search Details page.
+   */
+  async openFirstPodDetails(podName: string): Promise<void> {
+    await this.filterByKindAndName('Pod', podName);
+    await this.waitForResultsTable();
+    await this.page.locator('table').getByRole('link').first().click();
+    await this.page.waitForURL(new RegExp(`${SEARCH_ROUTES.resourceDetails}`));
+  }
 }

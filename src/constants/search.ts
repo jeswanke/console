@@ -2,6 +2,7 @@
 
 export const SEARCH_ROUTES = {
   page: '/multicloud/search',
+  resourceDetails: '/multicloud/search/resources',
 } as const;
 
 export const SEARCH_PAGE = {
@@ -23,4 +24,18 @@ export const SEARCH_PAGE = {
   desiredColumn: 'Desired',
   searchApiDeploymentName: 'search-api',
   clusterRelatedResourceLabel: 'Cluster',
+} as const;
+
+export const SEARCH_DETAILS_PAGE = {
+  tabs: {
+    details: 'Details',
+    yaml: 'YAML',
+    relatedResources: 'Related resources',
+    logs: 'Logs',
+  },
+  podDetailsSection: 'Pod details',
+  conditionsSection: 'Conditions',
+  podNameFilter: 'search-api-*',
+  clusterAccordionLabel: 'Cluster',
+  yamlPodKindLine: 'kind: Pod',
 } as const;
