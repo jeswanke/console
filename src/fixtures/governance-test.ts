@@ -6,10 +6,14 @@ import { PolicySetDetailsPage } from '@pages/governance/PolicySetDetailsPage';
 import { PlacementDetailsPage } from '@pages/governance/PlacementDetailsPage';
 import { DiscoveredPolicyDetailsPage } from '@pages/governance/DiscoveredPolicyDetailsPage';
 import { PolicyTemplateDetailsPage } from '@pages/governance/PolicyTemplateDetailsPage';
+import { GovernanceTable } from '@components/governance/GovernanceTable';
+import { ManageColumnsDialog } from '@components/patternfly/ManageColumnsDialog';
 
 type GovernanceFixtures = {
   oc: OcCliService;
   governancePage: GovernancePage;
+  governanceTable: GovernanceTable;
+  manageColumnsDialog: ManageColumnsDialog;
   policyDetailsPage: PolicyDetailsPage;
   policySetDetailsPage: PolicySetDetailsPage;
   placementDetailsPage: PlacementDetailsPage;
@@ -24,6 +28,14 @@ export const test = base.extend<GovernanceFixtures>({
 
   governancePage: async ({ page, oc }, use) => {
     await use(new GovernancePage(page, oc));
+  },
+
+  governanceTable: async ({ page }, use) => {
+    await use(new GovernanceTable(page));
+  },
+
+  manageColumnsDialog: async ({ page }, use) => {
+    await use(new ManageColumnsDialog(page));
   },
 
   policyDetailsPage: async ({ page, oc }, use) => {

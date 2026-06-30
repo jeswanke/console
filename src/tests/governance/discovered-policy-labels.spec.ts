@@ -16,34 +16,10 @@ import {
   GOV_DISCOVERED_POLICY_DETAILS,
   GOV_DISCOVERED_TEST_RESOURCES,
 } from '@constants/governance';
+import { waitForPolicyPropagation } from '@lib/governance/policy-lifecycle';
 
 const TEMPLATES_DIR = path.resolve(__dirname, '../../templates/governance');
 const RESOURCES_YAML = path.join(TEMPLATES_DIR, 'discovered-policy-resources.yaml');
-
-async function waitForPolicyPropagation(
-  oc: OcCliService,
-  namespace: string,
-  policyName: string,
-  timeoutMs = 120_000
-): Promise<void> {
-  const pollInterval = 5_000;
-  const start = Date.now();
-
-  while (Date.now() - start < timeoutMs) {
-    try {
-      const compliant = await oc.run(
-        `oc get policy ${policyName} -n ${namespace} -o jsonpath='{.status.compliant}' 2>/dev/null || true`
-      );
-      if (compliant && compliant !== "''" && compliant !== '') return;
-    } catch {
-      // Policy may not exist yet or status not populated
-    }
-    await new Promise((r) => setTimeout(r, pollInterval));
-  }
-  throw new Error(
-    `Policy ${policyName} did not propagate within ${timeoutMs / 1000}s`
-  );
-}
 
 test.describe.serial(
   'Discovered policy cluster labels (RHACM4K-64205)',
@@ -56,7 +32,7 @@ test.describe.serial(
     test.beforeAll(async () => {
       test.setTimeout(180_000);
       await oc.applyYaml(RESOURCES_YAML);
-      await waitForPolicyPropagation(oc, res.namespace, res.parentPolicy);
+      await waitForPolicyPropagation(oc, res.parentPolicy, res.namespace);
 
       const raw = await oc.run(
         `oc get placementdecision -n ${res.namespace} ` +
@@ -81,9 +57,7 @@ test.describe.serial(
       await governancePage.goto();
       await governancePage.openPoliciesTab();
       await governancePage.searchPolicies(res.parentPolicy);
-      await expect(
-        governancePage.getPolicyRow(res.parentPolicy)
-      ).toBeVisible();
+      await expect(governancePage.getPolicyRow(res.parentPolicy)).toBeVisible();
 
       await governancePage.getPolicyRow(res.parentPolicy).click();
       await policyDetailsPage.waitForLoad(30_000);
@@ -91,12 +65,8 @@ test.describe.serial(
       await policyDetailsPage.getResultsTab().click();
       await policyDetailsPage.waitForLoad(30_000);
 
-      await expect(
-        page.getByText(res.labeledPolicy)
-      ).toBeVisible({ timeout: 60_000 });
-      await expect(
-        page.getByText(res.unlabeledPolicy)
-      ).toBeVisible();
+      await expect(page.getByText(res.labeledPolicy)).toBeVisible({ timeout: 60_000 });
+      await expect(page.getByText(res.unlabeledPolicy)).toBeVisible();
     });
 
     // Polarion steps 4-5: Both child ConfigurationPolicies on Discovered policies tab
@@ -107,13 +77,13 @@ test.describe.serial(
       await governancePage.goto();
       await governancePage.openDiscoveredPoliciesTab();
 
-      await expect(
-        governancePage.getDiscoveredPolicyRow(res.labeledPolicy)
-      ).toBeVisible({ timeout: 60_000 });
+      await expect(governancePage.getDiscoveredPolicyRow(res.labeledPolicy)).toBeVisible({
+        timeout: 60_000,
+      });
 
-      await expect(
-        governancePage.getDiscoveredPolicyRow(res.unlabeledPolicy)
-      ).toBeVisible({ timeout: 60_000 });
+      await expect(governancePage.getDiscoveredPolicyRow(res.unlabeledPolicy)).toBeVisible({
+        timeout: 60_000,
+      });
     });
 
     // Polarion steps 6-9: Labels column, tag click, popover content
@@ -158,17 +128,13 @@ test.describe.serial(
       await expect(filterButton).toBeVisible();
       await filterButton.click();
 
-      const option = discoveredPolicyDetailsPage.getLabelFilterOption(
-        res.label.key
-      );
+      const option = discoveredPolicyDetailsPage.getLabelFilterOption(res.label.key);
       await expect(option).toBeVisible();
       await option.click();
 
       await discoveredPolicyDetailsPage.waitForLoad(30_000);
 
-      await expect(
-        page.getByRole('row').filter({ hasText: targetCluster })
-      ).toBeVisible();
+      await expect(page.getByRole('row').filter({ hasText: targetCluster })).toBeVisible();
 
       await discoveredPolicyDetailsPage.clearFilters();
     });
@@ -192,13 +158,11 @@ test.describe.serial(
       const labelTag = discoveredPolicyDetailsPage.getLabelCountTag(targetCluster);
       await expect(labelTag).toHaveCount(0);
 
-      await expect(row).toContainText(
-        GOV_DISCOVERED_POLICY_DETAILS.noLabelsIndicator
-      );
+      await expect(row).toContainText(GOV_DISCOVERED_POLICY_DETAILS.noLabelsIndicator);
 
-      await expect(
-        discoveredPolicyDetailsPage.getLabelFilterButton()
-      ).toHaveCount(0, { timeout: 10_000 });
+      await expect(discoveredPolicyDetailsPage.getLabelFilterButton()).toHaveCount(0, {
+        timeout: 10_000,
+      });
     });
   }
 );
