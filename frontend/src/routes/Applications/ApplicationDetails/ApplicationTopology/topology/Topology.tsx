@@ -26,7 +26,7 @@ import TopologyToolbar, { ToolbarControl } from './components/TopologyToolbar'
 import { ArgoAppDetailsContainerData, ClusterDetailsContainerData } from '../ApplicationTopology'
 import TopologyZoomBar from './components/TopologyZoomBar'
 import { TopologyAlerts } from './components/TopologyAlerts'
-import type { TopologyAlert } from '../model/analyzeTopology'
+import type { TopologyAlert } from '../analysis/analyzeTopology'
 
 import './css/topology-view.css'
 import { TFunction } from 'react-i18next'

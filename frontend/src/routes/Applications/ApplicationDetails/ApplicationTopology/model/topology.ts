@@ -25,8 +25,8 @@ import type {
 } from '../types'
 import { ToolbarControl } from '../topology/components/TopologyToolbar'
 import { Service } from '../../../../../resources'
-import { analyzeTopology } from './analyzeTopology'
-import type { TopologyAlert } from './analyzeTopology'
+import { analyzeTopology } from '../analysis/analyzeTopology'
+import type { TopologyAlert } from '../analysis/analyzeTopology'
 
 /**
  * Main function to get topology data for different application types.

@@ -3,7 +3,7 @@ import { css, keyframes } from '@emotion/css'
 import { Alert, AlertActionCloseButton, AlertActionLink, AlertGroup, AlertProps } from '@patternfly/react-core'
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { PulseColor } from '../../types'
-import type { TopologyAlert } from '../../model/analyzeTopology'
+import type { TopologyAlert } from '../../analysis/analyzeTopology'
 
 const STATUS_ORDER: PulseColor[] = ['red', 'orange', 'yellow', 'green']
 

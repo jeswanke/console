@@ -1,7 +1,7 @@
 /* Copyright Contributors to the Open Cluster Management project */
 import type { TopologyNode } from '../types'
-import type { IConditionError, IResourcesWithStatus, TopologyAlert } from '../analysis/analyzeTopology'
-import { createTopologyAlert, extractConditionsErrors } from '../analysis/analyzeTopologyHelpers'
+import type { IConditionError, IResourcesWithStatus, TopologyAlert } from './analyzeTopology'
+import { createTopologyAlert, extractConditionsErrors } from './analyzeTopologyHelpers'
 
 /** Sets pulse color on all nodes matching the given types. */
 const setNodePulseForTypes = (nodes: TopologyNode[], types: string[], pulse: string): void => {

@@ -9,7 +9,7 @@ import { useApplicationDetailsContext } from '~/routes/Applications/ApplicationD
 import { ISyncArgoCDModalProps, SyncArgoCDModal } from '~/routes/Applications/components/SyncArgoCDModal'
 import { processResourceActionLink } from './helpers/diagram-helpers'
 import { getDiagramElements } from './model/topology'
-import type { TopologyAlert } from './model/analyzeTopology'
+import type { TopologyAlert } from './analysis/analyzeTopology'
 import { DrawerShapes } from './components/DrawerShapes'
 import './ApplicationTopology.css'
 import './topology/css/Drawer.css'

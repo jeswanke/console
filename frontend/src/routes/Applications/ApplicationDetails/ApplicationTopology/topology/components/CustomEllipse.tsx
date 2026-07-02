@@ -33,7 +33,7 @@ const CustomEllipse: React.FunctionComponent<CustomEllipseProps> = ({
 
   if (shouldPulse) {
     const pulseStartRadius = Math.max(rx, ry)
-    const pulseMaxRadius = Math.round((pulseStartRadius + Math.max(8, Math.round(pulseStartRadius * 0.5))) * 0.85)
+    const pulseMaxRadius = Math.round((pulseStartRadius + Math.max(8, Math.round(pulseStartRadius * 0.5))) * 0.86)
     const glowId = `custom-ellipse-glow-${element.getId()}`
     return (
       <g>
@@ -53,7 +53,7 @@ const CustomEllipse: React.FunctionComponent<CustomEllipseProps> = ({
           <animate
             attributeName="opacity"
             attributeType="CSS"
-            values="0.8;0"
+            values="0.6;0"
             dur={PULSE_DURATION}
             repeatCount="indefinite"
           />

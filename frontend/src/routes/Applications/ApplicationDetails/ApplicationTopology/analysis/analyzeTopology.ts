@@ -1,7 +1,7 @@
 /* eslint-disable prettier/prettier */
 /* Copyright Contributors to the Open Cluster Management project */
 import type { TopologyNode } from '../types'
-import { analyzeAppSetTopology } from './analyzeAppSetTopology'
+import { analyzeAppSetTopology } from '../model/analyzeAppSetTopology'
 import type { TopologyAlert, TopologyAlertAction } from './analyzeTopologyHelpers'
 
 export type {

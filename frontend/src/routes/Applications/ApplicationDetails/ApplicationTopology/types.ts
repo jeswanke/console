@@ -1,5 +1,5 @@
 import { Dispatch, SetStateAction } from 'react'
-import type { TopologyAlert } from './model/analyzeTopology'
+import type { TopologyAlert } from './analysis/analyzeTopology'
 import {
   AnsibleJob,
   Application,
