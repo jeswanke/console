@@ -88,7 +88,8 @@ const bulletContentYaml = css`
   font-size: 11px;
   padding: 2px 8px 2px 16px;
   margin: 0;
-  background-color: #f0f0f0;
+  background-color: var(--pf-t--global--background--color--secondary--default);
+  color: var(--pf-t--global--text--color--regular);
   white-space: pre-wrap;
   overflow-x: auto;
 `
