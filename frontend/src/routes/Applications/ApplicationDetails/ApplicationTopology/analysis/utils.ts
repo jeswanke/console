@@ -1,37 +1,20 @@
 /* Copyright Contributors to the Open Cluster Management project */
 import type { IResource } from '../../../../../resources'
 import type { PulseColor, TopologyNode } from '../types'
-import { createTopologyAlertTips, getTopologyActions } from './analyzeTopology'
 
 export interface TopologyAlertAction {
   label: string
   action: { url?: string; func?: () => void }
 }
 
+export interface IBulletDescription {
+  title: string
+  content: string[]
+}
+
 export interface TopologyAlertDescription {
   message: string
-  bullets?: string[]
-}
-
-export interface TopologyAlert {
-  status: PulseColor
-  title: string
-  description?: TopologyAlertDescription
-  actions?: TopologyAlertAction[]
-  isMajor?: boolean
-}
-
-export interface IConditionErrors {
-  type: string
-  reason: string
-  message: string
-}
-
-export interface IConditionError {
-  name?: string
-  namespace?: string
-  kind: string
-  errors: IConditionErrors[]
+  bullets?: IBulletDescription[]
 }
 
 export interface IResourcesWithStatus extends IResource {
@@ -45,18 +28,63 @@ export interface IResourcesWithStatus extends IResource {
   }
 }
 
+export interface TopologyAlert {
+  status: PulseColor
+  title: string
+  description?: TopologyAlertDescription
+  actions?: TopologyAlertAction[]
+  isMajor?: boolean
+}
+
+export interface IConditionError {
+  type: string
+  reason: string
+  message: string
+}
+
+export interface IConditionWithErrors {
+  name?: string
+  namespace?: string
+  kind: string
+  resource: IResourcesWithStatus
+  errors: IConditionError[]
+}
+
+export interface IFilteredError {
+  firstError: IConditionError
+  otherErrors: IConditionError[]
+}
+
+export interface IFilteredConditionError {
+  name?: string
+  namespace?: string
+  kind: string
+  resource: IResourcesWithStatus
+  errors: IFilteredError[]
+}
+
 interface IErrorCondition {
   name: string
   namespace: string
   kind: string
+  resource: IResourcesWithStatus
   type: string
   reason: string
+}
+
+/** Sets pulse color on all nodes matching the given types. */
+export const setNodePulseForTypes = (nodes: TopologyNode[], types: string[], pulse: string): void => {
+  nodes.forEach((node) => {
+    if (types.includes(node.type)) {
+      node.specs.pulse = pulse
+    }
+  })
 }
 
 /**
  * Extracts condition errors from resources with status conditions.
  */
-export const extractConditionsErrors = (resources: IResourcesWithStatus[]): IConditionError[] => {
+export const extractConditionsErrors = (resources: IResourcesWithStatus[]): IFilteredConditionError[] => {
   const errorMap: Record<string, IErrorCondition[]> = {}
 
   resources.forEach((resource) => {
@@ -83,13 +111,14 @@ export const extractConditionsErrors = (resources: IResourcesWithStatus[]): ICon
         kind: resource.kind,
         name: resource.metadata?.name ?? '',
         namespace: resource.metadata?.namespace ?? '',
+        resource: resource,
         type: condition.type,
         reason: condition.reason,
       })
     })
   })
 
-  const conditionErrors: IConditionError[] = []
+  const conditionErrors: IConditionWithErrors[] = []
 
   Object.keys(errorMap).forEach((key) => {
     const errorConditions = errorMap[key]
@@ -101,6 +130,7 @@ export const extractConditionsErrors = (resources: IResourcesWithStatus[]): ICon
           name: firstItem.name,
           namespace: firstItem.namespace,
           kind: firstItem.kind,
+          resource: firstItem.resource,
           errors: [
             {
               message: key,
@@ -114,7 +144,10 @@ export const extractConditionsErrors = (resources: IResourcesWithStatus[]): ICon
       const firstItem = errorConditions.shift()
       if (firstItem) {
         conditionErrors.push({
+          name: firstItem.name,
+          namespace: firstItem.namespace,
           kind: firstItem.kind,
+          resource: firstItem.resource,
           errors: [
             {
               message: key,
@@ -130,6 +163,7 @@ export const extractConditionsErrors = (resources: IResourcesWithStatus[]): ICon
           name: item.name,
           namespace: item.namespace,
           kind: item.kind,
+          resource: item.resource,
           errors: [
             {
               message: key,
@@ -142,13 +176,16 @@ export const extractConditionsErrors = (resources: IResourcesWithStatus[]): ICon
     }
   })
 
-  return consolidateConditionErrors(conditionErrors)
+  const consolidatedConditionErrors = consolidateConditionErrors(conditionErrors)
+  return consolidatedConditionErrors
+    .map((conditionError) => filteredConditionErrors(conditionError))
+    .filter((conditionError): conditionError is IFilteredConditionError => conditionError !== undefined)
 }
 
 /** Merges condition errors that share the same name, namespace, and kind. */
-const consolidateConditionErrors = (conditionErrors: IConditionError[]): IConditionError[] => {
-  const consolidated: IConditionError[] = []
-  const byResourceKey = new Map<string, IConditionError>()
+const consolidateConditionErrors = (conditionErrors: IConditionWithErrors[]): IConditionWithErrors[] => {
+  const consolidated: IConditionWithErrors[] = []
+  const byResourceKey = new Map<string, IConditionWithErrors>()
 
   conditionErrors.forEach((item) => {
     const key = `${item.name ?? ''}|${item.namespace ?? ''}|${item.kind}`
@@ -159,10 +196,11 @@ const consolidateConditionErrors = (conditionErrors: IConditionError[]): ICondit
       return
     }
 
-    const merged: IConditionError = {
+    const merged: IConditionWithErrors = {
       name: item.name,
       namespace: item.namespace,
       kind: item.kind,
+      resource: item.resource,
       errors: [...item.errors],
     }
     byResourceKey.set(key, merged)
@@ -172,21 +210,8 @@ const consolidateConditionErrors = (conditionErrors: IConditionError[]): ICondit
   return consolidated
 }
 
-/**
- * Creates and pushes a topology alert from a resource condition error.
- */
-export const createTopologyAlert = (
-  node: TopologyNode,
-  alerts: TopologyAlert[],
-  resource: IConditionError,
-  isUnique?: boolean
-): void => {
-  const errors = resource.errors
-  if (errors.length === 0) {
-    return
-  }
-
-  const otherErrors: IConditionErrors[] = []
+const filterErrors = (errors: IConditionError[]): IFilteredError => {
+  const otherErrors: IConditionError[] = []
   const remainingErrors = errors.filter((error) => {
     if (error.reason?.toLowerCase().includes('succeed') ?? false) {
       otherErrors.push({
@@ -198,7 +223,7 @@ export const createTopologyAlert = (
     return true
   })
 
-  let firstError: IConditionErrors
+  let firstError: IConditionError
   if (remainingErrors.length > 1) {
     firstError = remainingErrors.shift()!
     otherErrors.push(...remainingErrors)
@@ -208,29 +233,72 @@ export const createTopologyAlert = (
     firstError = otherErrors.shift()!
   }
 
-  const bullets = otherErrors.map((error) => error.message)
-  bullets.push(...createTopologyAlertTips(firstError.message))
+  return {
+    firstError,
+    otherErrors,
+  }
+}
+
+export const filteredConditionErrors = (conditionError: IConditionWithErrors): IFilteredConditionError | undefined => {
+  if (conditionError.errors.length === 0) {
+    return
+  }
+
+  return {
+    name: conditionError.name,
+    namespace: conditionError.namespace,
+    kind: conditionError.kind,
+    resource: conditionError.resource,
+    errors: conditionError.errors.map((error) => filterErrors([error])),
+  }
+}
+/**
+ * Creates and pushes a topology alert from a resource condition error.
+ */
+export const createTopologyAlert = (
+  suggestions: IBulletDescription[],
+  actions: TopologyAlertAction[],
+  alerts: TopologyAlert[],
+  filteredError: IFilteredConditionError,
+  status: PulseColor = 'red',
+  isMajor: boolean = true,
+  isUnique?: boolean
+): void => {
+  if (filteredError.errors.length === 0) {
+    return
+  }
+
+  const { firstError } = filteredError.errors[0]
+  const otherErrors = filteredError.errors.flatMap((filtered, index) =>
+    index === 0 ? filtered.otherErrors : [filtered.firstError, ...filtered.otherErrors]
+  )
+
+  const bullets: IBulletDescription[] = otherErrors.map((error) => ({
+    title: error.message,
+    content: [],
+  }))
+  bullets.push(...suggestions)
 
   const description: TopologyAlertDescription = {
     message: firstError.message,
     bullets: bullets.length > 0 ? bullets : undefined,
   }
 
-  let title = resource.kind
+  let title = filteredError.kind
   const reasonOrType = firstError.reason || firstError.type
   if (reasonOrType) {
     const formattedReason = /succeed/i.test(reasonOrType) ? reasonOrType.replace(/succeed/gi, 'Failed') : reasonOrType
     title += ` ${formattedReason}`
   }
-  if (isUnique && resource.namespace && resource.name) {
-    title += ` ${resource.namespace}/${resource.name}`
+  if (isUnique && filteredError.namespace && filteredError.name) {
+    title += ` ${filteredError.namespace}/${filteredError.name}`
   }
 
   alerts.push({
-    status: 'red',
+    status,
     title,
     description,
-    actions: getTopologyActions(node),
-    isMajor: true,
+    actions,
+    isMajor,
   })
 }

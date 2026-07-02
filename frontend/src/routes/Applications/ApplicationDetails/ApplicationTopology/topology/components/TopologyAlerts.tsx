@@ -74,6 +74,25 @@ const bulletMarker = css`
   margin-right: var(--pf-t--global--spacer--sm);
 `
 
+const bulletTitle = css`
+  margin: 0;
+`
+
+const bulletContent = css`
+  margin-top: var(--pf-t--global--spacer--xs);
+  margin-bottom: calc(var(--pf-t--global--spacer--sm) * 2);
+`
+
+const bulletContentYaml = css`
+  font-family: Courier, monospace;
+  font-size: 11px;
+  padding: 2px 8px 2px 16px;
+  margin: 0;
+  background-color: #f0f0f0;
+  white-space: pre-wrap;
+  overflow-x: auto;
+`
+
 /** Sorts alerts with major alerts first, then by severity status. */
 const sortAlerts = (alerts: TopologyAlert[]): TopologyAlert[] => {
   return [...alerts].sort((a, b) => {
@@ -211,11 +230,18 @@ export function TopologyAlerts({ alerts }: TopologyAlertsProps) {
                     <p>{alert.description.message}</p>
                     {alert.description.bullets?.length ? (
                       <div className={bulletSpacer}>
-                        {alert.description.bullets.map((bullet) => (
-                          <p key={bullet}>
-                            <span className={bulletMarker}>{'\u25CF'}</span>
-                            {bullet}
-                          </p>
+                        {alert.description.bullets.map((bullet, bulletIndex) => (
+                          <div key={`${bullet.title}-${bulletIndex}`}>
+                            <p className={bulletTitle}>
+                              <span className={bulletMarker}>{'\u25CF'}</span>
+                              {bullet.title}
+                            </p>
+                            {bullet.content.length > 0 ? (
+                              <div className={bulletContent}>
+                                <pre className={bulletContentYaml}>{bullet.content.join('\n')}</pre>
+                              </div>
+                            ) : null}
+                          </div>
                         ))}
                       </div>
                     ) : null}
