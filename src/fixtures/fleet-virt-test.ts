@@ -1,17 +1,19 @@
 import { test as base, expect } from '@playwright/test';
 import { OcCliService } from '@services/OcCliService';
 import { FleetVirtPage } from '@pages/fleet-virt/FleetVirtPage';
+import { VmDetailsPage } from '@pages/fleet-virt/VmDetailsPage';
 import { AdvancedSearchModal } from '@components/fleet-virt/AdvancedSearchModal';
 import { SavedSearches } from '@components/fleet-virt/SavedSearches';
-import { getVirtConfig } from '@config';
-import type { VirtConfig } from '@config';
-
+import { TreeView } from '@components/fleet-virt/TreeView';
+import { StatusFilter } from '@components/fleet-virt/StatusFilter';
 type FleetVirtFixtures = {
   oc: OcCliService;
-  virtConfig: VirtConfig;
   fleetVirtPage: FleetVirtPage;
+  vmDetailsPage: VmDetailsPage;
   advancedSearchModal: AdvancedSearchModal;
   savedSearches: SavedSearches;
+  treeView: TreeView;
+  statusFilter: StatusFilter;
 };
 
 export const test = base.extend<FleetVirtFixtures>({
@@ -19,12 +21,12 @@ export const test = base.extend<FleetVirtFixtures>({
     await use(new OcCliService());
   },
 
-  virtConfig: async ({}, use) => {
-    await use(getVirtConfig());
-  },
-
   fleetVirtPage: async ({ page, oc }, use) => {
     await use(new FleetVirtPage(page, oc));
+  },
+
+  vmDetailsPage: async ({ page }, use) => {
+    await use(new VmDetailsPage(page));
   },
 
   advancedSearchModal: async ({ page }, use) => {
@@ -33,6 +35,14 @@ export const test = base.extend<FleetVirtFixtures>({
 
   savedSearches: async ({ page }, use) => {
     await use(new SavedSearches(page));
+  },
+
+  treeView: async ({ page }, use) => {
+    await use(new TreeView(page));
+  },
+
+  statusFilter: async ({ page }, use) => {
+    await use(new StatusFilter(page));
   },
 });
 

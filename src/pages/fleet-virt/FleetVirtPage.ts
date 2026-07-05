@@ -74,13 +74,8 @@ export class FleetVirtPage extends BasePage {
     return this.page.locator('h1');
   }
 
-  /**
-   * Extract VM name and namespace from the first row in the VM table.
-   * VirtualizedTable cells prepend column type prefixes (e.g. "VirtualMachineVM")
-   * which are stripped here.
-   */
   async getFirstVmInfo(): Promise<{ name: string; namespace: string }> {
-    const grid = this.page.getByRole('grid').last();
+    const grid = this.page.getByRole('grid', { name: 'VirtualMachines table' });
     const firstRow = grid.getByRole('row').first();
     await expect(firstRow).toBeVisible({ timeout: 30000 });
 
@@ -114,5 +109,15 @@ export class FleetVirtPage extends BasePage {
   async clickBackToVmList(): Promise<void> {
     await this.page.getByRole('button', { name: 'Back to VirtualMachines list' }).click();
     await this.shouldLoad();
+  }
+
+  getVmTableRows(): Locator {
+    return this.page.getByRole('grid', { name: 'VirtualMachines table' }).getByRole('row');
+  }
+
+  async clickFirstVmInTable(): Promise<void> {
+    const grid = this.page.getByRole('grid', { name: 'VirtualMachines table' });
+    const firstLink = grid.getByRole('link').first();
+    await firstLink.click();
   }
 }

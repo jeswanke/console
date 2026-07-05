@@ -1,14 +1,10 @@
 import { Page, Locator } from '@playwright/test';
 import { BasePage } from '@pages/BasePage';
+import { FLEET_VIRT_VM_ACTIONS } from '@constants/fleet-virt';
 
 /**
  * Fleet Virtualization VM Details page.
- *
- * Tabs: Overview, Metrics, YAML, Configuration, Events, Console, Snapshots, Diagnostics
- * Configuration sub-tabs: Details, Environment, Storage, Network, Scheduling, SSH
- *
  * Source: kubevirt-ui/kubevirt-plugin
- * Per architecture doc: page objects expose locators, tests assert.
  */
 export class VmDetailsPage extends BasePage {
   constructor(page: Page) {
@@ -29,15 +25,15 @@ export class VmDetailsPage extends BasePage {
   // ---------------------------------------------------------------------------
 
   getPageHeading(): Locator {
-    return this.page.getByRole('heading', { name: /^VM /, level: 1 });
+    return this.page.locator('h1').filter({ hasText: 'VM' });
   }
 
   // ---------------------------------------------------------------------------
-  // Actions
+  // Actions dropdown
   // ---------------------------------------------------------------------------
 
   getActionsDropdown(): Locator {
-    return this.page.getByRole('button', { name: 'Actions' });
+    return this.page.locator(FLEET_VIRT_VM_ACTIONS.dropdown);
   }
 
   async openActions(): Promise<void> {
@@ -68,29 +64,61 @@ export class VmDetailsPage extends BasePage {
   // Events tab
   // ---------------------------------------------------------------------------
 
-  getEventsHeading(): Locator {
-    return this.page.getByRole('heading', { name: 'Events', level: 2 });
-  }
-
   getEventsSection(): Locator {
-    return this.getEventsHeading();
+    return this.page.getByRole('heading', { name: 'Events', level: 2 });
   }
 
   // ---------------------------------------------------------------------------
   // Snapshots tab
   // ---------------------------------------------------------------------------
 
-  getSnapshotsHeading(): Locator {
+  getSnapshotsList(): Locator {
     return this.page.getByRole('heading', { name: 'Snapshots', level: 1 });
   }
 
-  getSnapshotsList(): Locator {
-    return this.getSnapshotsHeading();
+  // ---------------------------------------------------------------------------
+  // Configuration tab
+  // ---------------------------------------------------------------------------
+
+  getConfigurationTab(): Locator {
+    return this.page.getByRole('link', { name: 'Configuration' });
   }
 
   // ---------------------------------------------------------------------------
-  // Configuration tab (has sub-navigation)
+  // VM action buttons
   // ---------------------------------------------------------------------------
 
-  getConfigurationTab(): Locator { return this.page.getByRole('link', { name: 'Configuration' }); }
+  getStartButton(): Locator {
+    return this.page.locator(FLEET_VIRT_VM_ACTIONS.startButton);
+  }
+
+  getStopButton(): Locator {
+    return this.page.locator(FLEET_VIRT_VM_ACTIONS.stopButton);
+  }
+
+  getPauseButton(): Locator {
+    return this.page.locator(FLEET_VIRT_VM_ACTIONS.pauseButton);
+  }
+
+  getRestartButton(): Locator {
+    return this.page.locator(FLEET_VIRT_VM_ACTIONS.restartButton);
+  }
+
+  getStatusLabel(): Locator {
+    return this.page.locator(FLEET_VIRT_VM_ACTIONS.statusLabel);
+  }
+
+  async clickActionButton(action: 'start' | 'stop' | 'pause' | 'restart'): Promise<void> {
+    const buttonMap = {
+      start: FLEET_VIRT_VM_ACTIONS.startButton,
+      stop: FLEET_VIRT_VM_ACTIONS.stopButton,
+      pause: FLEET_VIRT_VM_ACTIONS.pauseButton,
+      restart: FLEET_VIRT_VM_ACTIONS.restartButton,
+    };
+    await this.page.locator(buttonMap[action]).click();
+    const confirmBtn = this.page.locator(FLEET_VIRT_VM_ACTIONS.confirmAction);
+    if (await confirmBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+      await confirmBtn.click();
+    }
+  }
 }

@@ -658,4 +658,15 @@ EOF`);
       `oc get configurationpolicy ${policyName} -n ${namespace} -o jsonpath='{.metadata.labels}'`,
     );
   }
+
+  async rbacAuthCanI(verb: string, resource: string, namespace: string, asUser: string): Promise<boolean> {
+    try {
+      const result = await this.run(
+        `oc auth can-i ${verb} ${resource} -n ${namespace} --as=${asUser}`,
+      );
+      return result.trim() === 'yes';
+    } catch {
+      return false;
+    }
+  }
 }

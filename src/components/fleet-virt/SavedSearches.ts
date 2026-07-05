@@ -32,6 +32,10 @@ export class SavedSearches {
     await expect(
       this.page.getByRole('heading', { name: 'Save search' })
     ).toBeHidden({ timeout: 5000 });
+
+    await expect(
+      this.page.getByRole('button', { name: FLEET_VIRT_SAVED_SEARCH.saveButton })
+    ).toBeVisible({ timeout: 5000 });
   }
 
   async openSavedSearches(): Promise<void> {
@@ -43,9 +47,19 @@ export class SavedSearches {
     }
   }
 
+  private async closeSavedSearches(): Promise<void> {
+    const toggle = this.page.getByRole('button', { name: FLEET_VIRT_SAVED_SEARCH.dropdown.toggle });
+    const expanded = await toggle.getAttribute('aria-expanded');
+    if (expanded === 'true') {
+      await toggle.click();
+      await expect(toggle).not.toHaveAttribute('aria-expanded', 'true', { timeout: 3000 });
+    }
+  }
+
   async removeSavedSearch(name: string): Promise<void> {
+    await this.closeSavedSearches();
     await this.openSavedSearches();
-    const item = this.page.getByRole('menuitem', { name });
+    const item = this.page.locator(FLEET_VIRT_SAVED_SEARCH.dropdown.item(name));
     await expect(item).toBeVisible({ timeout: 5000 });
     const deleteButton = this.page.locator(FLEET_VIRT_SAVED_SEARCH.dropdown.deleteItem(name));
     await deleteButton.click();
@@ -53,7 +67,7 @@ export class SavedSearches {
   }
 
   getSavedSearchItem(name: string): Locator {
-    return this.page.getByRole('menuitem', { name });
+    return this.page.locator(FLEET_VIRT_SAVED_SEARCH.dropdown.item(name));
   }
 
   getSavedSearchesToggle(): Locator {
