@@ -20,7 +20,7 @@
 // =============================================================================
 
 export const FLEET_VIRT_ROUTES = {
-  vmList: '/k8s/all-clusters/all-namespaces/kubevirt.io~v1~VirtualMachine',
+  vmList: '/fleet-virtualization/kubevirt.io~v1~VirtualMachine/all-clusters/all-namespaces',
 } as const;
 
 // =============================================================================
@@ -41,7 +41,7 @@ export const FLEET_VIRT_PAGE = {
 
 export const FLEET_VIRT_SEARCH = {
   searchInput: '[data-test="vm-search-input"] input',
-  searchResults: '[data-test="search-bar-results"]',
+  searchResults: '[data-test="search-results"]',
   resetButton: 'button[aria-label="Reset"]',
 } as const;
 
@@ -53,7 +53,7 @@ export const FLEET_VIRT_SEARCH = {
 // =============================================================================
 
 export const FLEET_VIRT_ADVANCED_SEARCH = {
-  openButton: '[data-test="vm-advanced-search"]',
+  openButton: '[data-test="vm-advanced-search-button"]',
   detailsContainer: '[data-test="adv-search-details"]',
   nameInput: '[data-test="adv-search-vm-name"]',
   cluster: {

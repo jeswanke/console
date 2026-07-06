@@ -20,12 +20,9 @@ export interface RbacUser {
 }
 
 export interface RbacConfig {
-  readonly testUser: string;
-  readonly testPassword: string;
   readonly idpName: string;
-  readonly managedAdminUser: string;
-  readonly managedAdminPassword: string;
   readonly spokeCluster: string;
+  readonly users: Readonly<Record<string, string>>;
 }
 
 export interface VirtConfig {

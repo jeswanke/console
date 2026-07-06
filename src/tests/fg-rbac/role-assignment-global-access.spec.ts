@@ -19,7 +19,8 @@ test.describe('Role Assignment - Global Access', { tag: ['@fg-rbac'] }, () => {
     oc,
     rbacConfig,
   }) => {
-    const user = rbacConfig.testUser;
+    const user = rbacConfig.users['global-61726'];
+    await oc.mcraDeleteAllForUser(user);
 
     await test.step('1: Navigate to Role Assignment creation', async () => {
       await userDetailsPage.gotoRoleAssignments(user);
@@ -118,6 +119,6 @@ test.describe('Role Assignment - Global Access', { tag: ['@fg-rbac'] }, () => {
   });
 
   test.afterEach(async ({ oc, rbacConfig }) => {
-    await oc.mcraDeleteAllForUser(rbacConfig.testUser);
+    await oc.mcraDeleteAllForUser(rbacConfig.users['global-61726']);
   });
 });

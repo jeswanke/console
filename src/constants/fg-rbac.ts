@@ -131,6 +131,7 @@ export const RBAC_WIZARD = {
 
   scopeInfo: {
     global: 'all current and future resources in all clusters',
+    clusterSets: 'all current and future resources on the selected cluster set',
   },
 
   identities: {

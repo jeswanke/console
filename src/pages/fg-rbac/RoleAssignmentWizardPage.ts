@@ -5,6 +5,7 @@ import {
   SCOPE_TYPES,
   RBAC_WIZARD,
   ScopeType,
+  GranularityOption,
 } from '@constants/fg-rbac';
 
 /**
@@ -55,9 +56,30 @@ export class RoleAssignmentWizardPage extends BasePage {
     return this.page.getByRole('option', { name: scopeType });
   }
 
-  async selectClusters(names: string[]): Promise<void> {
+  private async checkTableRows(names: string[]): Promise<void> {
     for (const name of names) {
       await this.modal.getByRole('row', { name }).getByRole('checkbox').check();
+    }
+  }
+
+  async selectClusterSets(names: string[]): Promise<void> {
+    await this.checkTableRows(names);
+  }
+
+  async selectClusters(names: string[]): Promise<void> {
+    await this.checkTableRows(names);
+  }
+
+  async selectGranularity(option: GranularityOption): Promise<void> {
+    await this.modal.getByRole('combobox').click();
+    await this.page.getByRole('option', { name: option }).click();
+    await this.waitForLoad();
+  }
+
+  async selectProjects(names: string[]): Promise<void> {
+    await this.waitForLoad();
+    for (const name of names) {
+      await this.modal.getByRole('row', { name }).getByRole('checkbox').check({ timeout: 60000 });
     }
   }
 

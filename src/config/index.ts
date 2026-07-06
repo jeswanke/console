@@ -67,16 +67,15 @@ export function getTestConfig(): TestConfig {
 }
 
 export function getRbacConfig(): RbacConfig {
-  if (!process.env.RBAC_TEST_PASSWORD) {
-    throw new Error('RBAC_TEST_PASSWORD environment variable is required');
+  const users: Record<string, string> = {};
+  for (const u of rbacPresets.users) {
+    users[u.role.replace('fg-rbac-', '')] = u.username;
   }
+
   return {
-    testUser: process.env.RBAC_TEST_USER || 'clc-e2e-global-61726',
-    testPassword: process.env.RBAC_TEST_PASSWORD,
-    idpName: process.env.RBAC_IDP || 'clc-e2e-htpasswd',
-    managedAdminUser: process.env.RBAC_MANAGED_ADMIN_USER || 'clc-e2e-managed-admin',
-    managedAdminPassword: process.env.RBAC_MANAGED_ADMIN_PASSWORD || process.env.RBAC_TEST_PASSWORD,
+    idpName: process.env.RBAC_IDP || rbacPresets.idp,
     spokeCluster: process.env.RBAC_SPOKE_CLUSTER || process.env.VIRT_SPOKE_CLUSTER || '',
+    users,
   };
 }
 
