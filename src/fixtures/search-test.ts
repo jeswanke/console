@@ -1,3 +1,4 @@
+import { OverviewPage } from '@pages/overview/OverviewPage';
 import { SearchDetailsPage } from '@pages/search/SearchDetailsPage';
 import { SearchPage } from '@pages/search/SearchPage';
 import { test as base, expect } from '@playwright/test';
@@ -7,6 +8,7 @@ type SearchFixtures = {
   oc: OcCliService;
   searchPage: SearchPage;
   searchDetailsPage: SearchDetailsPage;
+  overviewPage: OverviewPage;
 };
 
 export const test = base.extend<SearchFixtures>({
@@ -20,6 +22,10 @@ export const test = base.extend<SearchFixtures>({
 
   searchDetailsPage: async ({ page }, use) => {
     await use(new SearchDetailsPage(page));
+  },
+
+  overviewPage: async ({ page, oc }, use) => {
+    await use(new OverviewPage(page, oc));
   },
 });
 
