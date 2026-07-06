@@ -7,9 +7,11 @@ import { Topology } from './topology/Topology'
 import { useTranslation } from '~/lib/acm-i18next'
 import { useApplicationDetailsContext } from '~/routes/Applications/ApplicationDetails/ApplicationDetails'
 import { ISyncArgoCDModalProps, SyncArgoCDModal } from '~/routes/Applications/components/SyncArgoCDModal'
+import { EditYamlModal, IEditYamlModalProps } from './components/EditYamlModal'
 import { processResourceActionLink } from './helpers/diagram-helpers'
 import { getDiagramElements } from './model/topology'
 import type { TopologyAlert } from './analysis/analyzeTopology'
+import type { TopologyNode } from './types'
 import { DrawerShapes } from './components/DrawerShapes'
 import './ApplicationTopology.css'
 import './topology/css/Drawer.css'
@@ -145,6 +147,21 @@ export function ApplicationTopologyPageContent() {
   const [syncArgoCDModalProps, setSyncArgoCDModalProps] = useState<ISyncArgoCDModalProps | { open: false }>({
     open: false,
   })
+  const [editYamlModalProps, setEditYamlModalProps] = useState<IEditYamlModalProps | { open: false }>({
+    open: false,
+  })
+
+  const handleEditYaml = useCallback(
+    (node: TopologyNode) => {
+      setEditYamlModalProps({
+        open: true,
+        close: () => setEditYamlModalProps({ open: false }),
+        node,
+        hubClusterName,
+      })
+    },
+    [hubClusterName]
+  )
 
   const refreshResources = useCallback(() => {
     const app = applicationData?.application
@@ -160,6 +177,7 @@ export function ApplicationTopologyPageContent() {
   return (
     <>
       <SyncArgoCDModal {...syncArgoCDModalProps} />
+      <EditYamlModal {...editYamlModalProps} />
       <DrawerShapes />
       <Topology
         elements={elements}
@@ -174,6 +192,7 @@ export function ApplicationTopologyPageContent() {
         setDrawerContent={setDrawerContent}
         hubClusterName={hubClusterName}
         onRefreshResources={refreshResources}
+        onEditYaml={handleEditYaml}
       />
     </>
   )

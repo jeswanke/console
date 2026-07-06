@@ -122,6 +122,15 @@ const addApplicationAnalysis = (
       label: 'Edit specification',
       action: { url: 'yahoo.com' },
     },
+    {
+      label: 'Edit YAML',
+      action: {},
+      node,
+    },
+    {
+      label: 'Show logs',
+      action: { url: 'yahoo.com' },
+    },
   ]
   createTopologyAlert(suggestions, actions, alerts, filteredError)
 }

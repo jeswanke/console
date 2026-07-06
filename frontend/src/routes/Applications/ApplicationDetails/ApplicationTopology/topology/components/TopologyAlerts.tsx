@@ -2,7 +2,7 @@
 import { css, keyframes } from '@emotion/css'
 import { Alert, AlertActionCloseButton, AlertActionLink, AlertGroup, AlertProps } from '@patternfly/react-core'
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { PulseColor } from '../../types'
+import type { PulseColor, TopologyNode } from '../../types'
 import type { TopologyAlert } from '../../analysis/analyzeTopology'
 
 const STATUS_ORDER: PulseColor[] = ['red', 'orange', 'yellow', 'green']
@@ -85,7 +85,7 @@ const bulletContent = css`
 
 const bulletContentYaml = css`
   font-family: Courier, monospace;
-  font-size: 11px;
+  font-size: var(--pf-t--global--font--size--body--default);
   padding: 2px 8px 2px 16px;
   margin: 0;
   background-color: var(--pf-t--global--background--color--secondary--default);
@@ -107,9 +107,10 @@ const sortAlerts = (alerts: TopologyAlert[]): TopologyAlert[] => {
 
 export interface TopologyAlertsProps {
   alerts: TopologyAlert[]
+  onEditYaml?: (node: TopologyNode) => void
 }
 
-export function TopologyAlerts({ alerts }: TopologyAlertsProps) {
+export function TopologyAlerts({ alerts, onEditYaml }: TopologyAlertsProps) {
   const dismissedIdsRef = useRef<Set<string>>(new Set())
   const [visibleAlerts, setVisibleAlerts] = useState<TopologyAlert[]>([])
   const [removingIds, setRemovingIds] = useState<Set<string>>(new Set())
@@ -207,11 +208,15 @@ export function TopologyAlerts({ alerts }: TopologyAlertsProps) {
                   <AlertActionLink key={action.label} component="a" href={action.action.url}>
                     {action.label}
                   </AlertActionLink>
-                ) : (
+                ) : action.label === 'Edit YAML' && action.node ? (
+                  <AlertActionLink key={action.label} onClick={() => onEditYaml?.(action.node!)}>
+                    {action.label}
+                  </AlertActionLink>
+                ) : action.action.func ? (
                   <AlertActionLink key={action.label} onClick={action.action.func}>
                     {action.label}
                   </AlertActionLink>
-                )
+                ) : null
               )}
             </Fragment>
           ) : undefined

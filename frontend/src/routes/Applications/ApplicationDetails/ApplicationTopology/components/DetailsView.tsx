@@ -546,7 +546,6 @@ export const getLegendTitle = (type: string) => {
     .replace('stream', ' Stream')
     .replace('channel', ' Channel')
     .replace('controller', 'Controller')
-  //}
 }
 
 export default DetailsView

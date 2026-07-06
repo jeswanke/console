@@ -130,7 +130,9 @@ describe('CustomEllipse tests', () => {
 
   test('applies filter when provided', () => {
     const filter = 'url(#shadow-filter)'
-    const { container } = render(<CustomEllipse element={mockElement} width={100} height={80} filter={filter} isMulti />)
+    const { container } = render(
+      <CustomEllipse element={mockElement} width={100} height={80} filter={filter} isMulti />
+    )
     const ellipses = container.querySelectorAll('ellipse')
 
     ellipses.forEach((ellipse) => {

@@ -27,6 +27,7 @@ import { ArgoAppDetailsContainerData, ClusterDetailsContainerData } from '../App
 import TopologyZoomBar from './components/TopologyZoomBar'
 import { TopologyAlerts } from './components/TopologyAlerts'
 import type { TopologyAlert } from '../analysis/analyzeTopology'
+import type { TopologyNode } from '../types'
 
 import './css/topology-view.css'
 import { TFunction } from 'react-i18next'
@@ -71,6 +72,7 @@ export interface TopologyProps {
   processActionLink?: (resource: any, toggleLoading: () => void, hubClusterName: string) => void
   hubClusterName: string
   onRefreshResources?: () => void
+  onEditYaml?: (node: TopologyNode) => void
 }
 
 interface TopologyViewComponentsProps {
@@ -89,6 +91,7 @@ export const TopologyViewComponents: React.FC<TopologyViewComponentsProps> = ({ 
     nodeDetailsProvider,
     hubClusterName,
     alerts,
+    onEditYaml,
   } = topologyProps
   const [selectedIds, setSelectedIds] = useState<string[]>()
 
@@ -153,7 +156,7 @@ export const TopologyViewComponents: React.FC<TopologyViewComponentsProps> = ({ 
         onKeyDown={() => {}}
         style={{ width: '100%', height: '100%', position: 'relative' }}
       >
-        {alerts && alerts.length > 0 && <TopologyAlerts alerts={alerts} />}
+        {alerts && alerts.length > 0 && <TopologyAlerts alerts={alerts} onEditYaml={onEditYaml} />}
         <VisualizationSurface state={{ selectedIds }} />
       </div>
     </TopologyView>
