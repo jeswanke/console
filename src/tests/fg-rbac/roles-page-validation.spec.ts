@@ -4,19 +4,21 @@
  * Read-only validation of the Roles list page:
  *   1. Verify all 8 expected roles are listed
  *   2. Verify permissions keywords for all 8 roles via table Permissions column
- *   3. Verify role type via CLI (ClusterRole)
+ *   3. Verify role details metadata and tabs
+ *   4. Verify role assignments tab
+ *   5. Verify YAML tab content
+ *   6. Verify role type via CLI (ClusterRole)
  *
  * Login is handled by the setup project (auth.setup.ts) via storageState for admin.
  */
 
 import { test, expect } from '@fixtures/fg-rbac-test';
-import { RBAC_USER_DETAIL, RBAC_ROLES, RBAC_WIZARD, RBAC_RA_TABLE } from '@constants/fg-rbac';
+import { RBAC_ROLES } from '@constants/fg-rbac';
 
 test.describe('Roles Page Validation', { tag: ['@fg-rbac'] }, () => {
   test.setTimeout(240000);
 
   test('RHACM4K-61779: Validate roles list and permissions', async ({
-    page,
     rolesListPage,
     roleDetailsPage,
     oc,
@@ -25,16 +27,13 @@ test.describe('Roles Page Validation', { tag: ['@fg-rbac'] }, () => {
       await rolesListPage.goto();
 
       for (const role of RBAC_ROLES.expected) {
-        await expect(page.getByRole('link', { name: role, exact: true })).toBeVisible();
+        await expect(rolesListPage.getRoleLink(role)).toBeVisible();
       }
     });
 
     await test.step('2: Verify permissions keywords in table', async () => {
       for (const { name, keywords } of RBAC_ROLES.permissions) {
-        const row = page.getByRole('row').filter({
-          has: page.getByRole('link', { name, exact: true }),
-        });
-        const permissionsCell = row.getByRole('gridcell').nth(1);
+        const permissionsCell = rolesListPage.getPermissionsCell(name);
         for (const keyword of keywords) {
           await expect(permissionsCell).toContainText(keyword);
         }
@@ -43,27 +42,20 @@ test.describe('Roles Page Validation', { tag: ['@fg-rbac'] }, () => {
 
     await test.step('3: Verify role details metadata and tabs', async () => {
       await roleDetailsPage.goto('kubevirt.io:admin');
-      await expect(
-        page.getByRole('heading', { name: RBAC_USER_DETAIL.fields.generalInformation, level: 3 })
-      ).toBeVisible({ timeout: 15000 });
-      await expect(page.getByRole('tab', { name: 'Details' })).toBeVisible();
-      await expect(page.getByRole('tab', { name: 'Permissions' })).toBeVisible();
-      await expect(page.getByRole('tab', { name: RBAC_USER_DETAIL.tabs.roleAssignments })).toBeVisible();
+      await expect(roleDetailsPage.getGeneralInfoSection()).toBeVisible({ timeout: 15000 });
+      await expect(roleDetailsPage.getTab('Details')).toBeVisible();
+      await expect(roleDetailsPage.getTab('Permissions')).toBeVisible();
+      await expect(roleDetailsPage.getTab('Role assignments')).toBeVisible();
     });
 
     await test.step('4: Verify role assignments tab', async () => {
-      await page.getByRole('tab', { name: RBAC_USER_DETAIL.tabs.roleAssignments }).click();
-      await expect(
-        page.getByRole('button', { name: RBAC_WIZARD.title })
-          .or(page.getByText(RBAC_RA_TABLE.emptyState.title))
-      ).toBeVisible({ timeout: 30000 });
+      await roleDetailsPage.openRoleAssignmentsTab();
+      await expect(roleDetailsPage.getRoleAssignmentsContent()).toBeVisible({ timeout: 30000 });
     });
 
     await test.step('5: Verify YAML tab content', async () => {
-      const yamlTab = page.getByRole('tab', { name: 'YAML' });
-      await expect(yamlTab).toBeVisible();
-      await yamlTab.click();
-      await expect(page.locator('.monaco-editor').first()).toBeVisible({ timeout: 15000 });
+      await roleDetailsPage.openYamlTab();
+      await expect(roleDetailsPage.getYamlEditor()).toBeVisible({ timeout: 15000 });
     });
 
     await test.step('6: Verify role type via CLI', async () => {
