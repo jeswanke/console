@@ -6,6 +6,8 @@ import { useAnchor, ShapeProps, EllipseAnchor } from '@patternfly/react-topology
 import CustomEllipseAnchor from './CustomEllipseAnchor'
 
 const PULSE_DURATION = '3s'
+const PULSE_KEY_TIMES = '0;0.3;1'
+const PULSE_KEY_SPLINES = '0.0 0.0 0.2 1; 0.0 0.0 0.2 1'
 
 type CustomEllipseProps = ShapeProps & {
   isMulti?: boolean
@@ -14,7 +16,6 @@ type CustomEllipseProps = ShapeProps & {
 
 const CustomEllipse: React.FunctionComponent<CustomEllipseProps> = ({
   className = css(styles.topologyNodeBackground),
-  element,
   width,
   height,
   filter,
@@ -32,30 +33,30 @@ const CustomEllipse: React.FunctionComponent<CustomEllipseProps> = ({
   const cy = height / 2
 
   if (shouldPulse) {
-    const pulseStartRadius = Math.max(rx, ry)
-    const pulseMaxRadius = Math.round((pulseStartRadius + Math.max(8, Math.round(pulseStartRadius * 0.5))) * 0.86)
-    const glowId = `custom-ellipse-glow-${element.getId()}`
+    const pulseStartRadius = rx
+    const pulseExpand = Math.round(Math.max(8, Math.round(pulseStartRadius * 0.5)) * 0.75)
+    const pulseMidRadius = pulseStartRadius + Math.round(pulseExpand * 0.85)
+    const pulseMaxRadius = pulseStartRadius + pulseExpand
     return (
       <g>
-        <defs>
-          <radialGradient id={glowId} cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="yellow" />
-            <stop offset="100%" stopColor="red" />
-          </radialGradient>
-        </defs>
-        <circle cx={cx} cy={cy} r={pulseStartRadius} fill={`url(#${glowId})`} opacity={0.8}>
+        <circle cx={cx} cy={cy} r={pulseStartRadius} fill="red" opacity={0.8}>
           <animate
             attributeName="r"
-            values={`${pulseStartRadius};${pulseMaxRadius}`}
+            values={`${pulseStartRadius};${pulseMidRadius};${pulseMaxRadius}`}
             dur={PULSE_DURATION}
             repeatCount="indefinite"
+            calcMode="spline"
+            keyTimes={PULSE_KEY_TIMES}
+            keySplines={PULSE_KEY_SPLINES}
           />
           <animate
             attributeName="opacity"
-            attributeType="CSS"
-            values="0.6;0"
+            values="0.8;0.15;0"
             dur={PULSE_DURATION}
             repeatCount="indefinite"
+            calcMode="spline"
+            keyTimes={PULSE_KEY_TIMES}
+            keySplines={PULSE_KEY_SPLINES}
           />
         </circle>
         <ellipse className={className} ref={dndDropRef} cx={cx} cy={cy} rx={rx} ry={ry} filter={filter} />

@@ -179,36 +179,43 @@ describe('CustomEllipse tests', () => {
     expect(mockUseAnchor).toHaveBeenCalledWith(EllipseAnchor)
   })
 
-  test('renders a single ellipse with pulsating gradient circle when shouldPulse is true', () => {
+  test('renders a single ellipse with pulsating circle when shouldPulse is true', () => {
     const { container } = render(<CustomEllipse element={mockElement} width={100} height={80} isMulti shouldPulse />)
 
     expect(container.querySelectorAll('ellipse')).toHaveLength(1)
     expect(container.querySelectorAll('circle')).toHaveLength(1)
-    expect(container.querySelector('radialGradient')).toBeInTheDocument()
-    expect(container.querySelectorAll('animate')).toHaveLength(1)
+    expect(container.querySelectorAll('animate')).toHaveLength(2)
   })
 
-  test('renders pulsating gradient circle centered on the ellipse', () => {
+  test('renders pulsating circle centered on the ellipse', () => {
     const width = 100
     const height = 80
-    const pulseBaseRadius = Math.max(Math.max(0, width / 2 - 1), Math.max(0, height / 2 - 1))
-    const pulseMaxRadius = pulseBaseRadius + Math.max(8, Math.round(pulseBaseRadius * 0.5))
+    const pulseBaseRadius = Math.max(0, width / 2 - 1)
+    const pulseExpand = Math.round(Math.max(8, Math.round(pulseBaseRadius * 0.5)) * 0.75)
+    const pulseMidRadius = pulseBaseRadius + Math.round(pulseExpand * 0.85)
+    const pulseMaxRadius = pulseBaseRadius + pulseExpand
     const { container } = render(
       <CustomEllipse element={{ getId: () => 'test-node' } as never} width={width} height={height} shouldPulse />
     )
     const circle = container.querySelector('circle')
-    const animate = container.querySelector('animate')
-    const gradientStops = container.querySelectorAll('stop')
+    const radiusAnimate = container.querySelector('animate[attributeName="r"]')
+    const opacityAnimate = container.querySelector('animate[attributeName="opacity"]')
 
     expect(circle).toHaveAttribute('cx', String(width / 2))
     expect(circle).toHaveAttribute('cy', String(height / 2))
     expect(circle).toHaveAttribute('r', String(pulseBaseRadius))
-    expect(circle).toHaveAttribute('fill', 'url(#custom-ellipse-glow-test-node)')
-    expect(animate).toHaveAttribute('attributeName', 'r')
-    expect(animate).toHaveAttribute('values', `${pulseBaseRadius};${pulseMaxRadius};${pulseBaseRadius}`)
-    expect(animate).toHaveAttribute('dur', '2s')
-    expect(animate).toHaveAttribute('repeatCount', 'indefinite')
-    expect(gradientStops[0]).toHaveAttribute('stop-color', 'yellow')
-    expect(gradientStops[1]).toHaveAttribute('stop-color', 'orange')
+    expect(circle).toHaveAttribute('fill', 'red')
+    expect(radiusAnimate).toHaveAttribute('values', `${pulseBaseRadius};${pulseMidRadius};${pulseMaxRadius}`)
+    expect(radiusAnimate).toHaveAttribute('calcMode', 'spline')
+    expect(radiusAnimate).toHaveAttribute('keyTimes', '0;0.3;1')
+    expect(radiusAnimate).toHaveAttribute('keySplines', '0.0 0.0 0.2 1; 0.0 0.0 0.2 1')
+    expect(radiusAnimate).toHaveAttribute('dur', '3s')
+    expect(radiusAnimate).toHaveAttribute('repeatCount', 'indefinite')
+    expect(opacityAnimate).toHaveAttribute('values', '0.8;0.15;0')
+    expect(opacityAnimate).toHaveAttribute('calcMode', 'spline')
+    expect(opacityAnimate).toHaveAttribute('keyTimes', '0;0.3;1')
+    expect(opacityAnimate).toHaveAttribute('keySplines', '0.0 0.0 0.2 1; 0.0 0.0 0.2 1')
+    expect(opacityAnimate).toHaveAttribute('dur', '3s')
+    expect(opacityAnimate).toHaveAttribute('repeatCount', 'indefinite')
   })
 })

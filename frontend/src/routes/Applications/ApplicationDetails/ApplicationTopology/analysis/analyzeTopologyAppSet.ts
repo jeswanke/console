@@ -1,5 +1,6 @@
 /* Copyright Contributors to the Open Cluster Management project */
 import jsYaml from 'js-yaml'
+import type { ApplicationSet, Placement } from '~/resources'
 import type { TopologyNode } from '../types'
 import type {
   IBulletDescription,
@@ -94,8 +95,8 @@ const addPlacementAnalysis = (
   filteredError: IFilteredConditionError,
   alerts: TopologyAlert[]
 ): void => {
-  void node
-  const currentYaml = jsYaml.dump(node.placement.spec.predicates ?? {}, { indent: 2 }).split('\n')
+  const placement = node.placement as Placement
+  const currentYaml = jsYaml.dump(placement.spec.predicates ?? {}, { indent: 2 }).split('\n')
   const suggestions: IBulletDescription[] = [{ title: 'Current specification', content: currentYaml }]
 
   const actions = [
@@ -112,8 +113,8 @@ const addApplicationAnalysis = (
   filteredError: IFilteredConditionError,
   alerts: TopologyAlert[]
 ): void => {
-  void node
-  const currentYaml = jsYaml.dump(node.specs.raw?.spec?.template ?? {}, { indent: 2 }).split('\n')
+  const applicationSet = node.specs.raw as ApplicationSet
+  const currentYaml = jsYaml.dump(applicationSet.spec.template?.spec?.sources ?? {}, { indent: 2 }).split('\n')
   const suggestions: IBulletDescription[] = [{ title: 'Current specification', content: currentYaml }]
 
   const actions = [
