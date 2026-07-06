@@ -1069,10 +1069,12 @@ export interface DetailsViewProps {
   /** ID of the currently selected node */
   selectedNodeId: string
   nodeDetailsProvider?: (node: any, activeFilters: Record<string, any>, t: TFunction, hubClusterName: string) => any
-  /** Active tab key for tab navigation */
-  activeTabKey?: number
   /** Hub cluster name for multi-cluster scenarios */
   hubClusterName?: string
+  /** Opens the YAML editor modal for the selected resource */
+  onEditYaml?: (node: TopologyNodeWithStatus) => void
+  /** Opens the logs modal for the selected resource */
+  onViewLogs?: (node: TopologyNodeWithStatus) => void
 }
 
 // State interface for DetailsView component
@@ -1081,8 +1083,6 @@ export interface DetailsViewState {
   isLoading: boolean
   /** ID of the currently loading link */
   linkID: string
-  /** Currently active tab key */
-  activeTabKey: number
   /** Filtered node when viewing specific resource details */
   filteredNode?: TopologyNodeWithStatus
 }

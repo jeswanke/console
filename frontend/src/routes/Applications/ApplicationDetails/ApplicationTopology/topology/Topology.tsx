@@ -73,6 +73,7 @@ export interface TopologyProps {
   hubClusterName: string
   onRefreshResources?: () => void
   onEditYaml?: (node: TopologyNode) => void
+  onViewLogs?: (node: TopologyNode) => void
 }
 
 interface TopologyViewComponentsProps {
@@ -92,6 +93,7 @@ export const TopologyViewComponents: React.FC<TopologyViewComponentsProps> = ({ 
     hubClusterName,
     alerts,
     onEditYaml,
+    onViewLogs,
   } = topologyProps
   const [selectedIds, setSelectedIds] = useState<string[]>()
 
@@ -132,6 +134,8 @@ export const TopologyViewComponents: React.FC<TopologyViewComponentsProps> = ({ 
           nodeDetailsProvider={nodeDetailsProvider}
           t={t}
           hubClusterName={hubClusterName}
+          onEditYaml={onEditYaml}
+          onViewLogs={onViewLogs}
         />
       ) : undefined,
       !selectedNodeId
