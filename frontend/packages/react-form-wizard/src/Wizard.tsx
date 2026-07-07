@@ -83,6 +83,8 @@ export interface WizardProps {
   submitButtonText?: string
   submittingButtonText?: string
   isLoading?: boolean
+  height?: number | string
+  isModal?: boolean
 }
 
 export type WizardSubmit = (data: unknown) => Promise<void>
@@ -128,7 +130,7 @@ export function Wizard(props: WizardProps & { showHeader?: boolean; showYaml?: b
                             <FooterContentProvider>
                               <Drawer isExpanded={drawerExpanded} isInline>
                                 <DefaultDataContext.Provider value={defaultDataSnapshot}>
-                                  <DrawerContent panelContent={<WizardDrawer yamlEditor={props.yamlEditor} />}>
+                                  <DrawerContent panelContent={<WizardDrawer yamlEditor={props.yamlEditor} isModal={props.isModal} />}>
                                     <DrawerContentBody>
                                       <ItemContext.Provider value={data}>
                                         <StringContext.Provider value={wizardStrings || defaultStrings}>
@@ -142,6 +144,7 @@ export function Wizard(props: WizardProps & { showHeader?: boolean; showYaml?: b
                                             submitButtonText={props.submitButtonText}
                                             submittingButtonText={props.submittingButtonText}
                                             isLoading={props.isLoading}
+                                            height={props.height}
                                           >
                                             {props.children}
                                           </WizardInternal>
@@ -189,6 +192,7 @@ type WizardInternalProps = Omit<WizardFooterProps, 'steps'> & {
   onCancel: WizardCancel
   hasButtons?: boolean
   isLoading?: boolean
+  height?: number | string
 }
 
 const MAX_REVIEW_STORAGE_KEY_LEN = 96
@@ -215,6 +219,7 @@ function WizardInternal({
   submitButtonText,
   submittingButtonText,
   isLoading,
+  height,
 }: WizardInternalProps) {
   const { reviewLabel, stepsAriaLabel, contentAriaLabel } = useStringContext()
   const resolvedReviewStorageKey = reviewStorageKey ?? defaultReviewStorageKeyFromId(id ?? '')
@@ -263,6 +268,7 @@ function WizardInternal({
       <PFWizard
         navAriaLabel={`${stepsAriaLabel}`}
         aria-label={`${contentAriaLabel}`}
+        height={height}
         footer={
           <MyFooter
             onSubmit={onSubmit}
@@ -485,10 +491,10 @@ function RenderHiddenSteps(props: { stepComponents: ReactElement[] }) {
   )
 }
 
-function WizardDrawer(props: { yamlEditor?: () => ReactNode }) {
+function WizardDrawer(props: { yamlEditor?: () => ReactNode; isModal?: boolean }) {
   const [yamlEditor] = useState(props.yamlEditor ?? undefined)
   return (
-    <DrawerPanelContent isResizable={true} defaultSize="600px">
+    <DrawerPanelContent isResizable={true} defaultSize={props.isModal ? '400px' : '600px'}>
       {yamlEditor}
     </DrawerPanelContent>
   )

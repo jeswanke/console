@@ -107,11 +107,12 @@ const sortAlerts = (alerts: TopologyAlert[]): TopologyAlert[] => {
 
 export interface TopologyAlertsProps {
   alerts: TopologyAlert[]
+  onEditAppSet?: (node: TopologyNode) => void
   onEditYaml?: (node: TopologyNode) => void
   onViewLogs?: (node: TopologyNode) => void
 }
 
-export function TopologyAlerts({ alerts, onEditYaml, onViewLogs }: TopologyAlertsProps) {
+export function TopologyAlerts({ alerts, onEditAppSet, onEditYaml, onViewLogs }: TopologyAlertsProps) {
   const dismissedIdsRef = useRef<Set<string>>(new Set())
   const [visibleAlerts, setVisibleAlerts] = useState<TopologyAlert[]>([])
   const [removingIds, setRemovingIds] = useState<Set<string>>(new Set())
@@ -207,6 +208,10 @@ export function TopologyAlerts({ alerts, onEditYaml, onViewLogs }: TopologyAlert
               {alert.actions.map((action) =>
                 action.action?.url ? (
                   <AlertActionLink key={action.label} component="a" href={action.action.url}>
+                    {action.label}
+                  </AlertActionLink>
+                ) : action.label === 'Edit specification' && action.node ? (
+                  <AlertActionLink key={action.label} onClick={() => onEditAppSet?.(action.node!)}>
                     {action.label}
                   </AlertActionLink>
                 ) : action.label === 'Edit YAML' && action.node ? (

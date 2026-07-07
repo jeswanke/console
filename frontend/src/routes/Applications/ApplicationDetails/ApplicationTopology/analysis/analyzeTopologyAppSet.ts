@@ -102,7 +102,7 @@ const addPlacementAnalysis = (
   const actions = [
     {
       label: 'Edit specification',
-      action: { url: 'yahoo.com' },
+      node,
     },
   ]
   createTopologyAlert(suggestions, actions, alerts, filteredError)
@@ -120,7 +120,7 @@ const addApplicationAnalysis = (
   const actions = [
     {
       label: 'Edit specification',
-      action: { url: 'yahoo.com' },
+      node,
     },
     {
       label: 'Edit YAML',
