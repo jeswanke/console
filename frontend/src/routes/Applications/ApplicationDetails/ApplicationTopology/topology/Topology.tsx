@@ -160,7 +160,9 @@ export const TopologyViewComponents: React.FC<TopologyViewComponentsProps> = ({ 
         onKeyDown={() => {}}
         style={{ width: '100%', height: '100%', position: 'relative' }}
       >
-        {alerts && alerts.length > 0 && <TopologyAlerts alerts={alerts} onEditYaml={onEditYaml} />}
+        {alerts && alerts.length > 0 && (
+          <TopologyAlerts alerts={alerts} onEditYaml={onEditYaml} onViewLogs={onViewLogs} />
+        )}
         <VisualizationSurface state={{ selectedIds }} />
       </div>
     </TopologyView>

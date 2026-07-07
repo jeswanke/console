@@ -124,13 +124,16 @@ const addApplicationAnalysis = (
     },
     {
       label: 'Edit YAML',
-      action: {},
       node,
     },
-    {
-      label: 'Show logs',
-      action: { url: 'yahoo.com' },
-    },
+    ...(node.type === 'pod'
+      ? [
+          {
+            label: 'Show logs',
+            node,
+          },
+        ]
+      : []),
   ]
   createTopologyAlert(suggestions, actions, alerts, filteredError)
 }

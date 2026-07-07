@@ -4,7 +4,7 @@ import type { PulseColor, TopologyNode } from '../types'
 
 export interface TopologyAlertAction {
   label: string
-  action: { url?: string; func?: () => void }
+  action?: { url?: string; func?: () => void }
   node?: TopologyNode
 }
 

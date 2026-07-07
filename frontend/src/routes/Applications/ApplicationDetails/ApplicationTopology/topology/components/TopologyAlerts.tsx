@@ -108,9 +108,10 @@ const sortAlerts = (alerts: TopologyAlert[]): TopologyAlert[] => {
 export interface TopologyAlertsProps {
   alerts: TopologyAlert[]
   onEditYaml?: (node: TopologyNode) => void
+  onViewLogs?: (node: TopologyNode) => void
 }
 
-export function TopologyAlerts({ alerts, onEditYaml }: TopologyAlertsProps) {
+export function TopologyAlerts({ alerts, onEditYaml, onViewLogs }: TopologyAlertsProps) {
   const dismissedIdsRef = useRef<Set<string>>(new Set())
   const [visibleAlerts, setVisibleAlerts] = useState<TopologyAlert[]>([])
   const [removingIds, setRemovingIds] = useState<Set<string>>(new Set())
@@ -204,7 +205,7 @@ export function TopologyAlerts({ alerts, onEditYaml }: TopologyAlertsProps) {
           const actionLinks = alert.actions?.length ? (
             <Fragment>
               {alert.actions.map((action) =>
-                action.action.url ? (
+                action.action?.url ? (
                   <AlertActionLink key={action.label} component="a" href={action.action.url}>
                     {action.label}
                   </AlertActionLink>
@@ -212,7 +213,11 @@ export function TopologyAlerts({ alerts, onEditYaml }: TopologyAlertsProps) {
                   <AlertActionLink key={action.label} onClick={() => onEditYaml?.(action.node!)}>
                     {action.label}
                   </AlertActionLink>
-                ) : action.action.func ? (
+                ) : action.label === 'Show logs' && action.node ? (
+                  <AlertActionLink key={action.label} onClick={() => onViewLogs?.(action.node!)}>
+                    {action.label}
+                  </AlertActionLink>
+                ) : action.action?.func ? (
                   <AlertActionLink key={action.label} onClick={action.action.func}>
                     {action.label}
                   </AlertActionLink>
