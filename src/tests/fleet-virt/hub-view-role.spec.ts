@@ -87,9 +87,7 @@ test.describe('FG-RBAC - Hub View Role Limited Access', { tag: ['@fg-rbac', '@fl
     });
 
     await test.step('6: Verify Console tab is accessible', async () => {
-      const consoleLink = rbacSession.page.getByRole('link', { name: 'Console', exact: true });
-      await consoleLink.click();
-
+      await vmDetailsPage.getTabLink('Console').click();
       await rbacSession.page.waitForURL('**/console**', { timeout: 15000 });
     });
   });

@@ -6,8 +6,12 @@ import { AdvancedSearchModal } from '@components/fleet-virt/AdvancedSearchModal'
 import { SavedSearches } from '@components/fleet-virt/SavedSearches';
 import { TreeView } from '@components/fleet-virt/TreeView';
 import { StatusFilter } from '@components/fleet-virt/StatusFilter';
+import { getVirtConfig } from '@config';
+import type { VirtConfig } from '@config';
+
 type FleetVirtFixtures = {
   oc: OcCliService;
+  virtConfig: VirtConfig;
   fleetVirtPage: FleetVirtPage;
   vmDetailsPage: VmDetailsPage;
   advancedSearchModal: AdvancedSearchModal;
@@ -19,6 +23,10 @@ type FleetVirtFixtures = {
 export const test = base.extend<FleetVirtFixtures>({
   oc: async ({}, use) => {
     await use(new OcCliService());
+  },
+
+  virtConfig: async ({}, use) => {
+    await use(getVirtConfig());
   },
 
   fleetVirtPage: async ({ page, oc }, use) => {

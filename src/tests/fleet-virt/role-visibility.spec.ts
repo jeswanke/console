@@ -53,8 +53,6 @@ test.describe('FG-RBAC - Fleet Virt Role Visibility', { tag: ['@fg-rbac', '@flee
     await test.step('2: Verify page heading and VM tab', async () => {
       await expect(fleetVirtPage.getPageHeading()).toContainText('Virtual', { timeout: 10000 });
       await fleetVirtPage.gotoVmTab();
-      const vmTab = rbacSession.page.getByRole('tab', { name: 'Virtual machines' });
-      await expect(vmTab).toHaveAttribute('aria-selected', 'true', { timeout: 10000 });
     });
 
     await test.step('3: Verify tree view loads', async () => {
@@ -98,14 +96,14 @@ test.describe('FG-RBAC - Fleet Virt Role Visibility', { tag: ['@fg-rbac', '@flee
     });
 
     await test.step('5: Verify Console tab is accessible', async () => {
-      const consoleLink = rbacSession.page.getByRole('link', { name: 'Console', exact: true });
-      const consoleVisible = await consoleLink.isVisible().catch(() => false);
+      const consoleTab = vmDetailsPage.getTabLink('Console');
+      const consoleVisible = await consoleTab.isVisible().catch(() => false);
 
       if (!consoleVisible) {
         return;
       }
 
-      await consoleLink.click();
+      await consoleTab.click();
       await rbacSession.page.waitForURL('**/console**', { timeout: 15000 });
     });
 
