@@ -84,7 +84,14 @@ function EditYamlModalContent({ close, node: topologyNode, hubClusterName }: IEd
 
   const isHubClusterResource = (cluster === hubClusterName || isDesign) && !remoteArgoCluster
   const capitalizedKind = kind ? kind.charAt(0).toUpperCase() + kind.slice(1) : ''
-  const editorTitle = [cluster, capitalizedKind, namespace, name].filter((part) => part).join(' > ')
+  const editorTitle = [
+    capitalizedKind,
+    kind === 'applicationset' || kind === 'placement' || kind === 'placementdecision' ? undefined : cluster,
+    namespace,
+    name,
+  ]
+    .filter((part) => part)
+    .join(' > ')
 
   const [resource, setResource] = useState<any>(undefined)
   const [defaultItem, setDefaultItem] = useState<any>(undefined)

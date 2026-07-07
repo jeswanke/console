@@ -5,7 +5,7 @@ import * as React from 'react'
 import { useAnchor, ShapeProps, EllipseAnchor } from '@patternfly/react-topology'
 import CustomEllipseAnchor from './CustomEllipseAnchor'
 
-const PULSE_DURATION = '3s'
+const PULSE_DURATION = '2.5s'
 const PULSE_KEY_TIMES = '0;0.3;1'
 const PULSE_KEY_SPLINES = '0.0 0.0 0.2 1; 0.0 0.0 0.2 1'
 
