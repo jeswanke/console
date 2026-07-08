@@ -2,8 +2,17 @@
 import type { IResource } from '../../../../../resources'
 import type { PulseColor, TopologyNode } from '../types'
 
+export enum TopologyAlertActionType {
+  editYaml = 'editYaml',
+  showLog = 'showLog',
+  viewYaml = 'viewYaml',
+  launchArgo = 'launchArgo',
+  openUrl = 'openUrl',
+}
+
 export interface TopologyAlertAction {
   label: string
+  type: TopologyAlertActionType
   action?: { url?: string; func?: () => void }
   node?: TopologyNode
   highlightEditorPath?: string

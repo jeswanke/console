@@ -4,6 +4,7 @@ import { Alert, AlertActionCloseButton, AlertActionLink, AlertGroup, AlertProps 
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { PulseColor, TopologyNode } from '../../types'
 import type { TopologyAlert } from '../../analysis/analyzeTopology'
+import { TopologyAlertActionType } from '../../analysis/utils'
 
 const STATUS_ORDER: PulseColor[] = ['red', 'orange', 'yellow', 'green']
 
@@ -107,12 +108,11 @@ const sortAlerts = (alerts: TopologyAlert[]): TopologyAlert[] => {
 
 export interface TopologyAlertsProps {
   alerts: TopologyAlert[]
-  onEditAppSet?: (node: TopologyNode) => void
   onEditYaml?: (node: TopologyNode, highlightEditorPath?: string) => void
   onViewLogs?: (node: TopologyNode) => void
 }
 
-export function TopologyAlerts({ alerts, onEditAppSet, onEditYaml, onViewLogs }: TopologyAlertsProps) {
+export function TopologyAlerts({ alerts, onEditYaml, onViewLogs }: TopologyAlertsProps) {
   const dismissedIdsRef = useRef<Set<string>>(new Set())
   const [visibleAlerts, setVisibleAlerts] = useState<TopologyAlert[]>([])
   const [removingIds, setRemovingIds] = useState<Set<string>>(new Set())
@@ -205,32 +205,39 @@ export function TopologyAlerts({ alerts, onEditAppSet, onEditYaml, onViewLogs }:
           const isNew = newAlertIds.has(alertId)
           const actionLinks = alert.actions?.length ? (
             <Fragment>
-              {alert.actions.map((action) =>
-                action.action?.url ? (
-                  <AlertActionLink key={action.label} component="a" href={action.action.url}>
-                    {action.label}
-                  </AlertActionLink>
-                ) : action.label === 'Edit specification' && action.node ? (
-                  <AlertActionLink key={action.label} onClick={() => onEditAppSet?.(action.node!)}>
-                    {action.label}
-                  </AlertActionLink>
-                ) : action.label === 'Edit YAML' && action.node ? (
-                  <AlertActionLink
-                    key={action.label}
-                    onClick={() => onEditYaml?.(action.node!, action.highlightEditorPath)}
-                  >
-                    {action.label}
-                  </AlertActionLink>
-                ) : action.label === 'Show logs' && action.node ? (
-                  <AlertActionLink key={action.label} onClick={() => onViewLogs?.(action.node!)}>
-                    {action.label}
-                  </AlertActionLink>
-                ) : action.action?.func ? (
-                  <AlertActionLink key={action.label} onClick={action.action.func}>
-                    {action.label}
-                  </AlertActionLink>
-                ) : null
-              )}
+              {alert.actions.map((action) => {
+                switch (action.type) {
+                  case TopologyAlertActionType.launchArgo:
+                  case TopologyAlertActionType.openUrl:
+                    return action.action?.url ? (
+                      <AlertActionLink key={action.label} component="a" href={action.action.url}>
+                        {action.label}
+                      </AlertActionLink>
+                    ) : null
+                  case TopologyAlertActionType.editYaml:
+                  case TopologyAlertActionType.viewYaml:
+                    return action.node ? (
+                      <AlertActionLink
+                        key={action.label}
+                        onClick={() => onEditYaml?.(action.node!, action.highlightEditorPath)}
+                      >
+                        {action.label}
+                      </AlertActionLink>
+                    ) : null
+                  case TopologyAlertActionType.showLog:
+                    return action.node ? (
+                      <AlertActionLink key={action.label} onClick={() => onViewLogs?.(action.node!)}>
+                        {action.label}
+                      </AlertActionLink>
+                    ) : null
+                  default:
+                    return action.action?.func ? (
+                      <AlertActionLink key={action.label} onClick={action.action.func}>
+                        {action.label}
+                      </AlertActionLink>
+                    ) : null
+                }
+              })}
             </Fragment>
           ) : undefined
 

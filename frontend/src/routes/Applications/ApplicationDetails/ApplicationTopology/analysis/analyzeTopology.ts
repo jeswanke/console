@@ -16,7 +16,7 @@ export type {
   TopologyAlertDescription,
 } from './utils'
 
-export { createTopologyAlert, extractConditionsErrors } from './utils'
+export { createTopologyAlert, extractConditionsErrors, TopologyAlertActionType } from './utils'
 
 /**
  * Analyzes topology nodes and produces alerts for placement, cluster, and deployment issues.

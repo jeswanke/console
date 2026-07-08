@@ -131,9 +131,12 @@ export function ApplicationTopologyPageContent() {
     handleClusterDetailsContainerUpdate: setClusterDetailsContainerData,
   }
 
-  const processActionLink = (resource: any, toggleLoading: () => void, hubClusterName: string) => {
-    processResourceActionLink(resource, toggleLoading, t, hubClusterName)
-  }
+  const processActionLink = useCallback(
+    (resource: any, toggleLoading: () => void, hubClusterName: string) => {
+      processResourceActionLink(resource, toggleLoading, t, hubClusterName)
+    },
+    [t]
+  )
 
   const canUpdateStatuses = !!statuses
   useEffect(() => {

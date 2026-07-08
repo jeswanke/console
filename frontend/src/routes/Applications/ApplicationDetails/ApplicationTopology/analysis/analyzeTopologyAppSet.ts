@@ -1,14 +1,10 @@
 /* Copyright Contributors to the Open Cluster Management project */
-import jsYaml from 'js-yaml'
-import type { ApplicationSet, Placement } from '~/resources'
 import type { TopologyNode } from '../types'
-import type {
-  IBulletDescription,
-  IFilteredConditionError,
-  IResourcesWithStatus,
-  TopologyAlert,
-} from './analyzeTopology'
-import { createTopologyAlert, extractConditionsErrors, setNodePulseForTypes } from './utils'
+import type { IFilteredConditionError, IResourcesWithStatus, TopologyAlert } from './analyzeTopology'
+import { createAlertsApplication } from './createAlertsApplication'
+import { createAlertsAppset } from './createAlertsAppset'
+import { createAlertsPlacement } from './createAlertsPlacement'
+import { extractConditionsErrors, setNodePulseForTypes } from './utils'
 
 /**
  * Analyzes ApplicationSet topology nodes for placement and application errors.
@@ -29,7 +25,7 @@ export const analyzeTopologyAppSet = (appSet: TopologyNode, nodes: TopologyNode[
 
   if (placementErrors.length > 0) {
     placementErrors.forEach((placementError) => {
-      addPlacementAnalysis(placement!, placementError, alerts)
+      createAlertsPlacement(placement!, placementError, alerts)
     })
 
     if (placement) {
@@ -47,7 +43,7 @@ export const analyzeTopologyAppSet = (appSet: TopologyNode, nodes: TopologyNode[
 
     if (appSetAppsErrors.length > 0) {
       appSetAppsErrors.forEach((appSetAppsError) => {
-        addApplicationAnalysis(appSet, appSetAppsError, alerts)
+        createAlertsApplication(appSet, appSetAppsError, alerts)
       })
 
       appSet.specs.pulse = 'red'
@@ -62,79 +58,10 @@ export const analyzeTopologyAppSet = (appSet: TopologyNode, nodes: TopologyNode[
 
     if (appsetErrors.length > 0) {
       appsetErrors.forEach((appsetError) => {
-        addAppSetAnalysis(appSet, appsetError, alerts)
+        createAlertsAppset(appSet, appsetError, alerts)
       })
 
       appSet.specs.pulse = 'red'
     }
   }
-}
-
-const addAppSetAnalysis = (
-  node: TopologyNode,
-  filteredError: IFilteredConditionError,
-  alerts: TopologyAlert[]
-): void => {
-  void node
-  const suggestions: IBulletDescription[] = [
-    { title: 'tip 1', content: ['line1', 'line2'] },
-    { title: 'tip 2', content: ['line1', 'line2'] },
-    { title: 'tip 3', content: ['line1', 'line2'] },
-  ]
-  const actions = [
-    {
-      label: 'Launch Argo editor',
-      action: { url: 'yahoo.com' },
-    },
-  ]
-  createTopologyAlert(suggestions, actions, alerts, filteredError)
-}
-
-const addPlacementAnalysis = (
-  node: TopologyNode,
-  filteredError: IFilteredConditionError,
-  alerts: TopologyAlert[]
-): void => {
-  const placement = node.placement as Placement
-  const currentYaml = jsYaml.dump(placement.spec.predicates ?? {}, { indent: 2 }).split('\n')
-  const suggestions: IBulletDescription[] = [{ title: 'Current specification', content: currentYaml }]
-
-  const actions = [
-    {
-      label: 'Edit specification',
-      node,
-    },
-  ]
-  createTopologyAlert(suggestions, actions, alerts, filteredError)
-}
-
-const addApplicationAnalysis = (
-  node: TopologyNode,
-  filteredError: IFilteredConditionError,
-  alerts: TopologyAlert[]
-): void => {
-  const applicationSet = node.specs.raw as ApplicationSet
-  const currentYaml = jsYaml.dump(applicationSet.spec.template?.spec?.sources ?? {}, { indent: 2 }).split('\n')
-  const suggestions: IBulletDescription[] = [{ title: 'Current specification', content: currentYaml }]
-
-  const actions = [
-    {
-      label: 'Edit specification',
-      node,
-    },
-    {
-      label: 'Edit YAML',
-      node,
-      highlightEditorPath: 'ApplicationSet.spec.template.spec.sources',
-    },
-    ...(node.type === 'pod'
-      ? [
-          {
-            label: 'Show logs',
-            node,
-          },
-        ]
-      : []),
-  ]
-  createTopologyAlert(suggestions, actions, alerts, filteredError)
 }
