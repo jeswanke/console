@@ -156,12 +156,13 @@ export function ApplicationTopologyPageContent() {
   })
 
   const handleEditYaml = useCallback(
-    (node: TopologyNode) => {
+    (node: TopologyNode, highlightEditorPath?: string) => {
       setEditYamlModalProps({
         open: true,
         close: () => setEditYamlModalProps({ open: false }),
         node,
         hubClusterName,
+        highlightEditorPath,
       })
     },
     [hubClusterName]

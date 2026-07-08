@@ -72,7 +72,7 @@ export interface TopologyProps {
   processActionLink?: (resource: any, toggleLoading: () => void, hubClusterName: string) => void
   hubClusterName: string
   onRefreshResources?: () => void
-  onEditYaml?: (node: TopologyNode) => void
+  onEditYaml?: (node: TopologyNode, highlightEditorPath?: string) => void
   onViewLogs?: (node: TopologyNode) => void
 }
 

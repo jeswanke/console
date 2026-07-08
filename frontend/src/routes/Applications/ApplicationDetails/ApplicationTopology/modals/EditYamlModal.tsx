@@ -25,6 +25,7 @@ export interface IEditYamlModalProps {
   open: boolean
   node: TopologyNode
   hubClusterName: string
+  highlightEditorPath?: string
 }
 
 export function EditYamlModal(props: IEditYamlModalProps | { open: false }) {
@@ -35,7 +36,7 @@ export function EditYamlModal(props: IEditYamlModalProps | { open: false }) {
   return <EditYamlModalContent {...props} />
 }
 
-function EditYamlModalContent({ close, node: topologyNode, hubClusterName }: IEditYamlModalProps) {
+function EditYamlModalContent({ close, node: topologyNode, hubClusterName, highlightEditorPath }: IEditYamlModalProps) {
   const { t } = useTranslation()
   const node = topologyNode as any
   const {
@@ -104,8 +105,6 @@ function EditYamlModalContent({ close, node: topologyNode, hubClusterName }: IEd
   const [editorValidationStatus, setEditorValidationStatus] = useState(EditorValidationStatus.success)
   const [isReloading, setIsReloading] = useState(false)
   const shouldFoldAfterReloadRef = useRef(false)
-  const [highlightEditorPath] = useState<string | undefined>(undefined)
-
   const { apiGroup, version } = getGroupFromApiVersion(apiVersion)
   const [resourceUpdate, watchLoaded, watchError] = useFleetK8sWatchResource({
     groupVersionKind: { group: apiGroup, version, kind },
@@ -137,7 +136,12 @@ function EditYamlModalContent({ close, node: topologyNode, hubClusterName }: IEd
 
   useEffect(() => {
     let isComponentMounted = true
-    fetchResource()
+    const loadResource =
+      (type === 'applicationset' || type === 'placement') && node?.specs?.raw
+        ? Promise.resolve(node.specs.raw)
+        : fetchResource()
+
+    loadResource
       .then((response) => {
         if (isComponentMounted) {
           setResource(response)
@@ -155,7 +159,7 @@ function EditYamlModalContent({ close, node: topologyNode, hubClusterName }: IEd
     return () => {
       isComponentMounted = false
     }
-  }, [fetchResource])
+  }, [fetchResource, node?.specs?.raw, type])
 
   const watchedResource = Array.isArray(resourceUpdate) ? resourceUpdate[0] : resourceUpdate
   useEffect(() => {

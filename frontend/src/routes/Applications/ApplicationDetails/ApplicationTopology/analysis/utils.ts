@@ -6,6 +6,7 @@ export interface TopologyAlertAction {
   label: string
   action?: { url?: string; func?: () => void }
   node?: TopologyNode
+  highlightEditorPath?: string
 }
 
 export interface IBulletDescription {
@@ -30,6 +31,7 @@ export interface IResourcesWithStatus extends IResource {
 }
 
 export interface TopologyAlert {
+  id: string
   status: PulseColor
   title: string
   description?: TopologyAlertDescription
@@ -254,6 +256,13 @@ export const filteredConditionErrors = (conditionError: IConditionWithErrors): I
   }
 }
 /**
+ * Creates a stable alert id from title and description for deduplication.
+ */
+const getTopologyAlertId = (title: string, description: TopologyAlertDescription): string => {
+  return `${title}::${description.message}`
+}
+
+/**
  * Creates and pushes a topology alert from a resource condition error.
  */
 export const createTopologyAlert = (
@@ -295,7 +304,13 @@ export const createTopologyAlert = (
     title += ` ${filteredError.namespace}/${filteredError.name}`
   }
 
+  const id = getTopologyAlertId(title, description)
+  if (alerts.some((alert) => alert.id === id)) {
+    return
+  }
+
   alerts.push({
+    id,
     status,
     title,
     description,

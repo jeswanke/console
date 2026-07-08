@@ -108,7 +108,7 @@ const sortAlerts = (alerts: TopologyAlert[]): TopologyAlert[] => {
 export interface TopologyAlertsProps {
   alerts: TopologyAlert[]
   onEditAppSet?: (node: TopologyNode) => void
-  onEditYaml?: (node: TopologyNode) => void
+  onEditYaml?: (node: TopologyNode, highlightEditorPath?: string) => void
   onViewLogs?: (node: TopologyNode) => void
 }
 
@@ -123,9 +123,9 @@ export function TopologyAlerts({ alerts, onEditAppSet, onEditYaml, onViewLogs }:
   const sortedInputAlerts = useMemo(() => sortAlerts(alerts), [alerts])
 
   useEffect(() => {
-    const incoming = sortedInputAlerts.filter((alert) => !dismissedIdsRef.current.has(alert.title))
-    const existingTitles = new Set(visibleAlerts.map((a) => a.title))
-    const toAdd = incoming.filter((alert) => !existingTitles.has(alert.title))
+    const incoming = sortedInputAlerts.filter((alert) => !dismissedIdsRef.current.has(alert.id))
+    const existingIds = new Set(visibleAlerts.map((a) => a.id))
+    const toAdd = incoming.filter((alert) => !existingIds.has(alert.id))
 
     if (toAdd.length === 0) {
       setVisibleAlerts(incoming)
@@ -136,27 +136,27 @@ export function TopologyAlerts({ alerts, onEditAppSet, onEditYaml, onViewLogs }:
     const addedIds = new Set<string>()
 
     toAdd.forEach((alert) => {
-      const alertTitle = alert.title
+      const alertId = alert.id
       setTimeout(() => {
         setVisibleAlerts((prev) => {
-          if (prev.some((a) => a.title === alertTitle)) return prev
+          if (prev.some((a) => a.id === alertId)) return prev
           return sortAlerts([...prev, alert])
         })
-        setNewAlertIds((prev) => new Set(prev).add(alertTitle))
+        setNewAlertIds((prev) => new Set(prev).add(alertId))
         setTimeout(() => {
           setNewAlertIds((prev) => {
             const next = new Set(prev)
-            next.delete(alertTitle)
+            next.delete(alertId)
             return next
           })
         }, 300)
       }, delay)
       delay += 100
-      addedIds.add(alertTitle)
+      addedIds.add(alertId)
     })
 
     setVisibleAlerts((prev) => {
-      const kept = prev.filter((a) => incoming.some((i) => i.title === a.title))
+      const kept = prev.filter((a) => incoming.some((i) => i.id === a.id))
       return sortAlerts(kept)
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -175,7 +175,7 @@ export function TopologyAlerts({ alerts, onEditAppSet, onEditYaml, onViewLogs }:
     setRemovingIds((prev) => new Set(prev).add(alertId))
     setTimeout(() => {
       dismissedIdsRef.current.add(alertId)
-      setVisibleAlerts((prev) => prev.filter((a) => a.title !== alertId))
+      setVisibleAlerts((prev) => prev.filter((a) => a.id !== alertId))
       setRemovingIds((prev) => {
         const next = new Set(prev)
         next.delete(alertId)
@@ -200,7 +200,7 @@ export function TopologyAlerts({ alerts, onEditAppSet, onEditYaml, onViewLogs }:
     >
       <AlertGroup>
         {visibleAlerts.map((alert, index) => {
-          const alertId = alert.title
+          const alertId = alert.id
           const isRemoving = removingIds.has(alertId)
           const isNew = newAlertIds.has(alertId)
           const actionLinks = alert.actions?.length ? (
@@ -215,7 +215,10 @@ export function TopologyAlerts({ alerts, onEditAppSet, onEditYaml, onViewLogs }:
                     {action.label}
                   </AlertActionLink>
                 ) : action.label === 'Edit YAML' && action.node ? (
-                  <AlertActionLink key={action.label} onClick={() => onEditYaml?.(action.node!)}>
+                  <AlertActionLink
+                    key={action.label}
+                    onClick={() => onEditYaml?.(action.node!, action.highlightEditorPath)}
+                  >
                     {action.label}
                   </AlertActionLink>
                 ) : action.label === 'Show logs' && action.node ? (

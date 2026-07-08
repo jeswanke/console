@@ -125,6 +125,7 @@ const addApplicationAnalysis = (
     {
       label: 'Edit YAML',
       node,
+      highlightEditorPath: 'ApplicationSet.spec.template.spec.sources',
     },
     ...(node.type === 'pod'
       ? [
