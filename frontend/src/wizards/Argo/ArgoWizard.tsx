@@ -147,7 +147,6 @@ export interface ArgoWizardProps {
   yamlEditor?: () => ReactNode
   isPullModel?: boolean
   repoSecrets?: Secret[]
-  isModal?: boolean
 }
 
 function onlyUnique(value: any, index: any, self: string | any[]) {
@@ -455,7 +454,6 @@ export function ArgoWizard(props: ArgoWizardProps) {
         id="application-set-wizard"
         wizardStrings={translatedWizardStrings}
         breadcrumb={props.breadcrumb}
-        isModal={props.isModal}
         title={
           resources
             ? isPullModel

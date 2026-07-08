@@ -9,7 +9,8 @@ import {
   useItem,
 } from '@patternfly-labs/react-form-wizard'
 import { ArgoWizard } from '~/wizards/Argo/ArgoWizard'
-import { useContext, useEffect, useState } from 'react'
+import { useCallback, useContext, useEffect, useState } from 'react'
+import { Navigate, useNavigate, useParams } from 'react-router'
 import { useRecoilValue, useSharedAtoms, useSharedSelectors } from '~/shared-recoil'
 import { LoadingPage } from '~/components/LoadingPage'
 import { SyncEditor, ValidationStatus } from '~/components/SyncEditor/SyncEditor'
@@ -73,13 +74,34 @@ export interface EditApplicationSetProps {
   isModal?: boolean
 }
 
-export function EditApplicationSet({
+export default function EditArgoApplicationSet() {
+  const { name, namespace } = useParams<{ name: string; namespace: string }>()
+  const navigate = useNavigate()
+  const navigateToApplications = useCallback(() => {
+    navigate(NavigationPath.applications)
+  }, [navigate])
+
+  if (!name || !namespace) {
+    return <Navigate to={NavigationPath.applications} replace />
+  }
+
+  return (
+    <EditArgoApplicationSetContent
+      name={name}
+      namespace={namespace}
+      onCancel={navigateToApplications}
+      onSubmitSuccess={navigateToApplications}
+      onApplicationSetNotFound={navigateToApplications}
+    />
+  )
+}
+
+export function EditArgoApplicationSetContent({
   name,
   namespace,
   onCancel,
   onSubmitSuccess,
   onApplicationSetNotFound,
-  isModal = false,
 }: EditApplicationSetProps) {
   const { t } = useTranslation()
   const { timeZones } = useTimezones()
@@ -196,7 +218,6 @@ export function EditApplicationSet({
         clusters={managedClusters}
         clusterSets={clusterSets}
         clusterSetBindings={managedClusterSetBindings}
-        isModal={isModal}
         onCancel={() => {
           cancelForm()
           onCancel()
@@ -227,23 +248,6 @@ export function EditApplicationSet({
         repoSecrets={secrets}
       />
     )
-
-  if (isModal) {
-    return (
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          height: '100%',
-          maxHeight: '100%',
-          minHeight: 0,
-          overflow: 'hidden',
-        }}
-      >
-        {content}
-      </div>
-    )
-  }
 
   return content
 }

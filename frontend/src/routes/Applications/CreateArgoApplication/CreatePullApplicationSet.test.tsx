@@ -70,7 +70,7 @@ import {
 } from '~/resources'
 import { gitOpsOperators } from '~/routes/Applications/Application.sharedmocks'
 import { CreatePullApplicationSet } from './CreatePullApplicationSet'
-import { EditApplicationSetPage } from './EditApplicationSetPage'
+import EditArgoApplicationSet from './EditArgoApplicationSet'
 
 const gitOpsCluster: GitOpsCluster = {
   apiVersion: GitOpsClusterApiVersion,
@@ -551,7 +551,7 @@ describe('Create Argo Application Set', () => {
       <RecoilRoot>
         <MemoryRouter initialEntries={[NavigationPath.editApplicationArgo]}>
           <Routes>
-            <Route path={NavigationPath.editApplicationArgo} element={<EditApplicationSetPage />} />
+            <Route path={NavigationPath.editApplicationArgo} element={<EditArgoApplicationSet />} />
           </Routes>
         </MemoryRouter>
       </RecoilRoot>

@@ -7,7 +7,6 @@ import { Topology } from './topology/Topology'
 import { useTranslation } from '~/lib/acm-i18next'
 import { useApplicationDetailsContext } from '~/routes/Applications/ApplicationDetails/ApplicationDetails'
 import { ISyncArgoCDModalProps, SyncArgoCDModal } from '~/routes/Applications/components/SyncArgoCDModal'
-import { EditAppSetModal, IEditAppSetModalProps } from './modals/EditAppSetModal'
 import { EditYamlModal, IEditYamlModalProps } from './modals/EditYamlModal'
 import { ILogsModalProps, LogsModal } from './modals/LogsModal'
 import { processResourceActionLink } from './helpers/diagram-helpers'
@@ -149,23 +148,12 @@ export function ApplicationTopologyPageContent() {
   const [syncArgoCDModalProps, setSyncArgoCDModalProps] = useState<ISyncArgoCDModalProps | { open: false }>({
     open: false,
   })
-  const [editAppSetModalProps, setEditAppSetModalProps] = useState<IEditAppSetModalProps | { open: false }>({
-    open: false,
-  })
   const [editYamlModalProps, setEditYamlModalProps] = useState<IEditYamlModalProps | { open: false }>({
     open: false,
   })
   const [logsModalProps, setLogsModalProps] = useState<ILogsModalProps | { open: false }>({
     open: false,
   })
-
-  const handleEditAppSet = useCallback((node: TopologyNode) => {
-    setEditAppSetModalProps({
-      open: true,
-      close: () => setEditAppSetModalProps({ open: false }),
-      node,
-    })
-  }, [])
 
   const handleEditYaml = useCallback(
     (node: TopologyNode) => {
@@ -206,7 +194,6 @@ export function ApplicationTopologyPageContent() {
   return (
     <>
       <SyncArgoCDModal {...syncArgoCDModalProps} />
-      <EditAppSetModal {...editAppSetModalProps} />
       <EditYamlModal {...editYamlModalProps} />
       <LogsModal {...logsModalProps} />
       <DrawerShapes />
@@ -223,7 +210,6 @@ export function ApplicationTopologyPageContent() {
         setDrawerContent={setDrawerContent}
         hubClusterName={hubClusterName}
         onRefreshResources={refreshResources}
-        onEditAppSet={handleEditAppSet}
         onEditYaml={handleEditYaml}
         onViewLogs={handleViewLogs}
       />

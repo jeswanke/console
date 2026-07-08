@@ -72,7 +72,6 @@ export interface TopologyProps {
   processActionLink?: (resource: any, toggleLoading: () => void, hubClusterName: string) => void
   hubClusterName: string
   onRefreshResources?: () => void
-  onEditAppSet?: (node: TopologyNode) => void
   onEditYaml?: (node: TopologyNode) => void
   onViewLogs?: (node: TopologyNode) => void
 }
@@ -93,7 +92,6 @@ export const TopologyViewComponents: React.FC<TopologyViewComponentsProps> = ({ 
     nodeDetailsProvider,
     hubClusterName,
     alerts,
-    onEditAppSet,
     onEditYaml,
     onViewLogs,
   } = topologyProps
@@ -163,12 +161,7 @@ export const TopologyViewComponents: React.FC<TopologyViewComponentsProps> = ({ 
         style={{ width: '100%', height: '100%', position: 'relative' }}
       >
         {alerts && alerts.length > 0 && (
-          <TopologyAlerts
-            alerts={alerts}
-            onEditAppSet={onEditAppSet}
-            onEditYaml={onEditYaml}
-            onViewLogs={onViewLogs}
-          />
+          <TopologyAlerts alerts={alerts} onEditYaml={onEditYaml} onViewLogs={onViewLogs} />
         )}
         <VisualizationSurface state={{ selectedIds }} />
       </div>
