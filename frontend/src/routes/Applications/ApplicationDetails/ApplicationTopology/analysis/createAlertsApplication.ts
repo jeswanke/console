@@ -16,11 +16,6 @@ export const createAlertsApplication = (
 
   const actions = [
     {
-      label: 'Edit specification',
-      type: TopologyAlertActionType.editYaml,
-      node,
-    },
-    {
       label: 'Edit YAML',
       type: TopologyAlertActionType.editYaml,
       node,

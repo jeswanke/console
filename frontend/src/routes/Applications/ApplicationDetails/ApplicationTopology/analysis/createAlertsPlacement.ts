@@ -11,7 +11,7 @@ export const createAlertsPlacement = (
   alerts: TopologyAlert[]
 ): void => {
   const placement = node.placement as Placement
-  const currentYaml = jsYaml.dump(placement.spec.predicates ?? {}, { indent: 2 }).split('\n')
+  const currentYaml = jsYaml.dump(placement.spec.clusterSets ?? {}, { indent: 2 }).split('\n')
   const suggestions: IBulletDescription[] = [{ title: 'Current specification', content: currentYaml }]
 
   const actions = [
@@ -19,6 +19,7 @@ export const createAlertsPlacement = (
       label: 'Edit specification',
       type: TopologyAlertActionType.editYaml,
       node,
+      highlightEditorPath: 'Placement.spec.clusterSets',
     },
   ]
   createTopologyAlert(suggestions, actions, alerts, filteredError)
