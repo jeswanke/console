@@ -9,13 +9,14 @@ import {
   useItem,
 } from '@patternfly-labs/react-form-wizard'
 import { ArgoWizard } from '~/wizards/Argo/ArgoWizard'
-import { useCallback, useContext, useEffect, useState } from 'react'
-import { Navigate, useNavigate, useParams } from 'react-router'
+import { useContext, useEffect, useState } from 'react'
+import { useParams, useNavigate, PathParam, generatePath } from 'react-router'
 import { useRecoilValue, useSharedAtoms, useSharedSelectors } from '~/shared-recoil'
 import { LoadingPage } from '~/components/LoadingPage'
 import { SyncEditor, ValidationStatus } from '~/components/SyncEditor/SyncEditor'
 import { useTranslation } from '~/lib/acm-i18next'
 import { isType } from '~/lib/is-type'
+import { useSearchParams } from '~/lib/search'
 import { NavigationPath } from '~/NavigationPath'
 import {
   ApplicationSet,
@@ -29,6 +30,7 @@ import {
 } from '~/resources'
 import { listResources, reconcileResources } from '~/resources/utils'
 import { AcmToastContext } from '~/ui-components'
+import { argoAppSetQueryString } from './actions'
 import pushmodelschema from './pushmodelschema.json'
 import { GetGitOpsClusters } from './CreatePushApplicationSet'
 import { get, set } from 'lodash'
@@ -65,44 +67,7 @@ function getWizardSyncEditor() {
   return <WizardSyncEditor />
 }
 
-export interface EditApplicationSetProps {
-  name: string
-  namespace: string
-  onCancel: () => void
-  onSubmitSuccess: (applicationSet: ApplicationSet) => void
-  onApplicationSetNotFound: () => void
-  isModal?: boolean
-}
-
-export default function EditArgoApplicationSet() {
-  const { name, namespace } = useParams<{ name: string; namespace: string }>()
-  const navigate = useNavigate()
-  const navigateToApplications = useCallback(() => {
-    navigate(NavigationPath.applications)
-  }, [navigate])
-
-  if (!name || !namespace) {
-    return <Navigate to={NavigationPath.applications} replace />
-  }
-
-  return (
-    <EditArgoApplicationSetContent
-      name={name}
-      namespace={namespace}
-      onCancel={navigateToApplications}
-      onSubmitSuccess={navigateToApplications}
-      onApplicationSetNotFound={navigateToApplications}
-    />
-  )
-}
-
-export function EditArgoApplicationSetContent({
-  name,
-  namespace,
-  onCancel,
-  onSubmitSuccess,
-  onApplicationSetNotFound,
-}: EditApplicationSetProps) {
+export function EditArgoApplicationSet() {
   const { t } = useTranslation()
   const { timeZones } = useTimezones()
   const {
@@ -117,7 +82,10 @@ export function EditArgoApplicationSetContent({
   } = useSharedAtoms()
   const { ansibleCredentialsValue } = useSharedSelectors()
   const secrets = useRecoilValue(secretsState)
+  const navigate = useNavigate()
+  const searchParams = useSearchParams()
   const toast = useContext(AcmToastContext)
+  const { name = '', namespace = '' } = useParams<PathParam<NavigationPath.editApplicationArgo>>()
   const placements = useRecoilValue(placementsState)
   const gitOpsClusters = useRecoilValue(gitOpsClustersState)
   const channels = useRecoilValue(channelsState)
@@ -190,7 +158,7 @@ export function EditArgoApplicationSetContent({
       }
 
       if (applicationSet === undefined) {
-        onApplicationSetNotFound()
+        navigate(NavigationPath.applications)
         return
       }
       const applicationSetPlacements = placements.filter((placement) =>
@@ -198,58 +166,74 @@ export function EditArgoApplicationSetContent({
       )
       setExistingResources([copyOfAppSet, ...applicationSetPlacements])
     }
-  }, [applicationSets, name, namespace, onApplicationSetNotFound, placements])
+  }, [applicationSets, navigate, name, namespace, placements])
 
   const { cancelForm, submitForm } = useContext(LostChangesContext)
 
-  const content =
-    existingResources === undefined || loadingAppSets || !applicationSets ? (
-      <LoadingPage />
-    ) : (
-      <ArgoWizard
-        createClusterSetCallback={() => open(NavigationPath.clusterSets, '_blank')}
-        ansibleCredentials={availableAnsibleCredentials}
-        argoServers={availableArgoNS}
-        breadcrumb={[{ text: t('Applications'), to: NavigationPath.applications }, { text: name }]}
-        namespaces={availableNamespace}
-        applicationSets={applicationSets}
-        placements={placements}
-        yamlEditor={getWizardSyncEditor}
-        clusters={managedClusters}
-        clusterSets={clusterSets}
-        clusterSetBindings={managedClusterSetBindings}
-        onCancel={() => {
-          cancelForm()
-          onCancel()
-        }}
-        channels={channels}
-        getGitRevisions={getGitChannelBranches}
-        getGitPaths={getGitChannelPaths}
-        onSubmit={(data) => {
-          const resources = data as IResource[]
-          onlyDeletePlacementsThatAreNotUsedByOtherApplicationSets(resources, existingResources, applicationSets)
-          return reconcileResources(resources, existingResources).then(() => {
-            const applicationSet = resources.find((resource) => resource.kind === ApplicationSetKind)
-            if (applicationSet) {
-              toast.addAlert({
-                title: t('Application set updated'),
-                message: t('{{name}} was successfully updated.', { name: applicationSet.metadata?.name }),
-                type: 'success',
-                autoClose: true,
-              })
-              submitForm()
-              onSubmitSuccess(applicationSet as ApplicationSet)
-            }
-          })
-        }}
-        timeZones={timeZones}
-        resources={existingResources}
-        isPullModel={pullModel}
-        repoSecrets={secrets}
-      />
-    )
+  if (existingResources === undefined || loadingAppSets || !applicationSets) {
+    return <LoadingPage />
+  }
 
-  return content
+  return (
+    <ArgoWizard
+      createClusterSetCallback={() => open(NavigationPath.clusterSets, '_blank')}
+      ansibleCredentials={availableAnsibleCredentials}
+      argoServers={availableArgoNS}
+      breadcrumb={[{ text: t('Applications'), to: NavigationPath.applications }, { text: name }]}
+      namespaces={availableNamespace}
+      applicationSets={applicationSets}
+      placements={placements}
+      yamlEditor={getWizardSyncEditor}
+      clusters={managedClusters}
+      clusterSets={clusterSets}
+      clusterSetBindings={managedClusterSetBindings}
+      onCancel={() => {
+        cancelForm()
+        if (searchParams.get('context') === 'applicationsets') {
+          navigate(NavigationPath.applications)
+        } else {
+          navigate({
+            pathname: generatePath(NavigationPath.applicationDetails, { name, namespace }),
+            search: argoAppSetQueryString,
+          })
+        }
+      }}
+      channels={channels}
+      getGitRevisions={getGitChannelBranches}
+      getGitPaths={getGitChannelPaths}
+      onSubmit={(data) => {
+        const resources = data as IResource[]
+        onlyDeletePlacementsThatAreNotUsedByOtherApplicationSets(resources, existingResources, applicationSets)
+        return reconcileResources(resources, existingResources).then(() => {
+          const applicationSet = resources.find((resource) => resource.kind === ApplicationSetKind)
+          if (applicationSet) {
+            toast.addAlert({
+              title: t('Application set updated'),
+              message: t('{{name}} was successfully updated.', { name: applicationSet.metadata?.name }),
+              type: 'success',
+              autoClose: true,
+            })
+            submitForm()
+            if (searchParams.get('context') === 'applicationsets') {
+              navigate(NavigationPath.applications)
+            } else {
+              navigate({
+                pathname: generatePath(NavigationPath.applicationDetails, {
+                  namespace: applicationSet.metadata?.namespace ?? '',
+                  name: applicationSet.metadata?.name ?? '',
+                }),
+                search: argoAppSetQueryString,
+              })
+            }
+          }
+        })
+      }}
+      timeZones={timeZones}
+      resources={existingResources}
+      isPullModel={pullModel}
+      repoSecrets={secrets}
+    />
+  )
 }
 
 function isPlacementUsedByApplicationSet(applicationSet: ApplicationSet, placement: Placement) {

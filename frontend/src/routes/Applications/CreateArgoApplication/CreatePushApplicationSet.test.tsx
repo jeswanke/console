@@ -61,7 +61,7 @@ import {
 } from '~/resources'
 import { gitOpsOperators } from '~/routes/Applications/Application.sharedmocks'
 import CreatePushApplicationSet from './CreatePushApplicationSet'
-import EditArgoApplicationSet from './EditArgoApplicationSet'
+import { EditArgoApplicationSet } from './EditArgoApplicationSet'
 
 const gitOpsCluster: GitOpsCluster = {
   apiVersion: GitOpsClusterApiVersion,
