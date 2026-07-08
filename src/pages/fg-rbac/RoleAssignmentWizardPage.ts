@@ -118,6 +118,7 @@ export class RoleAssignmentWizardPage extends BasePage {
   }
 
   getSuccessNotification(): Locator { return this.page.getByText(RBAC_WIZARD.notifications.added); }
+  getUpdatedNotification(): Locator { return this.page.getByText(RBAC_WIZARD.notifications.updated); }
   getDuplicateError(): Locator { return this.page.getByText(RBAC_WIZARD.notifications.duplicate); }
 
   async selectIdentity(username: string): Promise<void> {
@@ -130,4 +131,24 @@ export class RoleAssignmentWizardPage extends BasePage {
   getWizardTitle(): Locator { return this.modal.getByRole('heading').first(); }
 
   getModal(): Locator { return this.modal; }
+
+  // ---------------------------------------------------------------------------
+  // Edit mode support
+  // ---------------------------------------------------------------------------
+
+  getNoChangesAlert(): Locator {
+    return this.modal.locator(RBAC_WIZARD.editMode.dangerAlertSelector);
+  }
+
+  getDiffStrikethrough(): Locator {
+    return this.modal.locator('s');
+  }
+
+  getUpdateButton(): Locator {
+    return this.modal.getByRole('button', { name: 'Save', exact: true });
+  }
+
+  async submitUpdate(): Promise<void> {
+    await this.getUpdateButton().click();
+  }
 }

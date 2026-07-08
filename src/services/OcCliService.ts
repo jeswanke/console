@@ -547,6 +547,32 @@ export class OcCliService {
     }
   }
 
+  async mcraGetForGroup(groupName: string): Promise<Record<string, unknown>[]> {
+    const items = await this.mcraGetAll();
+    return items.filter((m) => {
+      const spec = m.spec as Record<string, unknown> | undefined;
+      const subject = spec?.subject as Record<string, unknown> | undefined;
+      return subject?.kind === 'Group' && subject?.name === groupName;
+    });
+  }
+
+  async mcraDeleteAllForGroup(groupName: string): Promise<void> {
+    try {
+      const items = await this.mcraGetForGroup(groupName);
+      for (const item of items) {
+        const metadata = item.metadata as Record<string, unknown> | undefined;
+        if (metadata?.name && metadata?.namespace) {
+          await this.mcraDeleteByName(
+            metadata.name as string,
+            metadata.namespace as string
+          );
+        }
+      }
+    } catch {
+      // Best-effort cleanup
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // VM (VirtualMachine) operations
   // ---------------------------------------------------------------------------
@@ -604,6 +630,80 @@ spec:
 EOF`);
 
     return name;
+  }
+
+  async vmEnsureTestVMWithPVC(
+    name: string,
+    namespace: string,
+    labels?: Record<string, string>
+  ): Promise<string> {
+    const exists = await this.run(
+      `oc get vm ${name} -n ${namespace} --no-headers 2>/dev/null || true`
+    );
+    if (exists.includes(name)) {
+      return name;
+    }
+
+    const labelEntries = { 'e2e-test': 'true', ...labels };
+    const labelYaml = Object.entries(labelEntries)
+      .map(([k, v]) => `      ${k}: "${v}"`)
+      .join('\n');
+
+    await this.run(`oc apply -f - <<'EOF'
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  name: ${name}
+  namespace: ${namespace}
+  labels:
+${labelYaml}
+spec:
+  runStrategy: Always
+  template:
+    metadata:
+      labels:
+        kubevirt.io/vm: ${name}
+    spec:
+      domain:
+        devices:
+          disks:
+            - disk:
+                bus: virtio
+              name: rootdisk
+        resources:
+          requests:
+            memory: 2Gi
+      volumes:
+        - dataVolume:
+            name: ${name}-dv
+          name: rootdisk
+  dataVolumeTemplates:
+    - metadata:
+        name: ${name}-dv
+      spec:
+        sourceRef:
+          kind: DataSource
+          name: fedora
+          namespace: openshift-virtualization-os-images
+        storage:
+          resources:
+            requests:
+              storage: 30Gi
+EOF`);
+
+    return name;
+  }
+
+  async vmStopAsUser(name: string, namespace: string, asUser: string): Promise<void> {
+    await this.run(
+      `oc patch vm ${name} -n ${namespace} --type=merge -p '{"spec":{"runStrategy":"Halted"}}' --as=${asUser}`
+    );
+  }
+
+  async vmStartAsUser(name: string, namespace: string, asUser: string): Promise<void> {
+    await this.run(
+      `oc patch vm ${name} -n ${namespace} --type=merge -p '{"spec":{"runStrategy":"Always"}}' --as=${asUser}`
+    );
   }
 
   async vmIsRunning(name: string, namespace: string): Promise<boolean> {

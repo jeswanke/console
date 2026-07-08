@@ -1,6 +1,6 @@
-import { Page, Locator } from '@playwright/test';
+import { Page, Locator, expect } from '@playwright/test';
 import { BasePage } from '@pages/BasePage';
-import { FLEET_VIRT_VM_ACTIONS } from '@constants/fleet-virt';
+import { FLEET_VIRT_VM_ACTIONS, FLEET_VIRT_DELETE_MODAL } from '@constants/fleet-virt';
 
 /**
  * Fleet Virtualization VM Details page.
@@ -135,5 +135,33 @@ export class VmDetailsPage extends BasePage {
     if (await confirmBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
       await confirmBtn.click();
     }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Clone and delete
+  // ---------------------------------------------------------------------------
+
+  async clickCloneAction(): Promise<void> {
+    await this.openActions();
+    await this.getActionMenuItem('Clone').click();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Delete VM (TC: RHACM4K-60772)
+  // ---------------------------------------------------------------------------
+
+  async clickDeleteAction(): Promise<void> {
+    await expect(async () => {
+      await this.openActions();
+      const deleteItem = this.page.getByRole('menuitem', { name: /Delete/ });
+      await expect(deleteItem).toBeEnabled({ timeout: 5000 });
+      await deleteItem.click({ timeout: 5000 });
+    }).toPass({ intervals: [2000, 3000], timeout: 30000 });
+  }
+
+  async confirmDelete(): Promise<void> {
+    const dialog = this.page.getByRole('dialog');
+    await expect(dialog).toBeVisible({ timeout: 10000 });
+    await dialog.getByRole('button', { name: 'Delete', exact: true }).click();
   }
 }

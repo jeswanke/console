@@ -102,10 +102,12 @@ export const RBAC_RA_TABLE = {
   },
   rowActions: {
     kebabAriaLabel: 'Actions',
+    kebabSelector: 'button.pf-v6-c-menu-toggle[aria-label="Actions"]',
     editId: 'edit-role-assignment',
     editLabel: 'Edit role assignment',
     deleteId: 'delete-role-assignment',
     deleteLabel: 'Delete role assignment',
+    confirmInput: 'confirm',
   },
   filterIds: {
     role: 'role',
@@ -180,6 +182,7 @@ export const RBAC_WIZARD = {
 
   editMode: {
     noChangesAlert: 'No changes have been made. Please modify or cancel to exit.',
+    dangerAlertSelector: '.pf-v6-c-alert.pf-m-danger',
   },
 } as const;
 

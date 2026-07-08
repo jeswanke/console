@@ -62,4 +62,17 @@ export class UserDetailsPage extends BasePage {
     await createButton.click();
   }
 
+  // ---------------------------------------------------------------------------
+  // Group detail navigation
+  // ---------------------------------------------------------------------------
+
+  async gotoGroupDetail(groupName: string): Promise<void> {
+    const consoleUrl = await this.oc.getConsoleUrl();
+    await this.page.goto(`${consoleUrl}${RBAC_ROUTES.identities}`);
+    await this.waitForLoad();
+    await this.page.getByRole('tab', { name: 'Groups' }).click();
+    await this.waitForLoad();
+    await this.page.getByRole('link', { name: groupName, exact: true }).click();
+    await this.waitForLoad();
+  }
 }

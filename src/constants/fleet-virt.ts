@@ -126,6 +126,47 @@ export const FLEET_VIRT_VM_ACTIONS = {
 } as const;
 
 // =============================================================================
+// VM Creation wizard
+//
+// Source: kubevirt-plugin VmWizard (create from Template path)
+// Route: /fleet-virtualization/vm-wizard/cluster/:cluster/ns/:namespace
+// =============================================================================
+
+export const FLEET_VIRT_VM_CREATION = {
+  createButton: '[data-test="item-create"]',
+  createVmLabel: 'Create VirtualMachine',
+  wizard: {
+    clusterSelect: '[data-test="cluster-select"]',
+    projectSelect: '[data-test="project-select"]',
+    nameInput: '[data-test="vm-name-input"]',
+    createButton: '[data-test="create-vm-button"]',
+  },
+} as const;
+
+// =============================================================================
+// VM Clone modal
+//
+// Source: kubevirt-plugin CloneVMModal
+// =============================================================================
+
+export const FLEET_VIRT_CLONE_MODAL = {
+  container: '[data-test="dialog-modal"]',
+  nameInput: '#name',
+  startOnCloneCheckbox: '#start-clone',
+  saveButton: '[data-test="save-button"]',
+  cancelButton: '[data-test="cancel-button"]',
+} as const;
+
+// =============================================================================
+// VM Delete confirmation
+// =============================================================================
+
+export const FLEET_VIRT_DELETE_MODAL = {
+  container: '[data-test="modal"]',
+  confirmButton: '[data-test="confirm-action"]',
+} as const;
+
+// =============================================================================
 // Test defaults
 // =============================================================================
 

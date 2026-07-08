@@ -6,6 +6,7 @@ import {
   FLEET_VIRT_PAGE,
   FLEET_VIRT_SEARCH,
   FLEET_VIRT_ADVANCED_SEARCH,
+  FLEET_VIRT_VM_CREATION,
 } from '@constants/fleet-virt';
 
 /**
@@ -124,5 +125,13 @@ export class FleetVirtPage extends BasePage {
     const grid = this.page.getByRole('grid', { name: 'VirtualMachines table' });
     const firstLink = grid.getByRole('link').first();
     await firstLink.click();
+  }
+
+  // ---------------------------------------------------------------------------
+  // VM Creation
+  // ---------------------------------------------------------------------------
+
+  async clickCreateVM(): Promise<void> {
+    await this.page.getByRole('button', { name: FLEET_VIRT_VM_CREATION.createVmLabel }).first().click();
   }
 }
