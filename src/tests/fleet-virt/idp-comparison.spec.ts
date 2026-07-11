@@ -15,14 +15,12 @@
 import { test, expect } from '@fixtures/fg-rbac-test';
 import { OcCliService } from '@services/OcCliService';
 import { FleetVirtPage } from '@pages/fleet-virt/FleetVirtPage';
-import { VmDetailsPage } from '@pages/fleet-virt/VmDetailsPage';
 import { TreeView } from '@components/fleet-virt/TreeView';
 import { FLEET_VIRT_DEFAULTS } from '@constants/fleet-virt';
 
 const VM_NAME = `e2e-idp-cmp-${Date.now()}`;
 const VM_NAMESPACE = FLEET_VIRT_DEFAULTS.vmNamespace;
 const IDP_KUBEVIRT_USER = 'fg-rbac-idp-kubevirt-60257';
-const IDP_VM_USER = 'fg-rbac-idp-vm-60258';
 const ocSvc = new OcCliService();
 
 test.describe('Fleet Virt - IDP Comparison', { tag: ['@fg-rbac', '@fleet-virt', '@virtualization'] }, () => {

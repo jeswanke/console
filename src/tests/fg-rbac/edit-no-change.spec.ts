@@ -2,30 +2,63 @@
  * RHACM4K-61825: RBAC UI - Edit No-Change Detection
  *
  * Polarion steps:
- *   1. Create RA for user with kubevirt.io:view + default clusterset full access
- *   2. Open edit wizard, click through without changes
- *   3. Verify danger alert "No changes have been made..." + Save disabled
- *   4. Go back, change role to kubevirt.io:admin
- *   5. Verify diff display + Save enabled
- *   6. Save and verify updated
+ *   1. Open edit wizard on existing RA, click through without changes
+ *   2. Verify danger alert "No changes have been made..." + Save disabled
+ *   3. Go back, change role to kubevirt.io:admin
+ *   4. Verify diff format (strikethrough + new value)
+ *   5. Save and verify updated
+ *
+ * RA created via CLI in beforeAll for reliability (wizard-created MCRAs
+ * have delayed permission propagation that causes kebab items to stay disabled).
  *
  * Login is handled by the setup project (auth.setup.ts) via storageState.
  */
 
 import { test, expect } from '@fixtures/fg-rbac-test';
-import { RBAC_WIZARD, SCOPE_TYPES } from '@constants/fg-rbac';
+import { RBAC_WIZARD } from '@constants/fg-rbac';
 import { OcCliService } from '@services/OcCliService';
 
 const USERNAME = 'clc-e2e-reviewdiff-61825';
 const INITIAL_ROLE = 'kubevirt.io:view';
 const UPDATED_ROLE = 'kubevirt.io:admin';
+const MCRA_NAME = `e2e-reviewdiff-${Date.now()}`;
 const ocSvc = new OcCliService();
 
 test.describe('FG-RBAC - Edit No-Change Detection', { tag: ['@fg-rbac'] }, () => {
-  test.setTimeout(240000);
+  test.setTimeout(300000);
 
-  test.beforeAll(async () => {
+  test.beforeAll(async ({}, testInfo) => {
+    testInfo.setTimeout(120000);
     await ocSvc.mcraDeleteAllForUser(USERNAME);
+
+    await ocSvc.run(`oc apply -f - <<'EOF'
+apiVersion: rbac.open-cluster-management.io/v1beta1
+kind: MulticlusterRoleAssignment
+metadata:
+  name: ${MCRA_NAME}
+  namespace: open-cluster-management-global-set
+spec:
+  subject:
+    apiGroup: rbac.authorization.k8s.io
+    kind: User
+    name: ${USERNAME}
+  roleAssignments:
+    - clusterRole: ${INITIAL_ROLE}
+      clusterSelection:
+        placements:
+          - name: cluster-sets-default
+            namespace: open-cluster-management-global-set
+        type: placements
+      name: edit-test-access
+      targetNamespaces: []
+EOF`);
+
+    await expect(async () => {
+      const canPatch = await ocSvc.rbacAuthCanI(
+        'patch', 'multiclusterroleassignments.rbac.open-cluster-management.io', 'open-cluster-management-global-set', 'system:admin'
+      );
+      expect(canPatch).toBe(true);
+    }).toPass({ intervals: [5000], timeout: 30000 });
   });
 
   test.afterAll(async () => {
@@ -33,38 +66,28 @@ test.describe('FG-RBAC - Edit No-Change Detection', { tag: ['@fg-rbac'] }, () =>
   });
 
   test('RHACM4K-61825: Edit wizard detects no changes and allows role update', async ({
+    page,
     userDetailsPage,
     roleAssignmentWizardPage,
   }) => {
-    await test.step('1: Create initial RA with kubevirt.io:view', async () => {
-      await userDetailsPage.gotoRoleAssignments(USERNAME);
-      await userDetailsPage.openCreateRoleAssignment();
-      await expect(roleAssignmentWizardPage.getModal()).toBeVisible();
+    await test.step('1: Navigate to user and open edit wizard', async () => {
+      await userDetailsPage.gotoUserViaSearch(USERNAME);
+      await userDetailsPage.openRoleAssignmentsTab();
+      await expect(userDetailsPage.roleAssignmentsTable.getRowByRole(INITIAL_ROLE)).toBeVisible({ timeout: 30000 });
 
-      await roleAssignmentWizardPage.selectScopeType(SCOPE_TYPES.clusterSets);
-      await roleAssignmentWizardPage.selectClusterSets(['default']);
-      await roleAssignmentWizardPage.clickNext();
-      await roleAssignmentWizardPage.clickNext();
-      await roleAssignmentWizardPage.selectRole(INITIAL_ROLE);
-      await roleAssignmentWizardPage.clickNext();
-      await roleAssignmentWizardPage.submitCreate();
-      await expect(roleAssignmentWizardPage.getSuccessNotification()).toBeVisible({ timeout: 30000 });
-    });
-
-    await test.step('2: Wait for RA to be editable and open edit wizard', async () => {
       await expect(async () => {
-        await userDetailsPage.gotoRoleAssignments(USERNAME);
-        await expect(userDetailsPage.roleAssignmentsTable.getRowByRole(INITIAL_ROLE)).toBeVisible({ timeout: 5000 });
+        await page.keyboard.press('Escape');
+        await page.waitForTimeout(500);
         await userDetailsPage.roleAssignmentsTable.openKebabMenu(INITIAL_ROLE);
         const editItem = userDetailsPage.roleAssignmentsTable.getEditItem();
-        await expect(editItem).toBeEnabled({ timeout: 3000 });
+        await expect(editItem).toBeEnabled({ timeout: 60000 });
         await editItem.click();
-      }).toPass({ intervals: [15000, 20000], timeout: 180000 });
+      }).toPass({ intervals: [5000], timeout: 120000 });
 
       await expect(roleAssignmentWizardPage.getModal()).toBeVisible({ timeout: 15000 });
     });
 
-    await test.step('3: Click through without changes - verify no-change alert', async () => {
+    await test.step('2: Click through without changes - verify no-change alert', async () => {
       await roleAssignmentWizardPage.clickNext();
       await roleAssignmentWizardPage.clickNext();
       await roleAssignmentWizardPage.clickNext();
@@ -76,14 +99,14 @@ test.describe('FG-RBAC - Edit No-Change Detection', { tag: ['@fg-rbac'] }, () =>
       await expect(roleAssignmentWizardPage.getUpdateButton()).toBeDisabled();
     });
 
-    await test.step('4: Go back and change role to kubevirt.io:admin', async () => {
+    await test.step('3: Go back and change role to kubevirt.io:admin', async () => {
       const backButton = roleAssignmentWizardPage.getModal().getByRole('button', { name: 'Back' });
       await backButton.click();
       await roleAssignmentWizardPage.selectRole(UPDATED_ROLE);
       await roleAssignmentWizardPage.clickNext();
     });
 
-    await test.step('4b: Verify diff format (strikethrough old value, new value visible)', async () => {
+    await test.step('4: Verify diff format (strikethrough old value, new value visible)', async () => {
       await expect(roleAssignmentWizardPage.getNoChangesAlert()).toBeHidden({ timeout: 5000 });
 
       const strikethrough = roleAssignmentWizardPage.getDiffStrikethrough();
@@ -101,7 +124,8 @@ test.describe('FG-RBAC - Edit No-Change Detection', { tag: ['@fg-rbac'] }, () =>
 
     await test.step('6: Verify updated role in table', async () => {
       await expect(async () => {
-        await userDetailsPage.gotoRoleAssignments(USERNAME);
+        await userDetailsPage.gotoUserViaSearch(USERNAME);
+        await userDetailsPage.openRoleAssignmentsTab();
         await expect(userDetailsPage.roleAssignmentsTable.getRowByRole(UPDATED_ROLE)).toBeVisible();
       }).toPass({ intervals: [5000, 10000], timeout: 60000 });
     });

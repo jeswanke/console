@@ -43,6 +43,16 @@ export class UserDetailsPage extends BasePage {
     await this.waitForLoad();
   }
 
+  async gotoUserViaSearch(username: string): Promise<void> {
+    const consoleUrl = await this.oc.getConsoleUrl();
+    await this.page.goto(`${consoleUrl}${RBAC_ROUTES.identities}`);
+    await this.waitForLoad();
+    const search = this.page.locator('input[placeholder="Search"]').first();
+    await search.fill(username);
+    await this.page.getByRole('link', { name: username, exact: true }).click();
+    await this.waitForLoad();
+  }
+
   async gotoRoleAssignments(userId: string): Promise<void> {
     const consoleUrl = await this.oc.getConsoleUrl();
     await this.page.goto(`${consoleUrl}${RBAC_ROUTES.userRoleAssignments(userId)}`);

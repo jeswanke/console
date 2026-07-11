@@ -19,7 +19,6 @@ import { FLEET_VIRT_DEFAULTS } from '@constants/fleet-virt';
 
 const STD_VIEW_USER = 'fg-rbac-std-view-60309';
 const STD_ADMIN_USER = 'fg-rbac-std-admin-60309';
-const STD_EDIT_USER = 'fg-rbac-std-edit-60309';
 const STD_VIEW_USERNAME = 'clc-e2e-std-view-60309';
 const STD_ADMIN_USERNAME = 'clc-e2e-std-admin-60309';
 const STD_EDIT_USERNAME = 'clc-e2e-std-edit-60309';
@@ -38,7 +37,6 @@ test.describe('Fleet Virt - Standard Roles Without Fleet Access', { tag: ['@fg-r
       const headingVisible = await heading.isVisible({ timeout: 30000 }).catch(() => false);
 
       if (headingVisible) {
-        const noVms = fleetPage.getNoVMsEmptyState();
         const vmRows = fleetPage.getVmTableRows();
         const hasRows = await vmRows.first().isVisible({ timeout: 10000 }).catch(() => false);
         if (hasRows) {

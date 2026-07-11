@@ -37,10 +37,15 @@ export class RoleAssignmentsTable {
     return this.page.locator(`#${RBAC_RA_TABLE.rowActions.deleteId}`);
   }
 
-  async clickDeleteAction(): Promise<void> {
-    const deleteItem = this.getDeleteItem();
-    await expect(deleteItem).toBeEnabled({ timeout: 5000 });
-    await deleteItem.click();
+  async clickDeleteAction(roleName: string): Promise<void> {
+    await expect(async () => {
+      await this.page.keyboard.press('Escape');
+      await this.page.waitForTimeout(500);
+      await this.openKebabMenu(roleName);
+      const deleteItem = this.getDeleteItem();
+      await expect(deleteItem).toBeEnabled({ timeout: 60000 });
+      await deleteItem.click();
+    }).toPass({ intervals: [5000], timeout: 120000 });
   }
 
   async confirmDelete(): Promise<void> {

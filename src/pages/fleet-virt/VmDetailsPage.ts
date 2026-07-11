@@ -1,6 +1,6 @@
 import { Page, Locator, expect } from '@playwright/test';
 import { BasePage } from '@pages/BasePage';
-import { FLEET_VIRT_VM_ACTIONS, FLEET_VIRT_DELETE_MODAL } from '@constants/fleet-virt';
+import { FLEET_VIRT_VM_ACTIONS } from '@constants/fleet-virt';
 
 /**
  * Fleet Virtualization VM Details page.
@@ -152,6 +152,8 @@ export class VmDetailsPage extends BasePage {
 
   async clickDeleteAction(): Promise<void> {
     await expect(async () => {
+      await this.page.keyboard.press('Escape');
+      await this.page.waitForTimeout(500);
       await this.openActions();
       const deleteItem = this.page.getByRole('menuitem', { name: /Delete/ });
       await expect(deleteItem).toBeEnabled({ timeout: 5000 });
