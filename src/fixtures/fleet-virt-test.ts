@@ -2,7 +2,6 @@ import { test as base, expect } from '@playwright/test';
 import { OcCliService } from '@services/OcCliService';
 import { FleetVirtPage } from '@pages/fleet-virt/FleetVirtPage';
 import { VmDetailsPage } from '@pages/fleet-virt/VmDetailsPage';
-import { VmCreationPage } from '@pages/fleet-virt/VmCreationPage';
 import { AdvancedSearchModal } from '@components/fleet-virt/AdvancedSearchModal';
 import { SavedSearches } from '@components/fleet-virt/SavedSearches';
 import { TreeView } from '@components/fleet-virt/TreeView';
@@ -16,7 +15,6 @@ type FleetVirtFixtures = {
   virtConfig: VirtConfig;
   fleetVirtPage: FleetVirtPage;
   vmDetailsPage: VmDetailsPage;
-  vmCreationPage: VmCreationPage;
   advancedSearchModal: AdvancedSearchModal;
   savedSearches: SavedSearches;
   treeView: TreeView;
@@ -39,10 +37,6 @@ export const test = base.extend<FleetVirtFixtures>({
 
   vmDetailsPage: async ({ page }, use) => {
     await use(new VmDetailsPage(page));
-  },
-
-  vmCreationPage: async ({ page, oc }, use) => {
-    await use(new VmCreationPage(page, oc));
   },
 
   advancedSearchModal: async ({ page }, use) => {

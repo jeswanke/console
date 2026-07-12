@@ -31,27 +31,16 @@ test.describe('FG-RBAC - Edit No-Change Detection', { tag: ['@fg-rbac'] }, () =>
     testInfo.setTimeout(120000);
     await ocSvc.mcraDeleteAllForUser(USERNAME);
 
-    await ocSvc.run(`oc apply -f - <<'EOF'
-apiVersion: rbac.open-cluster-management.io/v1beta1
-kind: MulticlusterRoleAssignment
-metadata:
-  name: ${MCRA_NAME}
-  namespace: open-cluster-management-global-set
-spec:
-  subject:
-    apiGroup: rbac.authorization.k8s.io
-    kind: User
-    name: ${USERNAME}
-  roleAssignments:
-    - clusterRole: ${INITIAL_ROLE}
-      clusterSelection:
-        placements:
-          - name: cluster-sets-default
-            namespace: open-cluster-management-global-set
-        type: placements
-      name: edit-test-access
-      targetNamespaces: []
-EOF`);
+    await ocSvc.mcraCreate({
+      name: MCRA_NAME,
+      namespace: 'open-cluster-management-global-set',
+      subjectKind: 'User',
+      subjectName: USERNAME,
+      clusterRole: INITIAL_ROLE,
+      placementName: 'cluster-sets-default',
+      placementNamespace: 'open-cluster-management-global-set',
+      raName: 'edit-test-access',
+    });
 
     await expect(async () => {
       const canPatch = await ocSvc.rbacAuthCanI(

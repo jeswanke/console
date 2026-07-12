@@ -497,6 +497,73 @@ export class OcCliService {
   // MCRA (MulticlusterRoleAssignment) operations
   // ---------------------------------------------------------------------------
 
+  async mcraCreate(opts: {
+    name: string;
+    namespace: string;
+    subjectKind: 'User' | 'Group';
+    subjectName: string;
+    clusterRole: string;
+    placementName: string;
+    placementNamespace: string;
+    raName?: string;
+    targetNamespaces?: string[];
+  }): Promise<void> {
+    const ns = opts.targetNamespaces ?? [];
+    const nsLines = ns.length > 0
+      ? ['      targetNamespaces:', ...ns.map((n) => `        - ${n}`)]
+      : ['      targetNamespaces: []'];
+
+    const manifest = [
+      'apiVersion: rbac.open-cluster-management.io/v1beta1',
+      'kind: MulticlusterRoleAssignment',
+      'metadata:',
+      `  name: ${opts.name}`,
+      `  namespace: ${opts.namespace}`,
+      'spec:',
+      '  subject:',
+      '    apiGroup: rbac.authorization.k8s.io',
+      `    kind: ${opts.subjectKind}`,
+      `    name: ${opts.subjectName}`,
+      '  roleAssignments:',
+      `    - clusterRole: ${opts.clusterRole}`,
+      '      clusterSelection:',
+      '        placements:',
+      `          - name: ${opts.placementName}`,
+      `            namespace: ${opts.placementNamespace}`,
+      '        type: placements',
+      `      name: ${opts.raName ?? 'e2e-role-access'}`,
+      ...nsLines,
+      '',
+    ].join('\n');
+    await this.applyManifestFromStdin(manifest);
+  }
+
+  async mcraAddRoleAssignment(
+    mcraName: string,
+    namespace: string,
+    clusterRole: string,
+    placementName: string,
+    placementNamespace: string,
+    raName: string,
+    targetNamespaces?: string[]
+  ): Promise<void> {
+    const value = {
+      clusterRole,
+      clusterSelection: {
+        placements: [{ name: placementName, namespace: placementNamespace }],
+        type: 'placements',
+      },
+      name: raName,
+      targetNamespaces: targetNamespaces ?? [],
+    };
+    const patch = JSON.stringify([{ op: 'add', path: '/spec/roleAssignments/-', value }]);
+    await execFilePromise(
+      'oc',
+      ['patch', 'multiclusterroleassignment', mcraName, '-n', namespace, '--type=json', '-p', patch],
+      { encoding: 'utf8', maxBuffer: 1024 * 1024 }
+    );
+  }
+
   async mcraGetAll(labelSelector?: string): Promise<Record<string, unknown>[]> {
     const labelFlag = labelSelector ? ` -l "${labelSelector}"` : '';
     const output = await this.run(
@@ -692,18 +759,6 @@ spec:
 EOF`);
 
     return name;
-  }
-
-  async vmStopAsUser(name: string, namespace: string, asUser: string): Promise<void> {
-    await this.run(
-      `oc patch vm ${name} -n ${namespace} --type=merge -p '{"spec":{"runStrategy":"Halted"}}' --as=${asUser}`
-    );
-  }
-
-  async vmStartAsUser(name: string, namespace: string, asUser: string): Promise<void> {
-    await this.run(
-      `oc patch vm ${name} -n ${namespace} --type=merge -p '{"spec":{"runStrategy":"Always"}}' --as=${asUser}`
-    );
   }
 
   async vmIsRunning(name: string, namespace: string): Promise<boolean> {
