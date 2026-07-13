@@ -1,0 +1,70 @@
+## Batch 1 — check_manage_columns (RHACM4K-37242)
+## 2 policies applied via CLI. Just need to appear in the policies table.
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: Policy
+metadata:
+  name: test-manage-columns-1-e2e
+  namespace: default
+  annotations:
+    policy.open-cluster-management.io/standards: NIST-CSF
+    policy.open-cluster-management.io/categories: PR.IP Information Protection Processes and Procedures
+    policy.open-cluster-management.io/controls: PR.PT-3 Least Functionality
+spec:
+  disabled: false
+  remediationAction: inform
+  policy-templates:
+    - objectDefinition:
+        apiVersion: policy.open-cluster-management.io/v1
+        kind: ConfigurationPolicy
+        metadata:
+          name: manage-cols-ns-policy-1-e2e
+        spec:
+          remediationAction: inform
+          severity: low
+          namespaceSelector:
+            exclude:
+              - kube-*
+            include:
+              - default
+          object-templates:
+            - complianceType: musthave
+              objectDefinition:
+                kind: Namespace
+                apiVersion: v1
+                metadata:
+                  name: prod-auto-mcol-e2e
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: Policy
+metadata:
+  name: test-manage-columns-2-e2e
+  namespace: default
+  annotations:
+    policy.open-cluster-management.io/standards: NIST-CSF
+    policy.open-cluster-management.io/categories: PR.IP Information Protection Processes and Procedures
+    policy.open-cluster-management.io/controls: PR.PT-3 Least Functionality
+spec:
+  disabled: false
+  remediationAction: inform
+  policy-templates:
+    - objectDefinition:
+        apiVersion: policy.open-cluster-management.io/v1
+        kind: ConfigurationPolicy
+        metadata:
+          name: manage-cols-ns-policy-2-e2e
+        spec:
+          remediationAction: inform
+          severity: low
+          namespaceSelector:
+            exclude:
+              - kube-*
+            include:
+              - default
+          object-templates:
+            - complianceType: musthave
+              objectDefinition:
+                kind: Namespace
+                apiVersion: v1
+                metadata:
+                  name: prod-auto-mcol-2-e2e

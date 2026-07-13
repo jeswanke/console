@@ -1,0 +1,10 @@
+## Shared ManagedClusterSetBinding for default namespace.
+## Applied before any governance test that places policies via Placement in the default namespace.
+---
+apiVersion: cluster.open-cluster-management.io/v1beta2
+kind: ManagedClusterSetBinding
+metadata:
+  name: default
+  namespace: default
+spec:
+  clusterSet: default
