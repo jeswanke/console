@@ -3,9 +3,9 @@ import jsYaml from 'js-yaml'
 import type { Placement } from '~/resources'
 import type { TopologyNode } from '../types'
 import type { IBulletDescription, IFilteredConditionError, TopologyAlert } from './analyzeTopology'
-import { createTopologyAlert, TopologyAlertActionType } from './utils'
+import { createTopologyErrorAlert, TopologyAlertActionType } from './utils'
 
-export const createAlertsPlacement = (
+export const createSuggestsPlacement = (
   node: TopologyNode,
   filteredError: IFilteredConditionError,
   alerts: TopologyAlert[]
@@ -22,5 +22,5 @@ export const createAlertsPlacement = (
       highlightEditorPath: 'Placement.spec.clusterSets',
     },
   ]
-  createTopologyAlert(suggestions, actions, alerts, filteredError)
+  createTopologyErrorAlert(suggestions, actions, alerts, filteredError)
 }

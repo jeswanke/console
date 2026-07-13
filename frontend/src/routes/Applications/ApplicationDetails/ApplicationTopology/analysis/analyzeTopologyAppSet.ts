@@ -1,9 +1,9 @@
 /* Copyright Contributors to the Open Cluster Management project */
 import type { TopologyNode } from '../types'
 import type { IFilteredConditionError, IResourcesWithStatus, TopologyAlert } from './analyzeTopology'
-import { createAlertsApplication } from './createAlertsApplication'
-import { createAlertsAppset } from './createAlertsAppset'
-import { createAlertsPlacement } from './createAlertsPlacement'
+import { createSuggestsApplication } from './createSuggestsApplication'
+import { createSuggestsAppset } from './createSuggestsAppset'
+import { createSuggestsPlacement } from './createSuggestsPlacement'
 import { extractConditionsErrors, setNodePulseForTypes } from './utils'
 
 /**
@@ -25,7 +25,7 @@ export const analyzeTopologyAppSet = (appSet: TopologyNode, nodes: TopologyNode[
 
   if (placementErrors.length > 0) {
     placementErrors.forEach((placementError) => {
-      createAlertsPlacement(placement!, placementError, alerts)
+      createSuggestsPlacement(placement!, placementError, alerts)
     })
 
     if (placement) {
@@ -43,7 +43,7 @@ export const analyzeTopologyAppSet = (appSet: TopologyNode, nodes: TopologyNode[
 
     if (appSetAppsErrors.length > 0) {
       appSetAppsErrors.forEach((appSetAppsError) => {
-        createAlertsApplication(appSet, appSetAppsError, alerts)
+        createSuggestsApplication(appSet, appSetAppsError, alerts)
       })
 
       appSet.specs.pulse = 'red'
@@ -58,7 +58,7 @@ export const analyzeTopologyAppSet = (appSet: TopologyNode, nodes: TopologyNode[
 
     if (appsetErrors.length > 0) {
       appsetErrors.forEach((appsetError) => {
-        createAlertsAppset(appSet, appsetError, alerts)
+        createSuggestsAppset(appSet, appsetError, alerts)
       })
 
       appSet.specs.pulse = 'red'

@@ -16,7 +16,12 @@ export type {
   TopologyAlertDescription,
 } from './utils'
 
-export { createTopologyAlert, extractConditionsErrors, TopologyAlertActionType } from './utils'
+export {
+  createTopologyErrorAlert,
+  createTopologySyncAlert,
+  extractConditionsErrors,
+  TopologyAlertActionType,
+} from './utils'
 
 /**
  * Analyzes topology nodes and produces alerts for placement, cluster, and deployment issues.
@@ -26,7 +31,7 @@ export const analyzeTopology = (nodes: TopologyNode[]): TopologyAlert[] => {
 
   const appSet = nodes.find((node) => node.type === 'applicationset')
 
-  if (appSet && !appSet.specs?.isCreating) {
+  if (appSet) {
     analyzeTopologyAppSet(appSet, nodes, alerts)
   }
 

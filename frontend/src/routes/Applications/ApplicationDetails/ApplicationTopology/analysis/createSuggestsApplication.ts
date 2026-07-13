@@ -3,9 +3,9 @@ import jsYaml from 'js-yaml'
 import type { ApplicationSet } from '~/resources'
 import type { TopologyNode } from '../types'
 import type { IBulletDescription, IFilteredConditionError, TopologyAlert } from './analyzeTopology'
-import { createTopologyAlert, TopologyAlertActionType } from './utils'
+import { createTopologyErrorAlert, TopologyAlertActionType } from './utils'
 
-export const createAlertsApplication = (
+export const createSuggestsApplication = (
   node: TopologyNode,
   filteredError: IFilteredConditionError,
   alerts: TopologyAlert[]
@@ -31,5 +31,5 @@ export const createAlertsApplication = (
         ]
       : []),
   ]
-  createTopologyAlert(suggestions, actions, alerts, filteredError)
+  createTopologyErrorAlert(suggestions, actions, alerts, filteredError)
 }

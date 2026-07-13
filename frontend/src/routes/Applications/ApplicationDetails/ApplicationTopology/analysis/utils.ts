@@ -84,6 +84,25 @@ interface IErrorCondition {
   reason: string
 }
 
+export interface IResourceCondition {
+  type: string
+  reason?: string
+  message: string
+  status?: 'True' | 'False' | string
+}
+
+/** Determines whether a resource status condition represents an error state. */
+export const isErrorCondition = (condition: IResourceCondition): boolean => {
+  const typeLower = condition.type.toLowerCase()
+  const reasonLower = condition.reason?.toLowerCase()
+  const errorKeywords = ['error', 'failed']
+  const matchText = reasonLower ?? typeLower
+  const hasErrorInTypeOrReason = errorKeywords.some((keyword) => matchText.includes(keyword))
+  const positiveStatusTypes = ['satisfied', 'uptodate', 'generated']
+  const typeHasPositiveStatus = positiveStatusTypes.some((keyword) => typeLower.includes(keyword))
+  return hasErrorInTypeOrReason || (condition.status === 'False' && typeHasPositiveStatus)
+}
+
 /** Sets pulse color on all nodes matching the given types. */
 export const setNodePulseForTypes = (nodes: TopologyNode[], types: string[], pulse: string): void => {
   nodes.forEach((node) => {
@@ -102,16 +121,7 @@ export const extractConditionsErrors = (resources: IResourcesWithStatus[]): IFil
   resources.forEach((resource) => {
     const conditions = resource.status?.conditions ?? []
     conditions.forEach((condition) => {
-      const typeLower = condition.type.toLowerCase()
-      const reasonLower = condition.reason?.toLowerCase()
-      const hasErrorInTypeOrReason = typeLower.includes('error') || (reasonLower?.includes('error') ?? false)
-      const positiveStatusTypes = ['satisfied', 'uptodate', 'generated']
-      const typeHasPositiveStatus = positiveStatusTypes.some((keyword) => typeLower.includes(keyword))
-      const isErrorCondition =
-        (hasErrorInTypeOrReason && (condition.status === undefined || condition.status === 'True')) ||
-        (condition.status === 'False' && typeHasPositiveStatus)
-
-      if (!isErrorCondition) {
+      if (!isErrorCondition(condition)) {
         return
       }
 
@@ -274,7 +284,7 @@ const getTopologyAlertId = (title: string, description: TopologyAlertDescription
 /**
  * Creates and pushes a topology alert from a resource condition error.
  */
-export const createTopologyAlert = (
+export const createTopologyErrorAlert = (
   suggestions: IBulletDescription[],
   actions: TopologyAlertAction[],
   alerts: TopologyAlert[],
@@ -326,4 +336,22 @@ export const createTopologyAlert = (
     actions,
     isMajor,
   })
+}
+
+/**
+ * Creates a topology alert from the given title, status, description, and actions.
+ */
+export const createTopologySyncAlert = (
+  title: string,
+  status: PulseColor,
+  description: TopologyAlertDescription,
+  actions: TopologyAlertAction[]
+): TopologyAlert => {
+  return {
+    id: getTopologyAlertId(title, description),
+    status,
+    title,
+    description,
+    actions,
+  }
 }

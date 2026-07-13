@@ -1,9 +1,9 @@
 /* Copyright Contributors to the Open Cluster Management project */
 import type { TopologyNode } from '../types'
 import type { IBulletDescription, IFilteredConditionError, TopologyAlert } from './analyzeTopology'
-import { createTopologyAlert, TopologyAlertActionType } from './utils'
+import { createTopologyErrorAlert, TopologyAlertActionType } from './utils'
 
-export const createAlertsAppset = (
+export const createSuggestsAppset = (
   node: TopologyNode,
   filteredError: IFilteredConditionError,
   alerts: TopologyAlert[]
@@ -21,5 +21,5 @@ export const createAlertsAppset = (
       action: { url: 'yahoo.com' },
     },
   ]
-  createTopologyAlert(suggestions, actions, alerts, filteredError)
+  createTopologyErrorAlert(suggestions, actions, alerts, filteredError)
 }
