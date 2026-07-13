@@ -21,7 +21,7 @@ export interface TopologyAlertAction {
 
 export interface IBulletDescription {
   title: string
-  content: string[]
+  content?: string[]
 }
 
 export interface TopologyAlertDescription {

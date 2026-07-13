@@ -1,26 +1,89 @@
 /* Copyright Contributors to the Open Cluster Management project */
 import jsYaml from 'js-yaml'
+import stringSimilarity from 'string-similarity'
 import type { Placement } from '~/resources'
 import type { TopologyNode } from '../types'
-import type { IBulletDescription, IFilteredConditionError, TopologyAlert } from './analyzeTopology'
+import type { IFilteredConditionError, TopologyAlert } from './analyzeTopology'
 import { createTopologyErrorAlert, TopologyAlertActionType } from './utils'
+
+const BAD_PREDICATE_MESSAGE = 'No ManagedCluster matches any of the cluster predicate'
+const UNBOUND_CLUSTER_SETS_MESSAGE = 'None of ManagedClusterSets [] is bound to placement namespace'
+const SIMILARITY_THRESHOLD = 0.7
+
+const createPlacementAlert = (
+  message: string,
+  node: TopologyNode,
+  filteredError: IFilteredConditionError,
+  alerts: TopologyAlert[]
+): void => {
+  const placement = node.placement as Placement
+
+  switch (true) {
+    case stringSimilarity.compareTwoStrings(message, BAD_PREDICATE_MESSAGE) > SIMILARITY_THRESHOLD: {
+      const currentYaml = jsYaml.dump(placement.spec.predicates ?? {}, { indent: 2 }).split('\n')
+      const suggestions = [{ title: 'Current predicates', content: currentYaml }]
+      createTopologyErrorAlert(
+        suggestions,
+        [
+          {
+            label: 'Edit predicate',
+            type: TopologyAlertActionType.editYaml,
+            node,
+            highlightEditorPath: 'Placement.spec.predicates',
+          },
+        ],
+        alerts,
+        filteredError
+      )
+      break
+    }
+    case stringSimilarity.compareTwoStrings(message, UNBOUND_CLUSTER_SETS_MESSAGE) > SIMILARITY_THRESHOLD: {
+      const currentYaml = jsYaml.dump(placement.spec.clusterSets ?? {}, { indent: 2 }).split('\n')
+      const suggestions = [
+        { title: 'If specify a clusterSet, make sure it is bound to the gitops operator placement namespace' },
+        { title: 'If you want to deploy to all clusters, remove the clusterSets' },
+        { title: 'Current clustersets', content: currentYaml },
+      ]
+      createTopologyErrorAlert(
+        suggestions,
+        [
+          {
+            label: 'Edit clustersets',
+            type: TopologyAlertActionType.editYaml,
+            node,
+            highlightEditorPath: 'Placement.spec.clusterSets',
+          },
+        ],
+        alerts,
+        filteredError
+      )
+      break
+    }
+    default: {
+      const currentYaml = jsYaml.dump(placement.spec.clusterSets ?? {}, { indent: 2 }).split('\n')
+      const suggestions = [{ title: 'Current specification', content: currentYaml }]
+      createTopologyErrorAlert(
+        suggestions,
+        [
+          {
+            label: 'Edit placement',
+            type: TopologyAlertActionType.editYaml,
+            node,
+          },
+        ],
+        alerts,
+        filteredError
+      )
+    }
+  }
+}
 
 export const createSuggestsPlacement = (
   node: TopologyNode,
   filteredError: IFilteredConditionError,
   alerts: TopologyAlert[]
 ): void => {
-  const placement = node.placement as Placement
-  const currentYaml = jsYaml.dump(placement.spec.clusterSets ?? {}, { indent: 2 }).split('\n')
-  const suggestions: IBulletDescription[] = [{ title: 'Current specification', content: currentYaml }]
-
-  const actions = [
-    {
-      label: 'Edit specification',
-      type: TopologyAlertActionType.editYaml,
-      node,
-      highlightEditorPath: 'Placement.spec.clusterSets',
-    },
-  ]
-  createTopologyErrorAlert(suggestions, actions, alerts, filteredError)
+  filteredError.errors.forEach((error) => {
+    createPlacementAlert(error.firstError.message, node, { ...filteredError, errors: [error] }, alerts)
+  })
 }

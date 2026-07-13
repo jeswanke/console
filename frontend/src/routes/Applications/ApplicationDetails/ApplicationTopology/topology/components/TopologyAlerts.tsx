@@ -280,7 +280,7 @@ export function TopologyAlerts({ alerts, onEditYaml, onViewLogs, onSyncResources
                               <span className={bulletMarker}>{'\u25CF'}</span>
                               {bullet.title}
                             </p>
-                            {bullet.content.length > 0 ? (
+                            {bullet.content && bullet.content.length > 0 ? (
                               <div className={bulletContent}>
                                 <pre className={bulletContentYaml}>{bullet.content.join('\n')}</pre>
                               </div>
