@@ -179,7 +179,7 @@ const buildConsolidatedSyncDescription = (syncAlerts: SyncAlertEntry[]): Topolog
           title: formatKindList([...kinds]),
           content: formatClusterListContent([...clusters]),
         },
-        ...SYNC_ALERT_SUGGESTION_BULLETS,
+        ...(healthSyncKey !== 'Progressing' ? SYNC_ALERT_SUGGESTION_BULLETS : []),
       ],
     }
   }
@@ -192,7 +192,7 @@ const buildConsolidatedSyncDescription = (syncAlerts: SyncAlertEntry[]): Topolog
         content: [formatKindList([...kinds]), ...formatClusterListContent([...clusters])],
       }
     }),
-    ...SYNC_ALERT_SUGGESTION_BULLETS,
+    ...(sortedKeys.some((healthSyncKey) => healthSyncKey !== 'Progressing') ? SYNC_ALERT_SUGGESTION_BULLETS : []),
   ]
 
   return {
