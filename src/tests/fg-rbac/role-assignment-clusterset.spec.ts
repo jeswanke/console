@@ -249,4 +249,86 @@ test.describe('Role Assignment - Cluster Set Scope', { tag: ['@fg-rbac'] }, () =
       await oc.deleteYaml(TEST_CLUSTERSET_YAML);
     });
   });
+
+  test('RHACM4K-61730: Create Role Assignment with multiple cluster sets - project access', async ({
+    userDetailsPage,
+    roleAssignmentWizardPage,
+    oc,
+    rbacConfig,
+  }) => {
+    const user = rbacConfig.users['csproj-61730'];
+    const role = 'acm-vm-extended:admin';
+    const testClusterSet = 'e2e-test-clusterset';
+    const projectNames = ['default'];
+
+    await oc.mcraDeleteAllForUser(user);
+
+    await test.step('0: Create test cluster set for multi-select', async () => {
+      await oc.applyYaml(TEST_CLUSTERSET_YAML);
+    });
+
+    const clusterSets = [CLUSTER_SET, testClusterSet];
+
+    await test.step('1: Navigate and open wizard', async () => {
+      await userDetailsPage.gotoRoleAssignments(user);
+      await userDetailsPage.openCreateRoleAssignment();
+      await expect(roleAssignmentWizardPage.getModal()).toBeVisible();
+      await expect(roleAssignmentWizardPage.getWizardTitle()).toContainText(user);
+    });
+
+    await test.step('2: Select multiple cluster sets', async () => {
+      await roleAssignmentWizardPage.selectScopeType(SCOPE_TYPES.clusterSets);
+      await roleAssignmentWizardPage.selectClusterSets(clusterSets);
+      await roleAssignmentWizardPage.clickNext();
+    });
+
+    await test.step('3: Select project access granularity and projects', async () => {
+      await roleAssignmentWizardPage.selectGranularity(
+        GRANULARITY_OPTIONS.projectRoleAssignment
+      );
+      const createProjectBtn = roleAssignmentWizardPage.getModal().locator(`#${RBAC_WIZARD.projects.createButtonId}`);
+      await expect(createProjectBtn).toBeEnabled();
+      await roleAssignmentWizardPage.selectProjects(projectNames);
+      await expect(createProjectBtn).toBeDisabled();
+      await roleAssignmentWizardPage.clickNext();
+    });
+
+    await test.step('4: Select role', async () => {
+      const nextButton = roleAssignmentWizardPage.getNextButton();
+      await expect(nextButton).toBeDisabled();
+      await roleAssignmentWizardPage.selectRole(role);
+      await expect(nextButton).toBeEnabled();
+      await roleAssignmentWizardPage.clickNext();
+    });
+
+    await test.step('5: Review and create', async () => {
+      await expect(roleAssignmentWizardPage.getReviewSubject()).toContainText(user);
+      await expect(roleAssignmentWizardPage.getReviewScope()).toContainText('Projects');
+      await expect(roleAssignmentWizardPage.getReviewRole()).toContainText(role);
+      await roleAssignmentWizardPage.submitCreate();
+      await expect(roleAssignmentWizardPage.getSuccessNotification()).toBeVisible({
+        timeout: 30000,
+      });
+      await expect(roleAssignmentWizardPage.getModal()).toBeHidden();
+    });
+
+    await test.step('6: Verify role assignment in UI table', async () => {
+      await expect(async () => {
+        await userDetailsPage.gotoRoleAssignments(user);
+        await expect(
+          userDetailsPage.roleAssignmentsTable.getRowByRole(role)
+        ).toBeVisible();
+      }).toPass({ intervals: [5_000, 10_000, 15_000], timeout: 120_000 });
+
+      const row = userDetailsPage.roleAssignmentsTable.getRowByRole(role);
+      for (const cs of clusterSets) {
+        await expect(row.getByText(cs).first()).toBeVisible();
+      }
+    });
+
+    await test.step('7: Cleanup', async () => {
+      await oc.mcraDeleteAllForUser(user);
+      await oc.deleteYaml(TEST_CLUSTERSET_YAML);
+    });
+  });
 });

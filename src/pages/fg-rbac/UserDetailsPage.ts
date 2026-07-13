@@ -27,6 +27,16 @@ export class UserDetailsPage extends BasePage {
     this.roleAssignmentsTab = page.getByRole('tab', { name: RBAC_USER_DETAIL.tabs.roleAssignments });
   }
 
+  getPageHeading(): Locator {
+    return this.page.getByRole('heading', { level: 1 });
+  }
+
+  getGeneralInfoSection(): Locator {
+    return this.page.getByRole('heading', {
+      name: RBAC_USER_DETAIL.fields.generalInformation, level: 3,
+    }).locator('..');
+  }
+
   async goto(userId: string): Promise<void> {
     const consoleUrl = await this.oc.getConsoleUrl();
     await this.page.goto(`${consoleUrl}${RBAC_ROUTES.userDetails(userId)}`);
