@@ -1,6 +1,7 @@
 /* Copyright Contributors to the Open Cluster Management project */
 import type { TopologyNode } from '../types'
 import { analyzeTopologyApplications } from './analyzeTopologyApplications'
+import { analyzeTopologyClusters } from './analyzeTopologyClusters'
 import type { IFilteredConditionError, IResourcesWithStatus, TopologyAlert } from './analyzeTopology'
 import { createSuggestsAppset } from './createSuggestsAppset'
 import { createSuggestsPlacement } from './createSuggestsPlacement'
@@ -59,4 +60,6 @@ export const analyzeTopologyAppSet = async (
       appSet.specs.pulse = 'red'
     }
   }
+
+  await analyzeTopologyClusters(appSet, nodes, alerts)
 }

@@ -1,8 +1,6 @@
 /* Copyright Contributors to the Open Cluster Management project */
 import type { TopologyNode } from '../types'
 import { analyzeTopologyAppSet } from './analyzeTopologyAppSet'
-import { analyzeTopologyClusters } from './analyzeTopologyClusters'
-import { analyzeTopologyDeployments } from './analyzeTopologyDeployments'
 import type { TopologyAlert } from './utils'
 
 export type {
@@ -34,9 +32,6 @@ export const analyzeTopology = async (nodes: TopologyNode[]): Promise<TopologyAl
   if (appSet) {
     await analyzeTopologyAppSet(appSet, nodes, alerts)
   }
-
-  analyzeTopologyClusters(nodes, alerts)
-  analyzeTopologyDeployments(nodes, alerts)
 
   return alerts
 }

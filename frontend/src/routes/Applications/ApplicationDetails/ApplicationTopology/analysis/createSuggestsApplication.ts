@@ -179,18 +179,7 @@ export const createSuggestsApplication = (
             title: 'Grant the GitOps controller service account RBAC access to the target namespace',
           },
         ]
-        createTopologyErrorAlert(
-          suggestions,
-          [
-            {
-              label: 'Launch Argo editor',
-              type: TopologyAlertActionType.launchArgo,
-              node,
-            },
-          ],
-          alerts,
-          forbiddenError
-        )
+        createTopologyErrorAlert(suggestions, [], alerts, forbiddenError)
         break
       }
       case isSourceRequiredMessage(message): {
