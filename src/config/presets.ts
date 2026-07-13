@@ -55,6 +55,7 @@ export const rbacPresets = {
     { role: 'fg-rbac-group-last-60307', username: 'clc-e2e-group-last-60307', domains: ['fg-rbac', 'fleet-virt'] },
     { role: 'fg-rbac-idp-kubevirt-60257', username: 'clc-e2e-idp-kubevirt-60257', domains: ['fg-rbac', 'fleet-virt'] },
     { role: 'fg-rbac-idp-vm-60258', username: 'clc-e2e-idp-vm-60258', domains: ['fg-rbac', 'fleet-virt'] },
+    { role: 'fg-rbac-ldap-admin-60258', username: 'qe-admin-user', idp: 'qe-ldap', password: 'qe-admin-user', domains: ['fg-rbac', 'fleet-virt'] },
     { role: 'fg-rbac-search-61846', username: 'clc-e2e-search-61846', domains: ['fg-rbac', 'fleet-virt'] },
     { role: 'fg-rbac-view-cluster-59195', username: 'clc-e2e-view-cluster-59195', domains: ['fg-rbac', 'fleet-virt'] },
     { role: 'fg-rbac-operator-60239', username: 'clc-e2e-operator-60239', domains: ['fg-rbac', 'fleet-virt'] },

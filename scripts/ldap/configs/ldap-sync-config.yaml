@@ -1,0 +1,27 @@
+# oc create configmap ldap-sync-config --from-file=ldap-sync-config.yaml -n qe-ldap
+kind: LDAPSyncConfig
+apiVersion: v1
+url: "ldap://glauth-service.qe-ldap.svc.cluster.local:3893"
+insecure: true
+bindDN: "cn=ldap-syncer,ou=sync-group,dc=qe-ldap,dc=internal"
+bindPassword:
+  file: /etc/ldap-secret/password
+
+rfc2307:
+  groupsQuery:
+    baseDN: "ou=users,dc=qe-ldap,dc=internal"
+    scope: sub
+    derefAliases: never
+    filter: "(&(objectClass=posixGroup)(|(ou=qe-view-group)(ou=qe-edit-group)(ou=qe-admin-group)))"
+
+  groupUIDAttribute: "gidNumber"
+  groupNameAttributes: [ "ou" ]
+  groupMembershipAttributes: [ "memberUid" ]
+
+  usersQuery:
+    baseDN: "ou=users,dc=qe-ldap,dc=internal"
+    scope: sub
+    derefAliases: never
+    filter: "(objectClass=posixAccount)"
+  userUIDAttribute: "cn"
+  userNameAttributes: [ "cn" ]

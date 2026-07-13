@@ -1,0 +1,27 @@
+[
+  {
+    "op": "add",
+    "path": "/spec/identityProviders/-",
+    "value": {
+      "name": "qe-ldap",
+      "type": "LDAP",
+      "mappingMethod": "claim",
+      "ldap": {
+        "url": "ldap://glauth-service.qe-ldap.svc.cluster.local:3893/ou=users,dc=qe-ldap,dc=internal?cn?sub",
+        "insecure": true,
+        "bindDN": "cn=ldap-syncer,ou=sync-group,ou=users,dc=qe-ldap,dc=internal",
+        "bindPassword": {
+          "name": "ldap-bind-password"
+        },
+        "attributes": {
+          "id": ["cn"],
+          "name": ["cn"],
+          "preferredUsername": ["cn"],
+          "email": []
+        }
+      }
+    }
+  }
+]
+
+

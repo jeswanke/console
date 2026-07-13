@@ -3,11 +3,15 @@
  *
  * Polarion steps:
  *   1. Verify both IDP users can access Fleet Virt with tree visible
- *   2. First user (idp-kubevirt) stops the VM via UI Actions menu
- *   3. Second user (idp-vm) sees Stopped, starts the VM via UI Actions menu
+ *   2. HTPasswd user (clc-e2e-idp-kubevirt-60257) stops the VM via UI
+ *   3. LDAP user (qe-admin-user) sees Stopped, starts the VM via UI
  *
- * Both users have acm-vm-fleet:view + kubevirt.io:admin.
- * Proves RBAC is IDP-agnostic -- both htpasswd users have identical access.
+ * HTPasswd user: clc-e2e-idp-kubevirt-60257 via clc-e2e-htpasswd IDP
+ * LDAP user: qe-admin-user via qe-ldap IDP
+ * Both have acm-vm-fleet:view + kubevirt.io:admin.
+ * Proves RBAC is IDP-agnostic across different identity providers.
+ *
+ * Prerequisites: GLAuth LDAP server deployed (scripts/ldap/install-glauth.sh)
  *
  * Login uses asUser fixture (pre-saved storageState).
  */
@@ -22,8 +26,9 @@ import { FLEET_VIRT_DEFAULTS } from '@constants/fleet-virt';
 const VM_NAME = `e2e-idp-cmp-${Date.now()}`;
 const VM_NAMESPACE = FLEET_VIRT_DEFAULTS.vmNamespace;
 const CLUSTER = 'local-cluster';
-const IDP_KUBEVIRT_USER = 'fg-rbac-idp-kubevirt-60257';
-const IDP_VM_USER = 'fg-rbac-idp-vm-60258';
+const HTPASSWD_USER = 'fg-rbac-idp-kubevirt-60257';
+const LDAP_USER = 'fg-rbac-ldap-admin-60258';
+const MCRA_NS = 'open-cluster-management-global-set';
 const ocSvc = new OcCliService();
 
 test.describe('Fleet Virt - IDP Comparison', { tag: ['@fg-rbac', '@fleet-virt', '@virtualization'] }, () => {
@@ -32,8 +37,8 @@ test.describe('Fleet Virt - IDP Comparison', { tag: ['@fg-rbac', '@fleet-virt', 
   test.beforeAll(async ({}, testInfo) => {
     testInfo.setTimeout(180000);
 
-    const idpKubevirtCanGet = await ocSvc.rbacAuthCanI('get', 'virtualmachines.kubevirt.io', VM_NAMESPACE, 'clc-e2e-idp-kubevirt-60257');
-    if (!idpKubevirtCanGet) {
+    const htpasswdCanGet = await ocSvc.rbacAuthCanI('get', 'virtualmachines.kubevirt.io', VM_NAMESPACE, 'clc-e2e-idp-kubevirt-60257');
+    if (!htpasswdCanGet) {
       await ocSvc.mcraAddRoleAssignment(
         'htpasswd-idp-kubevirt-assignment',
         'open-cluster-management-global-set',
@@ -43,12 +48,38 @@ test.describe('Fleet Virt - IDP Comparison', { tag: ['@fg-rbac', '@fleet-virt', 
         'kubevirt-admin-access',
         ['default']
       );
-
-      await expect(async () => {
-        const canGet = await ocSvc.rbacAuthCanI('get', 'virtualmachines.kubevirt.io', VM_NAMESPACE, 'clc-e2e-idp-kubevirt-60257');
-        expect(canGet).toBe(true);
-      }).toPass({ intervals: [10000, 15000], timeout: 60000 });
     }
+
+    const ldapCanGet = await ocSvc.rbacAuthCanI('get', 'virtualmachines.kubevirt.io', VM_NAMESPACE, 'qe-admin-user');
+    if (!ldapCanGet) {
+      await ocSvc.mcraCreate({
+        name: 'ldap-admin-idp-60258',
+        namespace: MCRA_NS,
+        subjectKind: 'User',
+        subjectName: 'qe-admin-user',
+        clusterRole: 'kubevirt.io:admin',
+        placementName: 'cluster-sets-default',
+        placementNamespace: MCRA_NS,
+        raName: 'ldap-kubevirt-admin',
+      });
+      await ocSvc.mcraCreate({
+        name: 'ldap-fleet-idp-60258',
+        namespace: MCRA_NS,
+        subjectKind: 'User',
+        subjectName: 'qe-admin-user',
+        clusterRole: 'acm-vm-fleet:view',
+        placementName: 'cluster-sets-default',
+        placementNamespace: MCRA_NS,
+        raName: 'ldap-fleet-view',
+      });
+    }
+
+    await expect(async () => {
+      const htCanGet = await ocSvc.rbacAuthCanI('get', 'virtualmachines.kubevirt.io', VM_NAMESPACE, 'clc-e2e-idp-kubevirt-60257');
+      const ldCanGet = await ocSvc.rbacAuthCanI('get', 'virtualmachines.kubevirt.io', VM_NAMESPACE, 'qe-admin-user');
+      expect(htCanGet).toBe(true);
+      expect(ldCanGet).toBe(true);
+    }).toPass({ intervals: [10000, 15000], timeout: 60000 });
 
     await ocSvc.vmEnsureTestVM(VM_NAME, VM_NAMESPACE, { 'test-case': 'rhacm4k-60258' });
 
@@ -62,9 +93,9 @@ test.describe('Fleet Virt - IDP Comparison', { tag: ['@fg-rbac', '@fleet-virt', 
     await ocSvc.vmDeleteTestVM(VM_NAME, VM_NAMESPACE);
   });
 
-  test('RHACM4K-60258: Both htpasswd IDP users access Fleet Virt equally', async ({ asUser, oc }) => {
-    await test.step('1: Login as idp-kubevirt user and verify Fleet Virt access', async () => {
-      const session = await asUser(IDP_KUBEVIRT_USER);
+  test('RHACM4K-60258: HTPasswd and LDAP users access Fleet Virt equally', async ({ asUser, oc }) => {
+    await test.step('1: Login as HTPasswd user and verify Fleet Virt access', async () => {
+      const session = await asUser(HTPASSWD_USER);
       const fleetPage = new FleetVirtPage(session.page, oc);
       const treeView = new TreeView(session.page);
 
@@ -76,13 +107,15 @@ test.describe('Fleet Virt - IDP Comparison', { tag: ['@fg-rbac', '@fleet-virt', 
       }).toPass({ intervals: [3000, 5000], timeout: 30000 });
     });
 
-    await test.step('2: idp-kubevirt user stops the VM via UI', async () => {
-      const session = await asUser(IDP_KUBEVIRT_USER);
+    await test.step('2: HTPasswd user stops the VM via UI Actions', async () => {
+      const session = await asUser(HTPASSWD_USER);
       const fleetPage = new FleetVirtPage(session.page, oc);
       const vmDetails = new VmDetailsPage(session.page);
 
-      await fleetPage.gotoVmDetails(CLUSTER, VM_NAMESPACE, VM_NAME);
-      await expect(vmDetails.getPageHeading()).toBeVisible({ timeout: 30000 });
+      await expect(async () => {
+        await fleetPage.gotoVmDetails(CLUSTER, VM_NAMESPACE, VM_NAME);
+        await expect(vmDetails.getPageHeading()).toBeVisible({ timeout: 15000 });
+      }).toPass({ intervals: [10000, 15000], timeout: 120000 });
 
       await vmDetails.clickActionButton('stop');
 
@@ -91,15 +124,15 @@ test.describe('Fleet Virt - IDP Comparison', { tag: ['@fg-rbac', '@fleet-virt', 
       }).toPass({ intervals: [5000, 10000], timeout: 60000 });
     });
 
-    await test.step('3: idp-vm user sees Stopped and starts VM via UI', async () => {
-      const session = await asUser(IDP_VM_USER);
+    await test.step('3: LDAP user sees Stopped and starts VM via UI Actions', async () => {
+      const session = await asUser(LDAP_USER);
       const fleetPage = new FleetVirtPage(session.page, oc);
       const vmDetails = new VmDetailsPage(session.page);
 
       await expect(async () => {
         await fleetPage.gotoVmDetails(CLUSTER, VM_NAMESPACE, VM_NAME);
-        await expect(vmDetails.getPageHeading()).toBeVisible({ timeout: 10000 });
-      }).toPass({ intervals: [5000, 10000], timeout: 60000 });
+        await expect(vmDetails.getPageHeading()).toBeVisible({ timeout: 15000 });
+      }).toPass({ intervals: [10000, 15000], timeout: 120000 });
 
       await expect(vmDetails.getStatusLabel()).toContainText('Stopped', { timeout: 30000 });
 
