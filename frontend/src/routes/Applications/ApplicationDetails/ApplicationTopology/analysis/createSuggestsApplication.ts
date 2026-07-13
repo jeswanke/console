@@ -10,6 +10,8 @@ const APP_PATH_DOES_NOT_EXIST_MESSAGE =
   'Failed to load target state: failed to generate manifest for source: app path does not exist'
 const FAILED_SYNC_MESSAGE =
   'Failed last sync attempt to []: one or more synchronization tasks completed unsuccessfully,  (retried 5 times).'
+const FORBIDDEN_SYNC_MESSAGE =
+  'Failed last sync attempt to []: one or more objects failed to apply, reason: RESOURCE is forbidden: User "SERVICEACCOUNT" cannot create resource "RESOURCE" in API group "APIGROUP" in the namespace "NAMESPACE" (retried 5 times).'
 const SOURCE_REQUIRED_MESSAGE = 'either source.path, source.chart, or source.ref are required for source '
 const SIMILARITY_THRESHOLD = 0.7
 
@@ -42,6 +44,30 @@ const isFailedSyncMessage = (message: string): boolean =>
     normalizeFailedSyncMessage(message),
     normalizeFailedSyncMessage(FAILED_SYNC_MESSAGE)
   ) > SIMILARITY_THRESHOLD
+
+/** Strips variable sync revision, resources, and namespace so forbidden-sync errors compare consistently. */
+const normalizeForbiddenSyncMessage = (message: string): string =>
+  message
+    .replace(/Failed last sync attempt to \[[^\]]*\]/i, 'Failed last sync attempt to []')
+    .replace(
+      /reason:.*?(?=\(retried)/i,
+      'reason: RESOURCE is forbidden: User "SERVICEACCOUNT" cannot create resource "RESOURCE" in API group "APIGROUP" in the namespace "NAMESPACE" '
+    )
+    .replace(/\s+/g, ' ')
+    .trim()
+
+const isForbiddenSyncMessage = (message: string): boolean =>
+  /one or more objects failed to apply/i.test(message) &&
+  /is forbidden:/i.test(message) &&
+  stringSimilarity.compareTwoStrings(
+    normalizeForbiddenSyncMessage(message),
+    normalizeForbiddenSyncMessage(FORBIDDEN_SYNC_MESSAGE)
+  ) > SIMILARITY_THRESHOLD
+
+const getForbiddenSyncNamespace = (message: string): string | undefined => {
+  const match = message.match(/in the namespace "([^"]+)"/)
+  return match?.[1]
+}
 
 /** Collapses variable source index so missing path/chart/ref errors compare consistently. */
 const normalizeSourceRequiredMessage = (message: string): string =>
@@ -126,6 +152,44 @@ export const createSuggestsApplication = (
           ],
           alerts,
           singleError
+        )
+        break
+      }
+      case isForbiddenSyncMessage(message): {
+        const namespace = getForbiddenSyncNamespace(message)
+        const conciseMessage = namespace
+          ? `Sync failed: insufficient permissions to create resources in ${namespace}`
+          : 'Sync failed: insufficient permissions to create resources'
+        const forbiddenError = {
+          ...singleError,
+          errors: [
+            {
+              ...error,
+              firstError: { ...error.firstError, message: conciseMessage },
+            },
+          ],
+        }
+        const suggestions = [
+          {
+            title: namespace
+              ? `Argo CD lacks permission to create resources in namespace ${namespace}`
+              : 'Argo CD lacks permission to create resources in the target namespace',
+          },
+          {
+            title: 'Grant the GitOps controller service account RBAC access to the target namespace',
+          },
+        ]
+        createTopologyErrorAlert(
+          suggestions,
+          [
+            {
+              label: 'Launch Argo editor',
+              type: TopologyAlertActionType.launchArgo,
+              node,
+            },
+          ],
+          alerts,
+          forbiddenError
         )
         break
       }

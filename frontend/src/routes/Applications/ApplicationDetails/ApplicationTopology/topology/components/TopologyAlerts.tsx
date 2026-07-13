@@ -8,6 +8,15 @@ import { TopologyAlertActionType } from '../../analysis/utils'
 
 const STATUS_ORDER: PulseColor[] = ['red', 'orange', 'yellow', 'green']
 
+const MAX_MESSAGE_LENGTH = 256
+
+const truncateMessage = (message: string): string => {
+  if (message.length <= MAX_MESSAGE_LENGTH) {
+    return message
+  }
+  return `${message.slice(0, MAX_MESSAGE_LENGTH)}...`
+}
+
 const statusToVariant: Record<string, AlertProps['variant']> = {
   red: 'danger',
   orange: 'info',
@@ -271,7 +280,7 @@ export function TopologyAlerts({ alerts, onEditYaml, onViewLogs, onSyncResources
               >
                 {alert.description && (
                   <>
-                    <p>{alert.description.message}</p>
+                    <p>{truncateMessage(alert.description.message)}</p>
                     {alert.description.bullets?.length ? (
                       <div className={bulletSpacer}>
                         {alert.description.bullets.map((bullet, bulletIndex) => (
