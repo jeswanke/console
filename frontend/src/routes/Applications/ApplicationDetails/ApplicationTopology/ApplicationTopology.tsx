@@ -195,6 +195,33 @@ export function ApplicationTopologyPageContent() {
     [hubClusterName, processActionLink]
   )
 
+  const handleSyncResources = useCallback((node: TopologyNode) => {
+    setSyncArgoCDModalProps({
+      open: true,
+      close: () => setSyncArgoCDModalProps({ open: false }),
+      appOrAppSet: {
+        metadata: { name: node.name },
+        appSetApps: node.specs.appSetApps,
+      },
+    })
+  }, [])
+
+  const handleLaunchArgo = useCallback(
+    (node: TopologyNode) => {
+      processActionLink(
+        {
+          action: 'open_argo_editor',
+          name: node.name,
+          namespace: node.namespace,
+          cluster: hubClusterName,
+        },
+        () => {},
+        hubClusterName
+      )
+    },
+    [hubClusterName, processActionLink]
+  )
+
   const refreshResources = useCallback(() => {
     const app = applicationData?.application
     if (app) {
@@ -227,6 +254,8 @@ export function ApplicationTopologyPageContent() {
         onRefreshResources={refreshResources}
         onEditYaml={handleEditYaml}
         onViewLogs={handleViewLogs}
+        onSyncResources={handleSyncResources}
+        onLaunchArgo={handleLaunchArgo}
       />
     </>
   )

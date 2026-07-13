@@ -110,9 +110,11 @@ export interface TopologyAlertsProps {
   alerts: TopologyAlert[]
   onEditYaml?: (node: TopologyNode, highlightEditorPath?: string) => void
   onViewLogs?: (node: TopologyNode) => void
+  onSyncResources?: (node: TopologyNode) => void
+  onLaunchArgo?: (node: TopologyNode) => void
 }
 
-export function TopologyAlerts({ alerts, onEditYaml, onViewLogs }: TopologyAlertsProps) {
+export function TopologyAlerts({ alerts, onEditYaml, onViewLogs, onSyncResources, onLaunchArgo }: TopologyAlertsProps) {
   const dismissedIdsRef = useRef<Set<string>>(new Set())
   const [visibleAlerts, setVisibleAlerts] = useState<TopologyAlert[]>([])
   const [removingIds, setRemovingIds] = useState<Set<string>>(new Set())
@@ -207,6 +209,18 @@ export function TopologyAlerts({ alerts, onEditYaml, onViewLogs }: TopologyAlert
               {alert.actions.map((action) => {
                 switch (action.type) {
                   case TopologyAlertActionType.launchArgo:
+                    if (action.node) {
+                      return (
+                        <AlertActionLink key={action.label} onClick={() => onLaunchArgo?.(action.node!)}>
+                          {action.label}
+                        </AlertActionLink>
+                      )
+                    }
+                    return action.action?.url ? (
+                      <AlertActionLink key={action.label} component="a" href={action.action.url}>
+                        {action.label}
+                      </AlertActionLink>
+                    ) : null
                   case TopologyAlertActionType.openUrl:
                     return action.action?.url ? (
                       <AlertActionLink key={action.label} component="a" href={action.action.url}>
@@ -226,6 +240,12 @@ export function TopologyAlerts({ alerts, onEditYaml, onViewLogs }: TopologyAlert
                   case TopologyAlertActionType.showLog:
                     return action.node ? (
                       <AlertActionLink key={action.label} onClick={() => onViewLogs?.(action.node!)}>
+                        {action.label}
+                      </AlertActionLink>
+                    ) : null
+                  case TopologyAlertActionType.syncResources:
+                    return action.node ? (
+                      <AlertActionLink key={action.label} onClick={() => onSyncResources?.(action.node!)}>
                         {action.label}
                       </AlertActionLink>
                     ) : null

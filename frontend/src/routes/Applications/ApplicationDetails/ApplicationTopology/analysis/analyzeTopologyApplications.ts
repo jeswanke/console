@@ -101,6 +101,32 @@ const isBadDeployResourceHealth = (resource: ArgoAppResource): boolean => {
   return health !== 'Healthy' && sync !== 'Synced'
 }
 
+const isDeploymentNodeUnhealthy = (deploymentNode: TopologyNode, appsetClusters: string[]): boolean => {
+  const resources = (deploymentNode.specs?.resources ?? []) as ArgoAppResource[]
+
+  if (deploymentNode.specs.resourceCount !== appsetClusters.length) {
+    const resourceClusters = new Set(resources.map((resource) => resource.cluster).filter(Boolean) as string[])
+    if (appsetClusters.some((clusterName) => !resourceClusters.has(clusterName))) {
+      return true
+    }
+  }
+
+  return resources.some((resource) => {
+    const cluster = resource.cluster as string | undefined
+    return cluster && isBadDeployResourceHealth(resource)
+  })
+}
+
+const setPartialUnhealthyDeploymentNodePulses = (deploymentNodes: TopologyNode[], appsetClusters: string[]): void => {
+  const unhealthyNodes = deploymentNodes.filter((node) => isDeploymentNodeUnhealthy(node, appsetClusters))
+
+  if (unhealthyNodes.length > 0 && unhealthyNodes.length < deploymentNodes.length) {
+    unhealthyNodes.forEach((node) => {
+      node.specs.pulse = 'red'
+    })
+  }
+}
+
 const formatKindList = (kinds: string[]): string => {
   const sorted = [...new Set(kinds)].sort((a, b) => {
     if (a === 'Application') return -1
@@ -123,6 +149,11 @@ const getConsolidatedSyncStatus = (healthSyncKeys: string[]): PulseColor => {
   })
   return status
 }
+
+const SYNC_ALERT_SUGGESTION_BULLETS: IBulletDescription[] = [
+  { title: 'Try resyncing resources', content: [] },
+  { title: 'If the problem persists, try editing the appset in Argo CD', content: [] },
+]
 
 const buildConsolidatedSyncDescription = (syncAlerts: SyncAlertEntry[]): TopologyAlertDescription => {
   const byHealthSyncKey = new Map<string, { kinds: Set<string>; clusters: Set<string> }>()
@@ -148,17 +179,21 @@ const buildConsolidatedSyncDescription = (syncAlerts: SyncAlertEntry[]): Topolog
           title: formatKindList([...kinds]),
           content: formatClusterListContent([...clusters]),
         },
+        ...SYNC_ALERT_SUGGESTION_BULLETS,
       ],
     }
   }
 
-  const bullets: IBulletDescription[] = sortedKeys.map((healthSyncKey) => {
-    const { kinds, clusters } = byHealthSyncKey.get(healthSyncKey)!
-    return {
-      title: `Status: ${healthSyncKey}`,
-      content: [formatKindList([...kinds]), ...formatClusterListContent([...clusters])],
-    }
-  })
+  const bullets: IBulletDescription[] = [
+    ...sortedKeys.map((healthSyncKey) => {
+      const { kinds, clusters } = byHealthSyncKey.get(healthSyncKey)!
+      return {
+        title: `Status: ${healthSyncKey}`,
+        content: [formatKindList([...kinds]), ...formatClusterListContent([...clusters])],
+      }
+    }),
+    ...SYNC_ALERT_SUGGESTION_BULLETS,
+  ]
 
   return {
     message: '',
@@ -175,8 +210,13 @@ const pushSyncAlert = (
 ): void => {
   const actions = [
     {
-      label: 'Resync appset',
-      type: TopologyAlertActionType.editYaml,
+      label: 'Sync resources',
+      type: TopologyAlertActionType.syncResources,
+      node: appSet,
+    },
+    {
+      label: 'Launch Argo editor',
+      type: TopologyAlertActionType.launchArgo,
       node: appSet,
     },
   ]
@@ -339,12 +379,13 @@ export const analyzeTopologyApplications = async (
         createSuggestsApplication(appSet, appSetAppsError, alerts)
       })
       appSet.specs.pulse = 'red'
+      setPartialUnhealthyDeploymentNodePulses(deploymentNodes, appsetClusters)
     }
   }
 
-  // if (appSetAppsErrors.length > 0) {
-  //   return appSetAppsErrors
-  // }
+  if (appSetAppsErrors.length > 0) {
+    return appSetAppsErrors
+  }
 
   /////////////////////////////////////////////
   // create alert for unhealthy/unsynced deployments
@@ -372,6 +413,7 @@ export const analyzeTopologyApplications = async (
 
   if (syncAlerts.length > 0) {
     const healthSyncKeys = [...new Set(syncAlerts.map((entry) => entry.healthSyncKey))]
+    setPartialUnhealthyDeploymentNodePulses(deploymentNodes, appsetClusters)
     pushSyncAlert(
       'Some resources are not healthy or synced on these clusters',
       getConsolidatedSyncStatus(healthSyncKeys),

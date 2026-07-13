@@ -8,6 +8,7 @@ export enum TopologyAlertActionType {
   viewYaml = 'viewYaml',
   launchArgo = 'launchArgo',
   openUrl = 'openUrl',
+  syncResources = 'syncResources',
 }
 
 export interface TopologyAlertAction {

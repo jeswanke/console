@@ -74,6 +74,8 @@ export interface TopologyProps {
   onRefreshResources?: () => void
   onEditYaml?: (node: TopologyNode, highlightEditorPath?: string) => void
   onViewLogs?: (node: TopologyNode) => void
+  onSyncResources?: (node: TopologyNode) => void
+  onLaunchArgo?: (node: TopologyNode) => void
 }
 
 interface TopologyViewComponentsProps {
@@ -94,6 +96,8 @@ export const TopologyViewComponents: React.FC<TopologyViewComponentsProps> = ({ 
     alerts,
     onEditYaml,
     onViewLogs,
+    onSyncResources,
+    onLaunchArgo,
   } = topologyProps
   const [selectedIds, setSelectedIds] = useState<string[]>()
 
@@ -161,7 +165,13 @@ export const TopologyViewComponents: React.FC<TopologyViewComponentsProps> = ({ 
         style={{ width: '100%', height: '100%', position: 'relative' }}
       >
         {alerts && alerts.length > 0 && (
-          <TopologyAlerts alerts={alerts} onEditYaml={onEditYaml} onViewLogs={onViewLogs} />
+          <TopologyAlerts
+            alerts={alerts}
+            onEditYaml={onEditYaml}
+            onViewLogs={onViewLogs}
+            onSyncResources={onSyncResources}
+            onLaunchArgo={onLaunchArgo}
+          />
         )}
         <VisualizationSurface state={{ selectedIds }} />
       </div>
