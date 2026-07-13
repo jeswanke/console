@@ -7,7 +7,7 @@ spec:
   selector:
     app: glauth
   ports:
-  - name: ldap
-    protocol: TCP
-    port: 3893
-    targetPort: ldap
+    - name: ldap
+      protocol: TCP
+      port: 3893
+      targetPort: ldap
