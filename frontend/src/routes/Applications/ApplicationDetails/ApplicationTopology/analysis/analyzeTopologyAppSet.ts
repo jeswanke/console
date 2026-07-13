@@ -1,7 +1,7 @@
 /* Copyright Contributors to the Open Cluster Management project */
 import type { TopologyNode } from '../types'
+import { analyzeTopologyApplications } from './analyzeTopologyApplications'
 import type { IFilteredConditionError, IResourcesWithStatus, TopologyAlert } from './analyzeTopology'
-import { createSuggestsApplication } from './createSuggestsApplication'
 import { createSuggestsAppset } from './createSuggestsAppset'
 import { createSuggestsPlacement } from './createSuggestsPlacement'
 import { extractConditionsErrors, setNodePulseForTypes } from './utils'
@@ -9,7 +9,11 @@ import { extractConditionsErrors, setNodePulseForTypes } from './utils'
 /**
  * Analyzes ApplicationSet topology nodes for placement and application errors.
  */
-export const analyzeTopologyAppSet = (appSet: TopologyNode, nodes: TopologyNode[], alerts: TopologyAlert[]): void => {
+export const analyzeTopologyAppSet = async (
+  appSet: TopologyNode,
+  nodes: TopologyNode[],
+  alerts: TopologyAlert[]
+): Promise<void> => {
   let placementErrors: IFilteredConditionError[] = []
   let appsetErrors: IFilteredConditionError[] = []
   let appSetAppsErrors: IFilteredConditionError[] = []
@@ -38,16 +42,7 @@ export const analyzeTopologyAppSet = (appSet: TopologyNode, nodes: TopologyNode[
   // Analyzing Application Set Applications
   /////////////////////////////////////////////
   if (placementErrors.length === 0) {
-    const appSetApps = (appSet.specs.appSetApps ?? []) as IResourcesWithStatus[]
-    appSetAppsErrors = extractConditionsErrors(appSetApps)
-
-    if (appSetAppsErrors.length > 0) {
-      appSetAppsErrors.forEach((appSetAppsError) => {
-        createSuggestsApplication(appSet, appSetAppsError, alerts)
-      })
-
-      appSet.specs.pulse = 'red'
-    }
+    appSetAppsErrors = await analyzeTopologyApplications(appSet, nodes, alerts)
   }
 
   /////////////////////////////////////////////

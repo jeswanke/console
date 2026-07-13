@@ -140,10 +140,21 @@ export function ApplicationTopologyPageContent() {
 
   const canUpdateStatuses = !!statuses
   useEffect(() => {
-    if (topology) {
-      const diagramElements = getDiagramElements(cloneDeep(topology), statuses, canUpdateStatuses, t)
+    if (!topology) {
+      return
+    }
+
+    let isCancelled = false
+    void getDiagramElements(cloneDeep(topology), statuses, canUpdateStatuses, t).then((diagramElements) => {
+      if (isCancelled) {
+        return
+      }
       setElements({ nodes: diagramElements.nodes, links: diagramElements.links })
       setAlertsState(diagramElements.alerts ?? [])
+    })
+
+    return () => {
+      isCancelled = true
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [startup, refreshTime])

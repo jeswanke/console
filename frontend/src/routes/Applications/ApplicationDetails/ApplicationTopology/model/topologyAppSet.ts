@@ -729,7 +729,7 @@ function processResources(
         parent: {
           clusterId: parentId,
         },
-        resources: deployableResources,
+        resources: deployableResources || [deployable as unknown as ResourceItem],
         resourceCount: resourceCount || nodeClusters.length,
       },
     }

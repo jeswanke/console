@@ -10,7 +10,7 @@ const STATUS_ORDER: PulseColor[] = ['red', 'orange', 'yellow', 'green']
 
 const statusToVariant: Record<string, AlertProps['variant']> = {
   red: 'danger',
-  orange: 'warning',
+  orange: 'info',
   yellow: 'warning',
   green: 'success',
 }
@@ -184,8 +184,7 @@ export function TopologyAlerts({ alerts, onEditYaml, onViewLogs }: TopologyAlert
     }, 500)
   }, [])
 
-  const hasMajor = visibleAlerts.some((alert) => alert.isMajor)
-  const maxHeight = hasMajor ? '66vh' : '375px'
+  const maxHeight = '66vh'
   const isFadingIn = newAlertIds.size > 0
 
   if (!visibleAlerts.length) {
@@ -199,7 +198,7 @@ export function TopologyAlerts({ alerts, onEditYaml, onViewLogs }: TopologyAlert
       style={{ maxHeight }}
     >
       <AlertGroup>
-        {visibleAlerts.map((alert, index) => {
+        {visibleAlerts.map((alert) => {
           const alertId = alert.id
           const isRemoving = removingIds.has(alertId)
           const isNew = newAlertIds.has(alertId)
@@ -244,7 +243,6 @@ export function TopologyAlerts({ alerts, onEditYaml, onViewLogs }: TopologyAlert
           return (
             <div key={alertId} className={isRemoving ? alertFadeOut : isNew ? alertFadeIn : undefined}>
               <Alert
-                isExpandable={index > 0 && !alert.isMajor}
                 variant={statusToVariant[alert.status] ?? 'warning'}
                 title={alert.title}
                 id={alertId}

@@ -341,11 +341,11 @@ export const createTopologyErrorAlert = (
 /**
  * Creates a topology alert from the given title, status, description, and actions.
  */
-export const createTopologySyncAlert = (
+export const createTopologyAlert = (
   title: string,
   status: PulseColor,
   description: TopologyAlertDescription,
-  actions: TopologyAlertAction[]
+  actions?: TopologyAlertAction[]
 ): TopologyAlert => {
   return {
     id: getTopologyAlertId(title, description),

@@ -99,7 +99,7 @@ export const getTopology = async (
  * @param t - Translation function for internationalization
  * @returns Diagram elements ready for rendering
  */
-export const getDiagramElements = (
+export const buildDiagramElements = (
   topology: Topology,
   resourceStatuses: ResourceStatuses | null,
   canUpdateStatuses: boolean,
@@ -158,7 +158,7 @@ export const getDiagramElements = (
   })
 
   // Apply resource status information if available
-  let alerts: TopologyAlert[] = []
+  const alerts: TopologyAlert[] = []
   if (resourceStatuses) {
     // Merge search results into topology nodes
     addDiagramDetails(resourceStatuses, allResourcesMap, isClusterGrouped.value, hasHelmReleases, topology)
@@ -167,8 +167,6 @@ export const getDiagramElements = (
     nodes.forEach((node) => {
       computeNodeStatus(node, canUpdateStatuses, t, topology.hubClusterName as string)
     })
-
-    alerts = analyzeTopology(nodes)
   }
 
   return {
@@ -178,6 +176,21 @@ export const getDiagramElements = (
     nodes: nodes,
     alerts,
   }
+}
+
+export const getDiagramElements = async (
+  topology: Topology,
+  resourceStatuses: ResourceStatuses | null,
+  canUpdateStatuses: boolean,
+  t: Translator
+): Promise<DiagramElements> => {
+  const diagramElements = buildDiagramElements(topology, resourceStatuses, canUpdateStatuses, t)
+
+  if (resourceStatuses) {
+    diagramElements.alerts = await analyzeTopology(diagramElements.nodes)
+  }
+
+  return diagramElements
 }
 
 /**

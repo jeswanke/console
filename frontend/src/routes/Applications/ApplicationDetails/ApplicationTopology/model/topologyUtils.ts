@@ -219,6 +219,7 @@ export const processMultiples = (
   })
   return Object.entries(groupByKind).map(([kind, resourcesGroup]) => {
     const typedResourcesGroup = resourcesGroup as Array<Record<string, unknown>>
+    console.log('processMultiples', { kind, count: typedResourcesGroup.length, resourcesGroup: typedResourcesGroup })
     if (typedResourcesGroup.length === 1) {
       return typedResourcesGroup[0]
     } else {
