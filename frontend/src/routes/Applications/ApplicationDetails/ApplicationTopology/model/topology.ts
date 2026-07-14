@@ -16,6 +16,7 @@ import type {
   TopologyLink,
   TopologyResourceMap,
   DiagramElements,
+  GetDiagramElementsResult,
   ClusterGroupingState,
   HelmReleasesState,
   ResourceStatuses,
@@ -178,19 +179,17 @@ export const buildDiagramElements = (
   }
 }
 
-export const getDiagramElements = async (
+export const getDiagramElements = (
   topology: Topology,
   resourceStatuses: ResourceStatuses | null,
   canUpdateStatuses: boolean,
   t: Translator
-): Promise<DiagramElements> => {
+): GetDiagramElementsResult => {
   const diagramElements = buildDiagramElements(topology, resourceStatuses, canUpdateStatuses, t)
 
-  if (resourceStatuses) {
-    diagramElements.alerts = await analyzeTopology(diagramElements.nodes)
-  }
+  const alertsPromise = resourceStatuses ? analyzeTopology(diagramElements.nodes) : undefined
 
-  return diagramElements
+  return { diagramElements, alertsPromise }
 }
 
 /**

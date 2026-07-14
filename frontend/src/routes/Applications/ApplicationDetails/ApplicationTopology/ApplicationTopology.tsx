@@ -152,13 +152,24 @@ export function ApplicationTopologyPageContent() {
     }
 
     let isCancelled = false
-    void getDiagramElements(cloneDeep(topology), statuses, canUpdateStatuses, t).then((diagramElements) => {
-      if (isCancelled) {
-        return
-      }
-      setElements({ nodes: diagramElements.nodes, links: diagramElements.links })
-      setAlertsState(diagramElements.alerts ?? [])
-    })
+    const { diagramElements, alertsPromise } = getDiagramElements(cloneDeep(topology), statuses, canUpdateStatuses, t)
+
+    if (isCancelled) {
+      return
+    }
+
+    setElements({ nodes: diagramElements.nodes, links: diagramElements.links })
+
+    if (alertsPromise) {
+      void alertsPromise.then((alerts) => {
+        if (isCancelled) {
+          return
+        }
+        setAlertsState(alerts)
+      })
+    } else {
+      setAlertsState([])
+    }
 
     return () => {
       isCancelled = true

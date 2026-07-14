@@ -666,6 +666,11 @@ export interface DiagramElements {
   alerts: TopologyAlert[]
 }
 
+export interface GetDiagramElementsResult {
+  diagramElements: DiagramElements
+  alertsPromise?: Promise<TopologyAlert[]>
+}
+
 // Argo data structure passed to getArgoTopology
 export interface ArgoData {
   topology?: Topology

@@ -327,11 +327,11 @@ describe('topology', () => {
 
   describe('getDiagramElements', () => {
     it('should return diagram elements with nodes and links', async () => {
-      const result = await getDiagramElements(mockTopology, null, false, mockTranslator)
+      const { diagramElements } = getDiagramElements(mockTopology, null, false, mockTranslator)
 
-      expect(result).toBeDefined()
-      expect(result.nodes).toBeDefined()
-      expect(result.links).toBeDefined()
+      expect(diagramElements).toBeDefined()
+      expect(diagramElements.nodes).toBeDefined()
+      expect(diagramElements.links).toBeDefined()
     })
 
     it('should extract channel information from application nodes', async () => {
@@ -353,10 +353,10 @@ describe('topology', () => {
         hubClusterName: 'local-cluster',
       }
 
-      const result = await getDiagramElements(topologyWithChannels, null, false, mockTranslator)
+      const { diagramElements } = getDiagramElements(topologyWithChannels, null, false, mockTranslator)
 
-      expect(result.channels).toEqual(['ns1/channel1//path1', 'ns2/channel2//path2'])
-      expect(result.activeChannel).toBe('ns1/channel1//path1')
+      expect(diagramElements.channels).toEqual(['ns1/channel1//path1', 'ns2/channel2//path2'])
+      expect(diagramElements.activeChannel).toBe('ns1/channel1//path1')
     })
 
     it('should set default active channel when not specified', async () => {
@@ -377,9 +377,9 @@ describe('topology', () => {
         hubClusterName: 'local-cluster',
       }
 
-      const result = await getDiagramElements(topologyWithoutActiveChannel, null, false, mockTranslator)
+      const { diagramElements } = getDiagramElements(topologyWithoutActiveChannel, null, false, mockTranslator)
 
-      expect(result.activeChannel).toBe('channel1')
+      expect(diagramElements.activeChannel).toBe('channel1')
     })
 
     it('should filter out __ALL__/__ALL__ channel entry', async () => {
@@ -400,25 +400,26 @@ describe('topology', () => {
         hubClusterName: 'local-cluster',
       }
 
-      const result = await getDiagramElements(topologyWithAllChannel, null, false, mockTranslator)
+      const { diagramElements } = getDiagramElements(topologyWithAllChannel, null, false, mockTranslator)
 
-      expect(result.activeChannel).toBe('channel1')
+      expect(diagramElements.activeChannel).toBe('channel1')
     })
 
     it('should call addDiagramDetails and computeNodeStatus when resourceStatuses provided', async () => {
-      const result = await getDiagramElements(mockTopology, mockResourceStatuses, true, mockTranslator)
+      const { diagramElements, alertsPromise } = getDiagramElements(mockTopology, mockResourceStatuses, true, mockTranslator)
 
       expect(addDiagramDetails).toHaveBeenCalled()
       expect(computeNodeStatus).toHaveBeenCalled()
-      expect(result).toBeDefined()
+      expect(diagramElements).toBeDefined()
+      await alertsPromise
     })
 
     it('should not call status functions when resourceStatuses is null', async () => {
-      const result = await getDiagramElements(mockTopology, null, false, mockTranslator)
+      const { diagramElements } = getDiagramElements(mockTopology, null, false, mockTranslator)
 
       expect(addDiagramDetails).not.toHaveBeenCalled()
       expect(computeNodeStatus).not.toHaveBeenCalled()
-      expect(result).toBeDefined()
+      expect(diagramElements).toBeDefined()
     })
   })
 
