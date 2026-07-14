@@ -7,7 +7,7 @@ import type { PulseColor, TopologyNode } from '../../types'
 import type { TopologyAlert } from '../../analysis/analyzeTopology'
 import { TopologyAlertActionType } from '../../analysis/utils'
 
-const STATUS_ORDER: PulseColor[] = ['red', 'orange', 'yellow', 'green']
+const STATUS_ORDER: PulseColor[] = ['red', 'yellow', 'orange', 'green']
 
 const MAX_MESSAGE_LENGTH = 312
 

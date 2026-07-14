@@ -61,5 +61,5 @@ export const analyzeTopologyAppSet = async (
     }
   }
 
-  // await analyzeTopologyClusters(appSet, nodes, alerts)
+  await analyzeTopologyClusters(appSet, nodes, alerts)
 }
