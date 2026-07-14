@@ -12,6 +12,7 @@ export interface IEditAppSetModalProps {
   open: boolean
   node: TopologyNode
   showWizardInput?: string
+  onUpdateSuccess?: (nodeId: string) => void
 }
 
 interface ApplicationSetRouteParams {
@@ -51,10 +52,14 @@ export function EditAppSetModal(props: IEditAppSetModalProps | { open: false }) 
   return <EditAppSetModalContent {...props} />
 }
 
-function EditAppSetModalContent({ close, node }: IEditAppSetModalProps) {
+function EditAppSetModalContent({ close, node, onUpdateSuccess }: IEditAppSetModalProps) {
   const { applicationData } = useApplicationDetailsContext()
   const { name, namespace } = topologyNodeToAppSetParams(node, applicationData?.application)
   const handleClose = useCallback(() => close(), [close])
+  const handleSubmitSuccess = useCallback(() => {
+    onUpdateSuccess?.(node.id ?? '')
+    handleClose()
+  }, [handleClose, node.id, onUpdateSuccess])
   const modalTitle = [namespace, name].filter(Boolean).join(' > ')
 
   return (
@@ -96,7 +101,7 @@ function EditAppSetModalContent({ close, node }: IEditAppSetModalProps) {
             namespace={namespace}
             isModal={true}
             onCancel={handleClose}
-            onSubmitSuccess={handleClose}
+            onSubmitSuccess={handleSubmitSuccess}
             onApplicationSetNotFound={handleClose}
           />
         </div>

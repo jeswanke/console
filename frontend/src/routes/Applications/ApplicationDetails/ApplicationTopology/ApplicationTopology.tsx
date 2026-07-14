@@ -211,7 +211,7 @@ export function ApplicationTopologyPageContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [startup, refreshTime])
 
-  const handleYamlUpdateSuccess = useCallback((nodeId: string) => {
+  const handleResourceUpdateSuccess = useCallback((nodeId: string) => {
     setProcessingSave({
       isProcessingSave: true,
       nodeId,
@@ -236,14 +236,18 @@ export function ApplicationTopologyPageContent() {
     open: false,
   })
 
-  const handleEditAppSet = useCallback((node: TopologyNode, showWizardInput?: string) => {
-    setEditAppSetModalProps({
-      open: true,
-      close: () => setEditAppSetModalProps({ open: false }),
-      node,
-      showWizardInput,
-    })
-  }, [])
+  const handleEditAppSet = useCallback(
+    (node: TopologyNode, showWizardInput?: string) => {
+      setEditAppSetModalProps({
+        open: true,
+        close: () => setEditAppSetModalProps({ open: false }),
+        node,
+        showWizardInput,
+        onUpdateSuccess: handleResourceUpdateSuccess,
+      })
+    },
+    [handleResourceUpdateSuccess]
+  )
 
   const handleEditYaml = useCallback(
     (node: TopologyNode, highlightEditorPath?: string) => {
@@ -253,10 +257,10 @@ export function ApplicationTopologyPageContent() {
         node,
         hubClusterName,
         highlightEditorPath,
-        onUpdateSuccess: handleYamlUpdateSuccess,
+        onUpdateSuccess: handleResourceUpdateSuccess,
       })
     },
-    [hubClusterName, handleYamlUpdateSuccess]
+    [hubClusterName, handleResourceUpdateSuccess]
   )
 
   const handleViewLogs = useCallback(
