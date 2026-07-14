@@ -47,6 +47,7 @@ export interface TopologyProps {
   }
   alerts?: TopologyAlert[]
   currentAlertsKey?: string
+  isAnalyzing?: boolean
   isProcessingSave?: boolean
   processingSaveStart?: number
   onClearProcessingSave?: () => void
@@ -104,6 +105,7 @@ export const TopologyViewComponents: React.FC<TopologyViewComponentsProps> = ({ 
     hubClusterName,
     alerts,
     currentAlertsKey,
+    isAnalyzing,
     isProcessingSave,
     processingSaveStart,
     onClearProcessingSave,
@@ -209,7 +211,7 @@ export const TopologyViewComponents: React.FC<TopologyViewComponentsProps> = ({ 
     return () => clearTimeout(timer)
   }, [isProcessingSave, processingSaveStart, onClearProcessingSave])
 
-  const showAlerts = (alerts && alerts.length > 0) || isProcessingSave
+  const showAlerts = (alerts && alerts.length > 0) || isProcessingSave || isAnalyzing
 
   return (
     <TopologyView controlBar={<TopologyZoomBar />} contextToolbar={<TopologyToolbar {...topologyProps} />}>
@@ -228,6 +230,7 @@ export const TopologyViewComponents: React.FC<TopologyViewComponentsProps> = ({ 
           <TopologyAlerts
             alerts={alerts ?? []}
             currentAlertsKey={currentAlertsKey ?? '[]'}
+            isAnalyzing={isAnalyzing}
             isProcessingSave={isProcessingSave}
             onEditYaml={onEditYaml}
             onViewLogs={onViewLogs}

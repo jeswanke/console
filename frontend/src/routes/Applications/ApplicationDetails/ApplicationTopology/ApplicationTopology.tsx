@@ -2,7 +2,7 @@
 
 import { AcmDrawerContext } from '~/ui-components'
 import cloneDeep from 'lodash/cloneDeep'
-import { useCallback, useContext, useEffect, useState } from 'react'
+import { useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { Topology } from './topology/Topology'
 import { useTranslation } from '~/lib/acm-i18next'
 import { useApplicationDetailsContext } from '~/routes/Applications/ApplicationDetails/ApplicationDetails'
@@ -24,6 +24,8 @@ type ProcessingSaveState = {
   nodeId?: string
   start?: number
 }
+
+const ANALYZING_ALERT_THRESHOLD_MS = 1000
 
 export type ArgoAppDetailsContainerData = {
   page: number
@@ -59,7 +61,7 @@ export function ApplicationTopologyPageContent() {
     toolbarControl,
   } = useApplicationDetailsContext()
   const { t } = useTranslation()
-  const { refreshTime, topology, statuses } = applicationData
+  const { refreshTime, topology, statuses, application } = applicationData
   let hubClusterName = ''
   if (topology) {
     hubClusterName = topology.hubClusterName
@@ -70,7 +72,14 @@ export function ApplicationTopologyPageContent() {
     links: any[]
   }>({ nodes: [], links: [] })
   const [alertsState, setAlertsState] = useState<TopologyAlert[]>([])
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [processingSave, setProcessingSave] = useState<ProcessingSaveState>({ isProcessingSave: false })
+  const hasShownAnalyzingAlertRef = useRef(false)
+  const applicationKey = application?.metadata?.uid ?? application?.metadata?.name ?? ''
+
+  useEffect(() => {
+    hasShownAnalyzingAlertRef.current = false
+  }, [applicationKey])
 
   const [argoAppDetailsContainerData, setArgoAppDetailsContainerData] = useState<ArgoAppDetailsContainerData>({
     page: 1,
@@ -152,6 +161,7 @@ export function ApplicationTopologyPageContent() {
     }
 
     let isCancelled = false
+    let analyzingTimer: ReturnType<typeof setTimeout> | undefined
     const { diagramElements, alertsPromise } = getDiagramElements(cloneDeep(topology), statuses, canUpdateStatuses, t)
 
     if (isCancelled) {
@@ -161,18 +171,41 @@ export function ApplicationTopologyPageContent() {
     setElements({ nodes: diagramElements.nodes, links: diagramElements.links })
 
     if (alertsPromise) {
-      void alertsPromise.then((alerts) => {
-        if (isCancelled) {
-          return
-        }
-        setAlertsState(alerts)
-      })
+      if (!hasShownAnalyzingAlertRef.current) {
+        analyzingTimer = setTimeout(() => {
+          if (!isCancelled) {
+            setIsAnalyzing(true)
+          }
+        }, ANALYZING_ALERT_THRESHOLD_MS)
+      }
+
+      void alertsPromise
+        .then((alerts) => {
+          if (isCancelled) {
+            return
+          }
+          setAlertsState(alerts)
+        })
+        .finally(() => {
+          if (!isCancelled) {
+            if (analyzingTimer) {
+              clearTimeout(analyzingTimer)
+            }
+            setIsAnalyzing(false)
+            hasShownAnalyzingAlertRef.current = true
+          }
+        })
     } else {
+      setIsAnalyzing(false)
       setAlertsState([])
     }
 
     return () => {
       isCancelled = true
+      if (analyzingTimer) {
+        clearTimeout(analyzingTimer)
+      }
+      setIsAnalyzing(false)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [startup, refreshTime])
@@ -273,6 +306,7 @@ export function ApplicationTopologyPageContent() {
       <Topology
         elements={elements}
         alerts={alertsState}
+        isAnalyzing={isAnalyzing}
         isProcessingSave={processingSave.isProcessingSave}
         processingSaveStart={processingSave.start}
         onClearProcessingSave={clearProcessingSave}

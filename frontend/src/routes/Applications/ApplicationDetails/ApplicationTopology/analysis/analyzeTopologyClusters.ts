@@ -111,7 +111,7 @@ export const analyzeTopologyClusters = async (
 ): Promise<void> => {
   const isAppSetPullModel = Boolean(appSet.specs.isAppSetPullModel)
   const appSetClusters = ((appSet.specs.appSetClusters ?? []) as AppSetCluster[]).map((cluster) => cluster.name)
-
+  void nodes
   if (isAppSetPullModel) {
     await verifyPullClusterGitOps(appSet, appSetClusters, alerts)
   }

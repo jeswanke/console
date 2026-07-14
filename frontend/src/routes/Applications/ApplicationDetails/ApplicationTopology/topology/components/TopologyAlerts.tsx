@@ -119,6 +119,7 @@ const sortAlerts = (alerts: TopologyAlert[]): TopologyAlert[] => {
 export interface TopologyAlertsProps {
   alerts: TopologyAlert[]
   currentAlertsKey: string
+  isAnalyzing?: boolean
   isProcessingSave?: boolean
   onEditYaml?: (node: TopologyNode, highlightEditorPath?: string) => void
   onViewLogs?: (node: TopologyNode) => void
@@ -128,6 +129,7 @@ export interface TopologyAlertsProps {
 
 export function TopologyAlerts({
   alerts,
+  isAnalyzing,
   isProcessingSave,
   onEditYaml,
   onViewLogs,
@@ -142,6 +144,7 @@ export function TopologyAlerts({
   const containerRef = useRef<HTMLDivElement>(null)
   const [hasScrollbar, setHasScrollbar] = useState(false)
   const [processingAlertDismissed, setProcessingAlertDismissed] = useState(false)
+  const [analyzingAlertDismissed, setAnalyzingAlertDismissed] = useState(false)
 
   useEffect(() => {
     if (!isProcessingSave) {
@@ -149,8 +152,18 @@ export function TopologyAlerts({
     }
   }, [isProcessingSave])
 
+  useEffect(() => {
+    if (!isAnalyzing) {
+      setAnalyzingAlertDismissed(false)
+    }
+  }, [isAnalyzing])
+
   const dismissProcessingAlert = useCallback(() => {
     setProcessingAlertDismissed(true)
+  }, [])
+
+  const dismissAnalyzingAlert = useCallback(() => {
+    setAnalyzingAlertDismissed(true)
   }, [])
 
   const sortedInputAlerts = useMemo(() => sortAlerts(alerts), [alerts])
@@ -226,9 +239,24 @@ export function TopologyAlerts({
         <AlertGroup>
           <Alert
             variant="info"
-            title={t('Processing...')}
+            title={t('Progressing...')}
             id="topology-processing-alert"
             actionClose={<AlertActionCloseButton onClose={dismissProcessingAlert} />}
+          />
+        </AlertGroup>
+      </div>
+    )
+  }
+
+  if (isAnalyzing && !analyzingAlertDismissed) {
+    return (
+      <div ref={containerRef} className={containerBase} style={{ maxHeight }}>
+        <AlertGroup>
+          <Alert
+            variant="info"
+            title={t('Analyzing...')}
+            id="topology-analyzing-alert"
+            actionClose={<AlertActionCloseButton onClose={dismissAnalyzingAlert} />}
           />
         </AlertGroup>
       </div>
