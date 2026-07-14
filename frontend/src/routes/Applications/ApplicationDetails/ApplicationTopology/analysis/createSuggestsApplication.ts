@@ -108,7 +108,7 @@ export const createSuggestsApplication = (
           suggestions,
           [
             {
-              label: 'Edit sources',
+              label: 'Edit YAML',
               type: TopologyAlertActionType.editYaml,
               node,
               highlightEditorPath: 'ApplicationSet.spec.template.spec.sources',
@@ -134,15 +134,15 @@ export const createSuggestsApplication = (
           suggestions,
           [
             {
-              label: 'Sync resources',
-              type: TopologyAlertActionType.syncResources,
-              node,
-            },
-            {
-              label: 'Edit sources',
+              label: 'Edit YAML',
               type: TopologyAlertActionType.editYaml,
               node,
               highlightEditorPath: 'ApplicationSet.spec.template.spec.sources',
+            },
+            {
+              label: 'Sync resources',
+              type: TopologyAlertActionType.syncResources,
+              node,
             },
             {
               label: 'Launch Argo editor',
@@ -196,7 +196,7 @@ export const createSuggestsApplication = (
           suggestions,
           [
             {
-              label: 'Edit sources',
+              label: 'Edit YAML',
               type: TopologyAlertActionType.editYaml,
               node,
               highlightEditorPath: 'ApplicationSet.spec.template.spec.sources',
@@ -214,7 +214,7 @@ export const createSuggestsApplication = (
           suggestions,
           [
             {
-              label: 'Edit sources',
+              label: 'Edit YAML',
               type: TopologyAlertActionType.editYaml,
               node,
               highlightEditorPath: 'ApplicationSet.spec.template.spec.sources',

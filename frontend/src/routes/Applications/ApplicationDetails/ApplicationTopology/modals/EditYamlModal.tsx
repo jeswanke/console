@@ -36,12 +36,7 @@ export function EditYamlModal(props: IEditYamlModalProps | { open: false }) {
   return <EditYamlModalContent {...props} />
 }
 
-function EditYamlModalContent({
-  close,
-  node: topologyNode,
-  hubClusterName,
-  highlightEditorPath,
-}: IEditYamlModalProps) {
+function EditYamlModalContent({ close, node: topologyNode, hubClusterName, highlightEditorPath }: IEditYamlModalProps) {
   const { t } = useTranslation()
   const node = topologyNode as any
   const {
