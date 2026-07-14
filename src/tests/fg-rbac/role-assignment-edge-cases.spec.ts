@@ -91,8 +91,10 @@ test.describe('Role Assignment - Edge Cases', { tag: ['@fg-rbac'] }, () => {
     });
 
     await test.step('5: Move spoke into empty CS -- triggers future-clusters scenario', async () => {
-      await oc.run(
-        `oc label managedcluster ${spoke} cluster.open-cluster-management.io/clusterset=${emptyCSName} --overwrite`
+      await oc.labelManagedCluster(
+        spoke,
+        'cluster.open-cluster-management.io/clusterset',
+        emptyCSName,
       );
 
       await expect(async () => {
@@ -106,8 +108,10 @@ test.describe('Role Assignment - Edge Cases', { tag: ['@fg-rbac'] }, () => {
     });
 
     await test.step('6: Move spoke back to default cluster set', async () => {
-      await oc.run(
-        `oc label managedcluster ${spoke} cluster.open-cluster-management.io/clusterset=default --overwrite`
+      await oc.labelManagedCluster(
+        spoke,
+        'cluster.open-cluster-management.io/clusterset',
+        'default',
       );
     });
 
