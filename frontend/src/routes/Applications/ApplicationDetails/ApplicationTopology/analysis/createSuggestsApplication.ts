@@ -108,6 +108,11 @@ export const createSuggestsApplication = (
           suggestions,
           [
             {
+              label: 'Edit application',
+              type: TopologyAlertActionType.editAppSet,
+              node,
+            },
+            {
               label: 'Edit YAML',
               type: TopologyAlertActionType.editYaml,
               node,
@@ -133,6 +138,11 @@ export const createSuggestsApplication = (
         createTopologyErrorAlert(
           suggestions,
           [
+            {
+              label: 'Edit application',
+              type: TopologyAlertActionType.editAppSet,
+              node,
+            },
             {
               label: 'Edit YAML',
               type: TopologyAlertActionType.editYaml,
@@ -196,6 +206,11 @@ export const createSuggestsApplication = (
           suggestions,
           [
             {
+              label: 'Edit application',
+              type: TopologyAlertActionType.editAppSet,
+              node,
+            },
+            {
               label: 'Edit YAML',
               type: TopologyAlertActionType.editYaml,
               node,
@@ -213,6 +228,11 @@ export const createSuggestsApplication = (
         createTopologyErrorAlert(
           suggestions,
           [
+            {
+              label: 'Edit application',
+              type: TopologyAlertActionType.editAppSet,
+              node,
+            },
             {
               label: 'Edit YAML',
               type: TopologyAlertActionType.editYaml,

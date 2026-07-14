@@ -121,6 +121,7 @@ export interface TopologyAlertsProps {
   currentAlertsKey: string
   isAnalyzing?: boolean
   isProcessingSave?: boolean
+  onEditAppSet?: (node: TopologyNode, showWizardInput?: string) => void
   onEditYaml?: (node: TopologyNode, highlightEditorPath?: string) => void
   onViewLogs?: (node: TopologyNode) => void
   onSyncResources?: (node: TopologyNode) => void
@@ -131,6 +132,7 @@ export function TopologyAlerts({
   alerts,
   isAnalyzing,
   isProcessingSave,
+  onEditAppSet,
   onEditYaml,
   onViewLogs,
   onSyncResources,
@@ -280,24 +282,31 @@ export function TopologyAlerts({
           const isNew = newAlertIds.has(alertId)
           const actionLinks = alert.actions?.length ? (
             <Fragment>
-              {alert.actions.map((action) => {
+              {alert.actions.map((action, actionIndex) => {
+                const actionKey = `${action.label}-${actionIndex}`
                 switch (action.type) {
                   case TopologyAlertActionType.launchArgo:
                     if (action.node) {
                       return (
-                        <AlertActionLink key={action.label} onClick={() => onLaunchArgo?.(action.node!)}>
+                        <AlertActionLink key={actionKey} onClick={() => onLaunchArgo?.(action.node!)}>
                           {action.label}
                         </AlertActionLink>
                       )
                     }
                     return action.action?.url ? (
-                      <AlertActionLink key={action.label} component="a" href={action.action.url}>
+                      <AlertActionLink key={actionKey} component="a" href={action.action.url}>
+                        {action.label}
+                      </AlertActionLink>
+                    ) : null
+                  case TopologyAlertActionType.editAppSet:
+                    return action.node ? (
+                      <AlertActionLink key={actionKey} onClick={() => onEditAppSet?.(action.node!)}>
                         {action.label}
                       </AlertActionLink>
                     ) : null
                   case TopologyAlertActionType.openUrl:
                     return action.action?.url ? (
-                      <AlertActionLink key={action.label} component="a" href={action.action.url}>
+                      <AlertActionLink key={actionKey} component="a" href={action.action.url}>
                         {action.label}
                       </AlertActionLink>
                     ) : null
@@ -305,7 +314,7 @@ export function TopologyAlerts({
                   case TopologyAlertActionType.viewYaml:
                     return action.node ? (
                       <AlertActionLink
-                        key={action.label}
+                        key={actionKey}
                         onClick={() => onEditYaml?.(action.node!, action.highlightEditorPath)}
                       >
                         {action.label}
@@ -313,19 +322,19 @@ export function TopologyAlerts({
                     ) : null
                   case TopologyAlertActionType.showLog:
                     return action.node ? (
-                      <AlertActionLink key={action.label} onClick={() => onViewLogs?.(action.node!)}>
+                      <AlertActionLink key={actionKey} onClick={() => onViewLogs?.(action.node!)}>
                         {action.label}
                       </AlertActionLink>
                     ) : null
                   case TopologyAlertActionType.syncResources:
                     return action.node ? (
-                      <AlertActionLink key={action.label} onClick={() => onSyncResources?.(action.node!)}>
+                      <AlertActionLink key={actionKey} onClick={() => onSyncResources?.(action.node!)}>
                         {action.label}
                       </AlertActionLink>
                     ) : null
                   default:
                     return action.action?.func ? (
-                      <AlertActionLink key={action.label} onClick={action.action.func}>
+                      <AlertActionLink key={actionKey} onClick={action.action.func}>
                         {action.label}
                       </AlertActionLink>
                     ) : null

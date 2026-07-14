@@ -229,6 +229,11 @@ const pushSyncAlert = (
 ): void => {
   const actions = [
     {
+      label: 'Edit application',
+      type: TopologyAlertActionType.editAppSet,
+      node: appSet,
+    },
+    {
       label: 'Edit YAML',
       type: TopologyAlertActionType.editYaml,
       node: appSet,

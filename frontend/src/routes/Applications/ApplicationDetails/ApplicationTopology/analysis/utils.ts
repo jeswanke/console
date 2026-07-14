@@ -3,6 +3,7 @@ import type { IResource } from '../../../../../resources'
 import type { PulseColor, TopologyNode } from '../types'
 
 export enum TopologyAlertActionType {
+  editAppSet = 'editAppSet',
   editYaml = 'editYaml',
   showLog = 'showLog',
   viewYaml = 'viewYaml',

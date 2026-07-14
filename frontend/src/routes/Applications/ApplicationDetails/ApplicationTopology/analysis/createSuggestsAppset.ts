@@ -39,6 +39,11 @@ export const createSuggestsAppset = (
           suggestions,
           [
             {
+              label: 'Edit application',
+              type: TopologyAlertActionType.editAppSet,
+              node,
+            },
+            {
               label: 'Edit generators',
               type: TopologyAlertActionType.editYaml,
               node,
@@ -64,6 +69,11 @@ export const createSuggestsAppset = (
         createTopologyErrorAlert(
           suggestions,
           [
+            {
+              label: 'Edit application',
+              type: TopologyAlertActionType.editAppSet,
+              node,
+            },
             {
               label: 'Edit destinations',
               type: TopologyAlertActionType.editYaml,

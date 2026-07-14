@@ -29,6 +29,11 @@ export const createSuggestsPlacement = (
           suggestions,
           [
             {
+              label: 'Edit application',
+              type: TopologyAlertActionType.editAppSet,
+              node,
+            },
+            {
               label: 'Edit predicate',
               type: TopologyAlertActionType.editYaml,
               node,
@@ -51,6 +56,11 @@ export const createSuggestsPlacement = (
           suggestions,
           [
             {
+              label: 'Edit application',
+              type: TopologyAlertActionType.editAppSet,
+              node,
+            },
+            {
               label: 'Edit clustersets',
               type: TopologyAlertActionType.editYaml,
               node,
@@ -68,6 +78,11 @@ export const createSuggestsPlacement = (
         createTopologyErrorAlert(
           suggestions,
           [
+            {
+              label: 'Edit application',
+              type: TopologyAlertActionType.editAppSet,
+              node,
+            },
             {
               label: 'Edit placement',
               type: TopologyAlertActionType.editYaml,

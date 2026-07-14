@@ -82,6 +82,7 @@ export interface TopologyProps {
   processActionLink?: (resource: any, toggleLoading: () => void, hubClusterName: string) => void
   hubClusterName: string
   onRefreshResources?: () => void
+  onEditAppSet?: (node: TopologyNode) => void
   onEditYaml?: (node: TopologyNode, highlightEditorPath?: string) => void
   onViewLogs?: (node: TopologyNode) => void
   onSyncResources?: (node: TopologyNode) => void
@@ -109,6 +110,7 @@ export const TopologyViewComponents: React.FC<TopologyViewComponentsProps> = ({ 
     isProcessingSave,
     processingSaveStart,
     onClearProcessingSave,
+    onEditAppSet,
     onEditYaml,
     onViewLogs,
     onSyncResources,
@@ -232,6 +234,7 @@ export const TopologyViewComponents: React.FC<TopologyViewComponentsProps> = ({ 
             currentAlertsKey={currentAlertsKey ?? '[]'}
             isAnalyzing={isAnalyzing}
             isProcessingSave={isProcessingSave}
+            onEditAppSet={onEditAppSet}
             onEditYaml={onEditYaml}
             onViewLogs={onViewLogs}
             onSyncResources={onSyncResources}
