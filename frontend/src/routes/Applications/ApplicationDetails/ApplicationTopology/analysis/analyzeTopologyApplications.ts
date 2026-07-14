@@ -143,7 +143,7 @@ const getConsolidatedSyncStatus = (healthSyncKeys: string[]): PulseColor => {
   healthSyncKeys.forEach((key) => {
     if (key.includes('Degraded')) {
       status = 'red'
-    } else if (key.includes('Progressing') && status !== 'red') {
+    } else if ((key.includes('Progressing') || key.includes('OutOfSync')) && status !== 'red') {
       status = 'orange'
     }
   })
@@ -151,9 +151,28 @@ const getConsolidatedSyncStatus = (healthSyncKeys: string[]): PulseColor => {
 }
 
 const SYNC_ALERT_SUGGESTION_BULLETS: IBulletDescription[] = [
-  { title: 'Try resyncing resources', content: [] },
+  { title: 'Wait a few minutes for syncing to complete', content: [] },
+  { title: 'You can also try resyncing resources', content: [] },
   { title: 'If the problem persists, try editing the appset in Argo CD', content: [] },
 ]
+
+const dedupeAppSetAppsErrorsByReason = (errors: IFilteredConditionError[]): IFilteredConditionError[] => {
+  const seenReasons = new Set<string>()
+
+  return errors.filter((appSetAppsError) => {
+    const reasons = appSetAppsError.errors.flatMap((filtered) => [
+      filtered.firstError.reason,
+      ...filtered.otherErrors.map((error) => error.reason),
+    ])
+
+    if (reasons.some((reason) => seenReasons.has(reason))) {
+      return false
+    }
+
+    reasons.forEach((reason) => seenReasons.add(reason))
+    return true
+  })
+}
 
 const buildConsolidatedSyncDescription = (syncAlerts: SyncAlertEntry[]): TopologyAlertDescription => {
   const byHealthSyncKey = new Map<string, { kinds: Set<string>; clusters: Set<string> }>()
@@ -372,7 +391,10 @@ export const analyzeTopologyApplications = async (
       .map((mapKey) => appMap[mapKey])
       .filter((app): app is IResource => app !== undefined) as IResourcesWithStatus[]
 
-    appSetAppsErrors = extractConditionsErrors(badAppResources).slice(0, MAX_CONDITION_ERROR_ALERTS)
+    appSetAppsErrors = dedupeAppSetAppsErrorsByReason(extractConditionsErrors(badAppResources)).slice(
+      0,
+      MAX_CONDITION_ERROR_ALERTS
+    )
 
     if (appSetAppsErrors.length > 0) {
       appSetAppsErrors.forEach((appSetAppsError) => {

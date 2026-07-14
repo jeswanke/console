@@ -19,6 +19,12 @@ import './topology/css/Drawer.css'
 import { ArgoApp, ClusterDetailsContainerControl } from './types'
 import { nodeDetailsProvider } from './model/NodeDetailsProvider'
 
+type ProcessingSaveState = {
+  isProcessingSave: boolean
+  nodeId?: string
+  start?: number
+}
+
 export type ArgoAppDetailsContainerData = {
   page: number
   startIdx: number
@@ -64,6 +70,7 @@ export function ApplicationTopologyPageContent() {
     links: any[]
   }>({ nodes: [], links: [] })
   const [alertsState, setAlertsState] = useState<TopologyAlert[]>([])
+  const [processingSave, setProcessingSave] = useState<ProcessingSaveState>({ isProcessingSave: false })
 
   const [argoAppDetailsContainerData, setArgoAppDetailsContainerData] = useState<ArgoAppDetailsContainerData>({
     page: 1,
@@ -159,6 +166,18 @@ export function ApplicationTopologyPageContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [startup, refreshTime])
 
+  const handleYamlUpdateSuccess = useCallback((nodeId: string) => {
+    setProcessingSave({
+      isProcessingSave: true,
+      nodeId,
+      start: Date.now(),
+    })
+  }, [])
+
+  const clearProcessingSave = useCallback(() => {
+    setProcessingSave({ isProcessingSave: false })
+  }, [])
+
   const [syncArgoCDModalProps, setSyncArgoCDModalProps] = useState<ISyncArgoCDModalProps | { open: false }>({
     open: false,
   })
@@ -177,9 +196,10 @@ export function ApplicationTopologyPageContent() {
         node,
         hubClusterName,
         highlightEditorPath,
+        onUpdateSuccess: handleYamlUpdateSuccess,
       })
     },
-    [hubClusterName]
+    [hubClusterName, handleYamlUpdateSuccess]
   )
 
   const handleViewLogs = useCallback(
@@ -242,6 +262,9 @@ export function ApplicationTopologyPageContent() {
       <Topology
         elements={elements}
         alerts={alertsState}
+        isProcessingSave={processingSave.isProcessingSave}
+        processingSaveStart={processingSave.start}
+        onClearProcessingSave={clearProcessingSave}
         processActionLink={processActionLink}
         canUpdateStatuses={canUpdateStatuses}
         argoAppDetailsContainerControl={argoAppDetailsContainerControl}

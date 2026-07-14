@@ -2,13 +2,14 @@
 import { css, keyframes } from '@emotion/css'
 import { Alert, AlertActionCloseButton, AlertActionLink, AlertGroup, AlertProps } from '@patternfly/react-core'
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useTranslation } from '~/lib/acm-i18next'
 import type { PulseColor, TopologyNode } from '../../types'
 import type { TopologyAlert } from '../../analysis/analyzeTopology'
 import { TopologyAlertActionType } from '../../analysis/utils'
 
 const STATUS_ORDER: PulseColor[] = ['red', 'orange', 'yellow', 'green']
 
-const MAX_MESSAGE_LENGTH = 256
+const MAX_MESSAGE_LENGTH = 312
 
 const truncateMessage = (message: string): string => {
   if (message.length <= MAX_MESSAGE_LENGTH) {
@@ -117,19 +118,40 @@ const sortAlerts = (alerts: TopologyAlert[]): TopologyAlert[] => {
 
 export interface TopologyAlertsProps {
   alerts: TopologyAlert[]
+  currentAlertsKey: string
+  isProcessingSave?: boolean
   onEditYaml?: (node: TopologyNode, highlightEditorPath?: string) => void
   onViewLogs?: (node: TopologyNode) => void
   onSyncResources?: (node: TopologyNode) => void
   onLaunchArgo?: (node: TopologyNode) => void
 }
 
-export function TopologyAlerts({ alerts, onEditYaml, onViewLogs, onSyncResources, onLaunchArgo }: TopologyAlertsProps) {
+export function TopologyAlerts({
+  alerts,
+  isProcessingSave,
+  onEditYaml,
+  onViewLogs,
+  onSyncResources,
+  onLaunchArgo,
+}: TopologyAlertsProps) {
+  const { t } = useTranslation()
   const dismissedIdsRef = useRef<Set<string>>(new Set())
   const [visibleAlerts, setVisibleAlerts] = useState<TopologyAlert[]>([])
   const [removingIds, setRemovingIds] = useState<Set<string>>(new Set())
   const [newAlertIds, setNewAlertIds] = useState<Set<string>>(new Set())
   const containerRef = useRef<HTMLDivElement>(null)
   const [hasScrollbar, setHasScrollbar] = useState(false)
+  const [processingAlertDismissed, setProcessingAlertDismissed] = useState(false)
+
+  useEffect(() => {
+    if (!isProcessingSave) {
+      setProcessingAlertDismissed(false)
+    }
+  }, [isProcessingSave])
+
+  const dismissProcessingAlert = useCallback(() => {
+    setProcessingAlertDismissed(true)
+  }, [])
 
   const sortedInputAlerts = useMemo(() => sortAlerts(alerts), [alerts])
 
@@ -197,6 +219,21 @@ export function TopologyAlerts({ alerts, onEditYaml, onViewLogs, onSyncResources
 
   const maxHeight = '66vh'
   const isFadingIn = newAlertIds.size > 0
+
+  if (isProcessingSave && !processingAlertDismissed) {
+    return (
+      <div ref={containerRef} className={containerBase} style={{ maxHeight }}>
+        <AlertGroup>
+          <Alert
+            variant="info"
+            title={t('Processing...')}
+            id="topology-processing-alert"
+            actionClose={<AlertActionCloseButton onClose={dismissProcessingAlert} />}
+          />
+        </AlertGroup>
+      </div>
+    )
+  }
 
   if (!visibleAlerts.length) {
     return null

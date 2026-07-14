@@ -26,6 +26,7 @@ export interface IEditYamlModalProps {
   node: TopologyNode
   hubClusterName: string
   highlightEditorPath?: string
+  onUpdateSuccess?: (nodeId: string) => void
 }
 
 export function EditYamlModal(props: IEditYamlModalProps | { open: false }) {
@@ -36,7 +37,13 @@ export function EditYamlModal(props: IEditYamlModalProps | { open: false }) {
   return <EditYamlModalContent {...props} />
 }
 
-function EditYamlModalContent({ close, node: topologyNode, hubClusterName, highlightEditorPath }: IEditYamlModalProps) {
+function EditYamlModalContent({
+  close,
+  node: topologyNode,
+  hubClusterName,
+  highlightEditorPath,
+  onUpdateSuccess,
+}: IEditYamlModalProps) {
   const { t } = useTranslation()
   const node = topologyNode as any
   const {
@@ -176,9 +183,10 @@ function EditYamlModalContent({ close, node: topologyNode, hubClusterName, highl
 
   useEffect(() => {
     if (updateSuccess) {
+      onUpdateSuccess?.(topologyNode.id ?? '')
       close()
     }
-  }, [updateSuccess, close])
+  }, [updateSuccess, close, onUpdateSuccess, topologyNode.id])
 
   useEffect(() => {
     const resourceForRbac = {
