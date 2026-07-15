@@ -156,6 +156,22 @@ const SYNC_ALERT_SUGGESTION_BULLETS: IBulletDescription[] = [
   { title: 'If the problem persists, try editing the appset in Argo CD', content: [] },
 ]
 
+const PULL_SYNC_ALERT_SUGGESTION_BULLETS: IBulletDescription[] = [
+  {
+    title:
+      'Because this is a pull application, make sure the application has permissions to create namespaces on the target cluster',
+    content: [],
+  },
+  {
+    title:
+      'If the namespace must be created by this application, add a Namespace manifest to the repository with an early sync wave',
+    content: [],
+  },
+]
+
+const getSyncAlertSuggestionBullets = (isPullModel: boolean): IBulletDescription[] =>
+  isPullModel ? PULL_SYNC_ALERT_SUGGESTION_BULLETS : SYNC_ALERT_SUGGESTION_BULLETS
+
 const dedupeAppSetAppsErrorsByReason = (errors: IFilteredConditionError[]): IFilteredConditionError[] => {
   const seenReasons = new Set<string>()
 
@@ -174,7 +190,10 @@ const dedupeAppSetAppsErrorsByReason = (errors: IFilteredConditionError[]): IFil
   })
 }
 
-const buildConsolidatedSyncDescription = (syncAlerts: SyncAlertEntry[]): TopologyAlertDescription => {
+const buildConsolidatedSyncDescription = (
+  syncAlerts: SyncAlertEntry[],
+  isPullModel: boolean
+): TopologyAlertDescription => {
   const byHealthSyncKey = new Map<string, { kinds: Set<string>; clusters: Set<string> }>()
 
   syncAlerts.forEach(({ kind, healthSyncKey, clusterName }) => {
@@ -198,7 +217,7 @@ const buildConsolidatedSyncDescription = (syncAlerts: SyncAlertEntry[]): Topolog
           title: formatKindList([...kinds]),
           content: formatClusterListContent([...clusters]),
         },
-        ...(healthSyncKey !== 'Progressing' ? SYNC_ALERT_SUGGESTION_BULLETS : []),
+        ...(healthSyncKey !== 'Progressing' ? getSyncAlertSuggestionBullets(isPullModel) : []),
       ],
     }
   }
@@ -211,7 +230,9 @@ const buildConsolidatedSyncDescription = (syncAlerts: SyncAlertEntry[]): Topolog
         content: [formatKindList([...kinds]), ...formatClusterListContent([...clusters])],
       }
     }),
-    ...(sortedKeys.some((healthSyncKey) => healthSyncKey !== 'Progressing') ? SYNC_ALERT_SUGGESTION_BULLETS : []),
+    ...(sortedKeys.some((healthSyncKey) => healthSyncKey !== 'Progressing')
+      ? getSyncAlertSuggestionBullets(isPullModel)
+      : []),
   ]
 
   return {
@@ -435,6 +456,10 @@ export const analyzeTopologyApplications = async (
         return
       }
 
+      if (resource.requiresPruning === true) {
+        return
+      }
+
       const healthSyncKey = buildHealthSyncKey(healthStatus, syncStatus)
       if (!healthSyncKey) {
         return
@@ -450,7 +475,7 @@ export const analyzeTopologyApplications = async (
     pushSyncAlert(
       'Some resources are not healthy or synced on these clusters',
       getConsolidatedSyncStatus(healthSyncKeys),
-      buildConsolidatedSyncDescription(syncAlerts),
+      buildConsolidatedSyncDescription(syncAlerts, isAppSetPullModel),
       appSet,
       alerts
     )

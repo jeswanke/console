@@ -8,8 +8,12 @@ import { createTopologyErrorAlert, TopologyAlertActionType } from './utils'
 
 const APP_PATH_DOES_NOT_EXIST_MESSAGE =
   'Failed to load target state: failed to generate manifest for source: app path does not exist'
+const MANIFEST_GENERATION_RPC_UNAVAILABLE_MESSAGE =
+  'Failed to load target state: failed to generate manifest for source SOURCE: rpc error: code = Unavailable desc = connection error: desc = "transport: Error while dialing: dial tcp ADDRESS:PORT: connect: connection refused"'
 const FAILED_SYNC_MESSAGE =
   'Failed last sync attempt to []: one or more synchronization tasks completed unsuccessfully,  (retried 5 times).'
+const NAMESPACE_NOT_FOUND_SYNC_MESSAGE =
+  'Failed last sync attempt to []: one or more synchronization tasks completed unsuccessfully, reason: namespaces "NAMESPACE" not found (retried 5 times).'
 const FORBIDDEN_SYNC_MESSAGE =
   'Failed last sync attempt to []: one or more objects failed to apply, reason: RESOURCE is forbidden: User "SERVICEACCOUNT" cannot create resource "RESOURCE" in API group "APIGROUP" in the namespace "NAMESPACE" (retried 5 times).'
 const SOURCE_REQUIRED_MESSAGE = 'either source.path, source.chart, or source.ref are required for source '
@@ -31,6 +35,26 @@ const isAppPathDoesNotExistMessage = (message: string): boolean =>
     normalizeAppPathDoesNotExistMessage(APP_PATH_DOES_NOT_EXIST_MESSAGE)
   ) > SIMILARITY_THRESHOLD
 
+/** Strips variable source index and dial address so manifest RPC errors compare consistently. */
+const normalizeManifestGenerationRpcUnavailableMessage = (message: string): string =>
+  message
+    .replace(
+      /Failed to load target state: failed to generate manifest for source \d+ of \d+:/i,
+      'Failed to load target state: failed to generate manifest for source SOURCE:'
+    )
+    .replace(/dial tcp [^:]+:\d+:/i, 'dial tcp ADDRESS:PORT:')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+const isManifestGenerationRpcUnavailableMessage = (message: string): boolean =>
+  /Failed to load target state: failed to generate manifest for source/i.test(message) &&
+  /rpc error: code = Unavailable/i.test(message) &&
+  /connection refused/i.test(message) &&
+  stringSimilarity.compareTwoStrings(
+    normalizeManifestGenerationRpcUnavailableMessage(message),
+    normalizeManifestGenerationRpcUnavailableMessage(MANIFEST_GENERATION_RPC_UNAVAILABLE_MESSAGE)
+  ) > SIMILARITY_THRESHOLD
+
 /** Strips variable sync revision / reason so failed-sync messages compare consistently. */
 const normalizeFailedSyncMessage = (message: string): string =>
   message
@@ -44,6 +68,27 @@ const isFailedSyncMessage = (message: string): boolean =>
     normalizeFailedSyncMessage(message),
     normalizeFailedSyncMessage(FAILED_SYNC_MESSAGE)
   ) > SIMILARITY_THRESHOLD
+
+/** Strips variable sync revision and namespace so namespace-not-found sync errors compare consistently. */
+const normalizeNamespaceNotFoundSyncMessage = (message: string): string =>
+  message
+    .replace(/Failed last sync attempt to \[[^\]]*\]/i, 'Failed last sync attempt to []')
+    .replace(/reason: namespaces "[^"]+" not found/i, 'reason: namespaces "NAMESPACE" not found')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+const isNamespaceNotFoundSyncMessage = (message: string): boolean =>
+  /one or more synchronization tasks completed unsuccessfully/i.test(message) &&
+  /namespaces "[^"]+" not found/i.test(message) &&
+  stringSimilarity.compareTwoStrings(
+    normalizeNamespaceNotFoundSyncMessage(message),
+    normalizeNamespaceNotFoundSyncMessage(NAMESPACE_NOT_FOUND_SYNC_MESSAGE)
+  ) > SIMILARITY_THRESHOLD
+
+const getNamespaceNotFoundSyncNamespace = (message: string): string | undefined => {
+  const match = message.match(/namespaces "([^"]+)" not found/i)
+  return match?.[1]
+}
 
 /** Strips variable sync revision, resources, and namespace so forbidden-sync errors compare consistently. */
 const normalizeForbiddenSyncMessage = (message: string): string =>
@@ -124,6 +169,57 @@ export const createSuggestsApplication = (
         )
         break
       }
+      case isNamespaceNotFoundSyncMessage(message): {
+        const namespace = getNamespaceNotFoundSyncNamespace(message)
+        const conciseMessage = namespace
+          ? `Sync failed: namespace ${namespace} not found`
+          : 'Sync failed: target namespace not found'
+        const namespaceNotFoundError = {
+          ...singleError,
+          errors: [
+            {
+              ...error,
+              firstError: { ...error.firstError, message: conciseMessage },
+            },
+          ],
+        }
+        const suggestions = [
+          {
+            title: namespace
+              ? `Resources in this application require namespace ${namespace}, but it does not exist on the target cluster`
+              : 'Resources in this application require a namespace that does not exist on the target cluster',
+          },
+          {
+            title: namespace
+              ? `Add a Namespace manifest for ${namespace} to the application, or create the namespace on the cluster before syncing`
+              : 'Add a Namespace manifest to the application, or create the namespace on the cluster before syncing',
+          },
+        ]
+        createTopologyErrorAlert(
+          suggestions,
+          [
+            {
+              label: 'Edit application',
+              type: TopologyAlertActionType.editAppSet,
+              node,
+            },
+            {
+              label: 'Edit YAML',
+              type: TopologyAlertActionType.editYaml,
+              node,
+              highlightEditorPath: 'ApplicationSet.spec.template.spec.sources',
+            },
+            {
+              label: 'Launch Argo editor',
+              type: TopologyAlertActionType.launchArgo,
+              node,
+            },
+          ],
+          alerts,
+          namespaceNotFoundError
+        )
+        break
+      }
       case isFailedSyncMessage(message): {
         const currentYaml = jsYaml
           .dump(applicationSet.spec.template?.spec?.sources ?? applicationSet.spec.template?.spec?.source ?? {}, {
@@ -162,6 +258,62 @@ export const createSuggestsApplication = (
           ],
           alerts,
           singleError
+        )
+        break
+      }
+      case isManifestGenerationRpcUnavailableMessage(message): {
+        const manifestRpcError = {
+          ...singleError,
+          errors: [
+            {
+              ...error,
+              firstError: {
+                ...error.firstError,
+                message: 'Failed to generate manifests: GitOps manifest service unavailable',
+              },
+            },
+          ],
+        }
+        const suggestions = [
+          {
+            title: 'Argo CD could not reach the manifest generation service while loading the application target state',
+          },
+          {
+            title:
+              'For pull applications, verify the OpenShift GitOps Operator is installed and healthy on the target cluster',
+          },
+          {
+            title:
+              'Verify managed cluster connectivity and that the GitOps repo-server or config management plugin is running',
+          },
+        ]
+        createTopologyErrorAlert(
+          suggestions,
+          [
+            {
+              label: 'Edit application',
+              type: TopologyAlertActionType.editAppSet,
+              node,
+            },
+            {
+              label: 'Edit YAML',
+              type: TopologyAlertActionType.editYaml,
+              node,
+              highlightEditorPath: 'ApplicationSet.spec.template.spec.sources',
+            },
+            {
+              label: 'Sync resources',
+              type: TopologyAlertActionType.syncResources,
+              node,
+            },
+            {
+              label: 'Launch Argo editor',
+              type: TopologyAlertActionType.launchArgo,
+              node,
+            },
+          ],
+          alerts,
+          manifestRpcError
         )
         break
       }

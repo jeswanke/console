@@ -33,7 +33,7 @@ import './css/topology-view.css'
 import { TFunction } from 'react-i18next'
 import { TopologyRefreshContext } from './contexts/TopologyRefreshContext'
 
-const PROCESSING_SAVE_TIMEOUT_MS = 2 * 60 * 1000
+const PROCESSING_SAVE_TIMEOUT_MS = 60 * 1000
 
 const getAlertsTitlesKey = (alerts: TopologyAlert[] | undefined): string =>
   [...new Set((alerts ?? []).map((alert) => alert.title))].sort().join('\0')

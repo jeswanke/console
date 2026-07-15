@@ -1206,6 +1206,8 @@ export interface ArgoAppResource extends Record<string, unknown> {
   group?: string
   /** Resource status */
   status?: string
+  /** When true, the resource is out of sync and marked for pruning */
+  requiresPruning?: boolean
   /** Health status */
   health?: {
     status?: string
@@ -1595,6 +1597,8 @@ export interface ProcessedDeployableResource {
   resourceCount?: number
   /** Array of individual resource instances */
   resources?: AppSetApplicationResource[]
+  /** When true, the resource is out of sync and marked for pruning by Argo CD */
+  requiresPruning?: boolean
 }
 
 /**
