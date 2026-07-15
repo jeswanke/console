@@ -33,20 +33,19 @@ export class OverviewPage extends BasePage {
 
   async selectClusterLabelKey(): Promise<void> {
     await this.page.locator(`#${OVERVIEW_PAGE.clusterSelector.clusterLabelKeyInputId}`).click();
-    await this.waitForLoad();
+    await expect(this.page.locator('.pf-v6-c-menu')).toBeVisible();
     await this.page
       .getByRole('option', { name: OVERVIEW_PAGE.clusterSelector.localClusterLabel })
       .click();
-    await this.waitForLoad();
+    await expect(this.page.locator('.pf-v6-c-menu')).toBeHidden();
   }
 
   async selectClusterLabelValue(): Promise<void> {
     await this.page.locator(`#${OVERVIEW_PAGE.clusterSelector.clusterLabelValueInputId}`).click();
-    await this.waitForLoad();
+    await expect(this.page.locator('.pf-v6-c-menu')).toBeVisible();
     await this.page
       .getByRole('menuitem', { name: OVERVIEW_PAGE.clusterSelector.localClusterValue })
       .click();
-    await this.waitForLoad();
   }
 
   /** Returns the active filter chip/label for the local-cluster filter. */

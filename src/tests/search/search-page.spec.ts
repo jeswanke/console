@@ -1,6 +1,6 @@
 /**
  * ACM Search page.
- */
+*/
 
 import { SEARCH_PAGE, SEARCH_ROUTES } from '@constants/search';
 import { expect, test } from '@fixtures/search-test';
@@ -55,7 +55,8 @@ test.describe('Search page - critical paths', { tag: ['@search'] }, () => {
     await searchPage.goto();
 
     await test.step('Add kind:Deployment and name:search-api filters and run search', async () => {
-      await searchPage.filterByKindAndName('Deployment', SEARCH_PAGE.searchApiDeploymentName);
+      const filters = encodeURIComponent(JSON.stringify({ textsearch:`kind:Deployment name:${SEARCH_PAGE.searchApiDeploymentName}` }));
+      await searchPage.goto(`?filters=${filters}`);
       await searchPage.waitForResultsTable();
     });
 
@@ -77,34 +78,30 @@ test.describe('Search page - regression tests', { tag: ['@search'] }, () => {
   }) => {
     await searchPage.goto();
 
-    try {
-      await test.step('Run kind:Deployment search', async () => {
-        await searchPage.filterByKind('Deployment');
-        await searchPage.waitForResultsTable();
-      });
+    await test.step('Run kind:Deployment search', async () => {
+      const filters = encodeURIComponent(JSON.stringify({ textsearch:`kind:Deployment` }));
+      await searchPage.goto(`?filters=${filters}`);
+      await searchPage.waitForResultsTable();
+    });
 
-      await test.step('Verify the "Desired" column is visible', async () => {
-        await searchPage.table.verifyColumnHeaderVisible(SEARCH_PAGE.desiredColumn);
-      });
+    await test.step('Verify the "Desired" column is visible', async () => {
+      await searchPage.table.verifyColumnHeaderVisible(SEARCH_PAGE.desiredColumn);
+    });
 
-      await test.step('Open column management and uncheck "Desired"', async () => {
-        await searchPage.manageColumns.open();
-        await searchPage.manageColumns.uncheckColumn(SEARCH_PAGE.desiredColumn);
-        await searchPage.manageColumns.save();
-      });
-
-      await test.step('Verify "Desired" column is no longer visible', async () => {
-        await searchPage.table.verifyColumnHeaderNotVisible(SEARCH_PAGE.desiredColumn);
-      });
-
-      await test.step('Refresh the page and verify "Desired" column is still hidden', async () => {
-        await page.reload();
-        await searchPage.waitForResultsTable();
-        await searchPage.table.verifyColumnHeaderNotVisible(SEARCH_PAGE.desiredColumn);
-      });
-    } finally {
+    await test.step('Open column management and uncheck "Desired"', async () => {
       await searchPage.manageColumns.open();
-      await searchPage.manageColumns.restoreDefaultsAndSave();
-    }
+      await searchPage.manageColumns.uncheckColumn(SEARCH_PAGE.desiredColumn);
+      await searchPage.manageColumns.save();
+    });
+
+    await test.step('Verify "Desired" column is no longer visible', async () => {
+      await searchPage.table.verifyColumnHeaderNotVisible(SEARCH_PAGE.desiredColumn);
+    });
+
+    await test.step('Refresh the page and verify "Desired" column is still hidden', async () => {
+      await page.reload();
+      await searchPage.waitForResultsTable();
+      await searchPage.table.verifyColumnHeaderNotVisible(SEARCH_PAGE.desiredColumn);
+    });
   });
 });

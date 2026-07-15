@@ -3,9 +3,11 @@ import { SearchDetailsPage } from '@pages/search/SearchDetailsPage';
 import { SearchPage } from '@pages/search/SearchPage';
 import { test as base, expect } from '@playwright/test';
 import { OcCliService } from '@services/OcCliService';
+import { generateSafeName } from '@utils/kube-helper';
 
 type SearchFixtures = {
   oc: OcCliService;
+  uniqueName: string;
   searchPage: SearchPage;
   searchDetailsPage: SearchDetailsPage;
   overviewPage: OverviewPage;
@@ -14,6 +16,10 @@ type SearchFixtures = {
 export const test = base.extend<SearchFixtures>({
   oc: async ({}, use) => {
     await use(new OcCliService());
+  },
+
+  uniqueName: async ({}, use) => {
+    await use(generateSafeName('search'));
   },
 
   searchPage: async ({ page, oc }, use) => {

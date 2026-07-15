@@ -1,6 +1,6 @@
 import { SEARCH_DETAILS_PAGE } from '@constants/search';
 import { BasePage } from '@pages/BasePage';
-import { Locator, Page } from '@playwright/test';
+import { expect, Locator, Page } from '@playwright/test';
 
 /**
  * ACM Search Details page (`/multicloud/search/resources`).
@@ -31,6 +31,7 @@ export class SearchDetailsPage extends BasePage {
 
   async clickTab(name: string): Promise<void> {
     await this.getTab(name).click();
+    await expect(this.getTab(name)).toHaveAttribute('aria-selected', 'true');
     await this.waitForLoad();
   }
 

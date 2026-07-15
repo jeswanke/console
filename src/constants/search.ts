@@ -26,6 +26,25 @@ export const SEARCH_PAGE = {
   clusterRelatedResourceLabel: 'Cluster',
 } as const;
 
+export const SAVED_SEARCH = {
+  saveSearchButton: 'Save search',
+  modal: {
+    nameInputPlaceholder: 'Enter a name for this search query',
+    saveButton: 'Save',
+    cancelButton: 'Cancel',
+  },
+  card: {
+    /** CSS class on the PatternFly 6 plain MenuToggle that opens card actions */
+    kebabToggleSelector: 'button.pf-v6-c-menu-toggle',
+    editAction: 'Edit',
+    shareAction: 'Share',
+    deleteAction: 'Delete',
+  },
+  deleteModal: {
+    confirmButton: 'Delete',
+  },
+} as const;
+
 export const SEARCH_DETAILS_PAGE = {
   tabs: {
     details: 'Details',

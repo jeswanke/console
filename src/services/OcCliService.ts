@@ -85,6 +85,27 @@ export class OcCliService {
     return `https://${host}`;
   }
 
+  /** Returns the currently logged-in username from `oc whoami`. */
+  async getCurrentUser(): Promise<string> {
+    const { stdout } = await execFilePromise('oc', ['whoami'], {
+      encoding: 'utf8',
+      maxBuffer: 1024 * 1024,
+    });
+    return stdout.trim();
+  }
+
+  /**
+   * Delete the ACM `UserPreference` resource for `username`.
+   *
+   * `oc` login names may contain colons (e.g. `kube:admin`) but Kubernetes
+   * resource names cannot, so the console stores them with colons replaced by
+   * hyphens (`kube-admin`).  Uses `--ignore-not-found` so cleanup is always safe.
+   */
+  async deleteUserPreference(username: string): Promise<void> {
+    const resourceName = username.replaceAll(':', '-');
+    await this.deleteNonNamespacedResource('userpreference', '', resourceName);
+  }
+
   /**
    * Returns true if at least one instance of the resource exists in any namespace.
    * @param resource - e.g. "subscriptions.apps.open-cluster-management.io"
@@ -223,6 +244,19 @@ export class OcCliService {
       ['delete', resource, name, '-n', namespace, '--ignore-not-found'],
       { encoding: 'utf8', maxBuffer: 1024 * 1024 }
     );
+  }
+
+  private async deleteNonNamespacedResource(
+    resource: string,
+    namespace: string,
+    name: string
+  ): Promise<void> {
+    assertSafeOcResourceKind(resource, 'resource');
+    assertSafeOcSingleArg(name, 'name');
+    await execFilePromise('oc', ['delete', resource, name, '--ignore-not-found'], {
+      encoding: 'utf8',
+      maxBuffer: 1024 * 1024,
+    });
   }
 
   private async listNamespacedResourceNames(resource: string, namespace: string): Promise<string[]> {
