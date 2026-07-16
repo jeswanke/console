@@ -30,7 +30,7 @@ import type { TopologyAlert } from '../analysis/analyzeTopology'
 import type { TopologyNode } from '../types'
 
 import './css/topology-view.css'
-import { TFunction } from 'react-i18next'
+import type { TFunction } from 'i18next'
 import { TopologyRefreshContext } from './contexts/TopologyRefreshContext'
 
 const PROCESSING_SAVE_TIMEOUT_MS = 60 * 1000

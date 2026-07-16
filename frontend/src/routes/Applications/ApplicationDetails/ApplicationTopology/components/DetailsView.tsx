@@ -18,7 +18,7 @@ import {
   StatusType,
 } from '../types'
 import { typeToShapeMap } from '../model/NodeDetailsProvider'
-import { TFunction } from 'react-i18next'
+import type { TFunction } from 'i18next'
 
 /**
  * Decorator component that renders an icon for the details view header
