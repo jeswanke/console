@@ -1,4 +1,5 @@
 /* Copyright Contributors to the Open Cluster Management project */
+import type { TFunction } from 'i18next'
 import type { TopologyNode } from '../types'
 import { analyzeTopologyAppSet } from './analyzeTopologyAppSet'
 import type { TopologyAlert } from './utils'
@@ -24,13 +25,13 @@ export {
 /**
  * Analyzes topology nodes and produces alerts for placement, cluster, and deployment issues.
  */
-export const analyzeTopology = async (nodes: TopologyNode[]): Promise<TopologyAlert[]> => {
+export const analyzeTopology = async (nodes: TopologyNode[], t: TFunction): Promise<TopologyAlert[]> => {
   const alerts: TopologyAlert[] = []
 
   const appSet = nodes.find((node) => node.type === 'applicationset')
 
   if (appSet) {
-    await analyzeTopologyAppSet(appSet, nodes, alerts)
+    await analyzeTopologyAppSet(appSet, nodes, alerts, t)
   }
 
   return alerts

@@ -1,4 +1,5 @@
 /* Copyright Contributors to the Open Cluster Management project */
+import type { TFunction } from 'i18next'
 import { fleetResourceRequest } from '../../../../../resources/utils/fleet-resource-request'
 import type { AppSetCluster, TopologyNode } from '../types'
 import type { TopologyAlert } from './analyzeTopology'
@@ -28,7 +29,8 @@ const GITOPS_OPERATOR_SUBSCRIPTION = {
 const verifyPullClusterGitOps = async (
   appSet: TopologyNode,
   appSetClusters: string[],
-  alerts: TopologyAlert[]
+  alerts: TopologyAlert[],
+  t: TFunction
 ): Promise<void> => {
   const clustersToVerify = appSetClusters.slice(0, MAX_PULL_CLUSTER_FETCHES)
   await Promise.all(
@@ -36,11 +38,14 @@ const verifyPullClusterGitOps = async (
       try {
         const response = await fleetResourceRequest('GET', clusterName, GITOPS_OPERATOR_SUBSCRIPTION)
         if ('errorMessage' in response) {
-          const alert = createTopologyAlert('OpenShift GitOps Operator Missing', 'red', {
-            message: `Cannot find OpenShift GitOps Operator on ${clusterName}`,
+          const alert = createTopologyAlert(t('OpenShift GitOps Operator Missing'), 'red', {
+            message: t('Cannot find OpenShift GitOps Operator on {{clusterName}}', { clusterName }),
             bullets: [
               {
-                title: `For pulled applications, make sure the OpenShift GitOps Operator is installed on ${clusterName}`,
+                title: t(
+                  'For pulled applications, make sure the OpenShift GitOps Operator is installed on {{clusterName}}',
+                  { clusterName }
+                ),
                 content: [],
               },
             ],
@@ -97,13 +102,14 @@ const verifyPullClusterGitOps = async (
 export const analyzeTopologyClusters = async (
   appSet: TopologyNode,
   nodes: TopologyNode[],
-  alerts: TopologyAlert[]
+  alerts: TopologyAlert[],
+  t: TFunction
 ): Promise<void> => {
   const isAppSetPullModel = Boolean(appSet.specs.isAppSetPullModel)
   const appSetClusters = ((appSet.specs.appSetClusters ?? []) as AppSetCluster[]).map((cluster) => cluster.name)
   void nodes
   if (isAppSetPullModel) {
-    await verifyPullClusterGitOps(appSet, appSetClusters, alerts)
+    await verifyPullClusterGitOps(appSet, appSetClusters, alerts, t)
   }
 
   // const hubGitOpsCluster = await fetchHubGitOpsCluster()

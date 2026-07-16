@@ -187,7 +187,7 @@ export const getDiagramElements = (
 ): GetDiagramElementsResult => {
   const diagramElements = buildDiagramElements(topology, resourceStatuses, canUpdateStatuses, t)
 
-  const alertsPromise = resourceStatuses ? analyzeTopology(diagramElements.nodes) : undefined
+  const alertsPromise = resourceStatuses ? analyzeTopology(diagramElements.nodes, t) : undefined
 
   return { diagramElements, alertsPromise }
 }

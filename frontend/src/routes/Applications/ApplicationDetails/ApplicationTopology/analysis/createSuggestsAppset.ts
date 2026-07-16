@@ -1,4 +1,5 @@
 /* Copyright Contributors to the Open Cluster Management project */
+import type { TFunction } from 'i18next'
 import jsYaml from 'js-yaml'
 import stringSimilarity from 'string-similarity'
 import type { ApplicationSet } from '~/resources'
@@ -17,7 +18,8 @@ const isNoClusterDecisionResourcesError = (reason: string, message: string): boo
 export const createSuggestsAppset = (
   node: TopologyNode,
   filteredError: IFilteredConditionError,
-  alerts: TopologyAlert[]
+  alerts: TopologyAlert[],
+  t: TFunction
 ): void => {
   const applicationSet = node.specs.raw as ApplicationSet
 
@@ -30,34 +32,36 @@ export const createSuggestsAppset = (
         const currentYaml = jsYaml.dump(applicationSet.spec.generators ?? {}, { indent: 2 }).split('\n')
         const suggestions = [
           {
-            title:
-              'Make sure the placement referenced in the ApplicationSet generator exists and has cluster decisions',
+            title: t(
+              'Make sure the placement referenced in the ApplicationSet generator exists and has cluster decisions'
+            ),
           },
-          { title: 'Current generators', content: currentYaml },
+          { title: t('Current generators'), content: currentYaml },
         ]
         createTopologyErrorAlert(
           suggestions,
           [
             {
-              label: 'Edit application',
+              label: t('Edit application'),
               type: TopologyAlertActionType.editAppSet,
               node,
             },
             {
-              label: 'Edit generators',
+              label: t('Edit generators'),
               type: TopologyAlertActionType.editYaml,
               node,
               highlightEditorPath: 'ApplicationSet.spec.generators',
             },
             {
-              label: 'Edit destinations',
+              label: t('Edit destinations'),
               type: TopologyAlertActionType.editYaml,
               node,
               highlightEditorPath: 'ApplicationSet.spec.template.spec.destination',
             },
           ],
           alerts,
-          singleError
+          singleError,
+          t
         )
         break
       }
@@ -65,24 +69,25 @@ export const createSuggestsAppset = (
         const currentYaml = jsYaml
           .dump(applicationSet.spec.template?.spec?.destination ?? {}, { indent: 2 })
           .split('\n')
-        const suggestions = [{ title: 'Current destinations', content: currentYaml }]
+        const suggestions = [{ title: t('Current destinations'), content: currentYaml }]
         createTopologyErrorAlert(
           suggestions,
           [
             {
-              label: 'Edit application',
+              label: t('Edit application'),
               type: TopologyAlertActionType.editAppSet,
               node,
             },
             {
-              label: 'Edit destinations',
+              label: t('Edit destinations'),
               type: TopologyAlertActionType.editYaml,
               node,
               highlightEditorPath: 'ApplicationSet.spec.template.spec.destination',
             },
           ],
           alerts,
-          singleError
+          singleError,
+          t
         )
       }
     }

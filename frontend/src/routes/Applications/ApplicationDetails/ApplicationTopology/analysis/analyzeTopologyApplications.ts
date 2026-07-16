@@ -1,4 +1,5 @@
 /* Copyright Contributors to the Open Cluster Management project */
+import type { TFunction } from 'i18next'
 import type { IResource } from '../../../../../resources'
 import { fleetResourceRequest } from '../../../../../resources/utils/fleet-resource-request'
 import type { AppSetCluster, ArgoAppResource, PulseColor, TopologyNode } from '../types'
@@ -37,12 +38,12 @@ interface SyncAlertEntry {
   clusterName: string
 }
 
-const formatClusterListContent = (clusters: string[]): string[] => {
+const formatClusterListContent = (clusters: string[], t: TFunction): string[] => {
   const sorted = [...clusters].sort()
   if (sorted.length <= 3) {
     return sorted
   }
-  return [...sorted.slice(0, 3), `and ${sorted.length - 3} more`]
+  return [...sorted.slice(0, 3), t('and {{count}} more', { count: sorted.length - 3 })]
 }
 
 const buildHealthSyncKey = (healthStatus: string | undefined, syncStatus: string | undefined): string => {
@@ -127,15 +128,15 @@ const setPartialUnhealthyDeploymentNodePulses = (deploymentNodes: TopologyNode[]
   }
 }
 
-const formatKindList = (kinds: string[]): string => {
+const formatKindList = (kinds: string[], t: TFunction): string => {
   const sorted = [...new Set(kinds)].sort((a, b) => {
     if (a === 'Application') return -1
     if (b === 'Application') return 1
     return a.localeCompare(b)
   })
   const displayed = sorted.slice(0, 5).join(', ')
-  const suffix = sorted.length > 5 ? ` and ${sorted.length - 5} more` : ''
-  return `Kinds: ${displayed}${suffix}`
+  const suffix = sorted.length > 5 ? t(' and {{count}} more', { count: sorted.length - 5 }) : ''
+  return t('Kinds: {{kinds}}{{suffix}}', { kinds: displayed, suffix })
 }
 
 const getConsolidatedSyncStatus = (healthSyncKeys: string[]): PulseColor => {
@@ -150,27 +151,27 @@ const getConsolidatedSyncStatus = (healthSyncKeys: string[]): PulseColor => {
   return status
 }
 
-const SYNC_ALERT_SUGGESTION_BULLETS: IBulletDescription[] = [
-  { title: 'Wait a few minutes for syncing to complete', content: [] },
-  { title: 'You can also try resyncing resources', content: [] },
-  { title: 'If the problem persists, try editing the appset in Argo CD', content: [] },
-]
-
-const PULL_SYNC_ALERT_SUGGESTION_BULLETS: IBulletDescription[] = [
-  {
-    title:
-      'Because this is a pull application, make sure the application has permissions to create namespaces on the target cluster',
-    content: [],
-  },
-  {
-    title:
-      'If the namespace must be created by this application, add a Namespace manifest to the repository with an early sync wave',
-    content: [],
-  },
-]
-
-const getSyncAlertSuggestionBullets = (isPullModel: boolean): IBulletDescription[] =>
-  isPullModel ? PULL_SYNC_ALERT_SUGGESTION_BULLETS : SYNC_ALERT_SUGGESTION_BULLETS
+const getSyncAlertSuggestionBullets = (isPullModel: boolean, t: TFunction): IBulletDescription[] =>
+  isPullModel
+    ? [
+        {
+          title: t(
+            'Because this is a pull application, make sure the application has permissions to create namespaces on the target cluster'
+          ),
+          content: [],
+        },
+        {
+          title: t(
+            'If the namespace must be created by this application, add a Namespace manifest to the repository with an early sync wave'
+          ),
+          content: [],
+        },
+      ]
+    : [
+        { title: t('Wait a few minutes for syncing to complete'), content: [] },
+        { title: t('You can also try resyncing resources'), content: [] },
+        { title: t('If the problem persists, try editing the appset in Argo CD'), content: [] },
+      ]
 
 const dedupeAppSetAppsErrorsByReason = (errors: IFilteredConditionError[]): IFilteredConditionError[] => {
   const seenReasons = new Set<string>()
@@ -192,7 +193,8 @@ const dedupeAppSetAppsErrorsByReason = (errors: IFilteredConditionError[]): IFil
 
 const buildConsolidatedSyncDescription = (
   syncAlerts: SyncAlertEntry[],
-  isPullModel: boolean
+  isPullModel: boolean,
+  t: TFunction
 ): TopologyAlertDescription => {
   const byHealthSyncKey = new Map<string, { kinds: Set<string>; clusters: Set<string> }>()
 
@@ -211,13 +213,13 @@ const buildConsolidatedSyncDescription = (
     const healthSyncKey = sortedKeys[0]
     const { kinds, clusters } = byHealthSyncKey.get(healthSyncKey)!
     return {
-      message: `Status: ${healthSyncKey}`,
+      message: t('Status: {{status}}', { status: healthSyncKey }),
       bullets: [
         {
-          title: formatKindList([...kinds]),
-          content: formatClusterListContent([...clusters]),
+          title: formatKindList([...kinds], t),
+          content: formatClusterListContent([...clusters], t),
         },
-        ...(healthSyncKey !== 'Progressing' ? getSyncAlertSuggestionBullets(isPullModel) : []),
+        ...(healthSyncKey !== 'Progressing' ? getSyncAlertSuggestionBullets(isPullModel, t) : []),
       ],
     }
   }
@@ -226,12 +228,12 @@ const buildConsolidatedSyncDescription = (
     ...sortedKeys.map((healthSyncKey) => {
       const { kinds, clusters } = byHealthSyncKey.get(healthSyncKey)!
       return {
-        title: `Status: ${healthSyncKey}`,
-        content: [formatKindList([...kinds]), ...formatClusterListContent([...clusters])],
+        title: t('Status: {{status}}', { status: healthSyncKey }),
+        content: [formatKindList([...kinds], t), ...formatClusterListContent([...clusters], t)],
       }
     }),
     ...(sortedKeys.some((healthSyncKey) => healthSyncKey !== 'Progressing')
-      ? getSyncAlertSuggestionBullets(isPullModel)
+      ? getSyncAlertSuggestionBullets(isPullModel, t)
       : []),
   ]
 
@@ -246,27 +248,28 @@ const pushSyncAlert = (
   status: PulseColor,
   description: TopologyAlertDescription,
   appSet: TopologyNode,
-  alerts: TopologyAlert[]
+  alerts: TopologyAlert[],
+  t: TFunction
 ): void => {
   const actions = [
     {
-      label: 'Edit application',
+      label: t('Edit application'),
       type: TopologyAlertActionType.editAppSet,
       node: appSet,
     },
     {
-      label: 'Edit YAML',
+      label: t('Edit YAML'),
       type: TopologyAlertActionType.editYaml,
       node: appSet,
       highlightEditorPath: 'ApplicationSet.spec.template.spec.sources',
     },
     {
-      label: 'Sync resources',
+      label: t('Sync resources'),
       type: TopologyAlertActionType.syncResources,
       node: appSet,
     },
     {
-      label: 'Launch Argo editor',
+      label: t('Launch Argo editor'),
       type: TopologyAlertActionType.launchArgo,
       node: appSet,
     },
@@ -283,7 +286,8 @@ const pushSyncAlert = (
 export const analyzeTopologyApplications = async (
   appSet: TopologyNode,
   nodes: TopologyNode[],
-  alerts: TopologyAlert[]
+  alerts: TopologyAlert[],
+  t: TFunction
 ): Promise<IFilteredConditionError[]> => {
   const syncAlerts: SyncAlertEntry[] = []
   const appMap: Record<string, IResource> = {}
@@ -390,11 +394,18 @@ export const analyzeTopologyApplications = async (
             namespace,
           })
           if ('errorMessage' in response) {
-            const alert = createTopologyAlert('Application Missing', 'red', {
-              message: `Cannot find '${namespace}/${appName}' on ${clusterName}`,
+            const alert = createTopologyAlert(t('Application Missing'), 'red', {
+              message: t("Cannot find '{{namespace}}/{{appName}}' on {{clusterName}}", {
+                namespace,
+                appName,
+                clusterName,
+              }),
               bullets: [
                 {
-                  title: `For pulled applications, make sure the OpenShift GitOps Operator is installed on ${clusterName}`,
+                  title: t(
+                    'For pulled applications, make sure the OpenShift GitOps Operator is installed on {{clusterName}}',
+                    { clusterName }
+                  ),
                   content: [],
                 },
               ],
@@ -423,14 +434,14 @@ export const analyzeTopologyApplications = async (
       .map((mapKey) => appMap[mapKey])
       .filter((app): app is IResource => app !== undefined) as IResourcesWithStatus[]
 
-    appSetAppsErrors = dedupeAppSetAppsErrorsByReason(extractConditionsErrors(badAppResources)).slice(
+    appSetAppsErrors = dedupeAppSetAppsErrorsByReason(extractConditionsErrors(badAppResources, t)).slice(
       0,
       MAX_CONDITION_ERROR_ALERTS
     )
 
     if (appSetAppsErrors.length > 0) {
       appSetAppsErrors.forEach((appSetAppsError) => {
-        createSuggestsApplication(appSet, appSetAppsError, alerts)
+        createSuggestsApplication(appSet, appSetAppsError, alerts, t)
       })
       appSet.specs.pulse = 'red'
       setPartialUnhealthyDeploymentNodePulses(deploymentNodes, appsetClusters)
@@ -473,11 +484,12 @@ export const analyzeTopologyApplications = async (
     const healthSyncKeys = [...new Set(syncAlerts.map((entry) => entry.healthSyncKey))]
     setPartialUnhealthyDeploymentNodePulses(deploymentNodes, appsetClusters)
     pushSyncAlert(
-      'Some resources are not healthy or synced on these clusters',
+      t('Some resources are not healthy or synced on these clusters'),
       getConsolidatedSyncStatus(healthSyncKeys),
-      buildConsolidatedSyncDescription(syncAlerts, isAppSetPullModel),
+      buildConsolidatedSyncDescription(syncAlerts, isAppSetPullModel, t),
       appSet,
-      alerts
+      alerts,
+      t
     )
   }
 

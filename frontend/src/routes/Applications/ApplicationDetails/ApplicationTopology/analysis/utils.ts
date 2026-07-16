@@ -1,4 +1,5 @@
 /* Copyright Contributors to the Open Cluster Management project */
+import type { TFunction } from 'i18next'
 import type { IResource } from '../../../../../resources'
 import type { PulseColor, TopologyNode } from '../types'
 
@@ -117,7 +118,7 @@ export const setNodePulseForTypes = (nodes: TopologyNode[], types: string[], pul
 /**
  * Extracts condition errors from resources with status conditions.
  */
-export const extractConditionsErrors = (resources: IResourcesWithStatus[]): IFilteredConditionError[] => {
+export const extractConditionsErrors = (resources: IResourcesWithStatus[], t: TFunction): IFilteredConditionError[] => {
   const errorMap: Record<string, IErrorCondition[]> = {}
 
   resources.forEach((resource) => {
@@ -202,7 +203,7 @@ export const extractConditionsErrors = (resources: IResourcesWithStatus[]): IFil
 
   const consolidatedConditionErrors = consolidateConditionErrors(conditionErrors)
   return consolidatedConditionErrors
-    .map((conditionError) => filteredConditionErrors(conditionError))
+    .map((conditionError) => filteredConditionErrors(conditionError, t))
     .filter((conditionError): conditionError is IFilteredConditionError => conditionError !== undefined)
 }
 
@@ -234,13 +235,13 @@ const consolidateConditionErrors = (conditionErrors: IConditionWithErrors[]): IC
   return consolidated
 }
 
-const filterErrors = (errors: IConditionError[]): IFilteredError => {
+const filterErrors = (errors: IConditionError[], t: TFunction): IFilteredError => {
   const otherErrors: IConditionError[] = []
   const remainingErrors = errors.filter((error) => {
     if (error.reason?.toLowerCase().includes('succeed') ?? false) {
       otherErrors.push({
         ...error,
-        message: `${error.message} failed`,
+        message: t('{{message}} failed', { message: error.message }),
       })
       return false
     }
@@ -263,7 +264,10 @@ const filterErrors = (errors: IConditionError[]): IFilteredError => {
   }
 }
 
-export const filteredConditionErrors = (conditionError: IConditionWithErrors): IFilteredConditionError | undefined => {
+export const filteredConditionErrors = (
+  conditionError: IConditionWithErrors,
+  t: TFunction
+): IFilteredConditionError | undefined => {
   if (conditionError.errors.length === 0) {
     return
   }
@@ -273,7 +277,7 @@ export const filteredConditionErrors = (conditionError: IConditionWithErrors): I
     namespace: conditionError.namespace,
     kind: conditionError.kind,
     resource: conditionError.resource,
-    errors: conditionError.errors.map((error) => filterErrors([error])),
+    errors: conditionError.errors.map((error) => filterErrors([error], t)),
   }
 }
 /**
@@ -291,6 +295,7 @@ export const createTopologyErrorAlert = (
   actions: TopologyAlertAction[],
   alerts: TopologyAlert[],
   filteredError: IFilteredConditionError,
+  t: TFunction,
   status: PulseColor = 'red',
   isMajor: boolean = true,
   isUnique?: boolean
@@ -318,7 +323,9 @@ export const createTopologyErrorAlert = (
   let title = filteredError.kind
   const reasonOrType = firstError.reason || firstError.type
   if (reasonOrType) {
-    const formattedReason = /succeed/i.test(reasonOrType) ? reasonOrType.replace(/succeed/gi, 'Failed') : reasonOrType
+    const formattedReason = /succeed/i.test(reasonOrType)
+      ? reasonOrType.replace(/succeed/gi, t('Failed'))
+      : reasonOrType
     title += ` ${formattedReason}`
   }
   if (isUnique && filteredError.namespace && filteredError.name) {
