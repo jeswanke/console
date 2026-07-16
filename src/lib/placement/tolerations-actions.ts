@@ -94,6 +94,10 @@ export class PlacementTolerationsActions extends BasePage {
     await this.waitForLoad();
   }
 
+  getTolerationSecondsCheckbox(group: Locator): Locator {
+    return group.getByRole('checkbox', { name: /Set toleration seconds/i });
+  }
+
   getTolerationSecondsInput(group: Locator): Locator {
     return group
       .getByRole('spinbutton')
@@ -102,6 +106,11 @@ export class PlacementTolerationsActions extends BasePage {
   }
 
   async fillTolerationSeconds(group: Locator, seconds: string): Promise<void> {
+    const checkbox = this.getTolerationSecondsCheckbox(group);
+    if (!(await checkbox.isChecked())) {
+      await checkbox.check({ force: true });
+      await this.getTolerationSecondsInput(group).waitFor({ state: 'visible', timeout: 10_000 });
+    }
     await this.getTolerationSecondsInput(group).fill(seconds);
   }
 

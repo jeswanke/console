@@ -10,6 +10,7 @@ import {
   applyPullModelIncludeLocalGitAppSet,
   applyPullModelPlacementExcludeLocalCluster,
   cleanupPullModelIncludeLocalGitAppSet,
+  isLocalClusterInPlacementDecision,
 } from '@lib/app/argo-pull/apply-cli-appset';
 import { cleanupArgoPullApplication, createArgoPullApplication } from '@lib/app/argo-pull';
 import { setupArgoPullDestinationNamespace } from '@lib/app/argo-pull/setup-managed-destination-ns';
@@ -68,32 +69,39 @@ test.describe(
           options,
           managedClusterName,
         });
-        await verifyArgoPullHubTopologyWarning(
-          applicationDetailsPage,
-          options.applicationName,
-          APP_ARGO_PULL_TOPOLOGY_WARNINGS.hubClusterNotSupported
-        );
 
-        await applyPullModelPlacementExcludeLocalCluster(oc, options);
-        await waitForPullModelMcasrSyncedAndHealthy(oc, options, managedClusterName);
+        const hubTargeted = await isLocalClusterInPlacementDecision(oc, options);
+        if (hubTargeted) {
+          await verifyArgoPullHubTopologyWarning(
+            applicationDetailsPage,
+            options.applicationName,
+            APP_ARGO_PULL_TOPOLOGY_WARNINGS.hubClusterNotSupported
+          );
 
-        await verifyArgoPullApplicationOverviewTable({
-          applicationListPage,
-          options,
-          managedClusterName,
-        });
-        await openArgoPullApplicationFromOverviewTable(applicationListPage, options.applicationName);
-        await verifyArgoPullApplicationTopology({
-          applicationDetailsPage,
-          options,
-          managedClusterName,
-        });
-        await verifyArgoPullHubTopologyWarning(
-          applicationDetailsPage,
-          options.applicationName,
-          APP_ARGO_PULL_TOPOLOGY_WARNINGS.localClusterNotSupported,
-          { expectAbsent: true }
-        );
+          await applyPullModelPlacementExcludeLocalCluster(oc, options);
+          await waitForPullModelMcasrSyncedAndHealthy(oc, options, managedClusterName);
+
+          await verifyArgoPullApplicationOverviewTable({
+            applicationListPage,
+            options,
+            managedClusterName,
+          });
+          await openArgoPullApplicationFromOverviewTable(
+            applicationListPage,
+            options.applicationName
+          );
+          await verifyArgoPullApplicationTopology({
+            applicationDetailsPage,
+            options,
+            managedClusterName,
+          });
+          await verifyArgoPullHubTopologyWarning(
+            applicationDetailsPage,
+            options.applicationName,
+            APP_ARGO_PULL_TOPOLOGY_WARNINGS.localClusterNotSupported,
+            { expectAbsent: true }
+          );
+        }
 
         await cleanupPullModelIncludeLocalGitAppSet(oc, options);
       }

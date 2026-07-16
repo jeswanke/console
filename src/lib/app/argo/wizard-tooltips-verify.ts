@@ -1,4 +1,4 @@
-import { expect, type Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 
 import {
   ARGO_WIZARD_MORE_INFO_BUTTON,
@@ -18,20 +18,31 @@ import type { ApplicationListPage } from '@pages/app/ApplicationListPage';
 /** Click **More info**, assert popover body text, close popover (RHACM4K-61725). */
 export async function verifyArgoWizardTooltip(page: Page, def: ArgoWizardTooltipDef): Promise<void> {
   const texts = Array.isArray(def.expectedText) ? def.expectedText : [def.expectedText];
-  const help = page.locator(def.helpButtonSelector).first();
+  let help: Locator;
+  if (def.nearLabelText) {
+    help = page
+      .locator('.pf-v6-c-form__group-label')
+      .filter({ hasText: def.nearLabelText })
+      .getByRole('button', { name: 'More info' })
+      .last();
+  } else {
+    help = page.locator(def.helpButtonSelector).first();
+  }
   await help.scrollIntoViewIfNeeded();
   await help.click({ force: true });
-  const body = page.locator(def.popoverBodySelector).first();
+  const popover = page.getByRole('dialog').last();
+  const body = popover.locator('.pf-v6-c-popover__body');
   await expect(body).toBeVisible({ timeout: 10_000 });
   for (const text of texts) {
     await expect(body).toContainText(text);
   }
-  const close = body.locator('xpath=ancestor::*[@role="dialog" or contains(@class,"popover")][1]').getByRole('button', { name: 'Close' });
+  const close = popover.getByRole('button', { name: 'Close' });
   if (await close.isVisible().catch(() => false)) {
     await close.click();
   } else {
     await page.keyboard.press('Escape');
   }
+  await popover.waitFor({ state: 'hidden', timeout: 5_000 }).catch(() => {});
 }
 
 export async function assertGeneratorBlockHasNoMoreInfo(page: Page, headingPattern: RegExp): Promise<void> {

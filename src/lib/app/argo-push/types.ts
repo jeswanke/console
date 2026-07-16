@@ -34,7 +34,7 @@ export type CreateArgoPushApplicationOptions = {
   applicationSetNamespace?: string;
   /** Remote destination namespace on managed clusters (`spec.template.spec.destination.namespace`). */
   destinationNamespace: string;
-  git: ArgoPushGitRepositorySpec;
+  git?: ArgoPushGitRepositorySpec;
   /** Second **Template** source when {@link multiSource} is true. */
   helm?: ArgoPushHelmRepositorySpec;
   /** Git + Helm on **Template** (RHACM4K-37185). */

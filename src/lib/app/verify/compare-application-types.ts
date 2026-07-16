@@ -11,7 +11,7 @@ export async function verifyCompareApplicationTypesPopover(
   const table = applicationListPage.applicationsTable;
   // Cypress `navigateApplication()` opens Create application, then clicks Compare.
   await applicationListPage.openCreateApplication();
-  await applicationListPage.getPage().getByText(APP_TOOLBAR.compareTypesLabel, { exact: true }).click();
+  await applicationListPage.getPage().getByRole('button', { name: APP_TOOLBAR.compareTypesLabel }).click();
 
   const popover = table.getCompareApplicationTypesPopover();
   await expect(popover).toBeVisible();
@@ -22,5 +22,5 @@ export async function verifyCompareApplicationTypesPopover(
   await expect(body).toContainText(APP_CREATE_MENU.options.argoPushModel);
   await expect(body).toContainText(APP_CREATE_MENU.options.subscription);
 
-  await applicationListPage.getPage().getByText(APP_TOOLBAR.compareTypesLabel, { exact: true }).click();
+  await applicationListPage.getPage().getByRole('button', { name: APP_TOOLBAR.compareTypesLabel }).click();
 }

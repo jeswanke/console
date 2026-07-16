@@ -9,7 +9,7 @@ import type { OcCliService } from '@services/OcCliService';
 export const APP_ARGO_SYNC_TEST_59973 = {
   appsetName: 'test-appset-sync',
   appsetNamespace: 'openshift-gitops',
-  argoAppName: 'test-appset-sync-local-cluster',
+  placementName: 'test-appset-sync-placement',
   targetNamespace: 'test-appset-sync-ns',
   setupYamlRelativePath: 'src/templates/app/argo/test-appset-sync.yaml',
 } as const;
@@ -25,13 +25,25 @@ export async function syncArgoPushApplicationSetFromDetails(params: {
   const {
     appsetName,
     appsetNamespace,
-    argoAppName,
+    placementName,
     targetNamespace,
     setupYamlRelativePath,
   } = APP_ARGO_SYNC_TEST_59973;
 
   await oc.createNamespaceIfNotExists(targetNamespace);
   await oc.applyYaml(path.join(projectRoot, setupYamlRelativePath));
+
+  await expect
+    .poll(() => oc.getPlacementDecisionClusterCount(appsetNamespace, placementName), {
+      timeout: 120_000,
+      intervals: [2_000, 5_000, 10_000],
+      message: `PlacementDecision ${placementName} must select at least 1 cluster`,
+    })
+    .toBeGreaterThan(0);
+
+  const clusters = await oc.getPlacementDecisionClusterNames(appsetNamespace, placementName);
+  const clusterName = clusters[0];
+  const argoAppName = `${appsetName}-${clusterName}`;
 
   await expect
     .poll(() => oc.argoCdApplicationExists(appsetNamespace, argoAppName), {
@@ -45,7 +57,6 @@ export async function syncArgoPushApplicationSetFromDetails(params: {
 
   const syncStatus = await oc.getArgoCdApplicationSyncStatus(appsetNamespace, argoAppName);
   if (syncStatus === 'Synced') {
-    // AppSet may already exist from a prior run; recreate child app so sync UI can be exercised.
     await oc.deleteArgoCdApplication(appsetNamespace, argoAppName);
     await expect
       .poll(() => oc.argoCdApplicationExists(appsetNamespace, argoAppName), {

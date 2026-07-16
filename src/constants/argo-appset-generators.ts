@@ -172,7 +172,7 @@ export const T_CLUSTER_URL_PATH_BASENAME = {
 } as const;
 
 export const T_GIT_LIST_DEST = {
-  'spec.template.metadata.name': `${ARGO_APPSET_GENERATORS.applicationName}-{{.cluster}}`,
+  'spec.template.metadata.name': `${ARGO_APPSET_GENERATORS.applicationName}-{{name}}-{{path.basename}}`,
   'spec.template.spec.destination.server': '{{.url}}',
   'spec.template.spec.destination.namespace': '{{path.basename}}',
 } as const;

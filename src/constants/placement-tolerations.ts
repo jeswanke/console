@@ -24,11 +24,11 @@ export const PLACEMENT_TOLERATIONS_UI = {
   summaryChipPattern: (key: string) =>
     new RegExp(`${escapePlacementRegExp(key)}\\s+exists`, 'i'),
   labels: {
-    key: /^Key \*$/,
-    operator: /^Operator \*$/,
-    value: /^Value$/,
-    effect: /^Effect$/,
-    tolerationSeconds: /^Toleration seconds$/,
+    key: 'Key',
+    operator: 'Operator',
+    value: 'Value',
+    effect: 'Effect',
+    tolerationSeconds: 'Toleration seconds',
   },
   operators: {
     exists: /^Exists$/,
@@ -44,9 +44,9 @@ export const PLACEMENT_TOLERATIONS_UI = {
 /** YAML fragment patterns for toleration edits (Placement doc within sync editor). */
 export const PLACEMENT_TOLERATIONS_YAML_PATTERNS = {
   unreachableEdited:
-    /cluster\.open-cluster-management\.io\/unreachable[\s\S]*operator:\s*Equal[\s\S]*value:\s*['"]?true['"]?[\s\S]*effect:\s*NoSelect[\s\S]*tolerationSeconds:\s*300/,
+    /^(?=[\s\S]*cluster\.open-cluster-management\.io\/unreachable)(?=[\s\S]*operator:\s*Equal)(?=[\s\S]*value:\s*['"]?true['"]?)(?=[\s\S]*effect:\s*NoSelect)(?=[\s\S]*tolerationSeconds:\s*300)/,
   customToleration:
-    /custom-taint-key[\s\S]*operator:\s*Exists[\s\S]*effect:\s*PreferNoSelect/,
+    /^(?=[\s\S]*custom-taint-key)(?=[\s\S]*operator:\s*Exists)(?=[\s\S]*effect:\s*PreferNoSelect)/,
 } as const;
 
 function escapePlacementRegExp(s: string): string {

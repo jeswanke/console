@@ -91,6 +91,7 @@ export async function verifyArgoPushPrivateRepoDetailsTab(
   >
 ): Promise<void> {
   const { applicationName, argoServerLabel, git } = options;
+  if (!git) throw new Error('verifyArgoPushPrivateRepoDetailsTab: git repository spec is required');
 
   await detailsPage.openDetailTab('details');
   await detailsPage.expectDetailTabSelected('details');

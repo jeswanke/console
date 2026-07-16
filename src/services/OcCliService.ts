@@ -20,7 +20,7 @@ type PlacementJson = {
 type PlacementDecisionJson = {
   status?: {
     numberOfClusters?: number;
-    decisions?: unknown[];
+    decisions?: Array<{ clusterName?: string }>;
   };
 };
 
@@ -871,6 +871,29 @@ export class OcCliService {
         return 0;
       }
       throw err;
+    }
+  }
+
+  /** Cluster names from PlacementDecision status.decisions. */
+  async getPlacementDecisionClusterNames(
+    namespace: string,
+    placementName: string
+  ): Promise<string[]> {
+    assertSafeOcSingleArg(namespace, 'namespace');
+    assertSafeOcSingleArg(placementName, 'placementName');
+    const decisionName = `${placementName}-decision-1`;
+    try {
+      const { stdout } = await execFilePromise(
+        'oc',
+        ['get', 'placementdecision', decisionName, '-n', namespace, '-o', 'json'],
+        { encoding: 'utf8', maxBuffer: 1024 * 1024 }
+      );
+      const parsed = JSON.parse(stdout) as PlacementDecisionJson;
+      return (parsed.status?.decisions ?? [])
+        .map((d) => d.clusterName)
+        .filter((n): n is string => typeof n === 'string');
+    } catch {
+      return [];
     }
   }
 

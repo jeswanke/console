@@ -144,12 +144,18 @@ export class ApplicationsTable extends AcmTable {
     if (!isOpen) {
       await this.openFilter();
     }
-    await this.getFilterOption(optionLabel).check();
+    const checkbox = this.getFilterOption(optionLabel);
+    if (!(await checkbox.isChecked())) {
+      await checkbox.check();
+    }
   }
 
   /** Deselect (uncheck) a filter option by label. Filter menu must be open. */
   async deselectFilterOption(optionLabel: string): Promise<void> {
-    await this.getFilterOption(optionLabel).uncheck();
+    const checkbox = this.getFilterOption(optionLabel);
+    if (await checkbox.isChecked()) {
+      await checkbox.uncheck();
+    }
   }
 
   /** Column header cell (`th[data-label="…"]`). */

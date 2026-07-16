@@ -523,7 +523,7 @@ async function selectGitRepositoryTypeOnPullTemplate(page: Page): Promise<void> 
 async function fillArgoTemplateStep(page: Page): Promise<void> {
   const { repoUrl, destinationNamespace } = ARGO_APPSET_GENERATORS;
   await selectGitRepositoryTypeOnPullTemplate(page);
-  await pickComboboxOption(
+  await pickCreatableComboboxValue(
     page,
     page.getByRole('combobox', { name: W.template.gitUrlComboboxLabel }),
     repoUrl

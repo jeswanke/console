@@ -44,7 +44,7 @@ export async function verifyDefaultTolerationFieldsWhenExpanded(
   await expect(
     group.getByRole('combobox', { name: PLACEMENT_TOLERATIONS_UI.effectPlaceholder })
   ).toBeVisible();
-  await expect(tolerations.getTolerationSecondsInput(group)).toHaveValue('');
+  await expect(tolerations.getTolerationSecondsCheckbox(group)).not.toBeChecked();
 }
 
 export async function editUnreachableTolerationInForm(

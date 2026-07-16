@@ -47,7 +47,7 @@ test.describe(
           git,
         } = options;
 
-        await applyPrivateGitRepoSecretToArgo(oc, auth, git.url);
+        await applyPrivateGitRepoSecretToArgo(oc, auth, git!.url);
         await cleanupArgoPushApplication(oc, options);
 
         await applicationListPage.goto();

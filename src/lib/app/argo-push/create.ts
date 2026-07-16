@@ -34,6 +34,7 @@ async function fillSingleGitTemplateStep(
   options: Pick<CreateArgoPushApplicationOptions, 'git' | 'destinationNamespace'>
 ): Promise<void> {
   const { git, destinationNamespace } = options;
+  if (!git) throw new Error('fillSingleGitTemplateStep: git repository spec is required');
   await wizard.selectGitRepositoryTypeOnTemplate();
   await wizard.waitForLoad();
   await wizard.pickGitUrlOption(git.url);

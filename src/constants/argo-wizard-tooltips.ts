@@ -4,6 +4,8 @@ export type ArgoWizardTooltipDef = {
   helpButtonSelector: string;
   popoverBodySelector: string;
   expectedText: string | string[];
+  /** Label text near the help button; used when element IDs are unreliable (generator fields). */
+  nearLabelText?: string;
 };
 
 export const ARGO_WIZARD_TOOLTIPS = {
@@ -19,50 +21,56 @@ export const ARGO_WIZARD_TOOLTIPS = {
   },
   generators: {
     clusterDecisionRequeue: {
-      helpButtonSelector: '#clusterdecisionresource-requeueafterseconds-label-help-button',
-      popoverBodySelector: '#popover-clusterdecisionresource-requeueafterseconds-label-help-popover-body',
+      helpButtonSelector: '[id$="-label-help-button"]',
+      popoverBodySelector: '[id$="-label-help-popover-body"]',
       expectedText:
         'Sets the time delay in seconds before the application set controller triggers a refresh of the cluster resource decision generator to detect placement decision changes and update the resulting applications.',
+      nearLabelText: 'Requeue time',
     },
     clustersMatchLabels: {
-      helpButtonSelector: '#clusters-selector-matchlabels-label-help-button',
-      popoverBodySelector: '#popover-clusters-selector-matchlabels-label-help-popover-body',
+      helpButtonSelector: '[id$="matchLabels-label-help-button"]',
+      popoverBodySelector: '[id$="matchLabels-label-help-popover-body"]',
       expectedText: 'Labels to match clusters by',
     },
     gitRepoUrl: {
-      helpButtonSelector: '#git-repourl-label-help-button',
-      popoverBodySelector: '#popover-git-repourl-label-help-popover-body',
+      helpButtonSelector: '[id$="-label-help-button"]',
+      popoverBodySelector: '[id$="-label-help-popover-body"]',
       expectedText: 'The URL path for the Git repository.',
+      nearLabelText: 'URL',
     },
     gitRevision: {
-      helpButtonSelector: '#git-revision-label-help-button',
-      popoverBodySelector: '#popover-git-revision-label-help-popover-body',
+      helpButtonSelector: '[id$="-label-help-button"]',
+      popoverBodySelector: '[id$="-label-help-popover-body"]',
       expectedText: 'Refer to a single commit',
+      nearLabelText: 'Revision',
     },
     gitRequeue: {
-      helpButtonSelector: '#git-requeueafterseconds-label-help-button',
-      popoverBodySelector: '#popover-git-requeueafterseconds-label-help-popover-body',
+      helpButtonSelector: '[id$="-label-help-button"]',
+      popoverBodySelector: '[id$="-label-help-popover-body"]',
       expectedText: 'Git requeue time in seconds',
+      nearLabelText: 'Requeue time',
     },
     pluginInputParams: {
-      helpButtonSelector: '#plugin-input-parameters-label-help-button',
-      popoverBodySelector: '#popover-plugin-input-parameters-label-help-popover-body',
+      helpButtonSelector: '[id$="plugin.input.parameters-label-help-button"]',
+      popoverBodySelector: '[id$="plugin.input.parameters-label-help-popover-body"]',
       expectedText: 'Key-value parameters to pass to the plugin',
     },
     pluginValues: {
-      helpButtonSelector: '#plugin-values-label-help-button',
-      popoverBodySelector: '#popover-plugin-values-label-help-popover-body',
+      helpButtonSelector: '[id$="plugin.values-label-help-button"]',
+      popoverBodySelector: '[id$="plugin.values-label-help-popover-body"]',
       expectedText: 'Values to include in the generated parameters',
     },
     pluginRequeue: {
-      helpButtonSelector: '#plugin-requeueafterseconds-label-help-button',
-      popoverBodySelector: '#popover-plugin-requeueafterseconds-label-help-popover-body',
+      helpButtonSelector: '[id$="-label-help-button"]',
+      popoverBodySelector: '[id$="-label-help-popover-body"]',
       expectedText: 'Plugin requeue time in seconds',
+      nearLabelText: 'Requeue time',
     },
     pullRequestRequeue: {
-      helpButtonSelector: '#pullrequest-requeueafterseconds-label-help-button',
-      popoverBodySelector: '#popover-pullrequest-requeueafterseconds-label-help-popover-body',
+      helpButtonSelector: '[id$="-label-help-button"]',
+      popoverBodySelector: '[id$="-label-help-popover-body"]',
       expectedText: 'Pull request requeue time in seconds',
+      nearLabelText: 'Requeue time',
     },
   },
   repository: {
@@ -99,18 +107,18 @@ export const ARGO_WIZARD_TOOLTIPS = {
   },
   syncPolicy: {
     prune: {
-      helpButtonSelector: '#spec-template-spec-syncpolicy-automated-prune-label-help-button',
-      popoverBodySelector: '#popover-spec-template-spec-syncpolicy-automated-prune-label-help-popover-body',
+      helpButtonSelector: '[id$="syncPolicy.automated.prune-label-help-button"]',
+      popoverBodySelector: '[id$="syncPolicy.automated.prune-label-help-popover-body"]',
       expectedText: 'If automated sync is disabled, this option will be ignored.',
     },
     allowEmpty: {
-      helpButtonSelector: '#spec-template-spec-syncpolicy-automated-allowempty-label-help-button',
-      popoverBodySelector: '#popover-spec-template-spec-syncpolicy-automated-allowempty-label-help-popover-body',
+      helpButtonSelector: '[id$="syncPolicy.automated.allowEmpty-label-help-button"]',
+      popoverBodySelector: '[id$="syncPolicy.automated.allowEmpty-label-help-popover-body"]',
       expectedText: 'If automated sync is disabled, this option will be ignored.',
     },
     selfHeal: {
-      helpButtonSelector: '#spec-template-spec-syncpolicy-automated-selfheal-label-help-button',
-      popoverBodySelector: '#popover-spec-template-spec-syncpolicy-automated-selfheal-label-help-popover-body',
+      helpButtonSelector: '[id$="syncPolicy.automated.selfHeal-label-help-button"]',
+      popoverBodySelector: '[id$="syncPolicy.automated.selfHeal-label-help-popover-body"]',
       expectedText: 'If automated sync is disabled, this option will be ignored.',
     },
   },

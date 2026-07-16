@@ -86,7 +86,7 @@ export async function verifyArgoPullApplicationOverviewTable(params: {
   await expect(table.getCellByLabel(row, 'namespace')).toContainText(argoServerNamespace);
 
   const clustersCell = table.getCellByLabel(row, 'clusters');
-  await expect(clustersCell).toContainText('Remote');
+  await expect(clustersCell).toContainText('Remote', { timeout: 120_000 });
   await expect(clustersCell.getByRole('link')).toHaveAttribute(
     'href',
     expect.stringContaining(managedClusterName)

@@ -36,7 +36,7 @@ export const argoPushDomainPayloadSchema = z
     argoServerLabel: z.string().min(1),
     applicationSetNamespace: z.string().min(1).optional(),
     destinationNamespace: z.string().min(1),
-    git: argoPushGitRepositorySchema,
+    git: argoPushGitRepositorySchema.optional(),
     helm: argoPushHelmRepositorySchema.optional(),
     /** When true, wizard adds Git (first) + Helm (second) on **Template**. */
     multiSource: z.boolean().optional(),

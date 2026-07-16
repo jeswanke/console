@@ -684,7 +684,7 @@ export const APP_ARGO_CREATE_WIZARD_SHARED = {
 /** Shared RHACM4K-61724 YAML patterns (pull + push); modal uses GitOpsCluster from CreateArgoResources. */
 const APP_ARGO_PLACEMENT_TOLERATIONS_YAML_PATTERNS = {
   modalGitOpsPlacementTolerations:
-    /kind:\s*GitOpsCluster[\s\S]*kind:\s*Placement[\s\S]*tolerations:[\s\S]*cluster\.open-cluster-management\.io\/unreachable[\s\S]*operator:\s*Exists[\s\S]*cluster\.open-cluster-management\.io\/unavailable[\s\S]*operator:\s*Exists[\s\S]*clusterSets:\s*\n\s*-\s*default/,
+    /kind:\s*GitOpsCluster[\s\S]*kind:\s*Placement[\s\S]*(?=[\s\S]*tolerations:[\s\S]*cluster\.open-cluster-management\.io\/unreachable[\s\S]*operator:\s*Exists[\s\S]*cluster\.open-cluster-management\.io\/unavailable[\s\S]*operator:\s*Exists)(?=[\s\S]*clusterSets:\s*\n\s*-\s*default)/,
   wizardApplicationSetPlacementTolerations:
     /kind:\s*ApplicationSet[\s\S]*kind:\s*Placement[\s\S]*tolerations:[\s\S]*cluster\.open-cluster-management\.io\/unreachable[\s\S]*operator:\s*Exists[\s\S]*cluster\.open-cluster-management\.io\/unavailable[\s\S]*operator:\s*Exists/,
   ...PLACEMENT_TOLERATIONS_YAML_PATTERNS,

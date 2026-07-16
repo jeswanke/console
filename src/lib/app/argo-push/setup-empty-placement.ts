@@ -26,7 +26,7 @@ export async function setupEmptyPlacementApplicationSet(
   await validateApplicationSetSourceRepoUrl(oc, {
     namespace: resolveApplicationSetNamespace(options),
     applicationSetName: options.applicationName,
-    repoUrl: options.git.url,
+    repoUrl: options.git?.url ?? '',
     shouldBePresent: true,
   });
 }

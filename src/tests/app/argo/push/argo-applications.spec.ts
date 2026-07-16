@@ -70,7 +70,7 @@ test.describe(
         await validateApplicationSetSourceRepoUrl(oc, {
           namespace: argoPush.applicationSetNamespace ?? argoPush.argoServerLabel,
           applicationSetName: argoPush.applicationName,
-          repoUrl: argoPush.git.url,
+          repoUrl: argoPush.git?.url ?? '',
           shouldBePresent: true,
         });
       }
@@ -92,7 +92,7 @@ test.describe(
         await validateApplicationSetSourceRepoUrl(oc, {
           namespace: argoPush.applicationSetNamespace ?? argoPush.argoServerLabel,
           applicationSetName: argoPush.applicationName,
-          repoUrl: argoPush.git.url,
+          repoUrl: argoPush.git?.url ?? '',
           shouldBePresent: false,
         });
       }
@@ -109,7 +109,7 @@ test.describe(
           applicationListPage,
           argoPushApplicationCreateWizardPage,
           argoPush.applicationName,
-          { type: 'git', git: argoPush.git }
+          { type: 'git', git: argoPush.git! }
         );
       }
     );

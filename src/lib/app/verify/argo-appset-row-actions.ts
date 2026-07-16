@@ -32,11 +32,16 @@ export async function searchApplicationSetFromRowActions(
   const row = table.getRowByName(applicationSetName);
   await table.openRowActions(row);
   await table.clickSearchApplicationMenuItem();
-  await expect(applicationListPage.getPage()).toHaveURL(/\/multicloud\/search/);
-  const labels = applicationListPage.getPage().locator('[class*="label-group__list-item"]');
+  const page = applicationListPage.getPage();
+  await expect(page).toHaveURL(/\/multicloud\/search/);
+  const labels = page.locator('[class*="label-group__list-item"]');
   await expect(labels.filter({ hasText: `name:${applicationSetName}` })).toBeVisible({ timeout: 60_000 });
   await expect(labels.filter({ hasText: `namespace:${applicationSetNamespace}` })).toBeVisible();
   await expect(labels.filter({ hasText: 'kind:applicationset' })).toBeVisible();
+  const moreBtn = page.getByRole('button', { name: /more$/ });
+  if (await moreBtn.isVisible().catch(() => false)) {
+    await moreBtn.click();
+  }
   await expect(labels.filter({ hasText: 'apigroup:argoproj.io' })).toBeVisible();
   await expect(labels.filter({ hasText: 'apiversion:v1alpha1' })).toBeVisible();
 }

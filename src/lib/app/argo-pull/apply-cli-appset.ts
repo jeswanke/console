@@ -71,6 +71,16 @@ export async function applyPullModelPlacementExcludeLocalCluster(
   await oc.run(`oc apply -f - <<'EOF'\n${yaml}\nEOF`);
 }
 
+export async function isLocalClusterInPlacementDecision(
+  oc: OcCliService,
+  options: CreateArgoPushApplicationOptions
+): Promise<boolean> {
+  const argoServerNamespace = options.applicationSetNamespace ?? options.argoServerLabel;
+  const placementName = `${options.applicationName}-placement`;
+  const clusters = await oc.getPlacementDecisionClusterNames(argoServerNamespace, placementName);
+  return clusters.includes('local-cluster');
+}
+
 /** RHACM4K-38202 cleanup: delete hub ApplicationSet + Placement and unblock local-cluster app removal. */
 export async function cleanupPullModelIncludeLocalGitAppSet(
   oc: OcCliService,

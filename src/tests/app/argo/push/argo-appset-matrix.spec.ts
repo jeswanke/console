@@ -3,6 +3,8 @@
  *
  * Cypress: `Argo_Appset_Matrix_Test_Suite.cy.js`.
  */
+import { expect } from '@playwright/test';
+
 import { APP_ARGO_MATRIX_APPSET } from '@constants/app';
 import {
   applyArgoMatrixAppsetSetup,
@@ -13,6 +15,9 @@ import {
 } from '@lib/app/setup/argo-matrix-appset';
 import { test } from '@fixtures/app-test';
 
+const PLACEMENT_NAME = 'argo-appset-matrix-placement';
+const PLACEMENT_NAMESPACE = 'openshift-gitops';
+
 test.describe(
   'Application Lifecycle UI: ApplicationSet matrix (Cluster Decision + Git)',
   { tag: ['@ALC', '@gitops', '@e2e-argo', '@applicationset', '@pullmodel', '@argo-matrix'] },
@@ -22,14 +27,30 @@ test.describe(
     let managedClusterName: string;
 
     test.beforeAll(async ({ oc }) => {
+      test.setTimeout(600_000);
+
+      await applyArgoMatrixAppsetSetup(oc);
+
+      await expect
+        .poll(() => oc.getPlacementDecisionClusterCount(PLACEMENT_NAMESPACE, PLACEMENT_NAME), {
+          timeout: 120_000,
+          intervals: [2_000, 5_000, 10_000],
+          message: `PlacementDecision ${PLACEMENT_NAME} must select at least 1 cluster`,
+        })
+        .toBeGreaterThan(0);
+
+      const clusters = await oc.getPlacementDecisionClusterNames(
+        PLACEMENT_NAMESPACE,
+        PLACEMENT_NAME
+      );
       managedClusterName =
-        process.env.E2E_MANAGED_CLUSTER_NAME?.trim() || 'local-cluster';
+        process.env.E2E_MANAGED_CLUSTER_NAME?.trim() || clusters[0] || 'local-cluster';
+
       await prepareMatrixManagedClusterNamespaces(
         oc,
         managedClusterName,
         APP_ARGO_MATRIX_APPSET.destinationNamespaces
       );
-      await applyArgoMatrixAppsetSetup(oc);
       await waitForMatrixDeployedNamespaces(
         oc,
         managedClusterName,
