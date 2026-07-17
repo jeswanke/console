@@ -47,16 +47,15 @@ test.describe.serial(
   'RHACM4K-37242: GRC: Verify Manage columns option for policies table',
   { tag: ['@governance'] },
   () => {
-    const oc = new OcCliService();
     const res = GOV_MANAGE_COLUMNS_TEST_RESOURCES;
 
-    test.beforeAll(async () => {
+    test.beforeAll(async ({ oc }) => {
       test.setTimeout(180_000);
       await oc.applyYaml(RESOURCES_YAML);
       await waitForPolicyCreated(oc, res.namespace, `${res.policyPrefix}-1-e2e`);
     });
 
-    test.afterAll(async () => {
+    test.afterAll(async ({ oc }) => {
       await oc.deleteYaml(RESOURCES_YAML);
     });
 

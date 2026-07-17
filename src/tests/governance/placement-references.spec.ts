@@ -12,7 +12,6 @@
 
 import * as path from 'path';
 import { test, expect } from '@fixtures/governance-test';
-import { OcCliService } from '@services/OcCliService';
 import {
   GOV_POLICY_DETAILS,
   GOV_PLACEMENT_DETAILS,
@@ -26,14 +25,13 @@ test.describe.serial(
   'Placement references in policy and policy set details',
   { tag: ['@governance'] },
   () => {
-    const oc = new OcCliService();
     const ns = GOV_TEST_RESOURCES.namespace;
 
-    test.beforeAll(async () => {
+    test.beforeAll(async ({ oc }) => {
       await oc.applyYaml(RESOURCES_YAML);
     });
 
-    test.afterAll(async () => {
+    test.afterAll(async ({ oc }) => {
       await oc.deleteYaml(RESOURCES_YAML);
     });
 

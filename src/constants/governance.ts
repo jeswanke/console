@@ -61,7 +61,7 @@ export const POLICY_PLACEMENT_PREVIEW = {
     ...PLACEMENT_CLUSTER_PREVIEW.placement,
     /** Hub PF Select — aria-label is "Select the cluster sets", not "Cluster sets". */
     clusterSetsComboboxLabel: /^Select the cluster sets$/i,
-    existingPlacementComboboxLabel: /^Placement$/i,
+    existingPlacementComboboxLabel: /^Select the placement$/i,
   },
 } as const;
 
@@ -79,7 +79,7 @@ export const POLICY_SET_PLACEMENT_PREVIEW = {
   placement: {
     ...PLACEMENT_CLUSTER_PREVIEW.placement,
     clusterSetsComboboxLabel: /^Select the cluster sets$/i,
-    existingPlacementComboboxLabel: /^Placement$/i,
+    existingPlacementComboboxLabel: /^Select the placement$/i,
   },
 } as const;
 
@@ -309,6 +309,20 @@ export const GOV_TOOLBAR = {
   exportAllToCSVLabel: 'Export all to CSV',
 } as const;
 
+export const GOV_POLICY_ACTIONS = {
+  actionsDropdownId: 'table-actions-dropdown',
+  statusGroupId: 'status',
+  remediationGroupId: 'remediation-policy',
+  actions: {
+    enable: 'Enable',
+    disable: 'Disable',
+    inform: 'Inform',
+    enforce: 'Enforce',
+    delete: 'Delete',
+    edit: 'Edit',
+  },
+} as const;
+
 // =============================================================================
 // Batch 1 test resources
 // =============================================================================
@@ -327,4 +341,25 @@ export const GOV_EXPORT_CSV_TEST_RESOURCES = {
   policyPrefix: 'settest',
   policySetPrefix: 'test-policyset',
   namespace: 'default',
+} as const;
+
+// =============================================================================
+// Batch 2 test resources
+// =============================================================================
+
+export const GOV_BULK_ACTION_TEST_RESOURCES = {
+  policyPrefix: 'test-bulk-action',
+  namespace: 'default',
+} as const;
+
+export const GOV_POLICY_PLACEMENT_TEST_RESOURCES = {
+  policyPrefix: 'plc-placement',
+  namespace: 'open-cluster-management-global-set',
+  clusterSet: 'global',
+} as const;
+
+export const GOV_NS_LABELSELECTOR_TEST_RESOURCES = {
+  policyPrefix: 'test-pod-policy-14942',
+  namespace: 'default',
+  targetNamespace: 'auto-policy-test-1',
 } as const;

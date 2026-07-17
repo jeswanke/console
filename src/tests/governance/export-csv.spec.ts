@@ -12,7 +12,6 @@
 
 import * as path from 'path';
 import { test, expect } from '@fixtures/governance-test';
-import { OcCliService } from '@services/OcCliService';
 import {
   GOV_EXPORT_CSV_TEST_RESOURCES,
   GOV_TABLE_COLUMNS,
@@ -71,10 +70,9 @@ test.describe.serial(
   'GRC: Test export CSV functionality in GRC pages',
   { tag: ['@governance'] },
   () => {
-    const oc = new OcCliService();
     const res = GOV_EXPORT_CSV_TEST_RESOURCES;
 
-    test.beforeAll(async () => {
+    test.beforeAll(async ({ oc }) => {
       test.setTimeout(180_000);
       try {
         await oc.applyYaml(CLUSTER_SET_BINDING_YAML);
@@ -90,7 +88,7 @@ test.describe.serial(
       );
     });
 
-    test.afterAll(async () => {
+    test.afterAll(async ({ oc }) => {
       await oc.deleteYaml(RESOURCES_YAML);
     });
 

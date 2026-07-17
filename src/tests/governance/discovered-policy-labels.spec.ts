@@ -11,7 +11,6 @@
 
 import * as path from 'path';
 import { test, expect } from '@fixtures/governance-test';
-import { OcCliService } from '@services/OcCliService';
 import {
   GOV_DISCOVERED_POLICY_DETAILS,
   GOV_DISCOVERED_TEST_RESOURCES,
@@ -25,11 +24,10 @@ test.describe.serial(
   'Discovered policy cluster labels (RHACM4K-64205)',
   { tag: ['@governance'] },
   () => {
-    const oc = new OcCliService();
     const res = GOV_DISCOVERED_TEST_RESOURCES;
     let targetCluster: string;
 
-    test.beforeAll(async () => {
+    test.beforeAll(async ({ oc }) => {
       test.setTimeout(180_000);
       await oc.applyYaml(RESOURCES_YAML);
       await waitForPolicyPropagation(oc, res.parentPolicy, res.namespace);
@@ -42,7 +40,7 @@ test.describe.serial(
       targetCluster = raw.replace(/'/g, '');
     });
 
-    test.afterAll(async () => {
+    test.afterAll(async ({ oc }) => {
       await oc.deleteYaml(RESOURCES_YAML);
       await oc.run(`oc delete namespace ${res.namespace} --ignore-not-found`);
     });

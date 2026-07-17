@@ -40,7 +40,12 @@ export async function downloadCSV(
  * Uses a minimal built-in parser (no external dependency).
  */
 export function parseCSV(filePath: string): Record<string, string>[] {
-  const content = fs.readFileSync(filePath, 'utf-8');
+  const allowedRoot = path.resolve(process.cwd(), 'test-results', 'csv-downloads') + path.sep;
+  const resolved = path.resolve(filePath);
+  if (!resolved.startsWith(allowedRoot)) {
+    throw new Error(`Refusing to read CSV outside allowed directory: ${resolved}`);
+  }
+  const content = fs.readFileSync(resolved, 'utf-8');
   const lines = parseCSVRows(content);
   if (lines.length === 0) return [];
 

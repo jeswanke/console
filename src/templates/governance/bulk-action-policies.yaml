@@ -1,6 +1,6 @@
-## Batch 1 — check_filter (RHACM4K-6818)
-## 3 policies placed on local-cluster with inform remediation.
-## All enabled, local, inform. Will have violations (pod does not exist).
+## Batch 2 — check_bulk_action (RHACM4K-6905)
+## 3 ConfigurationPolicy resources for bulk action testing.
+## All target local-cluster, inform, enabled.
 ---
 apiVersion: policy.open-cluster-management.io/v1
 kind: Policy
@@ -12,18 +12,20 @@ metadata:
     policy.open-cluster-management.io/categories: PR.IP Information Protection Processes and Procedures
     policy.open-cluster-management.io/controls: PR.IP-1 Baseline Configuration
 spec:
-  disabled: false
   remediationAction: inform
+  disabled: false
   policy-templates:
     - objectDefinition:
         apiVersion: policy.open-cluster-management.io/v1
         kind: ConfigurationPolicy
         metadata:
-          name: filter-test-pod-1-e2e
+          name: policy-pod-bulk-1-e2e
         spec:
           remediationAction: inform
           severity: low
           namespaceSelector:
+            exclude:
+              - kube-*
             include:
               - default
           object-templates:
@@ -32,13 +34,13 @@ spec:
                 apiVersion: v1
                 kind: Pod
                 metadata:
-                  name: nginx-filter-test-1-e2e
+                  name: nginx-pod-bulk-1-e2e
                 spec:
                   securityContext:
                     runAsNonRoot: true
                   containers:
                     - name: nginx
-                      image: nginx:latest
+                      image: registry.access.redhat.com/ubi9/nginx-124:latest
                       securityContext:
                         allowPrivilegeEscalation: false
                         readOnlyRootFilesystem: true
@@ -63,18 +65,20 @@ metadata:
     policy.open-cluster-management.io/categories: PR.AC Identity Management and Access Control
     policy.open-cluster-management.io/controls: PR.IP-1 Baseline Configuration
 spec:
-  disabled: false
   remediationAction: inform
+  disabled: false
   policy-templates:
     - objectDefinition:
         apiVersion: policy.open-cluster-management.io/v1
         kind: ConfigurationPolicy
         metadata:
-          name: filter-test-pod-2-e2e
+          name: policy-pod-bulk-2-e2e
         spec:
           remediationAction: inform
           severity: low
           namespaceSelector:
+            exclude:
+              - kube-*
             include:
               - default
           object-templates:
@@ -83,13 +87,13 @@ spec:
                 apiVersion: v1
                 kind: Pod
                 metadata:
-                  name: nginx-filter-test-2-e2e
+                  name: nginx-pod-bulk-2-e2e
                 spec:
                   securityContext:
                     runAsNonRoot: true
                   containers:
                     - name: nginx
-                      image: nginx:latest
+                      image: registry.access.redhat.com/ubi9/nginx-124:latest
                       securityContext:
                         allowPrivilegeEscalation: false
                         readOnlyRootFilesystem: true
@@ -114,18 +118,20 @@ metadata:
     policy.open-cluster-management.io/categories: PR.DS Data Security
     policy.open-cluster-management.io/controls: PR.IP-1 Baseline Configuration
 spec:
-  disabled: false
   remediationAction: inform
+  disabled: false
   policy-templates:
     - objectDefinition:
         apiVersion: policy.open-cluster-management.io/v1
         kind: ConfigurationPolicy
         metadata:
-          name: filter-test-pod-3-e2e
+          name: policy-pod-bulk-3-e2e
         spec:
           remediationAction: inform
           severity: low
           namespaceSelector:
+            exclude:
+              - kube-*
             include:
               - default
           object-templates:
@@ -134,13 +140,13 @@ spec:
                 apiVersion: v1
                 kind: Pod
                 metadata:
-                  name: nginx-filter-test-3-e2e
+                  name: nginx-pod-bulk-3-e2e
                 spec:
                   securityContext:
                     runAsNonRoot: true
                   containers:
                     - name: nginx
-                      image: nginx:latest
+                      image: registry.access.redhat.com/ubi9/nginx-124:latest
                       securityContext:
                         allowPrivilegeEscalation: false
                         readOnlyRootFilesystem: true
@@ -158,22 +164,26 @@ spec:
 apiVersion: cluster.open-cluster-management.io/v1beta1
 kind: Placement
 metadata:
-  name: filter-test-placement-e2e
+  name: test-bulk-action-placement-e2e
   namespace: default
 spec:
   clusterSets:
     - default
-  numberOfClusters: 1
+  predicates:
+    - requiredClusterSelector:
+        labelSelector:
+          matchLabels:
+            local-cluster: 'true'
 ---
 apiVersion: policy.open-cluster-management.io/v1
 kind: PlacementBinding
 metadata:
-  name: filter-test-pb-e2e
+  name: test-bulk-action-pb-e2e
   namespace: default
 placementRef:
-  apiGroup: cluster.open-cluster-management.io
   kind: Placement
-  name: filter-test-placement-e2e
+  apiGroup: cluster.open-cluster-management.io
+  name: test-bulk-action-placement-e2e
 subjects:
   - apiGroup: policy.open-cluster-management.io
     kind: Policy

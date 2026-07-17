@@ -10,7 +10,6 @@
 
 import * as path from 'path';
 import { test, expect } from '@fixtures/governance-test';
-import { OcCliService } from '@services/OcCliService';
 import { GOV_FILTER_TEST_RESOURCES } from '@constants/governance';
 import { waitForPolicyPropagation } from '@lib/governance/policy-lifecycle';
 
@@ -22,10 +21,9 @@ test.describe.serial(
   'RHACM4K-6818: GRC: Verify all Filter options for the Governance policy data table',
   { tag: ['@governance'] },
   () => {
-    const oc = new OcCliService();
     const res = GOV_FILTER_TEST_RESOURCES;
 
-    test.beforeAll(async () => {
+    test.beforeAll(async ({ oc }) => {
       test.setTimeout(180_000);
       try {
         await oc.applyYaml(CLUSTER_SET_BINDING_YAML);
@@ -36,7 +34,7 @@ test.describe.serial(
       await waitForPolicyPropagation(oc, `${res.policyPrefix}-1-e2e`, res.namespace);
     });
 
-    test.afterAll(async () => {
+    test.afterAll(async ({ oc }) => {
       await oc.deleteYaml(RESOURCES_YAML);
     });
 

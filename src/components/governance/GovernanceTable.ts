@@ -2,13 +2,17 @@
 
 import { Page, Locator, expect } from '@playwright/test';
 import { AcmTable } from '@components/patternfly/AcmTable';
-import { GOV_TABLE_COLUMNS, GOV_TOOLBAR, GOV_FILTER } from '@constants/governance';
+import {
+  GOV_TABLE_COLUMNS,
+  GOV_TOOLBAR,
+  GOV_FILTER,
+  GOV_POLICY_ACTIONS,
+} from '@constants/governance';
 import { PF_SPINNER, PF_SKELETON } from '@constants/selectors';
 
 /**
- * Governance policies table — extends AcmTable with filter, export, and cell access.
- *
- * Mirrors the ApplicationsTable pattern for filter/export interactions.
+ * Governance policies table — extends AcmTable with filter, export, row selection,
+ * bulk actions, and kebab row actions.
  */
 export class GovernanceTable extends AcmTable {
   private readonly drawerBody: Locator;
@@ -39,10 +43,6 @@ export class GovernanceTable extends AcmTable {
     await this.getFilterButton().click();
   }
 
-  /**
-   * Apply one or more filter options: opens filter, selects each option, then closes.
-   * Matches Cypress `doFilter` 1:1.
-   */
   async applyFilter(searchTerm: string, filterOptions: string[]): Promise<void> {
     await this.search(searchTerm);
     await expect(this.page.locator(PF_SPINNER)).toHaveCount(0, { timeout: 30_000 });
@@ -79,6 +79,120 @@ export class GovernanceTable extends AcmTable {
   async clickExportCSV(): Promise<void> {
     await this.getExportButton().click();
     await this.page.getByRole('menuitem', { name: GOV_TOOLBAR.exportAllToCSVLabel }).click();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Row selection
+  // ---------------------------------------------------------------------------
+
+  async selectRowByName(policyName: string): Promise<void> {
+    const row = this.getRowByName(policyName);
+    // PF6 hides the native <input> behind a styled <label>; force bypasses the visibility check
+    // eslint-disable-next-line playwright/no-force-option
+    await row.getByRole('checkbox').check({ force: true });
+  }
+
+  async selectAllVisibleRows(): Promise<void> {
+    const checkboxes = this.getTable().locator('tbody input[type="checkbox"]');
+    const count = await checkboxes.count();
+    for (let i = 0; i < count; i++) {
+      // PF6 hides the native <input> behind a styled <label>; force bypasses the visibility check
+      // eslint-disable-next-line playwright/no-force-option
+      await checkboxes.nth(i).check({ force: true });
+    }
+  }
+
+  async deselectAllRows(): Promise<void> {
+    const checkboxes = this.getTable().locator('tbody input[type="checkbox"]');
+    const count = await checkboxes.count();
+    for (let i = 0; i < count; i++) {
+      // PF6 hides the native <input> behind a styled <label>; force bypasses the visibility check
+      // eslint-disable-next-line playwright/no-force-option
+      await checkboxes.nth(i).uncheck({ force: true });
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Bulk actions (toolbar dropdown)
+  // ---------------------------------------------------------------------------
+
+  getActionsDropdown(): Locator {
+    return this.page.locator(`button#${GOV_POLICY_ACTIONS.actionsDropdownId}`);
+  }
+
+  async openActionsDropdown(): Promise<void> {
+    const btn = this.getActionsDropdown();
+    await btn.scrollIntoViewIfNeeded();
+    await btn.click();
+  }
+
+  async clickBulkAction(action: string): Promise<void> {
+    await this.openActionsDropdown();
+    const lowerAction = action.toLowerCase();
+
+    if (lowerAction === 'enable' || lowerAction === 'disable') {
+      await this.page.locator(`#${GOV_POLICY_ACTIONS.statusGroupId}`).hover();
+      // PF6 menu subitems may have pointer-events:none during open transition
+      // eslint-disable-next-line playwright/no-force-option
+      await this.page.locator(`#${lowerAction}`).click({ force: true });
+    } else if (lowerAction === 'inform' || lowerAction === 'enforce') {
+      await this.page.locator(`#${GOV_POLICY_ACTIONS.remediationGroupId}`).hover();
+      // PF6 menu subitems may have pointer-events:none during open transition
+      // eslint-disable-next-line playwright/no-force-option
+      await this.page.locator(`#${lowerAction}-policy`).click({ force: true });
+    } else {
+      // PF6 menu subitems may have pointer-events:none during open transition
+      // eslint-disable-next-line playwright/no-force-option
+      await this.page.locator(`#${lowerAction}`).click({ force: true });
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Individual row actions (kebab menu)
+  // ---------------------------------------------------------------------------
+
+  async openRowActions(policyName: string): Promise<void> {
+    const kebab = this.page.locator(`[id="${policyName}-actions"]`);
+    await kebab.scrollIntoViewIfNeeded();
+    await kebab.click();
+    const expanded = await kebab.getAttribute('aria-expanded');
+    if (expanded === 'false') {
+      await kebab.click();
+    }
+  }
+
+  async clickRowAction(policyName: string, action: string): Promise<void> {
+    await this.openRowActions(policyName);
+    const lowerAction = action.toLowerCase();
+
+    if (lowerAction === 'enable' || lowerAction === 'disable') {
+      await this.page.locator('#status-policy').hover();
+      // PF6 menu subitems may have pointer-events:none during open transition
+      // eslint-disable-next-line playwright/no-force-option
+      await this.page.locator(`#${lowerAction}-policy`).click({ force: true });
+    } else if (lowerAction === 'inform' || lowerAction === 'enforce') {
+      await this.page.locator('#remediation-policy').hover();
+      // PF6 menu subitems may have pointer-events:none during open transition
+      // eslint-disable-next-line playwright/no-force-option
+      await this.page.locator(`#${lowerAction}-policy`).click({ force: true });
+    } else {
+      // PF6 menu subitems may have pointer-events:none during open transition
+      // eslint-disable-next-line playwright/no-force-option
+      await this.page.locator(`#${lowerAction}-policy`).click({ force: true });
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Action confirmation modals
+  // ---------------------------------------------------------------------------
+
+  async confirmActionModal(actionText: string): Promise<void> {
+    const modal = this.page.getByRole('dialog').first();
+    await expect(modal).toBeVisible({ timeout: 10_000 });
+    const button = modal.getByRole('button', { name: new RegExp(actionText, 'i') });
+    await button.scrollIntoViewIfNeeded();
+    await button.click();
+    await modal.waitFor({ state: 'hidden', timeout: 30_000 });
   }
 
   // ---------------------------------------------------------------------------
@@ -122,5 +236,15 @@ export class GovernanceTable extends AcmTable {
     } else {
       await expect(cell).toHaveText(expectedValue);
     }
+  }
+
+  async verifyPolicyInListing(policyName: string): Promise<void> {
+    await expect(this.getRowByName(policyName)).toBeVisible({ timeout: 30_000 });
+  }
+
+  async verifyPolicyNotInListing(policyName: string): Promise<void> {
+    await expect(this.page.getByRole('link', { name: policyName, exact: true })).not.toBeVisible({
+      timeout: 30_000,
+    });
   }
 }
