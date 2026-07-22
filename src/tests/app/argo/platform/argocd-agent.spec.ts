@@ -32,7 +32,7 @@ test.describe(
     });
 
     test(
-      'RHACM4K-59837: Verify Argo CD application deployment succeeds using Argo CD Agent',
+      'RHACM4K-59837: ALC: Verify Argo CD application deployment succeeds using Argo CD Agent',
       { tag: ['@RHACM4K-59837', '@non-ui', '@e2e-common'] },
       async ({ oc }) => {
         test.setTimeout(600_000);

@@ -34,12 +34,12 @@ test.describe(
       await applyFluxLocalRepos(oc);
     });
 
-    test.beforeEach(() => {
+    test.beforeAll(() => {
       clearE2eSpecDataCache();
     });
 
     test(
-      'RHACM4K-16762: Verify FluxCD Git Application on local cluster appears in Applications table and topology',
+      'RHACM4K-16762: ALC: Verify FluxCD Git Application on local cluster appears in Applications table and topology',
       {
         tag: [
           '@RHACM4K-16762',
@@ -65,7 +65,7 @@ test.describe(
     );
 
     test(
-      'RHACM4K-16763: Verify FluxCD Helm Application on local cluster appears in Applications table and topology',
+      'RHACM4K-16763: ALC: Verify FluxCD Helm Application on local cluster appears in Applications table and topology',
       { tag: ['@RHACM4K-16763', '@UI', '@e2e-flux'] },
       async ({ oc, applicationListPage, applicationDetailsPage }) => {
         test.setTimeout(900_000);
@@ -82,7 +82,7 @@ test.describe(
     );
 
     test(
-      'RHACM4K-16764: Verify FluxCD Git Application update after edit is reflected in table and topology',
+      'RHACM4K-16764: ALC: Verify FluxCD Git Application update after edit is reflected in table and topology',
       { tag: ['@RHACM4K-16764', '@UI', '@e2e-flux'] },
       async ({ oc, applicationListPage, applicationDetailsPage }) => {
         test.setTimeout(1_200_000);
@@ -111,7 +111,7 @@ test.describe(
     );
 
     test(
-      'RHACM4K-16769: Verify FluxCD Helm Application update after edit is reflected in table and topology',
+      'RHACM4K-16769: ALC: Verify FluxCD Helm Application update after edit is reflected in table and topology',
       { tag: ['@RHACM4K-16769', '@UI', '@e2e-flux'] },
       async ({ oc, applicationListPage, applicationDetailsPage }) => {
         test.setTimeout(1_200_000);
@@ -140,7 +140,7 @@ test.describe(
     );
 
     test(
-      'RHACM4K-16779: Verify FluxCD Git Application deletion is reflected in Applications table',
+      'RHACM4K-16779: ALC: Verify FluxCD Git Application deletion is reflected in Applications table',
       { tag: ['@RHACM4K-16779', '@UI', '@e2e-flux'] },
       async ({ oc, applicationListPage, applicationDetailsPage }) => {
         test.setTimeout(900_000);
@@ -161,7 +161,7 @@ test.describe(
     );
 
     test(
-      'RHACM4K-16781: Verify FluxCD Helm Application deletion is reflected in Applications table',
+      'RHACM4K-16781: ALC: Verify FluxCD Helm Application deletion is reflected in Applications table',
       { tag: ['@RHACM4K-16781', '@UI', '@e2e-flux'] },
       async ({ oc, applicationListPage, applicationDetailsPage }) => {
         test.setTimeout(900_000);

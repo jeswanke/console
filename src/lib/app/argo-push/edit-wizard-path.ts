@@ -29,6 +29,7 @@ export async function editArgoPushApplicationGitPathAndVerifyTopology(params: {
   } = params;
   const argoServerNamespace = argoPush.applicationSetNamespace ?? argoPush.argoServerLabel;
   const argoAppName = `${argoPush.applicationName}-${clusterName}`;
+  const page = applicationDetailsPage.getPage();
 
   await createArgoPushApplicationIfMissing(oc, applicationListPage, wizard, argoPush);
 
@@ -39,7 +40,7 @@ export async function editArgoPushApplicationGitPathAndVerifyTopology(params: {
 
   await new Promise((resolve) => setTimeout(resolve, 30_000));
 
-  await applicationDetailsPage.goto(argoServerNamespace, argoPush.applicationName, 'details');
+  await applicationDetailsPage.gotoApplicationSet(argoServerNamespace, argoPush.applicationName, 'details');
   await applicationDetailsPage.syncArgoCdApplication({ timeout: 120_000 });
 
   await expect
@@ -52,7 +53,7 @@ export async function editArgoPushApplicationGitPathAndVerifyTopology(params: {
   if (argoPush.clusterResources?.length) {
     await applicationDetailsPage.openDetailTab('topology');
     await verifyArgoPushAppTopologyTab({
-      page: applicationDetailsPage.getPage(),
+      page,
       detailsPage: applicationDetailsPage,
       applicationSetName: argoPush.applicationName,
       argoServerNamespace,

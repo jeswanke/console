@@ -26,7 +26,7 @@ test.describe(
     test.describe.configure({ mode: 'serial' });
 
     test(
-      'RHACM4K-63608: As an application admin, I can create an application using a private repository via the AppSet wizard',
+      'RHACM4K-63608: ALC: As an application admin, I can create an application using a private repository via the AppSet wizard',
       { tag: ['@RHACM4K-63608', '@create', '@e2e-common'] },
       async ({
         oc,
@@ -78,7 +78,7 @@ test.describe(
           const clusterResourceRows = options.clusterResources ?? [];
           if (clusterResourceRows.length === 0) {
             throw new Error(
-              'RHACM4K-63608: clusterResources must be defined in argo-push scenario YAML'
+              'RHACM4K-63608: ALC: clusterResources must be defined in argo-push scenario YAML'
             );
           }
           await verifyArgoPushPrivateRepoTopologyDeployed(applicationDetailsPage, {

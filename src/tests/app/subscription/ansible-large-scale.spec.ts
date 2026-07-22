@@ -22,7 +22,7 @@ test.describe('Ansible Large Scale', {
     await ensureAnsibleScaleSuitePrep(oc);
   });
 
-  test.beforeEach(() => {
+  test.beforeAll(() => {
     clearE2eSpecDataCache();
   });
 

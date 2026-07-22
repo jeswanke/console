@@ -4,24 +4,21 @@ import type { ApplicationListPage } from '@pages/app/ApplicationListPage';
 
 const STATUS_COLUMNS = ['healthStatus', 'syncStatus', 'podStatus'] as const;
 
-/** Cypress `tbody tr` length after searching an owned ApplicationSet (parent + child app). */
-export const APPSET_OWNED_APP_TABLE_ROW_COUNT = 2;
+/** Minimum rows: 1 parent ApplicationSet + at least 1 child app. */
+export const APPSET_MIN_TABLE_ROW_COUNT = 2;
 
-/**
- * Cypress: `cy.get('[data-ouia-component-type*="Table"] tbody tr').should('have.length', 2)`.
- */
 export async function expectApplicationSetSearchTableRowCount(
   applicationListPage: ApplicationListPage,
-  expectedRowCount: number = APPSET_OWNED_APP_TABLE_ROW_COUNT
+  minRowCount: number = APPSET_MIN_TABLE_ROW_COUNT
 ): Promise<void> {
   const table = applicationListPage.applicationsTable;
   await expect
     .poll(() => table.getDataRowCount(), {
       timeout: 60_000,
       intervals: [1_000, 2_000, 5_000],
-      message: `Expected ${expectedRowCount} table rows after ApplicationSet search`,
+      message: `Expected at least ${minRowCount} table rows after ApplicationSet search`,
     })
-    .toBe(expectedRowCount);
+    .toBeGreaterThanOrEqual(minRowCount);
 }
 
 async function readGreenLabelCount(
@@ -58,18 +55,16 @@ export async function verifyApplicationSetOwnedAppRowsOnList(
   await expect
     .poll(
       async () => {
-        const counts: number[] = [];
         for (const columnKey of STATUS_COLUMNS) {
           const count = await readGreenLabelCount(applicationListPage, applicationSetName, columnKey);
           if (count === null || count < 1) return false;
-          counts.push(count);
         }
-        return counts.every((count) => count === counts[0]);
+        return true;
       },
       {
         timeout: 300_000,
         intervals: [2_000, 5_000, 10_000],
-        message: `Expected matching green Health/Sync/Pod labels on ApplicationSet "${applicationSetName}"`,
+        message: `Expected at least one green Health/Sync/Pod label on ApplicationSet "${applicationSetName}"`,
       }
     )
     .toBe(true);

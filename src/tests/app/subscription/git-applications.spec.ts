@@ -52,7 +52,7 @@ test.describe('Git Applications', {
 }, () => {
   test.describe.configure({ mode: 'serial' });
 
-  test.beforeEach(() => {
+  test.beforeAll(() => {
     clearE2eSpecDataCache();
   });
 
@@ -666,7 +666,7 @@ test.describe('Git Applications', {
       const { applicationName, namespace } = options;
       const baseRepo = options.repositories![0]!;
       if (baseRepo.kind !== 'git') {
-        throw new Error('RHACM4K-7513: expected a single Git repository block');
+        throw new Error('RHACM4K-7513: ALC: expected a single Git repository block');
       }
 
       await oc.deleteNamespace(namespace);

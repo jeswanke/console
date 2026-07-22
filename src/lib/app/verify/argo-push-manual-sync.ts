@@ -2,6 +2,7 @@ import { expect } from '@playwright/test';
 
 import { createArgoPushApplicationIfMissing } from '@lib/app/argo-push';
 import type { CreateArgoPushApplicationOptions } from '@lib/app/argo-push/types';
+import { topologyAppSetApplicationDataId } from '@lib/app/topology/appset-graph-ids';
 import { verifyArgoPushAppTopologyTab } from '@lib/app/verify/argo-push-topology-tab';
 import type { ApplicationDetailsPage } from '@pages/app/ApplicationDetailsPage';
 import type { ApplicationListPage } from '@pages/app/ApplicationListPage';
@@ -43,7 +44,9 @@ export async function runArgoPushManualSyncScenario(params: {
 
   await applicationDetailsPage.openDetailTab('topology');
   await applicationDetailsPage.expectTopologyGraphVisible();
-  await applicationDetailsPage.clickTopologyGraphNodeByDataId(`application--${argoAppName}`);
+  await applicationDetailsPage.clickTopologyGraphNodeByDataId(
+    topologyAppSetApplicationDataId(argoPush.applicationName)
+  );
   await applicationDetailsPage.expectVisibleTopologyDrawerContains(/OutOfSync/i);
 
   await applicationDetailsPage.openDetailTab('details');

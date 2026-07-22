@@ -18,7 +18,7 @@ test.describe(
     test.use({ viewport: { width: 2560, height: 1440 } });
 
     test(
-      'RHACM4K-61329: As an application admin, I want to have persistent search, sort, and filters in the application list',
+      'RHACM4K-61329: ALC: As an application admin, I want to have persistent search, sort, and filters in the application list',
       { tag: ['@RHACM4K-61329', '@UI'] },
       async ({ applicationListPage, applicationDetailsPage, page }) => {
         test.setTimeout(300_000);

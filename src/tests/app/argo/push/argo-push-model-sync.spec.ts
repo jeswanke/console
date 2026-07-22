@@ -14,7 +14,7 @@ test.describe(
   { tag: ['@ALC', '@gitops', '@e2e-argo', '@applicationset', '@push-model'] },
   () => {
     test(
-      'RHACM4K-61942: Manually sync an ApplicationSet created with automated sync disabled',
+      'RHACM4K-61942: ALC: Manually sync an ApplicationSet created with automated sync disabled',
       { tag: ['@RHACM4K-61942', '@UI', '@applicationset'] },
       async ({
         oc,
@@ -22,7 +22,7 @@ test.describe(
         applicationDetailsPage,
         argoPushApplicationCreateWizardPage,
       }) => {
-        test.setTimeout(900_000);
+        test.setTimeout(600_000);
         clearE2eSpecDataCache();
         const { argoPush } = resolveArgoPushScenarioByTestId('RHACM4K-61942');
         await ensureLocalClusterMatchingLabelForArgoAppTable(oc, 'name', 'local-cluster');

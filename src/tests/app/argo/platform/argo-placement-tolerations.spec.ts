@@ -13,7 +13,7 @@ test.describe(
   { tag: ['@app', '@alc', '@UI', '@placement', '@gitops', '@argo-pull', '@argo-push'] },
   () => {
     test(
-      'RHACM4K-61724: Default Placement CRs include unreachable and unavailable tolerations (pull and push)',
+      'RHACM4K-61724: ALC: Default Placement CRs include unreachable and unavailable tolerations (pull and push)',
       { tag: ['@RHACM4K-61724'] },
       async ({
         applicationListPage,

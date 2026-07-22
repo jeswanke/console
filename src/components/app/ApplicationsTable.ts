@@ -146,7 +146,7 @@ export class ApplicationsTable extends AcmTable {
     }
     const checkbox = this.getFilterOption(optionLabel);
     if (!(await checkbox.isChecked())) {
-      await checkbox.check();
+      await checkbox.click({ force: true });
     }
   }
 
@@ -154,7 +154,7 @@ export class ApplicationsTable extends AcmTable {
   async deselectFilterOption(optionLabel: string): Promise<void> {
     const checkbox = this.getFilterOption(optionLabel);
     if (await checkbox.isChecked()) {
-      await checkbox.uncheck();
+      await checkbox.click({ force: true });
     }
   }
 

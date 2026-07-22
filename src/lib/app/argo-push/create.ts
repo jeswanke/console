@@ -139,9 +139,7 @@ async function fillSyncPolicyStep(
 ): Promise<void> {
   if (!options.disableAutomatedSync) return;
   const page = wizard.getPage();
-  const automated = page.locator('#spec-template-spec-syncpolicy-automated-enabled input[type="checkbox"]').or(
-    page.locator('input[id="spec-template-spec-syncpolicy-automated-enabled"]')
-  );
+  const automated = page.locator('[id$="syncPolicy.automated.enabled"]');
   await automated.scrollIntoViewIfNeeded();
   if (await automated.isChecked().catch(() => false)) {
     await automated.click({ force: true });

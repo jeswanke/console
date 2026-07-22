@@ -15,12 +15,12 @@ test.describe(
   () => {
     test.describe.configure({ mode: 'serial' });
 
-    test.beforeEach(() => {
+    test.beforeAll(() => {
       clearE2eSpecDataCache();
     });
 
     test(
-      'RHACM4K-6735: Edit an existing Argo appset via wizard (mortgage path)',
+      'RHACM4K-6735: ALC: Edit an existing Argo appset via wizard (mortgage path)',
       { tag: ['@RHACM4K-6735', '@UI', '@e2e-argo'] },
       async ({
         oc,
@@ -28,7 +28,7 @@ test.describe(
         applicationDetailsPage,
         argoPushApplicationCreateWizardPage,
       }) => {
-        test.setTimeout(900_000);
+        test.setTimeout(600_000);
         const { argoPush } = resolveArgoPushScenarioByTestId('RHACM4K-6735');
         await ensureLocalClusterMatchingLabelForArgoAppTable(oc, 'name', 'local-cluster');
         try {
@@ -47,7 +47,7 @@ test.describe(
     );
 
     test(
-      'RHACM4K-6773: Edit deployed Argo appset path back to helloworld-argo via wizard',
+      'RHACM4K-6773: ALC: Edit deployed Argo appset path back to helloworld-argo via wizard',
       { tag: ['@RHACM4K-6773', '@UI', '@e2e-argo'] },
       async ({
         oc,
@@ -55,7 +55,7 @@ test.describe(
         applicationDetailsPage,
         argoPushApplicationCreateWizardPage,
       }) => {
-        test.setTimeout(900_000);
+        test.setTimeout(600_000);
         const { argoPush } = resolveArgoPushScenarioByTestId('RHACM4K-6773');
         await ensureLocalClusterMatchingLabelForArgoAppTable(oc, 'name', 'local-cluster');
         try {

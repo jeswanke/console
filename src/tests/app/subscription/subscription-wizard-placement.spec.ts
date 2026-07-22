@@ -21,7 +21,7 @@ test.describe(
     });
 
     test(
-      'RHACM4K-64215: As an application admin, I can verify the removal of the PlacementRule deprecation banner and that only Placement resources are selectable during Subscription creation',
+      'RHACM4K-64215: ALC: As an application admin, I can verify the removal of the PlacementRule deprecation banner and that only Placement resources are selectable during Subscription creation',
       { tag: ['@RHACM4K-64215'] },
       async ({ oc, applicationListPage, subscriptionApplicationCreateWizardPage: wizard }) => {
         await test.step('Apply placement test resources on the hub', async () => {

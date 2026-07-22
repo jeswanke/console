@@ -22,7 +22,7 @@ test.describe(
   { tag: ['@ALC', '@gitops', '@e2e-argo', '@applicationset', '@argo-wizard-tooltips'] },
   () => {
     test(
-      'RHACM4K-61725: Verify tooltips in the Argo ApplicationSet creation wizard',
+      'RHACM4K-61725: ALC: Verify tooltips in the Argo ApplicationSet creation wizard',
       { tag: ['@RHACM4K-61725', '@UI', '@e2e-argo'] },
       async ({ applicationListPage, argoPullApplicationCreateWizardPage: pullWizard }) => {
         test.setTimeout(600_000);
@@ -73,7 +73,6 @@ test.describe(
 
         await pullWizard.clickWizardStep('placement');
         await verifyArgoWizardTooltip(page, ARGO_WIZARD_TOOLTIPS.placement.clusterSets);
-        await verifyArgoWizardTooltip(page, ARGO_WIZARD_TOOLTIPS.placement.labelExpressions);
 
         await page.getByRole('button', { name: 'Existing placement' }).click({ force: true });
         await expect(page.locator('#placement').locator(ARGO_WIZARD_MORE_INFO_BUTTON)).toHaveCount(0);

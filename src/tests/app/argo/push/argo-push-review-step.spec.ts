@@ -19,7 +19,7 @@ test.describe(
   { tag: ['@app', '@alc', '@UI', '@argo', '@push-model', '@review'] },
   () => {
     test(
-      'RHACM4K-63807: As an application admin, I can utilize the enhanced review step features during Application Set creation',
+      'RHACM4K-63807: ALC: As an application admin, I can utilize the enhanced review step features during Application Set creation',
       { tag: ['@RHACM4K-63807', '@gitops'] },
       async ({ applicationListPage, argoPushApplicationCreateWizardPage: wizard }) => {
         test.setTimeout(300_000);

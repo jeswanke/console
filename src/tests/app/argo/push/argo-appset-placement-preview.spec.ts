@@ -22,7 +22,7 @@ test.describe(
     });
 
     test(
-      'RHACM4K-64219: As an application admin, I can preview matched clusters via Placement Preview in ApplicationSet wizards',
+      'RHACM4K-64219: ALC: As an application admin, I can preview matched clusters via Placement Preview in ApplicationSet wizards',
       { tag: ['@RHACM4K-64219'] },
       async ({ applicationListPage, argoPullApplicationCreateWizardPage: pullWizard }) => {
         test.setTimeout(360_000);

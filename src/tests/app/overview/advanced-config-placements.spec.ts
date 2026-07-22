@@ -14,7 +14,7 @@ test.describe(
   { tag: ['@app', '@alc', '@UI'] },
   () => {
     test(
-      'RHACM4K-63573: As an application admin, I can verify the page deprecation notice, removal of the Placements tab, and removal of placement terminology',
+      'RHACM4K-63573: ALC: As an application admin, I can verify the page deprecation notice, removal of the Placements tab, and removal of placement terminology',
       { tag: ['@RHACM4K-63573'] },
       async ({ applicationListPage }) => {
         await test.step('Navigate to Applications Advanced configuration', async () => {

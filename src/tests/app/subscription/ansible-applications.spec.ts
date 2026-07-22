@@ -30,7 +30,7 @@ test.describe('Ansible Applications', {
 }, () => {
   test.describe.configure({ mode: 'serial' });
 
-  test.beforeEach(() => {
+  test.beforeAll(() => {
     clearE2eSpecDataCache();
   });
 

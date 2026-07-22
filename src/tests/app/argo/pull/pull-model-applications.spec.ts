@@ -35,7 +35,7 @@ test.describe(
   () => {
     test.describe.configure({ mode: 'serial' });
 
-    test.beforeEach(() => {
+    test.beforeAll(() => {
       clearE2eSpecDataCache();
     });
 

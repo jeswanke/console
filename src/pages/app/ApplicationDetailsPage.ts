@@ -69,6 +69,19 @@ export class ApplicationDetailsPage extends BasePage {
     await this.waitForLoad();
   }
 
+  async gotoApplicationSet(
+    namespace: string,
+    name: string,
+    tab: AppApplicationDetailsTabKey = 'details'
+  ): Promise<void> {
+    const consoleUrl = await this.oc.getConsoleUrl();
+    const slug = APP_APPLICATION_DETAILS.tabs[tab].slug;
+    await this.page.goto(
+      `${consoleUrl}${APP_ROUTES.detailsTab(namespace, name, slug)}?apiVersion=applicationset.argoproj.io`
+    );
+    await this.waitForLoad();
+  }
+
   /** Flux CD app topology (`?apiVersion=flux&cluster=…`). Cypress local-cluster Flux suite. */
   async gotoFluxTopology(
     namespace: string,
@@ -98,6 +111,14 @@ export class ApplicationDetailsPage extends BasePage {
   /** Application resource name (PF page `h1`). */
   getApplicationHeading(): Locator {
     return this.page.getByRole('heading', { level: 1 });
+  }
+
+  async clickActionsMenuEdit(): Promise<void> {
+    await this.page
+      .getByRole('button', { name: 'Actions' })
+      .filter({ has: this.page.locator('[class*="menu-toggle"]') })
+      .click({ force: true });
+    await this.page.locator('#edit-application').click();
   }
 
   /** Tablist containing Topology / Details (filtered by Topology tab label). */

@@ -1,3 +1,4 @@
+import { expect } from '@playwright/test';
 import type { OcCliService } from '@services/OcCliService';
 import type { ApplicationListPage } from '@pages/app/ApplicationListPage';
 import type { ArgoPushApplicationCreateWizardPage } from '@pages/app/ArgoPushApplicationCreateWizardPage';
@@ -48,6 +49,14 @@ export async function createArgoPushApplicationIfMissing(
 
   await applicationListPage.goto();
   await createArgoPushApplication(applicationListPage, wizard, options);
+
+  await expect
+    .poll(() => oc.applicationSetExists(argoServerNamespace, applicationName), {
+      timeout: 30_000,
+      intervals: [2_000, 5_000],
+      message: `ApplicationSet ${argoServerNamespace}/${applicationName} should exist after wizard creation`,
+    })
+    .toBe(true);
 
   if (expectedGitPath) {
     const pathValid = await oc.applicationSetHasGitSourcePath(

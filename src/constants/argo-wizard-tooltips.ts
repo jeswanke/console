@@ -75,33 +75,37 @@ export const ARGO_WIZARD_TOOLTIPS = {
   },
   repository: {
     gitRepoUrl: {
-      helpButtonSelector: '#repourl-label-help-button',
-      popoverBodySelector: '#popover-repourl-label-help-popover-body',
+      helpButtonSelector: '[id$="-label-help-button"]',
+      popoverBodySelector: '[id$="-label-help-popover-body"]',
       expectedText: 'The URL path for the Git repository',
+      nearLabelText: 'URL',
     },
     targetRevision: {
-      helpButtonSelector: '#targetrevision-label-help-button',
-      popoverBodySelector: '#popover-targetrevision-label-help-popover-body',
+      helpButtonSelector: '[id$="-label-help-button"]',
+      popoverBodySelector: '[id$="-label-help-popover-body"]',
       expectedText: 'Refer to a single commit',
+      nearLabelText: 'Revision',
     },
     path: {
-      helpButtonSelector: '#path-label-help-button',
-      popoverBodySelector: '#popover-path-label-help-popover-body',
+      helpButtonSelector: '[id$="-label-help-button"]',
+      popoverBodySelector: '[id$="-label-help-popover-body"]',
       expectedText: 'The location of the resources on the Git repository',
+      nearLabelText: 'Path',
     },
     helmRepoUrl: {
-      helpButtonSelector: '#repourl-label-help-button',
-      popoverBodySelector: '#popover-repourl-label-help-popover-body',
+      helpButtonSelector: '[id$="-label-help-button"]',
+      popoverBodySelector: '[id$="-label-help-popover-body"]',
       expectedText: 'The URL path for the Helm repository',
+      nearLabelText: 'URL',
     },
     chart: {
-      helpButtonSelector: '#chart-label-help-button',
-      popoverBodySelector: '#popover-chart-label-help-popover-body',
+      helpButtonSelector: '[id$="chart-label-help-button"]',
+      popoverBodySelector: '[id$="chart-label-help-popover-body"]',
       expectedText: 'The specific name for the target Helm chart',
     },
     helmTargetRevision: {
-      helpButtonSelector: '#targetrevision-label-help-button',
-      popoverBodySelector: '#popover-targetrevision-label-help-popover-body',
+      helpButtonSelector: '[id$="targetRevision-label-help-button"]',
+      popoverBodySelector: '[id$="targetRevision-label-help-popover-body"]',
       expectedText: 'The version or versions for the deployable',
     },
   },
@@ -124,14 +128,10 @@ export const ARGO_WIZARD_TOOLTIPS = {
   },
   placement: {
     clusterSets: {
-      helpButtonSelector: '#clustersets-label-help-button',
-      popoverBodySelector: '#popover-clustersets-label-help-popover-body',
+      helpButtonSelector: '[id$="-label-help-button"]',
+      popoverBodySelector: '[id$="-label-help-popover-body"]',
       expectedText: 'Select cluster sets from which to select clusters',
-    },
-    labelExpressions: {
-      helpButtonSelector: '#label-expressions-label-help-button',
-      popoverBodySelector: '#popover-label-expressions-label-help-popover-body',
-      expectedText: 'Select clusters from the clusters in selected cluster sets',
+      nearLabelText: 'Cluster sets',
     },
   },
 } as const satisfies Record<string, Record<string, ArgoWizardTooltipDef>>;

@@ -185,8 +185,17 @@ export class ApplicationListPage extends BasePage {
 
   /** Click Create application (opens dropdown/modal) */
   async openCreateApplication(): Promise<void> {
-    await this.applicationsTable.clickCreateApplication();
-    await expect(this.applicationsTable.getCreateApplicationMenu()).toBeVisible();
+    const menu = this.applicationsTable.getCreateApplicationMenu();
+    await expect
+      .poll(
+        async () => {
+          if (await menu.isVisible().catch(() => false)) return true;
+          await this.applicationsTable.clickCreateApplication();
+          return menu.isVisible().catch(() => false);
+        },
+        { timeout: 30_000, intervals: [500, 1_000, 2_000] }
+      )
+      .toBe(true);
   }
 
   /**

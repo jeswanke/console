@@ -20,7 +20,7 @@ test.describe(
   { tag: ['@app', '@alc', '@UI', '@RHACM4K-64616'] },
   () => {
     test(
-      'RHACM4K-64616: As an application admin, I can filter applications through labels',
+      'RHACM4K-64616: ALC: As an application admin, I can filter applications through labels',
       { tag: ['@RHACM4K-64616'] },
       async ({ applicationListPage }) => {
         await applicationListPage.goto();

@@ -7,7 +7,7 @@ test.describe(
   { tag: ['@app', '@alc', '@UI'] },
   () => {
     test(
-      'RHACM4K-63768: As a cluster admin, I can manage additional columns for different applications',
+      'RHACM4K-63768: ALC: As a cluster admin, I can manage additional columns for different applications',
       { tag: ['@RHACM4K-63768'] },
       async ({ applicationListPage }) => {
         const { manageColumns, applicationsTable: table } = applicationListPage;

@@ -12,7 +12,7 @@ test.describe(
   { tag: ['@app', '@alc', '@UI'] },
   () => {
     test(
-      'RHACM4K-64170: As an application admin, I can verify removal of the PlacementRule tab, and removal of PlacementRule terminology',
+      'RHACM4K-64170: ALC: As an application admin, I can verify removal of the PlacementRule tab, and removal of PlacementRule terminology',
       { tag: ['@RHACM4K-64170'] },
       async ({ applicationListPage }) => {
         await test.step('Navigate to Applications Advanced configuration', async () => {

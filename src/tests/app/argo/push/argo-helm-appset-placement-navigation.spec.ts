@@ -24,7 +24,7 @@ test.describe(
   { tag: ['@app', '@alc', '@UI', '@placement', '@gitops', '@argo-push'] },
   () => {
     test(
-      'RHACM4K-64417: As an application admin, I can view and navigate to the associated Placement from the ApplicationSet details page',
+      'RHACM4K-64417: ALC: As an application admin, I can view and navigate to the associated Placement from the ApplicationSet details page',
       { tag: ['@RHACM4K-64417'] },
       async ({
         oc,

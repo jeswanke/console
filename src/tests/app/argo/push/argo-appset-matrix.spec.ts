@@ -63,7 +63,7 @@ test.describe(
     });
 
     test(
-      'RHACM4K-58916: Create matrix ApplicationSet, verify applications and topology',
+      'RHACM4K-58916: ALC: Create matrix ApplicationSet, verify applications and topology',
       { tag: ['@RHACM4K-58916', '@UI', '@e2e-argo', '@applicationset'] },
       async ({ applicationListPage, applicationDetailsPage }) => {
         test.setTimeout(600_000);

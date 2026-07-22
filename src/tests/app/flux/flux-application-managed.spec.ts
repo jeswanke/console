@@ -48,12 +48,12 @@ test.describe(
       await applyFluxReposOnCluster(oc, managedClusterName);
     });
 
-    test.beforeEach(() => {
+    test.beforeAll(() => {
       clearE2eSpecDataCache();
     });
 
     test(
-      'RHACM4K-16783: Verify FluxCD Git Application on managed cluster appears in Applications table and topology',
+      'RHACM4K-16783: ALC: Verify FluxCD Git Application on managed cluster appears in Applications table and topology',
       { tag: ['@RHACM4K-16783', '@UI', '@e2e-flux'] },
       async ({ oc, applicationListPage, applicationDetailsPage }) => {
         if (!managedClusterName) return;
@@ -77,7 +77,7 @@ test.describe(
     );
 
     test(
-      'RHACM4K-16784: Verify FluxCD Helm Application on managed cluster appears in Applications table and topology',
+      'RHACM4K-16784: ALC: Verify FluxCD Helm Application on managed cluster appears in Applications table and topology',
       { tag: ['@RHACM4K-16784', '@UI', '@e2e-flux'] },
       async ({ oc, applicationListPage, applicationDetailsPage }) => {
         if (!managedClusterName) return;
@@ -101,7 +101,7 @@ test.describe(
     );
 
     test(
-      'RHACM4K-16785: Verify FluxCD Git Application update after edit is reflected in table and topology',
+      'RHACM4K-16785: ALC: Verify FluxCD Git Application update after edit is reflected in table and topology',
       { tag: ['@RHACM4K-16785', '@UI', '@e2e-flux'] },
       async ({ oc, applicationListPage, applicationDetailsPage }) => {
         if (!managedClusterName) return;
@@ -143,7 +143,7 @@ test.describe(
     );
 
     test(
-      'RHACM4K-16786: Verify FluxCD Helm Application update after edit is reflected in table and topology',
+      'RHACM4K-16786: ALC: Verify FluxCD Helm Application update after edit is reflected in table and topology',
       { tag: ['@RHACM4K-16786', '@UI', '@e2e-flux'] },
       async ({ oc, applicationListPage, applicationDetailsPage }) => {
         if (!managedClusterName) return;
@@ -185,7 +185,7 @@ test.describe(
     );
 
     test(
-      'RHACM4K-16787: Verify FluxCD Git Application deletion is reflected in Applications table',
+      'RHACM4K-16787: ALC: Verify FluxCD Git Application deletion is reflected in Applications table',
       { tag: ['@RHACM4K-16787', '@UI', '@e2e-flux'] },
       async ({ oc, applicationListPage, applicationDetailsPage }) => {
         if (!managedClusterName) return;
@@ -213,7 +213,7 @@ test.describe(
     );
 
     test(
-      'RHACM4K-16788: Verify FluxCD Helm Application deletion is reflected in Applications table',
+      'RHACM4K-16788: ALC: Verify FluxCD Helm Application deletion is reflected in Applications table',
       { tag: ['@RHACM4K-16788', '@UI', '@e2e-flux'] },
       async ({ oc, applicationListPage, applicationDetailsPage }) => {
         if (!managedClusterName) return;

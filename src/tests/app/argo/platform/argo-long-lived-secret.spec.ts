@@ -20,12 +20,12 @@ test.describe(
     const managedClusterName =
       process.env.E2E_MANAGED_CLUSTER_NAME?.trim() || 'local-cluster';
 
-    test.beforeEach(() => {
+    test.beforeAll(() => {
       clearE2eSpecDataCache();
     });
 
     test(
-      'RHACM4K-54897: Verify Application Manager ManagedServiceAccount secret creation',
+      'RHACM4K-54897: ALC: Verify Application Manager ManagedServiceAccount secret creation',
       { tag: ['@RHACM4K-54897', '@UI', '@e2e-argo'] },
       async ({
         oc,
@@ -47,7 +47,7 @@ test.describe(
     );
 
     test(
-      'RHACM4K-54902: Verify ManagedServiceAccount secret after delete and recreate',
+      'RHACM4K-54902: ALC: Verify ManagedServiceAccount secret after delete and recreate',
       { tag: ['@RHACM4K-54902', '@UI', '@e2e-argo'] },
       async ({
         oc,

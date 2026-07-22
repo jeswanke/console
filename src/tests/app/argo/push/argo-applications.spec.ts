@@ -26,7 +26,7 @@ test.describe(
   () => {
     test.describe.configure({ mode: 'serial' });
 
-    test.beforeEach(() => {
+    test.beforeAll(() => {
       clearE2eSpecDataCache();
     });
 
@@ -34,7 +34,7 @@ test.describe(
       'RHACM4K-4043: ALC: Application owned by applicationSet shows up under the applicationSet name',
       { tag: ['@RHACM4K-4043', '@e2e-argo', '@UI', '@post-upgrade'] },
       async ({ oc, applicationListPage, argoPushApplicationCreateWizardPage }) => {
-        test.setTimeout(900_000);
+        test.setTimeout(600_000);
 
         const { argoPush } = resolveArgoPushScenarioById('argo_appset_owned_app_4043');
         await createArgoPushApplicationIfMissing(
@@ -51,7 +51,7 @@ test.describe(
       'RHACM4K-37185: ALC: Add multiple sources support for ApplicationSet in App UI',
       { tag: ['@RHACM4K-37185', '@e2e-argo', '@UI', '@applicationset'] },
       async ({ oc, applicationListPage, argoPushApplicationCreateWizardPage }) => {
-        test.setTimeout(900_000);
+        test.setTimeout(600_000);
 
         const { argoPush } = resolveArgoPushScenarioById('argo_multisource_git_helm_37185');
         await cleanupArgoPushApplication(oc, argoPush);
@@ -206,7 +206,7 @@ test.describe(
       'RHACM4K-59973: ALC: Sync Argo CD Push Model ApplicationSet on Console',
       { tag: ['@RHACM4K-59973', '@e2e-argo', '@UI', '@applicationset'] },
       async ({ oc, applicationListPage, applicationDetailsPage }) => {
-        test.setTimeout(900_000);
+        test.setTimeout(600_000);
 
         await syncArgoPushApplicationSetFromDetails({
           oc,
