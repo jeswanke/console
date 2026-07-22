@@ -243,7 +243,7 @@ export class GovernanceTable extends AcmTable {
   }
 
   async verifyPolicyNotInListing(policyName: string): Promise<void> {
-    await expect(this.page.getByRole('link', { name: policyName, exact: true })).not.toBeVisible({
+    await expect(this.getRowByName(policyName)).not.toBeVisible({
       timeout: 30_000,
     });
   }
