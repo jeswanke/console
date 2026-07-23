@@ -609,8 +609,8 @@ export class OcCliService {
           );
         }
       }
-    } catch {
-      // Best-effort cleanup
+    } catch (err) {
+      console.warn('mcraDeleteAllForUser cleanup failed:', err);
     }
   }
 
@@ -635,8 +635,8 @@ export class OcCliService {
           );
         }
       }
-    } catch {
-      // Best-effort cleanup
+    } catch (err) {
+      console.warn('mcraDeleteAllForGroup cleanup failed:', err);
     }
   }
 
