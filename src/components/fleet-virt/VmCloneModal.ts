@@ -1,5 +1,4 @@
 import { Page, Locator } from '@playwright/test';
-import { FLEET_VIRT_CLONE_MODAL } from '@constants/fleet-virt';
 
 /**
  * VM Clone modal component.
@@ -14,10 +13,10 @@ export class VmCloneModal {
   private readonly saveButton: Locator;
 
   constructor(private readonly page: Page) {
-    this.container = page.locator(FLEET_VIRT_CLONE_MODAL.container);
-    this.nameInput = page.locator(FLEET_VIRT_CLONE_MODAL.nameInput);
-    this.startOnCloneCheckbox = page.locator(FLEET_VIRT_CLONE_MODAL.startOnCloneCheckbox);
-    this.saveButton = page.locator(FLEET_VIRT_CLONE_MODAL.saveButton);
+    this.container = page.getByRole('dialog');
+    this.nameInput = this.container.getByRole('textbox', { name: 'Name' });
+    this.startOnCloneCheckbox = this.container.getByRole('checkbox', { name: /Start VirtualMachine/ });
+    this.saveButton = this.container.getByRole('button', { name: 'Clone' });
   }
 
   getContainer(): Locator { return this.container; }

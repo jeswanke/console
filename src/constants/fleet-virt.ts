@@ -126,20 +126,6 @@ export const FLEET_VIRT_VM_ACTIONS = {
 } as const;
 
 // =============================================================================
-// VM Clone modal
-//
-// Source: kubevirt-plugin CloneVMModal
-// =============================================================================
-
-export const FLEET_VIRT_CLONE_MODAL = {
-  container: '[data-test="dialog-modal"]',
-  nameInput: '#name',
-  startOnCloneCheckbox: '#start-clone',
-  saveButton: '[data-test="save-button"]',
-  cancelButton: '[data-test="cancel-button"]',
-} as const;
-
-// =============================================================================
 // Test defaults
 // =============================================================================
 

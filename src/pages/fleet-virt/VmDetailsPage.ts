@@ -153,7 +153,7 @@ export class VmDetailsPage extends BasePage {
   async clickDeleteAction(): Promise<void> {
     await expect(async () => {
       await this.page.keyboard.press('Escape');
-      await this.page.waitForTimeout(500);
+      await expect(this.page.getByRole('menuitem', { name: /Delete/ })).toBeHidden({ timeout: 3000 });
       await this.openActions();
       const deleteItem = this.page.getByRole('menuitem', { name: /Delete/ });
       await expect(deleteItem).toBeEnabled({ timeout: 5000 });
