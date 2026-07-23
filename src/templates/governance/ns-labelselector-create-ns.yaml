@@ -1,0 +1,61 @@
+# Policy to create test namespaces on managed clusters for RHACM4K-14942
+apiVersion: policy.open-cluster-management.io/v1
+kind: Policy
+metadata:
+  name: setup-ns-14942-e2e
+  namespace: default
+spec:
+  remediationAction: enforce
+  disabled: false
+  policy-templates:
+    - objectDefinition:
+        apiVersion: policy.open-cluster-management.io/v1
+        kind: ConfigurationPolicy
+        metadata:
+          name: setup-ns-14942-e2e
+        spec:
+          remediationAction: inform
+          severity: low
+          namespaceSelector:
+            exclude:
+              - kube-*
+            include:
+              - default
+          object-templates:
+            - complianceType: musthave
+              objectDefinition:
+                kind: Namespace
+                apiVersion: v1
+                metadata:
+                  name: auto-policy-test-1
+                  labels:
+                    name: auto-policy-test-1
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: PlacementBinding
+metadata:
+  name: binding-setup-ns-14942-e2e
+  namespace: default
+placementRef:
+  name: setup-ns-14942-e2e-placement
+  kind: Placement
+  apiGroup: cluster.open-cluster-management.io
+subjects:
+  - name: setup-ns-14942-e2e
+    kind: Policy
+    apiGroup: policy.open-cluster-management.io
+---
+apiVersion: cluster.open-cluster-management.io/v1beta1
+kind: Placement
+metadata:
+  name: setup-ns-14942-e2e-placement
+  namespace: default
+spec:
+  predicates:
+    - requiredClusterSelector:
+        labelSelector:
+          matchExpressions:
+            - key: feature.open-cluster-management.io/addon-config-policy-controller
+              operator: In
+              values:
+                - available

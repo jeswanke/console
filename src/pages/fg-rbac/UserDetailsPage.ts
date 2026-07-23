@@ -1,8 +1,9 @@
-import { Page, Locator, expect } from '@playwright/test';
+import { Page, Locator } from '@playwright/test';
 import { BasePage } from '@pages/BasePage';
 import { RoleAssignmentsTable } from '@components/fg-rbac/RoleAssignmentsTable';
 import { OcCliService } from '@services/OcCliService';
-import { RBAC_ROUTES, RBAC_USER_DETAIL, RBAC_RA_TABLE } from '@constants/fg-rbac';
+import { RBAC_ROUTES, RBAC_USER_DETAIL } from '@constants/fg-rbac';
+import { openCreateRoleAssignment } from '@lib/fg-rbac/role-assignment-actions';
 
 /**
  * User detail page with tabs: Details, YAML, Role assignments, Groups.
@@ -55,11 +56,7 @@ export class UserDetailsPage extends BasePage {
   }
 
   async openCreateRoleAssignment(): Promise<void> {
-    const createButton = this.page.getByRole('button', {
-      name: RBAC_RA_TABLE.toolbar.createButtonLabel,
-    });
-    await expect(createButton).not.toHaveAttribute('aria-disabled', 'true', { timeout: 60000 });
-    await createButton.click();
+    await openCreateRoleAssignment(this.page);
   }
 
 }

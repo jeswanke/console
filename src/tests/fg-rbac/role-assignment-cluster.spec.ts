@@ -46,9 +46,7 @@ test.describe('Role Assignment - Cluster Scope', { tag: ['@fg-rbac'] }, () => {
     });
 
     await test.step('3: Select full access granularity', async () => {
-      await roleAssignmentWizardPage.selectGranularity(
-        GRANULARITY_OPTIONS.clusterRoleAssignment
-      );
+      await roleAssignmentWizardPage.selectGranularity(GRANULARITY_OPTIONS.clusterRoleAssignment);
       await expect(roleAssignmentWizardPage.getScopeInfoMessage()).toContainText(
         /selected cluster\b/
       );
@@ -77,9 +75,7 @@ test.describe('Role Assignment - Cluster Scope', { tag: ['@fg-rbac'] }, () => {
     await test.step('6: Verify role assignment in UI table', async () => {
       await expect(async () => {
         await userDetailsPage.gotoRoleAssignments(user);
-        await expect(
-          userDetailsPage.roleAssignmentsTable.getRowByRole(role)
-        ).toBeVisible();
+        await expect(userDetailsPage.roleAssignmentsTable.getRowByRole(role)).toBeVisible();
       }).toPass({ intervals: [5_000, 10_000, 15_000], timeout: 90_000 });
 
       const row = userDetailsPage.roleAssignmentsTable.getRowByRole(role);
@@ -118,9 +114,7 @@ test.describe('Role Assignment - Cluster Scope', { tag: ['@fg-rbac'] }, () => {
     });
 
     await test.step('3: Select project access granularity and verify create project button', async () => {
-      await roleAssignmentWizardPage.selectGranularity(
-        GRANULARITY_OPTIONS.projectRoleAssignment
-      );
+      await roleAssignmentWizardPage.selectGranularity(GRANULARITY_OPTIONS.projectRoleAssignment);
       const createProjectBtn = roleAssignmentWizardPage
         .getModal()
         .locator(`#${RBAC_WIZARD.projects.createButtonId}`);
@@ -152,9 +146,7 @@ test.describe('Role Assignment - Cluster Scope', { tag: ['@fg-rbac'] }, () => {
     await test.step('6: Verify role assignment in UI table', async () => {
       await expect(async () => {
         await userDetailsPage.gotoRoleAssignments(user);
-        await expect(
-          userDetailsPage.roleAssignmentsTable.getRowByRole(role)
-        ).toBeVisible();
+        await expect(userDetailsPage.roleAssignmentsTable.getRowByRole(role)).toBeVisible();
       }).toPass({ intervals: [5_000, 10_000, 15_000], timeout: 120_000 });
 
       const row = userDetailsPage.roleAssignmentsTable.getRowByRole(role);
@@ -197,9 +189,7 @@ test.describe('Role Assignment - Cluster Scope', { tag: ['@fg-rbac'] }, () => {
     });
 
     await test.step('3: Select full access granularity', async () => {
-      await roleAssignmentWizardPage.selectGranularity(
-        GRANULARITY_OPTIONS.clusterRoleAssignment
-      );
+      await roleAssignmentWizardPage.selectGranularity(GRANULARITY_OPTIONS.clusterRoleAssignment);
       await expect(roleAssignmentWizardPage.getScopeInfoMessage()).toContainText(
         /selected clusters\b/
       );
@@ -230,9 +220,7 @@ test.describe('Role Assignment - Cluster Scope', { tag: ['@fg-rbac'] }, () => {
     await test.step('6: Verify role assignment in UI table', async () => {
       await expect(async () => {
         await userDetailsPage.gotoRoleAssignments(user);
-        await expect(
-          userDetailsPage.roleAssignmentsTable.getRowByRole(role)
-        ).toBeVisible();
+        await expect(userDetailsPage.roleAssignmentsTable.getRowByRole(role)).toBeVisible();
       }).toPass({ intervals: [5_000, 10_000, 15_000], timeout: 90_000 });
 
       const row = userDetailsPage.roleAssignmentsTable.getRowByRole(role);
@@ -286,9 +274,7 @@ test.describe('Role Assignment - Cluster Scope', { tag: ['@fg-rbac'] }, () => {
     });
 
     await test.step('3: Select project access granularity and projects', async () => {
-      await roleAssignmentWizardPage.selectGranularity(
-        GRANULARITY_OPTIONS.projectRoleAssignment
-      );
+      await roleAssignmentWizardPage.selectGranularity(GRANULARITY_OPTIONS.projectRoleAssignment);
       const createProjectBtn = roleAssignmentWizardPage
         .getModal()
         .locator(`#${RBAC_WIZARD.projects.createButtonId}`);
@@ -323,9 +309,7 @@ test.describe('Role Assignment - Cluster Scope', { tag: ['@fg-rbac'] }, () => {
     await test.step('6: Verify role assignment in UI table', async () => {
       await expect(async () => {
         await userDetailsPage.gotoRoleAssignments(user);
-        await expect(
-          userDetailsPage.roleAssignmentsTable.getRowByRole(role)
-        ).toBeVisible();
+        await expect(userDetailsPage.roleAssignmentsTable.getRowByRole(role)).toBeVisible();
       }).toPass({ intervals: [5_000, 10_000, 15_000], timeout: 120_000 });
 
       const row = userDetailsPage.roleAssignmentsTable.getRowByRole(role);

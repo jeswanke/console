@@ -1,0 +1,65 @@
+apiVersion: policy.open-cluster-management.io/v1
+kind: Policy
+metadata:
+  name: test-[ID]-[TESTID]-e2e-rbac-test-2
+  namespace: e2e-rbac-test-2
+  annotations:
+    policy.open-cluster-management.io/categories: PR.AC Identity Management and Access Control
+    policy.open-cluster-management.io/standards: NIST-CSF
+    policy.open-cluster-management.io/controls: PR.AC-4 Access Control
+spec:
+  disabled: false
+  remediationAction: inform
+  policy-templates:
+    - objectDefinition:
+        apiVersion: policy.open-cluster-management.io/v1
+        kind: ConfigurationPolicy
+        metadata:
+          name: test-namespace-policy-[ID]-[TESTID]-prod-ns-rbac
+        spec:
+          remediationAction: inform
+          severity: low
+          namespaceSelector:
+            exclude:
+              - kube-*
+            include:
+              - default
+            matchExpressions: []
+          object-templates:
+            - complianceType: musthave
+              objectDefinition:
+                kind: Namespace
+                apiVersion: v1
+                metadata:
+                  name: prod-auto-[ID]-[TESTID]-rbac
+---
+apiVersion: cluster.open-cluster-management.io/v1beta1
+kind: Placement
+metadata:
+  name: test-[ID]-[TESTID]-e2e-rbac-test-2-placement
+  namespace: e2e-rbac-test-2
+spec:
+  clusterSets:
+    - global
+  predicates:
+    - requiredClusterSelector:
+        labelSelector:
+          matchExpressions:
+            - key: feature.open-cluster-management.io/addon-iam-policy-controller
+              operator: In
+              values:
+                - available
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: PlacementBinding
+metadata:
+  name: test-[ID]-[TESTID]-e2e-rbac-test-2-placement
+  namespace: e2e-rbac-test-2
+placementRef:
+  name: test-[ID]-[TESTID]-e2e-rbac-test-2-placement
+  kind: Placement
+  apiGroup: cluster.open-cluster-management.io
+subjects:
+  - name: test-[ID]-[TESTID]-e2e-rbac-test-2
+    apiGroup: policy.open-cluster-management.io
+    kind: Policy

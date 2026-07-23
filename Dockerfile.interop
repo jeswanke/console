@@ -1,0 +1,36 @@
+# Dockerfile.interop — OPP interop CI image for console-e2e
+#
+# Provides: Playwright + Chromium + oc CLI + console-e2e test code.
+# Built by ci-operator and promoted to the acm-qe image namespace.
+#
+# Test steps invoke:
+#   ./start.sh alc          # Application Lifecycle
+#   ./start.sh clc          # Cluster Lifecycle
+#   ./start.sh grc          # Governance
+#   ./start.sh search       # Search
+#   ./start.sh fg-rbac      # FG-RBAC
+#   ./start.sh fleet-virt   # Fleet Virtualization
+#
+# Required runtime env: HUB_URL, HUB_PASSWORD (or HUB_TOKEN).
+# Optional runtime env: TEST_MODE=integration (excludes sample specs).
+
+FROM mcr.microsoft.com/playwright:v1.58.2-noble AS base
+
+ARG OC_VERSION=stable
+ARG OC_URL="https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/${OC_VERSION}/openshift-client-linux.tar.gz"
+
+USER root
+RUN set -eux; \
+    curl -fsSL "${OC_URL}" | tar -xzC /usr/local/bin oc kubectl; \
+    chmod 0755 /usr/local/bin/oc /usr/local/bin/kubectl; \
+    oc version --client
+
+WORKDIR /console-e2e
+COPY . .
+
+RUN chmod -R g+w /console-e2e
+
+ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+RUN npm ci
+
+USER 1000

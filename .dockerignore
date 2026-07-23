@@ -1,0 +1,25 @@
+# .dockerignore — keep the build context lean for Dockerfile.interop
+.git
+node_modules
+dist
+test-results
+playwright-report
+playwright/.cache
+.auth
+.idea
+.vscode
+*.swp
+*.swo
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+.env
+.env.local
+.env.*.local
+env/alc.local.env
+*.local.env
+__pycache__
+*.py[cod]
+docs
+.github

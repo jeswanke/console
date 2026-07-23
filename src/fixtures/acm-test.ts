@@ -8,6 +8,7 @@ import { PoliciesListPage } from '@pages/governance/PoliciesListPage';
 import { CreatePolicyWizardPage } from '@pages/governance/CreatePolicyWizardPage';
 import { PolicySetsListPage } from '@pages/governance/PolicySetsListPage';
 import { CreatePolicySetWizardPage } from '@pages/governance/CreatePolicySetWizardPage';
+import { WelcomePage } from '@pages/overview/WelcomePage';
 import { generateSafeName } from '@utils/kube-helper';
 
 type AcmFixtures = {
@@ -21,6 +22,7 @@ type AcmFixtures = {
   createPolicyWizardPage: CreatePolicyWizardPage;
   policySetsListPage: PolicySetsListPage;
   createPolicySetWizardPage: CreatePolicySetWizardPage;
+  welcomePage: WelcomePage;
 };
 
 export const test = base.extend<AcmFixtures>({
@@ -62,6 +64,10 @@ export const test = base.extend<AcmFixtures>({
 
   createPolicySetWizardPage: async ({ page, oc }, use) => {
     await use(new CreatePolicySetWizardPage(page, oc));
+  },
+
+  welcomePage: async ({ page, oc }, use) => {
+    await use(new WelcomePage(page, oc));
   },
 });
 
