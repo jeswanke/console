@@ -28,9 +28,14 @@ RUN set -eux; \
 WORKDIR /console-e2e
 COPY . .
 
-RUN chmod -R g+w /console-e2e
-
 ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
-RUN npm ci
+
+RUN <<'EOF'
+set -exo pipefail
+shopt -s inherit_errexit
+
+chmod -R g+w /console-e2e
+npm ci
+EOF
 
 USER 1000
