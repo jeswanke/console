@@ -779,8 +779,11 @@ EOF`);
         `oc auth can-i ${verb} ${resource} -n ${namespace} --as=${asUser}`,
       );
       return result.trim() === 'yes';
-    } catch {
-      return false;
+    } catch (err: unknown) {
+      if (err instanceof Error && 'stdout' in err && String((err as Record<string, unknown>).stdout).trim() === 'no') {
+        return false;
+      }
+      throw err;
     }
   }
 }
