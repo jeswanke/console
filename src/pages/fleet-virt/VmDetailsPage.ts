@@ -24,6 +24,14 @@ export class VmDetailsPage extends BasePage {
     return this.page.getByRole('link', { name: tabName, exact: true });
   }
 
+  /** Dismiss the kubevirt-plugin "Welcome to OpenShift Virtualization" modal if present */
+  async dismissWelcomeModal(): Promise<void> {
+    const closeBtn = this.page.getByRole('dialog', { name: 'Welcome modal' }).getByRole('button', { name: 'Close' });
+    if (await closeBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+      await closeBtn.click();
+    }
+  }
+
   async clickTab(tabName: string): Promise<void> {
     await this.getTabLink(tabName).click();
     await this.waitForLoad();
@@ -67,6 +75,21 @@ export class VmDetailsPage extends BasePage {
 
   getGuestLoginCredentials(): Locator {
     return this.page.getByRole('heading', { name: 'Guest login credentials' });
+  }
+
+  /** Shown when VNC WebSocket fails (user lacks vnc subresource permission) */
+  getVncDisconnectedText(): Locator {
+    return this.page.getByText('Click Connect to open the VNC console.');
+  }
+
+  /** "Connect" button in VNC disconnected EmptyState */
+  getVncConnectButton(): Locator {
+    return this.page.getByRole('button', { name: 'Connect', exact: true });
+  }
+
+  /** "Disconnect" button — always rendered, disabled when not connected */
+  getVncDisconnectButton(): Locator {
+    return this.page.getByRole('button', { name: 'Disconnect', exact: true });
   }
 
   // ---------------------------------------------------------------------------

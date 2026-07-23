@@ -13,7 +13,7 @@ export class TreeView {
   }
 
   async toggleShowVmProjects(): Promise<void> {
-    await this.showVmProjectsSwitch.click({ force: true });
+    await this.showVmProjectsSwitch.click();
   }
 
   async expandCluster(clusterName: string): Promise<void> {

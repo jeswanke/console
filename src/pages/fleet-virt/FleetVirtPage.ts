@@ -71,7 +71,7 @@ export class FleetVirtPage extends BasePage {
   }
 
   getPageHeading(): Locator {
-    return this.page.locator('h1');
+    return this.page.locator('[data-test="page-heading"] h1');
   }
 
   /**

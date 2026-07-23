@@ -57,68 +57,63 @@ test.describe('FG-RBAC - Fleet Virt Role Visibility', { tag: ['@fg-rbac', '@flee
 
     await test.step('3: Verify tree view loads', async () => {
       const treeItems = treeView.getAllTreeItems();
-      const treeVisible = await treeItems.first().isVisible({ timeout: 10000 }).catch(() => false);
-      if (treeVisible) {
-        const count = await treeItems.count();
-        expect(count).toBeGreaterThanOrEqual(1);
-      }
+      await expect(treeItems.first()).toBeVisible({ timeout: 15000 });
+      expect(await treeItems.count()).toBeGreaterThanOrEqual(1);
     });
 
     await test.step('4: Navigate to VM details and verify read-only access', async () => {
-      const rows = fleetVirtPage.getVmTableRows();
-      const hasVMs = await rows.first().isVisible({ timeout: 15000 }).catch(() => false);
+      // Wait for kubevirtprojects API to index the namespace (propagation delay)
+      await expect(async () => {
+        await treeView.expandCluster('local-cluster');
+        await treeView.clickProject('local-cluster', VM_NAMESPACE);
+      }).toPass({ intervals: [5000, 10000], timeout: 60000 });
 
-      if (!hasVMs) {
-        test.info().annotations.push({
-          type: 'info',
-          description: 'No VMs visible for RBAC user -- MCRAs may not be configured. Skipping VM details steps.',
-        });
-        return;
-      }
+      await expect(async () => {
+        const rows = fleetVirtPage.getVmTableRows();
+        await expect(rows.first()).toBeVisible({ timeout: 10000 });
+      }).toPass({ intervals: [3000, 5000], timeout: 30000 });
 
       await fleetVirtPage.clickFirstVmInTable();
+      await vmDetailsPage.dismissWelcomeModal();
 
       await expect(async () => {
         await expect(vmDetailsPage.getPageHeading()).toBeVisible({ timeout: 10000 });
       }).toPass({ intervals: [5000, 10000], timeout: 60000 });
 
-      const startBtn = vmDetailsPage.getStartButton();
-      const stopBtn = vmDetailsPage.getStopButton();
-      const pauseBtn = vmDetailsPage.getPauseButton();
-      const restartBtn = vmDetailsPage.getRestartButton();
+      // View-only user: all action buttons render as visible but disabled
+      await expect(vmDetailsPage.getStartButton()).toBeVisible();
+      await expect(vmDetailsPage.getStartButton()).toBeDisabled();
 
-      for (const btn of [startBtn, stopBtn, pauseBtn, restartBtn]) {
-        const isVisible = await btn.isVisible().catch(() => false);
-        if (isVisible) {
-          await expect(btn).toBeDisabled();
-        }
-      }
+      await expect(vmDetailsPage.getStopButton()).toBeVisible();
+      await expect(vmDetailsPage.getStopButton()).toBeDisabled();
+
+      await expect(vmDetailsPage.getPauseButton()).toBeVisible();
+      await expect(vmDetailsPage.getPauseButton()).toBeDisabled();
+
+      await expect(vmDetailsPage.getRestartButton()).toBeVisible();
+      await expect(vmDetailsPage.getRestartButton()).toBeDisabled();
     });
 
-    await test.step('5: Verify Console tab is accessible', async () => {
+    await test.step('5: Verify Console tab - VNC denied for view-only user', async () => {
       const consoleTab = vmDetailsPage.getTabLink('Console');
-      const consoleVisible = await consoleTab.isVisible().catch(() => false);
-
-      if (!consoleVisible) {
-        return;
-      }
-
+      await expect(consoleTab).toBeVisible();
       await consoleTab.click();
       await rbacSession.page.waitForURL('**/console**', { timeout: 15000 });
+
+      // VNC auto-connects on mount; for view-only user it fails (403) because
+      // kubevirt.io:view does not include subresources.kubevirt.io/virtualmachineinstances/vnc.
+      // The Disconnect button is ALWAYS rendered (never hidden) — it's disabled when not connected.
+      await expect(async () => {
+        await expect(vmDetailsPage.getVncDisconnectedText()).toBeVisible();
+        await expect(vmDetailsPage.getVncConnectButton()).toBeVisible();
+        await expect(vmDetailsPage.getVncDisconnectButton()).toBeDisabled();
+      }).toPass({ intervals: [3000, 5000, 7000], timeout: 25000 });
     });
 
     await test.step('6: CLI - verify RBAC permissions via oc auth can-i', async () => {
       const canGet = await oc.rbacAuthCanI('get', 'virtualmachines', VM_NAMESPACE, RBAC_USERNAME);
       const canPatch = await oc.rbacAuthCanI('patch', 'virtualmachines', VM_NAMESPACE, RBAC_USERNAME);
       const canDelete = await oc.rbacAuthCanI('delete', 'virtualmachines', VM_NAMESPACE, RBAC_USERNAME);
-
-      if (!canGet && !canPatch && !canDelete) {
-        test.info().annotations.push({
-          type: 'info',
-          description: 'RBAC user has no VM permissions -- MCRAs may not be configured.',
-        });
-        return;
-      }
 
       expect(canGet).toBe(true);
       expect(canPatch).toBe(false);

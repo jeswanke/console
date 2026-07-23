@@ -53,8 +53,11 @@ test.describe('FG-RBAC - Hub View Role Limited Access', { tag: ['@fg-rbac', '@fl
 
     await test.step('2: Go to VM tab and navigate tree', async () => {
       await fleetVirtPage.gotoVmTab();
-      await treeView.expandCluster('local-cluster');
-      await treeView.clickProject('local-cluster', VM_NAMESPACE);
+      // Wait for kubevirtprojects API to index the namespace (propagation delay)
+      await expect(async () => {
+        await treeView.expandCluster('local-cluster');
+        await treeView.clickProject('local-cluster', VM_NAMESPACE);
+      }).toPass({ intervals: [5000, 10000], timeout: 60000 });
     });
 
     await test.step('3: Verify VM table has rows', async () => {
@@ -66,29 +69,40 @@ test.describe('FG-RBAC - Hub View Role Limited Access', { tag: ['@fg-rbac', '@fl
 
     await test.step('4: Navigate to VM details', async () => {
       await fleetVirtPage.clickFirstVmInTable();
+      await vmDetailsPage.dismissWelcomeModal();
 
       await expect(async () => {
         await expect(vmDetailsPage.getPageHeading()).toBeVisible({ timeout: 10000 });
       }).toPass({ intervals: [5000, 10000], timeout: 60000 });
     });
 
-    await test.step('5: Verify action buttons are disabled', async () => {
-      const startBtn = vmDetailsPage.getStartButton();
-      const stopBtn = vmDetailsPage.getStopButton();
-      const pauseBtn = vmDetailsPage.getPauseButton();
-      const restartBtn = vmDetailsPage.getRestartButton();
+    await test.step('5: Verify action buttons are disabled for view-only user', async () => {
+      // View-only user: all action buttons render as visible but disabled
+      await expect(vmDetailsPage.getStartButton()).toBeVisible();
+      await expect(vmDetailsPage.getStartButton()).toBeDisabled();
 
-      for (const btn of [startBtn, stopBtn, pauseBtn, restartBtn]) {
-        const isVisible = await btn.isVisible().catch(() => false);
-        if (isVisible) {
-          await expect(btn).toBeDisabled();
-        }
-      }
+      await expect(vmDetailsPage.getStopButton()).toBeVisible();
+      await expect(vmDetailsPage.getStopButton()).toBeDisabled();
+
+      await expect(vmDetailsPage.getPauseButton()).toBeVisible();
+      await expect(vmDetailsPage.getPauseButton()).toBeDisabled();
+
+      await expect(vmDetailsPage.getRestartButton()).toBeVisible();
+      await expect(vmDetailsPage.getRestartButton()).toBeDisabled();
     });
 
-    await test.step('6: Verify Console tab is accessible', async () => {
+    await test.step('6: Verify Console tab - VNC denied for view-only user', async () => {
       await vmDetailsPage.getTabLink('Console').click();
       await rbacSession.page.waitForURL('**/console**', { timeout: 15000 });
+
+      // VNC auto-connects on mount; for view-only user it fails (403) because
+      // kubevirt.io:view does not include subresources.kubevirt.io/virtualmachineinstances/vnc.
+      // The Disconnect button is ALWAYS rendered (never hidden) — it's disabled when not connected.
+      await expect(async () => {
+        await expect(vmDetailsPage.getVncDisconnectedText()).toBeVisible();
+        await expect(vmDetailsPage.getVncConnectButton()).toBeVisible();
+        await expect(vmDetailsPage.getVncDisconnectButton()).toBeDisabled();
+      }).toPass({ intervals: [3000, 5000, 7000], timeout: 25000 });
     });
   });
 });
