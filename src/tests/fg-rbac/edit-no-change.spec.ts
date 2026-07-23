@@ -55,7 +55,6 @@ test.describe('FG-RBAC - Edit No-Change Detection', { tag: ['@fg-rbac'] }, () =>
   });
 
   test('RHACM4K-61825: Edit wizard detects no changes and allows role update', async ({
-    page,
     userDetailsPage,
     roleAssignmentWizardPage,
   }) => {
@@ -64,14 +63,7 @@ test.describe('FG-RBAC - Edit No-Change Detection', { tag: ['@fg-rbac'] }, () =>
       await userDetailsPage.openRoleAssignmentsTab();
       await expect(userDetailsPage.roleAssignmentsTable.getRowByRole(INITIAL_ROLE)).toBeVisible({ timeout: 30000 });
 
-      await expect(async () => {
-        await page.keyboard.press('Escape');
-        await page.waitForTimeout(500);
-        await userDetailsPage.roleAssignmentsTable.openKebabMenu(INITIAL_ROLE);
-        const editItem = userDetailsPage.roleAssignmentsTable.getEditItem();
-        await expect(editItem).toBeEnabled({ timeout: 60000 });
-        await editItem.click();
-      }).toPass({ intervals: [5000], timeout: 120000 });
+      await userDetailsPage.roleAssignmentsTable.clickEditAction(INITIAL_ROLE);
 
       await expect(roleAssignmentWizardPage.getModal()).toBeVisible({ timeout: 15000 });
     });

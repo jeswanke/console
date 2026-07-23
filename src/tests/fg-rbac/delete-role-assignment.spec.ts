@@ -89,15 +89,7 @@ test.describe('FG-RBAC - Delete Role Assignment', { tag: ['@fg-rbac'] }, () => {
     });
 
     await test.step('4: Delete last RA (kubevirt.io:view) via kebab menu', async () => {
-      await expect(async () => {
-        await page.keyboard.press('Escape');
-        await page.waitForTimeout(500);
-        await userDetailsPage.roleAssignmentsTable.openKebabMenu(ROLE_1);
-        const deleteItem = userDetailsPage.roleAssignmentsTable.getDeleteItem();
-        await expect(deleteItem).toBeEnabled({ timeout: 60000 });
-        await deleteItem.click();
-      }).toPass({ intervals: [5000], timeout: 120000 });
-
+      await userDetailsPage.roleAssignmentsTable.clickDeleteAction(ROLE_1);
       await userDetailsPage.roleAssignmentsTable.confirmDelete();
 
       await expect(userDetailsPage.roleAssignmentsTable.getEmptyStateTitle()).toBeVisible({ timeout: 30000 });

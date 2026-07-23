@@ -33,22 +33,16 @@ test.describe('Fleet Virt - Standard Roles Without Fleet Access', { tag: ['@fg-r
       const fleetPage = new FleetVirtPage(session.page, oc);
 
       await fleetPage.goto();
-      const heading = fleetPage.getPageHeading();
-      const headingVisible = await heading.isVisible({ timeout: 30000 }).catch(() => false);
+      await expect(fleetPage.getPageHeading()).toBeVisible({ timeout: 30000 });
 
-      if (headingVisible) {
-        const vmRows = fleetPage.getVmTableRows();
-        const hasRows = await vmRows.first().isVisible({ timeout: 10000 }).catch(() => false);
-        if (hasRows) {
-          expect(await vmRows.count()).toBe(0);
-        }
-      }
+      // User has no acm-vm-fleet role — VM table should be empty
+      const vmRows = fleetPage.getVmTableRows();
+      await expect(vmRows.first()).toBeHidden({ timeout: 10000 });
 
       const searchPage = new SearchPage(session.page, oc);
       await searchPage.goto();
       await searchPage.filterByKind('VirtualMachine');
-      const hasVmResults = await searchPage.table.getRow('VirtualMachine').isVisible({ timeout: 10000 }).catch(() => false);
-      expect(hasVmResults).toBe(false);
+      await expect(searchPage.table.getRow('VirtualMachine')).toBeHidden({ timeout: 10000 });
     });
 
     await test.step('2: std-admin -- Fleet Virt empty + Search returns no VMs', async () => {
@@ -56,22 +50,16 @@ test.describe('Fleet Virt - Standard Roles Without Fleet Access', { tag: ['@fg-r
       const fleetPage = new FleetVirtPage(session.page, oc);
 
       await fleetPage.goto();
-      const heading = fleetPage.getPageHeading();
-      const headingVisible = await heading.isVisible({ timeout: 30000 }).catch(() => false);
+      await expect(fleetPage.getPageHeading()).toBeVisible({ timeout: 30000 });
 
-      if (headingVisible) {
-        const vmRows = fleetPage.getVmTableRows();
-        const hasRows = await vmRows.first().isVisible({ timeout: 10000 }).catch(() => false);
-        if (hasRows) {
-          expect(await vmRows.count()).toBe(0);
-        }
-      }
+      // User has no acm-vm-fleet role — VM table should be empty
+      const vmRows = fleetPage.getVmTableRows();
+      await expect(vmRows.first()).toBeHidden({ timeout: 10000 });
 
       const searchPage = new SearchPage(session.page, oc);
       await searchPage.goto();
       await searchPage.filterByKind('VirtualMachine');
-      const hasVmResults = await searchPage.table.getRow('VirtualMachine').isVisible({ timeout: 10000 }).catch(() => false);
-      expect(hasVmResults).toBe(false);
+      await expect(searchPage.table.getRow('VirtualMachine')).toBeHidden({ timeout: 10000 });
     });
 
     await test.step('3: CLI -- verify fleet permissions + deletecollection difference', async () => {

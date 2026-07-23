@@ -40,11 +40,22 @@ export class RoleAssignmentsTable {
   async clickDeleteAction(roleName: string): Promise<void> {
     await expect(async () => {
       await this.page.keyboard.press('Escape');
-      await this.page.waitForTimeout(500);
+      await expect(this.getDeleteItem()).toBeHidden({ timeout: 3000 });
       await this.openKebabMenu(roleName);
       const deleteItem = this.getDeleteItem();
       await expect(deleteItem).toBeEnabled({ timeout: 60000 });
       await deleteItem.click();
+    }).toPass({ intervals: [5000], timeout: 120000 });
+  }
+
+  async clickEditAction(roleName: string): Promise<void> {
+    await expect(async () => {
+      await this.page.keyboard.press('Escape');
+      await expect(this.getEditItem()).toBeHidden({ timeout: 3000 });
+      await this.openKebabMenu(roleName);
+      const editItem = this.getEditItem();
+      await expect(editItem).toBeEnabled({ timeout: 60000 });
+      await editItem.click();
     }).toPass({ intervals: [5000], timeout: 120000 });
   }
 
