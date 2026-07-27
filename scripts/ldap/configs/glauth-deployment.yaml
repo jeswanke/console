@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: glauth
+  namespace: qe-ldap
+  labels:
+    app: glauth
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: glauth
+  template:
+    metadata:
+      labels:
+        app: glauth
+    spec:
+      containers:
+        - name: glauth
+          image: docker.io/glauth/glauth:v2.3.2
+          ports:
+            - name: ldap
+              containerPort: 3893
+          command: ['/app/glauth', '-c', '/etc/glauth/glauth.cfg']
+          volumeMounts:
+            - name: config-volume
+              mountPath: /etc/glauth
+      volumes:
+        - name: config-volume
+          configMap:
+            name: glauth-config

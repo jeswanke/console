@@ -571,6 +571,73 @@ export class OcCliService {
   // MCRA (MulticlusterRoleAssignment) operations
   // ---------------------------------------------------------------------------
 
+  async mcraCreate(opts: {
+    name: string;
+    namespace: string;
+    subjectKind: 'User' | 'Group';
+    subjectName: string;
+    clusterRole: string;
+    placementName: string;
+    placementNamespace: string;
+    raName?: string;
+    targetNamespaces?: string[];
+  }): Promise<void> {
+    const ns = opts.targetNamespaces ?? [];
+    const nsLines = ns.length > 0
+      ? ['      targetNamespaces:', ...ns.map((n) => `        - ${n}`)]
+      : ['      targetNamespaces: []'];
+
+    const manifest = [
+      'apiVersion: rbac.open-cluster-management.io/v1beta1',
+      'kind: MulticlusterRoleAssignment',
+      'metadata:',
+      `  name: ${opts.name}`,
+      `  namespace: ${opts.namespace}`,
+      'spec:',
+      '  subject:',
+      '    apiGroup: rbac.authorization.k8s.io',
+      `    kind: ${opts.subjectKind}`,
+      `    name: ${opts.subjectName}`,
+      '  roleAssignments:',
+      `    - clusterRole: ${opts.clusterRole}`,
+      '      clusterSelection:',
+      '        placements:',
+      `          - name: ${opts.placementName}`,
+      `            namespace: ${opts.placementNamespace}`,
+      '        type: placements',
+      `      name: ${opts.raName ?? 'e2e-role-access'}`,
+      ...nsLines,
+      '',
+    ].join('\n');
+    await this.applyManifestFromStdin(manifest);
+  }
+
+  async mcraAddRoleAssignment(
+    mcraName: string,
+    namespace: string,
+    clusterRole: string,
+    placementName: string,
+    placementNamespace: string,
+    raName: string,
+    targetNamespaces?: string[]
+  ): Promise<void> {
+    const value = {
+      clusterRole,
+      clusterSelection: {
+        placements: [{ name: placementName, namespace: placementNamespace }],
+        type: 'placements',
+      },
+      name: raName,
+      targetNamespaces: targetNamespaces ?? [],
+    };
+    const patch = JSON.stringify([{ op: 'add', path: '/spec/roleAssignments/-', value }]);
+    await execFilePromise(
+      'oc',
+      ['patch', 'multiclusterroleassignment', mcraName, '-n', namespace, '--type=json', '-p', patch],
+      { encoding: 'utf8', maxBuffer: 1024 * 1024 }
+    );
+  }
+
   async mcraGetAll(labelSelector?: string): Promise<Record<string, unknown>[]> {
     const args = ['get', 'multiclusterroleassignment', '-A', '-o', 'json'];
     if (labelSelector) {
@@ -622,8 +689,34 @@ export class OcCliService {
           await this.mcraDeleteByName(metadata.name as string, metadata.namespace as string);
         }
       }
-    } catch {
-      // Best-effort cleanup
+    } catch (err) {
+      console.warn('mcraDeleteAllForUser cleanup failed:', err);
+    }
+  }
+
+  async mcraGetForGroup(groupName: string): Promise<Record<string, unknown>[]> {
+    const items = await this.mcraGetAll();
+    return items.filter((m) => {
+      const spec = m.spec as Record<string, unknown> | undefined;
+      const subject = spec?.subject as Record<string, unknown> | undefined;
+      return subject?.kind === 'Group' && subject?.name === groupName;
+    });
+  }
+
+  async mcraDeleteAllForGroup(groupName: string): Promise<void> {
+    try {
+      const items = await this.mcraGetForGroup(groupName);
+      for (const item of items) {
+        const metadata = item.metadata as Record<string, unknown> | undefined;
+        if (metadata?.name && metadata?.namespace) {
+          await this.mcraDeleteByName(
+            metadata.name as string,
+            metadata.namespace as string
+          );
+        }
+      }
+    } catch (err) {
+      console.warn('mcraDeleteAllForGroup cleanup failed:', err);
     }
   }
 
@@ -681,6 +774,68 @@ spec:
         - containerDisk:
             image: quay.io/kubevirt/cirros-container-disk-demo
           name: containerdisk
+EOF`);
+
+    return name;
+  }
+
+  async vmEnsureTestVMWithPVC(
+    name: string,
+    namespace: string,
+    labels?: Record<string, string>
+  ): Promise<string> {
+    const exists = await this.run(
+      `oc get vm ${name} -n ${namespace} --no-headers 2>/dev/null || true`
+    );
+    if (exists.includes(name)) {
+      return name;
+    }
+
+    const labelEntries = { 'e2e-test': 'true', ...labels };
+    const labelYaml = Object.entries(labelEntries)
+      .map(([k, v]) => `      ${k}: "${v}"`)
+      .join('\n');
+
+    await this.run(`oc apply -f - <<'EOF'
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  name: ${name}
+  namespace: ${namespace}
+  labels:
+${labelYaml}
+spec:
+  runStrategy: Always
+  template:
+    metadata:
+      labels:
+        kubevirt.io/vm: ${name}
+    spec:
+      domain:
+        devices:
+          disks:
+            - disk:
+                bus: virtio
+              name: rootdisk
+        resources:
+          requests:
+            memory: 2Gi
+      volumes:
+        - dataVolume:
+            name: ${name}-dv
+          name: rootdisk
+  dataVolumeTemplates:
+    - metadata:
+        name: ${name}-dv
+      spec:
+        sourceRef:
+          kind: DataSource
+          name: fedora
+          namespace: openshift-virtualization-os-images
+        storage:
+          resources:
+            requests:
+              storage: 30Gi
 EOF`);
 
     return name;

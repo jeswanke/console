@@ -6,6 +6,7 @@ import { AdvancedSearchModal } from '@components/fleet-virt/AdvancedSearchModal'
 import { SavedSearches } from '@components/fleet-virt/SavedSearches';
 import { TreeView } from '@components/fleet-virt/TreeView';
 import { StatusFilter } from '@components/fleet-virt/StatusFilter';
+import { VmCloneModal } from '@components/fleet-virt/VmCloneModal';
 import { getVirtConfig } from '@config';
 import type { VirtConfig } from '@config';
 
@@ -18,6 +19,7 @@ type FleetVirtFixtures = {
   savedSearches: SavedSearches;
   treeView: TreeView;
   statusFilter: StatusFilter;
+  vmCloneModal: VmCloneModal;
 };
 
 export const test = base.extend<FleetVirtFixtures>({
@@ -51,6 +53,10 @@ export const test = base.extend<FleetVirtFixtures>({
 
   statusFilter: async ({ page }, use) => {
     await use(new StatusFilter(page));
+  },
+
+  vmCloneModal: async ({ page }, use) => {
+    await use(new VmCloneModal(page));
   },
 });
 

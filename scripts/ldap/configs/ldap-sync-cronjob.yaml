@@ -1,0 +1,37 @@
+# create secret first: oc create secret generic ldap-sync-secret --from-literal=password=ldap-syncer -n qe-ldap
+# create manual job: oc create job --from=cronjob/ldap-group-syncer ldap-sync-manual-test -n qe-ldap
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: ldap-group-syncer
+  namespace: qe-ldap
+spec:
+  schedule: '*/15 * * * *'
+  failedJobsHistoryLimit: 5
+  successfulJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: ldap-group-syncer
+          restartPolicy: OnFailure
+          volumes:
+            - name: sync-config-volume
+              configMap:
+                name: ldap-sync-config
+            - name: ldap-secret-volume
+              secret:
+                secretName: ldap-sync-secret
+          containers:
+            - name: ldap-group-syncer
+              image: registry.redhat.io/openshift4/ose-cli:latest
+              volumeMounts:
+                - name: sync-config-volume
+                  mountPath: /etc/sync-config
+                - name: ldap-secret-volume
+                  mountPath: /etc/ldap-secret
+              command:
+                - '/bin/bash'
+                - '-c'
+                - |
+                  oc adm groups sync --sync-config=/etc/sync-config/ldap-sync-config.yaml --confirm

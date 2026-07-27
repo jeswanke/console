@@ -46,16 +46,16 @@ export function getHubAuth(): HubAuthConfig {
 }
 
 export function getRbacUsers(domain?: string): RbacUser[] {
-  const password = process.env.RBAC_TEST_PASSWORD ?? '';
-  const idp = process.env.RBAC_IDP ?? rbacPresets.idp;
+  const defaultPassword = process.env.RBAC_TEST_PASSWORD ?? '';
+  const defaultIdp = process.env.RBAC_IDP ?? rbacPresets.idp;
 
   return rbacPresets.users
     .filter((u) => !domain || (u.domains as readonly string[]).includes(domain))
     .map((u) => ({
       role: u.role,
       username: u.username,
-      password,
-      idp,
+      password: ('password' in u && u.password) ? u.password as string : defaultPassword,
+      idp: ('idp' in u && u.idp) ? u.idp as string : defaultIdp,
       domains: u.domains,
     }));
 }
