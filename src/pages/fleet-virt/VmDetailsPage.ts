@@ -1,5 +1,6 @@
 import { Page, Locator } from '@playwright/test';
 import { BasePage } from '@pages/BasePage';
+import { FLEET_VIRT_VM_ACTIONS } from '@constants/fleet-virt';
 
 /**
  * Fleet Virtualization VM Details page.
@@ -19,8 +20,20 @@ export class VmDetailsPage extends BasePage {
   // Navigation
   // ---------------------------------------------------------------------------
 
+  getTabLink(tabName: string): Locator {
+    return this.page.getByRole('link', { name: tabName, exact: true });
+  }
+
+  /** Dismiss the kubevirt-plugin "Welcome to OpenShift Virtualization" modal if present */
+  async dismissWelcomeModal(): Promise<void> {
+    const closeBtn = this.page.getByRole('dialog', { name: 'Welcome modal' }).getByRole('button', { name: 'Close' });
+    if (await closeBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+      await closeBtn.click();
+    }
+  }
+
   async clickTab(tabName: string): Promise<void> {
-    await this.page.getByRole('link', { name: tabName, exact: true }).click();
+    await this.getTabLink(tabName).click();
     await this.waitForLoad();
   }
 
@@ -64,6 +77,21 @@ export class VmDetailsPage extends BasePage {
     return this.page.getByRole('heading', { name: 'Guest login credentials' });
   }
 
+  /** Shown when VNC WebSocket fails (user lacks vnc subresource permission) */
+  getVncDisconnectedText(): Locator {
+    return this.page.getByText('Click Connect to open the VNC console.');
+  }
+
+  /** "Connect" button in VNC disconnected EmptyState */
+  getVncConnectButton(): Locator {
+    return this.page.getByRole('button', { name: 'Connect', exact: true });
+  }
+
+  /** "Disconnect" button — always rendered, disabled when not connected */
+  getVncDisconnectButton(): Locator {
+    return this.page.getByRole('button', { name: 'Disconnect', exact: true });
+  }
+
   // ---------------------------------------------------------------------------
   // Events tab
   // ---------------------------------------------------------------------------
@@ -93,4 +121,42 @@ export class VmDetailsPage extends BasePage {
   // ---------------------------------------------------------------------------
 
   getConfigurationTab(): Locator { return this.page.getByRole('link', { name: 'Configuration' }); }
+
+  // ---------------------------------------------------------------------------
+  // VM action buttons
+  // ---------------------------------------------------------------------------
+
+  getStartButton(): Locator {
+    return this.page.locator(FLEET_VIRT_VM_ACTIONS.startButton);
+  }
+
+  getStopButton(): Locator {
+    return this.page.locator(FLEET_VIRT_VM_ACTIONS.stopButton);
+  }
+
+  getPauseButton(): Locator {
+    return this.page.locator(FLEET_VIRT_VM_ACTIONS.pauseButton);
+  }
+
+  getRestartButton(): Locator {
+    return this.page.locator(FLEET_VIRT_VM_ACTIONS.restartButton);
+  }
+
+  getStatusLabel(): Locator {
+    return this.page.locator(FLEET_VIRT_VM_ACTIONS.statusLabel);
+  }
+
+  async clickActionButton(action: 'start' | 'stop' | 'pause' | 'restart'): Promise<void> {
+    const buttonMap = {
+      start: FLEET_VIRT_VM_ACTIONS.startButton,
+      stop: FLEET_VIRT_VM_ACTIONS.stopButton,
+      pause: FLEET_VIRT_VM_ACTIONS.pauseButton,
+      restart: FLEET_VIRT_VM_ACTIONS.restartButton,
+    };
+    await this.page.locator(buttonMap[action]).click();
+    const confirmBtn = this.page.locator(FLEET_VIRT_VM_ACTIONS.confirmAction);
+    if (await confirmBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+      await confirmBtn.click();
+    }
+  }
 }

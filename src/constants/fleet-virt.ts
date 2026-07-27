@@ -99,3 +99,37 @@ export const FLEET_VIRT_SAVED_SEARCH = {
     deleteAriaLabel: 'Delete saved search',
   },
 } as const;
+
+// =============================================================================
+// Tree view sidebar
+// =============================================================================
+
+export const FLEET_VIRT_TREE_VIEW = {
+  clusterPrefix: 'clusterSelector',
+  projectPrefix: 'projectSelector',
+  nodeToggle: 'button.pf-v6-c-tree-view__node-toggle',
+  nodeText: 'button.pf-v6-c-tree-view__node-text',
+} as const;
+
+// =============================================================================
+// VM action buttons (details page icon bar)
+// =============================================================================
+
+export const FLEET_VIRT_VM_ACTIONS = {
+  dropdown: '[data-test="actions-dropdown"]',
+  startButton: '[data-test-id="vm-action-start-button"]',
+  stopButton: '[data-test-id="vm-action-stop-button"]',
+  pauseButton: '[data-test-id="vm-action-pause-button"]',
+  restartButton: '[data-test-id="vm-action-restart-button"]',
+  statusLabel: '[data-test-id="virtual-machine-overview-details-status"]',
+  confirmAction: '[data-test="confirm-action"]',
+} as const;
+
+// =============================================================================
+// Test defaults
+// =============================================================================
+
+export const FLEET_VIRT_DEFAULTS = {
+  vmNamespace: 'default',
+  spokeCluster: process.env.VIRT_SPOKE_CLUSTER?.split(',')[0] || 'local-cluster',
+} as const;

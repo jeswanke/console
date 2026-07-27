@@ -71,7 +71,7 @@ export class FleetVirtPage extends BasePage {
   }
 
   getPageHeading(): Locator {
-    return this.page.locator('h1');
+    return this.page.locator('[data-test="page-heading"] h1');
   }
 
   /**
@@ -114,5 +114,15 @@ export class FleetVirtPage extends BasePage {
   async clickBackToVmList(): Promise<void> {
     await this.page.getByRole('button', { name: 'Back to VirtualMachines list' }).click();
     await this.shouldLoad();
+  }
+
+  getVmTableRows(): Locator {
+    return this.page.getByRole('grid', { name: 'VirtualMachines table' }).getByRole('row');
+  }
+
+  async clickFirstVmInTable(): Promise<void> {
+    const grid = this.page.getByRole('grid', { name: 'VirtualMachines table' });
+    const firstLink = grid.getByRole('link').first();
+    await firstLink.click();
   }
 }
