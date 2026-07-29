@@ -36,3 +36,5 @@ npm-debug.log*
 .env.*.local
 env/alc.local.env
 *.local.env
+.omo/
+.cursor/
