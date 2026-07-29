@@ -255,7 +255,7 @@ export class ApplicationsTable extends AcmTable {
     if (!isOpen) {
       await this.openLabelFilter();
     }
-    await this.getLabelFilterCheckbox(labelKeyValue).check();
+    await this.getLabelFilterCheckbox(labelKeyValue).setChecked(true);
   }
 
   /** Count of visible data rows on the current table page. */

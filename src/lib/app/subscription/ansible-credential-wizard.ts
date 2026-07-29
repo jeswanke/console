@@ -33,6 +33,12 @@ export async function fillAddCredentialWizardDialog(
   const addButton = wizard.getAddCredentialDialogAddButton();
   await expect(addButton).toBeEnabled({ timeout: 30_000 });
   await addButton.click();
+  if (await dialog.isVisible().catch(() => false)) {
+    await wizard.getPage().waitForTimeout(2_000);
+    if (await dialog.isVisible().catch(() => false)) {
+      await addButton.click({ force: true });
+    }
+  }
   await expect(dialog).toBeHidden({ timeout: 60_000 });
   await wizard.waitForLoad();
 }
@@ -43,12 +49,53 @@ export async function addAnsibleCredentialViaWizard(
   blockIndex: number,
   spec: AddCredentialWizardSpec
 ): Promise<void> {
-  const block = wizard.getRepositoryBlockContainer(blockIndex);
-  const existingSecret = block.getByPlaceholder(
-    APP_SUBSCRIPTION_CREATE_WIZARD.automation.existingSecretPlaceholder
-  );
-  await existingSecret.click();
-  await wizard.getAddCredentialButton().click();
+  const page = wizard.getPage();
+  const credInput = page.locator('[data-testid="select-connection"]');
 
-  await fillAddCredentialWizardDialog(wizard, spec);
+  const secretExists = await wizard.oc
+    .run(`oc get secret ${spec.secretName} -n ${spec.secretNamespace} --ignore-not-found -o name`)
+    .then((out) => out.trim().length > 0)
+    .catch(() => false);
+
+  if (!secretExists) {
+    const block = wizard.getRepositoryBlockContainer(blockIndex);
+    const existingSecret = block.getByPlaceholder(
+      APP_SUBSCRIPTION_CREATE_WIZARD.automation.existingSecretPlaceholder
+    );
+    await existingSecret.click();
+    await wizard.getAddCredentialButton().click();
+    await fillAddCredentialWizardDialog(wizard, spec);
+
+    if (!page.url().includes('/create/subscription')) {
+      await page.goBack();
+      await wizard.waitForLoad();
+    }
+  }
+
+  await credInput.scrollIntoViewIfNeeded();
+
+  // After dialog close the PF6 combobox auto-fills the credential name as both
+  // value and placeholder, but React's form state does NOT register it as a
+  // proper selection (aria-expanded stays false, onChange never fired).
+  // Playwright's clear()/fill("") are no-ops here because the controlled
+  // component snaps the value back.  Use the PF6 "Clear input value" button
+  // which properly resets the React state, then re-type with pressSequentially
+  // so individual key events trigger typeahead filtering.
+  const credInputGroup = credInput.locator(
+    'xpath=ancestor::div[contains(@class,"pf-v6-c-text-input-group")]'
+  );
+  const clearBtn = credInputGroup.locator('[aria-label="Clear input value"]');
+  if (await clearBtn.isVisible().catch(() => false)) {
+    await clearBtn.click();
+    await page.waitForTimeout(500);
+  }
+
+  await credInput.click();
+  await credInput.pressSequentially(spec.secretName, { delay: 30 });
+  await page.waitForTimeout(1_000);
+
+  const option = page.locator(`#select-typeahead-${spec.secretName}`);
+  await expect(option).toBeVisible({ timeout: 10_000 });
+  await option.click();
+  await wizard.waitForLoad();
 }

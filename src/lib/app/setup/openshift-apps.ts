@@ -24,7 +24,7 @@ async function applyYamlFile(oc: OcCliService, relativePath: string): Promise<vo
 
 async function deleteYamlFile(oc: OcCliService, relativePath: string): Promise<void> {
   const yaml = fs.readFileSync(templatePath(relativePath), 'utf8');
-  await oc.run(`oc delete -f - <<'EOF'\n${yaml}\nEOF`);
+  await oc.run(`oc delete --ignore-not-found -f - <<'EOF'\n${yaml}\nEOF`);
 }
 
 function helloworldTemplate(spec: CreateOpenshiftApplicationOptions): string {

@@ -47,7 +47,10 @@ scenarios:
         applicationName: auto-obj-multi
         namespace: auto-obj-multi-ns
       applicationExpectations:
-        successMinResourceCount: 3
+        successMinResourceCount: 5
+        detailsClustersSummary:
+          variant: localAndRemote
+          remoteCount: 1
 
   auto_obj_add_subscription:
     enabled: true

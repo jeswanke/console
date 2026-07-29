@@ -12,7 +12,7 @@ scenarios:
     blocks:
       - use:
           - git_example_k8s_main
-          - git_example_k8s_lars_sandbox_backend
+          - git_example_k8s_backend
           - skip_automation_ansible
           - placement_label_local
           - timewindow_active_all_week

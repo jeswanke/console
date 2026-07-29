@@ -19,7 +19,7 @@ scenarios:
         applicationName: auto-git-ansible-cred-wizard
         namespace: auto-git-ansible-cred-wizard-ns
 
-  # RHACM4K-1560: pre/post subscription hooks with existing `alc-ansible-secret` (no delete).
+  # RHACM4K-1560: pre/post subscription hooks with CLI-created credential.
   auto_git_ansible_1560:
     enabled: true
     tests:
@@ -27,7 +27,7 @@ scenarios:
     blocks:
       - use:
           - git_ansible_samples
-          - ansible_existing_alc_secret
+          - ansible_existing_pre_post_secret
           - placement_label_local
           - timewindow_default
     extends:

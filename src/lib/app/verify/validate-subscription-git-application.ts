@@ -17,6 +17,7 @@ import type { CreateSubscriptionOptions } from '../subscription/types';
 import {
   defaultPlacementCrName,
   defaultSubscriptionCrName,
+  expectTopologySubscriptionHookNodes,
   topologyApplicationDataId,
   topologySubscriptionDataId,
 } from '../topology/graph-ids';
@@ -160,7 +161,7 @@ export async function verifyGitApplicationDefect7696(
   await expect(yamlToggle).toBeChecked();
   await expect(page.locator('.yamlEditorContainer')).toBeVisible({ timeout: 5_000 });
 
-  await page.locator('#cancel-button-portal-id').click();
+  await page.locator('button#cancel-button-portal-id').click();
   await applicationDetailsPage.navigateToApplicationTab(namespace, applicationName, 'topology');
   const surface = applicationDetailsPage.getTopologySurface();
   await expect(surface).toBeVisible({ timeout: 60_000 });
@@ -197,6 +198,8 @@ export async function validateSubscriptionGitApplication(
   await applicationListPage.goto();
   await applicationListPage.waitForLoad();
   const table = applicationListPage.applicationsTable;
+  await table.search(applicationName);
+  await applicationListPage.waitForLoad();
   const row = table.getRowByName(applicationName);
   await expect(row).toBeVisible({ timeout: 60_000 });
   await expect(table.getCellByLabel(row, 'name')).toContainText(applicationName);
@@ -218,6 +221,15 @@ export async function validateSubscriptionGitApplication(
     await expectTopologyShowsDeployableTypes(
       applicationDetailsPage.getTopologySurface(),
       topologyDeployables,
+      { timeout: 300_000 }
+    );
+  }
+
+  const hookSubstrings = applicationExpectations.topologySubscriptionHooks;
+  if (hookSubstrings && hookSubstrings.length > 0) {
+    await expectTopologySubscriptionHookNodes(
+      applicationDetailsPage.getTopologySurface(),
+      hookSubstrings,
       { timeout: 300_000 }
     );
   }

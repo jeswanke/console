@@ -78,15 +78,16 @@ export async function expectHubSubscriptionAndPlacementReady(
     .toBe(true);
 }
 
-/** Cypress `verifyApplicationBackend` — example-k8s-app resources in `lars-sandbox`. */
+/** Verify example-k8s-app resources deployed in the subscription's namespace. */
 export async function verifyExampleK8sAppBackendOnLocalCluster(
   oc: OcCliService,
-  applicationExpectations: ApplicationExpectationsPayload
+  applicationExpectations: ApplicationExpectationsPayload,
+  namespace: string
 ): Promise<void> {
   await expectSubscriptionAppResourcesViaOc({
     oc,
     applicationName: 'namespace-length-backend',
-    namespace: 'lars-sandbox',
+    namespace,
     applicationExpectations,
     includeApplication: false,
     includeSubscriptionAndPlacement: false,

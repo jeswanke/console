@@ -17,7 +17,7 @@ fragments:
       - route
       - service
       - replicaset
-      - other
+      - customresource
 
   flux_helm_helloworld_deploy:
     deployment: helloworld-app-deploy
@@ -28,7 +28,7 @@ fragments:
       - route
       - service
       - replicaset
-      - other
+      - customresource
       - chart
 
   flux_git_mortgage_deploy:
@@ -38,7 +38,7 @@ fragments:
     topologyIcons:
       - service
       - replicaset
-      - other
+      - customresource
 
   flux_helm_mortgage_deploy:
     deployment: mortgage-app-deploy
@@ -47,7 +47,7 @@ fragments:
     topologyIcons:
       - service
       - replicaset
-      - other
+      - customresource
       - chart
 
 profiles:

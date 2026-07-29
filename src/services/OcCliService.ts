@@ -138,6 +138,31 @@ export class OcCliService {
     );
   }
 
+  async ensureAnsibleCredentialSecret(
+    name: string,
+    namespace: string,
+    host: string,
+    token: string
+  ): Promise<void> {
+    assertSafeOcSingleArg(name, 'name');
+    assertSafeOcSingleArg(namespace, 'namespace');
+    const exists = await this.run(
+      `oc get secret ${name} -n ${namespace} --ignore-not-found -o name`
+    ).then((out) => out.trim().length > 0).catch(() => false);
+    if (exists) return;
+    const hostB64 = Buffer.from(host).toString('base64');
+    const tokenB64 = Buffer.from(token).toString('base64');
+    await this.run(
+      `oc apply -f - <<'EOF'\n` +
+      `apiVersion: v1\nkind: Secret\nmetadata:\n` +
+      `  name: ${name}\n  namespace: ${namespace}\n` +
+      `  labels:\n    cluster.open-cluster-management.io/credentials: ""\n` +
+      `    cluster.open-cluster-management.io/type: ans\n` +
+      `type: Opaque\ndata:\n  host: ${hostB64}\n  token: ${tokenB64}\n` +
+      `EOF`
+    );
+  }
+
   async getConsoleUrl(): Promise<string> {
     const host = await this.run(
       'oc get route console -n openshift-console -o jsonpath="{.spec.host}"'

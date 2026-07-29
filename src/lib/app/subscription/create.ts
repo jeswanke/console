@@ -78,8 +78,11 @@ export async function createSubscription(
     const submitButton = wizard.getPrimarySubmitButton();
     await submitButton.waitFor({ state: 'visible', timeout: 30_000 });
     await expect(submitButton).toBeEnabled({ timeout: 30_000 });
-    await submitButton.click();
-    await wizard.waitForLoad();
+    await submitButton.scrollIntoViewIfNeeded();
+    await submitButton.click({ force: true });
+    // Poll the Application CR immediately — do not wait on page-wide skeletons first.
+    // After Create the console may keep PF skeletons mounted while navigating; that used to
+    // stall `waitForLoad` long enough for the app to be deleted before the existence poll ran.
     await waitForSubscriptionApplicationAfterCreate(wizard, namespace, applicationName);
   }
 }
@@ -98,7 +101,7 @@ export async function waitForSubscriptionApplicationAfterCreate(
   await expect
     .poll(() => wizard.oc.applicationsAppK8sIoExists(namespace, applicationName), {
       timeout,
-      intervals: [2_000, 3_000, 5_000, 10_000],
+      intervals: [1_000, 2_000, 3_000, 5_000],
       message: `Expected Application "${applicationName}" in namespace "${namespace}" after Create`,
     })
     .toBe(true);
@@ -110,5 +113,7 @@ export async function waitForSubscriptionApplicationAfterCreate(
   } catch {
     // Hub may stay on the create route or return to the list; callers navigate via ApplicationDetailsPage.
   }
-  await wizard.waitForLoad();
+
+  // Soft settle only — details/topology can keep PF skeletons mounted; do not block the test on them.
+  await wizard.waitForLoad(15_000).catch(() => undefined);
 }

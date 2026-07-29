@@ -9,6 +9,7 @@ import type { ApplicationListPage } from '@pages/app/ApplicationListPage';
 import type { OcCliService } from '@services/OcCliService';
 
 import type { CreateSubscriptionOptions } from '../subscription/types';
+import { defaultPlacementCrName } from '../topology/graph-ids';
 import {
   expectApplicationDetailsMinSuccessResourceCount,
   verifySubscriptionAppDetailsTab,
@@ -104,11 +105,15 @@ export async function verifySubscriptionObjectApplication(
   });
 
   await applicationDetailsPage.navigateToApplicationTab(namespace, applicationName, 'topology');
+  const placementName = defaultPlacementCrName(applicationName, 1);
+  const clusterNames = await oc.getPlacementDecisionClusterNames(namespace, placementName);
+  const topologyClusterName = [...clusterNames].sort().join('--') || 'local-cluster';
   await verifySubscriptionAppTopologyTab({
     page,
     detailsPage: applicationDetailsPage,
     applicationName,
     namespace,
+    clusterName: topologyClusterName,
     blockIndex: 1,
     clusterResourceRows,
     assertGraphNodesSuccessStatus: false,
@@ -121,11 +126,13 @@ export async function verifySubscriptionObjectApplication(
     );
   }
 
-  await applicationListPage.expectAdvancedConfigShowsSubscriptionAndChannelForBlock({
-    applicationName,
-    applicationExpectations,
-    blockIndex: 1,
-  });
+  if (applicationExpectations.advancedConfiguration) {
+    await applicationListPage.expectAdvancedConfigShowsSubscriptionAndChannelForBlock({
+      applicationName,
+      applicationExpectations,
+      blockIndex: 1,
+    });
+  }
 
   await expectGitSubscriptionApiResourcesContain(oc, applicationName, namespace, {
     localClusterPlacement: localPlacement,

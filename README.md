@@ -205,11 +205,59 @@ This runs once per `npx playwright test` execution.
 
 ## Writing New Tests
 
+### Test Case Naming Convention (Mandatory)
+
+Test titles **must** follow this format:
+
+```
+RHACM4K-XXXXX: <Component>: <Title>
+```
+
+| Part | Required | Description |
+| --- | --- | --- |
+| `RHACM4K-XXXXX` | **Yes** | Polarion test case ID. Every test must trace to a Polarion ID. |
+| `<Component>` | **Yes** | Short component tag: `ALC`, `CLC`, `GRC`, `Search`, `RBAC`. |
+| `<Title>` | **Yes** | Human-readable description of what the test verifies. |
+
+**Correct:**
+```typescript
+test('RHACM4K-16762: ALC: Verify FluxCD Git Application on local cluster appears in Applications table and topology', ...)
+test('RHACM4K-6818: GRC: Verify all Filter options for the Governance policy data table', ...)
+test('RHACM4K-57212: Search: Verify Search returns and displays expected results', ...)
+test('RHACM4K-64220: CLC: Placement cluster preview in standalone Create placement wizard', ...)
+```
+
+**Wrong:**
+```typescript
+test('should load and render the search page', ...)          // Missing Polarion ID and component
+test('RHACM4K-16762: Verify FluxCD Git Application', ...)    // Missing component tag
+test('displays Applications page with title', ...)            // Missing everything
+```
+
+**Component tags:**
+
+| Tag | Area |
+| --- | --- |
+| `ALC` | Application Lifecycle (subscriptions, Argo CD, Flux, OCP apps) |
+| `CLC` | Cluster Lifecycle (cluster list, placements, cluster sets) |
+| `GRC` | Governance, Risk, Compliance (policies, policy sets, discovered policies) |
+| `Search` | Search page, saved searches, overview |
+| `RBAC` | Role-based access control |
+
+When a single Polarion ID covers multiple sub-tests in a serial `test.describe`, each `test()` should still include the Polarion ID with a distinguishing suffix:
+
+```typescript
+test('RHACM4K-64165: GRC: policy appears on the policies list', ...)
+test('RHACM4K-64165: GRC: policy details page shows placement reference', ...)
+```
+
+### Example
+
 ```typescript
 import { test, expect } from '@fixtures/acm-test';
 
 test.describe('My Feature', () => {
-  test('should do something', async ({ page, oc, uniqueName }) => {
+  test('RHACM4K-XXXXX: CLC: should do something', async ({ page, oc, uniqueName }) => {
     // page - authenticated Playwright page
     // oc - OcCliService for backend operations
     // uniqueName - random unique name for test resources

@@ -60,51 +60,56 @@ export function topologyClusterHubDataId(clusterName: string, subscriptionCrName
   return `member--clusters--${clusterName}--${subscriptionCrName}`;
 }
 
-function deployedResourcePrefix(subscriptionCrName: string, namespace: string): string {
-  return `member--deployed-resource--member--clusters--local-cluster--${subscriptionCrName}--${namespace}--`;
+function deployedResourcePrefix(clusterName: string, subscriptionCrName: string, namespace: string): string {
+  return `member--deployed-resource--member--clusters--${clusterName}--${subscriptionCrName}--${namespace}--`;
 }
 
 export function topologyDeployedRouteDataId(
+  clusterName: string,
   subscriptionCrName: string,
   namespace: string,
   routeName: string
 ): string {
-  return `${deployedResourcePrefix(subscriptionCrName, namespace)}${routeName}--route`;
+  return `${deployedResourcePrefix(clusterName, subscriptionCrName, namespace)}${routeName}--route`;
 }
 
 export function topologyDeployedDeploymentDataId(
+  clusterName: string,
   subscriptionCrName: string,
   namespace: string,
   deploymentName: string
 ): string {
-  return `${deployedResourcePrefix(subscriptionCrName, namespace)}${deploymentName}--deployment`;
+  return `${deployedResourcePrefix(clusterName, subscriptionCrName, namespace)}${deploymentName}--deployment`;
 }
 
 export function topologyDeployedReplicaSetDataId(
+  clusterName: string,
   subscriptionCrName: string,
   namespace: string,
   deploymentName: string,
   replicaSetName: string
 ): string {
-  return `${deployedResourcePrefix(subscriptionCrName, namespace)}${deploymentName}--deployment--replicaset--${replicaSetName}`;
+  return `${deployedResourcePrefix(clusterName, subscriptionCrName, namespace)}${deploymentName}--deployment--replicaset--${replicaSetName}`;
 }
 
 export function topologyDeployedPodDataId(
+  clusterName: string,
   subscriptionCrName: string,
   namespace: string,
   deploymentName: string,
   replicaSetName: string,
   podStem: string
 ): string {
-  return `${deployedResourcePrefix(subscriptionCrName, namespace)}${deploymentName}--deployment--replicaset--${replicaSetName}--pod--${podStem}`;
+  return `${deployedResourcePrefix(clusterName, subscriptionCrName, namespace)}${deploymentName}--deployment--replicaset--${replicaSetName}--pod--${podStem}`;
 }
 
 export function topologyDeployedServiceDataId(
+  clusterName: string,
   subscriptionCrName: string,
   namespace: string,
   serviceName: string
 ): string {
-  return `${deployedResourcePrefix(subscriptionCrName, namespace)}${serviceName}--service`;
+  return `${deployedResourcePrefix(clusterName, subscriptionCrName, namespace)}${serviceName}--service`;
 }
 
 export type TopologyClusterResourceRef = { kind: string; name: string };
@@ -149,17 +154,17 @@ export function buildTopologyNodeDataIdsForSubscriptionBlock(params: {
   for (const row of params.clusterResourceRows) {
     const k = row.kind.toLowerCase();
     if (k === 'route') {
-      ids.push(topologyDeployedRouteDataId(subName, params.namespace, row.name));
+      ids.push(topologyDeployedRouteDataId(cluster, subName, params.namespace, row.name));
     } else if (k === 'deployment') {
-      ids.push(topologyDeployedDeploymentDataId(subName, params.namespace, row.name));
+      ids.push(topologyDeployedDeploymentDataId(cluster, subName, params.namespace, row.name));
     } else if (k === 'service') {
-      ids.push(topologyDeployedServiceDataId(subName, params.namespace, row.name));
+      ids.push(topologyDeployedServiceDataId(cluster, subName, params.namespace, row.name));
     } else if (k === 'replicaset') {
       if (!deploymentName) {
         throw new Error('topology-graph: ReplicaSet row requires a Deployment row in the same block');
       }
       ids.push(
-        topologyDeployedReplicaSetDataId(subName, params.namespace, deploymentName, row.name)
+        topologyDeployedReplicaSetDataId(cluster, subName, params.namespace, deploymentName, row.name)
       );
     } else if (k === 'pod') {
       if (!deploymentName || !replicaSetName) {
@@ -169,6 +174,7 @@ export function buildTopologyNodeDataIdsForSubscriptionBlock(params: {
       }
       ids.push(
         topologyDeployedPodDataId(
+          cluster,
           subName,
           params.namespace,
           deploymentName,
@@ -176,6 +182,8 @@ export function buildTopologyNodeDataIdsForSubscriptionBlock(params: {
           row.name
         )
       );
+    } else {
+      ids.push(`${deployedResourcePrefix(cluster, subName, params.namespace)}${row.name}--${k}`);
     }
   }
 
@@ -200,19 +208,24 @@ export function expectedTopologyDrawerContains(nodeDataId: string): string | Reg
     return /Clusters \(\d+\)/;
   }
   if (nodeDataId.includes('--pod--')) {
-    return 'Type: Pod';
+    return /\bPod\b/;
   }
   if (nodeDataId.includes('--replicaset--')) {
-    return 'Type: Replicaset';
+    return /\bReplicaset\b/i;
   }
   if (nodeDataId.endsWith('--service')) {
-    return 'Type: Service';
+    return /\bService\b/;
   }
   if (nodeDataId.endsWith('--route')) {
-    return 'Type: Route';
+    return /\bRoute\b/;
   }
   if (nodeDataId.endsWith('--deployment')) {
-    return 'Type: Deployment';
+    return /\bDeployment\b/;
+  }
+  const kindMatch = nodeDataId.match(/--([a-z]+)$/);
+  if (kindMatch) {
+    const kind = kindMatch[1]!;
+    return new RegExp(`\\b${kind.charAt(0).toUpperCase()}${kind.slice(1)}\\b`, 'i');
   }
   throw new Error(`topology-graph: no drawer expectation for node data-id: ${nodeDataId}`);
 }
@@ -246,7 +259,7 @@ export function dedupeTopologyNodeDataIds(dataIds: string[]): string[] {
 export function buildMergedTopologyNodeDataIdsForSubscriptionBlocks(params: {
   applicationName: string;
   namespace: string;
-  blocks: { blockIndex: number; clusterResourceRows: TopologyClusterResourceRef[] }[];
+  blocks: { blockIndex: number; clusterName?: string; clusterResourceRows: TopologyClusterResourceRef[] }[];
 }): string[] {
   const merged: string[] = [];
   for (const b of params.blocks) {
@@ -254,6 +267,7 @@ export function buildMergedTopologyNodeDataIdsForSubscriptionBlocks(params: {
       ...buildTopologyNodeDataIdsForSubscriptionBlock({
         applicationName: params.applicationName,
         namespace: params.namespace,
+        clusterName: b.clusterName,
         blockIndex: b.blockIndex,
         clusterResourceRows: b.clusterResourceRows,
       })
@@ -265,7 +279,7 @@ export function buildMergedTopologyNodeDataIdsForSubscriptionBlocks(params: {
 export function buildMergedTopologyDrawerSpotChecksForSubscriptionBlocks(params: {
   applicationName: string;
   namespace: string;
-  blocks: { blockIndex: number; clusterResourceRows: TopologyClusterResourceRef[] }[];
+  blocks: { blockIndex: number; clusterName?: string; clusterResourceRows: TopologyClusterResourceRef[] }[];
 }): { nodeDataId: string; drawerContains: string | RegExp }[] {
   const seen = new Set<string>();
   const out: { nodeDataId: string; drawerContains: string | RegExp }[] = [];
@@ -273,6 +287,7 @@ export function buildMergedTopologyDrawerSpotChecksForSubscriptionBlocks(params:
     const checks = buildTopologyDrawerSpotChecksForSubscriptionBlock({
       applicationName: params.applicationName,
       namespace: params.namespace,
+      clusterName: b.clusterName,
       blockIndex: b.blockIndex,
       clusterResourceRows: b.clusterResourceRows,
     });
@@ -319,6 +334,40 @@ export async function expectApplicationTopologyUrl(
 /** Weak smoke: console shell title (same on many pages). */
 export async function expectOpenShiftShellTitle(page: Page): Promise<void> {
   await expect(page).toHaveTitle(/OpenShift/i);
+}
+
+/**
+ * Poll until each hook substring (e.g. `prehook`, `posthook`) matches at least one topology node
+ * whose `data-id` starts with `member--deployed-resource--member--subscription--` (subscription hook placement).
+ */
+export async function expectTopologySubscriptionHookNodes(
+  surface: Locator,
+  hookSubstrings: string[],
+  options?: { timeout?: number }
+): Promise<void> {
+  const timeout = options?.timeout ?? 120_000;
+  const hookPrefix = 'member--deployed-resource--member--subscription--';
+
+  await expect
+    .poll(
+      async () => {
+        const allNodeIds = await surface
+          .locator('g[data-kind=node][data-type=node]')
+          .evaluateAll((els) => els.map((el) => el.getAttribute('data-id') ?? ''));
+
+        const hookNodes = allNodeIds.filter((id) => id.startsWith(hookPrefix));
+
+        const missing: string[] = [];
+        for (const sub of hookSubstrings) {
+          if (!hookNodes.some((id) => id.includes(sub))) {
+            missing.push(sub);
+          }
+        }
+        return missing;
+      },
+      { timeout, intervals: [2_000, 3_000, 5_000] }
+    )
+    .toEqual([]);
 }
 
 /**

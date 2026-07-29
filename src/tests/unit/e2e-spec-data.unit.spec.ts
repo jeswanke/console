@@ -281,16 +281,20 @@ test.describe('e2e-spec-data YAML processing', () => {
       secretNamespace: 'default',
     });
     expect(resolved.applicationExpectations?.detailsClustersSummary).toEqual({ variant: 'localOnly' });
-    expect(resolved.applicationExpectations?.successMinResourceCount).toBe(2);
+    expect(resolved.applicationExpectations?.successMinResourceCount).toBe(4);
     expect(resolved.applicationExpectations?.topologyDeployableResourceTypes).toEqual([
       'configmap',
       'ansiblejob',
+    ]);
+    expect(resolved.applicationExpectations?.topologySubscriptionHooks).toEqual([
+      'prehook',
+      'posthook',
     ]);
     expect(resolved.applicationExpectations?.localClusterPlacement).toBe(true);
     expect(resolved.applicationExpectations?.clusterResources[0]).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ kind: 'ConfigMap', name: 'guestbook-cfgmap' }),
-        expect.objectContaining({ kind: 'AnsibleJob', name: 'prehook-test' }),
+        expect.objectContaining({ kind: 'AnsibleJob', name: 'ansible-regular-test' }),
       ])
     );
   });
@@ -306,9 +310,13 @@ test.describe('e2e-spec-data YAML processing', () => {
       branch: 'main',
     });
     expect(resolved.subscription.perBlock?.[0]?.automation?.existingAnsibleSecret).toBe(
-      'alc-ansible-secret'
+      'ansible-pre-post-1560'
     );
-    expect(resolved.applicationExpectations?.successMinResourceCount).toBe(2);
+    expect(resolved.applicationExpectations?.successMinResourceCount).toBe(4);
+    expect(resolved.applicationExpectations?.topologySubscriptionHooks).toEqual([
+      'prehook',
+      'posthook',
+    ]);
     expect(resolved.applicationExpectations?.localClusterPlacement).toBe(true);
   });
 
@@ -696,7 +704,7 @@ test.describe('e2e-spec-data YAML processing', () => {
       kind: 'objectStorage',
       subfolder: 'helloworld',
     });
-    expect(resolved.applicationExpectations.successMinResourceCount).toBe(3);
+    expect(resolved.applicationExpectations.successMinResourceCount).toBe(5);
   });
 
   test('auto_obj_add_subscription: RHACM4K-7812 add subscription reuses auto-obj-multi app', () => {

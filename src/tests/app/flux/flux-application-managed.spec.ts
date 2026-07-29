@@ -57,7 +57,7 @@ test.describe(
       { tag: ['@RHACM4K-16783', '@UI', '@e2e-flux'] },
       async ({ oc, applicationListPage, applicationDetailsPage }) => {
         if (!managedClusterName) return;
-        test.setTimeout(900_000);
+        test.setTimeout(600_000);
         const { flux } = resolveFluxScenarioByTestId('RHACM4K-16783');
         const spec = withFluxClusterName(flux, managedClusterName);
         await applyFluxAppOnCluster(oc, spec, managedClusterName);
@@ -81,7 +81,7 @@ test.describe(
       { tag: ['@RHACM4K-16784', '@UI', '@e2e-flux'] },
       async ({ oc, applicationListPage, applicationDetailsPage }) => {
         if (!managedClusterName) return;
-        test.setTimeout(900_000);
+        test.setTimeout(600_000);
         const { flux } = resolveFluxScenarioByTestId('RHACM4K-16784');
         const spec = withFluxClusterName(flux, managedClusterName);
         await applyFluxAppOnCluster(oc, spec, managedClusterName);
@@ -105,7 +105,7 @@ test.describe(
       { tag: ['@RHACM4K-16785', '@UI', '@e2e-flux'] },
       async ({ oc, applicationListPage, applicationDetailsPage }) => {
         if (!managedClusterName) return;
-        test.setTimeout(1_200_000);
+        test.setTimeout(900_000);
         const { base, delta } = resolveFluxScenarioPair({
           baseScenarioId: 'flux_git_edit_managed_initial',
           testId: 'RHACM4K-16785',
@@ -147,7 +147,7 @@ test.describe(
       { tag: ['@RHACM4K-16786', '@UI', '@e2e-flux'] },
       async ({ oc, applicationListPage, applicationDetailsPage }) => {
         if (!managedClusterName) return;
-        test.setTimeout(1_200_000);
+        test.setTimeout(900_000);
         const { base, delta } = resolveFluxScenarioPair({
           baseScenarioId: 'flux_helm_edit_managed_initial',
           testId: 'RHACM4K-16786',
@@ -189,7 +189,7 @@ test.describe(
       { tag: ['@RHACM4K-16787', '@UI', '@e2e-flux'] },
       async ({ oc, applicationListPage, applicationDetailsPage }) => {
         if (!managedClusterName) return;
-        test.setTimeout(900_000);
+        test.setTimeout(600_000);
         const { flux } = resolveFluxScenarioByTestId('RHACM4K-16787');
         const spec = withFluxClusterName(flux, managedClusterName);
         await applyFluxAppOnCluster(oc, spec, managedClusterName);
@@ -217,7 +217,7 @@ test.describe(
       { tag: ['@RHACM4K-16788', '@UI', '@e2e-flux'] },
       async ({ oc, applicationListPage, applicationDetailsPage }) => {
         if (!managedClusterName) return;
-        test.setTimeout(900_000);
+        test.setTimeout(600_000);
         const { flux } = resolveFluxScenarioByTestId('RHACM4K-16788');
         const spec = withFluxClusterName(flux, managedClusterName);
         await applyFluxAppOnCluster(oc, spec, managedClusterName);

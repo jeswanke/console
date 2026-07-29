@@ -26,9 +26,9 @@ awx_list_count() {
 }
 
 resolve_from_cluster() {
-  log "Step: discover controller — reading routes and secrets in namespace ${AAP_NAMESPACE}."
+  log "Step: discover gateway — reading routes and secrets in namespace ${AAP_NAMESPACE}."
   local route=""
-  route="$(oc get route -n "${AAP_NAMESPACE}" -o jsonpath='{.items[1].spec.host}' 2>/dev/null || true)"
+  route="$(oc get route -n "${AAP_NAMESPACE}" "${AAP_NAMESPACE}" -o jsonpath='{.spec.host}' 2>/dev/null || true)"
   if [[ -z "${route}" ]]; then
     route="$(oc get route -n "${AAP_NAMESPACE}" -o jsonpath='{.items[0].spec.host}' 2>/dev/null || true)"
   fi
@@ -42,19 +42,19 @@ resolve_from_cluster() {
   )"
 
   if [[ -n "${route}" ]]; then
-    log "Step: discover controller — route host resolved (ANSIBLE_URL will use https://${route})."
+    log "Step: discover gateway — route host resolved (ANSIBLE_URL will use https://${route})."
   else
-    log "Step: discover controller — no route host found in ${AAP_NAMESPACE} (check AAP install / AAP_NAMESPACE)."
+    log "Step: discover gateway — no route host found in ${AAP_NAMESPACE} (check AAP install / AAP_NAMESPACE)."
   fi
   if [[ -n "${ANSIBLE_TOWER_PASSWORD:-}" ]]; then
-    log "Step: discover controller — admin password secret present."
+    log "Step: discover gateway — admin password secret present."
   else
-    log "Step: discover controller — admin password secret missing or empty."
+    log "Step: discover gateway — admin password secret missing or empty."
   fi
   if [[ -n "${ANSIBLE_TOKEN:-}" ]]; then
-    log "Step: discover controller — admin token secret present."
+    log "Step: discover gateway — admin token secret present."
   else
-    log "Step: discover controller — admin token secret missing or empty."
+    log "Step: discover gateway — admin token secret missing or empty."
   fi
 }
 

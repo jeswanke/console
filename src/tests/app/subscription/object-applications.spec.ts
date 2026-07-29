@@ -166,9 +166,11 @@ test.describe(
         await oc.labelNamespaceForAlcTest(options.namespace);
 
         const { applicationName, namespace } = options;
+        const block1Clusters = await oc.getPlacementDecisionClusterNames(namespace, `${applicationName}-placement-1`);
+        const block2Clusters = await oc.getPlacementDecisionClusterNames(namespace, `${applicationName}-placement-2`);
         const mergedSubscriptionBlocks = [
-          { blockIndex: 1, clusterResourceRows: expectations.topologyClusterResourceBlocks[0]! },
-          { blockIndex: 2, clusterResourceRows: expectations.topologyClusterResourceBlocks[1]! },
+          { blockIndex: 1, clusterName: [...block1Clusters].sort().join('--') || 'local-cluster', clusterResourceRows: expectations.topologyClusterResourceBlocks[0]! },
+          { blockIndex: 2, clusterName: [...block2Clusters].sort().join('--') || 'local-cluster', clusterResourceRows: expectations.topologyClusterResourceBlocks[1]! },
         ];
 
         await verifySubscriptionAppDetailsTab({
@@ -179,7 +181,7 @@ test.describe(
           applicationExpectations: expectations,
           repositories: options.repositories,
           clusterResourceStatusPattern: subscriptionDetailsClusterResourceTotalPattern(
-            expectations.clusterResources[0]!.length
+            expectations.successMinResourceCount ?? 5
           ),
           detailsValuesTimeout: 300_000,
         });

@@ -1,7 +1,7 @@
 /**
  * Internal wizard fill helpers for subscription create/edit flows.
  */
-import { type Locator } from '@playwright/test';
+import { expect, type Locator } from '@playwright/test';
 import {
   APP_SUBSCRIPTION_CREATE_WIZARD,
   type SubscriptionWizardRepositoryCardKind,
@@ -24,6 +24,7 @@ import { enableExistingPlacementConfigurationInRepositoryBlock } from './placeme
 
 async function fillIfDefined(locator: Locator, value: string | undefined): Promise<void> {
   if (value === undefined) return;
+  if (await locator.isDisabled().catch(() => false)) return;
   await locator.fill(value);
 }
 
@@ -190,34 +191,47 @@ async function fillTimeWindow(
 ): Promise<void> {
   await wizard.expandSettingsSectionForRepositoryBlock(blockIndex);
   if (spec.mode === 'default') {
-    await wizard.getTimeWindowDefaultModeRadioForBlock(blockIndex).click();
+    const radio = wizard.getTimeWindowDefaultModeRadioForBlock(blockIndex);
+    await radio.scrollIntoViewIfNeeded();
+    await radio.click();
     await wizard.waitForLoad();
     return;
   }
   if (spec.mode === 'active') {
-    await wizard.getTimeWindowActiveModeRadioForBlock(blockIndex).click();
+    const radio = wizard.getTimeWindowActiveModeRadioForBlock(blockIndex);
+    await radio.scrollIntoViewIfNeeded();
+    await radio.click();
   } else if (spec.mode === 'blocked') {
-    await wizard.getTimeWindowBlockedModeRadioForBlock(blockIndex).click();
+    const radio = wizard.getTimeWindowBlockedModeRadioForBlock(blockIndex);
+    await radio.scrollIntoViewIfNeeded();
+    await radio.click();
   }
-  // Mode selection expands the time-window accordion and enables the timezone control (`isDisabled={!mode}`).
   if (spec.timezone !== undefined) {
     await wizard.pickTimeWindowTimezoneMenuOptionForRepositoryBlock(blockIndex, spec.timezone);
   }
   if (spec.weekdays) {
     for (const [day, checked] of Object.entries(spec.weekdays)) {
       if (checked === undefined) continue;
-      await wizard.getTimeWindowDayCheckbox(day, blockIndex).setChecked(!!checked);
+      const cb = wizard.getTimeWindowDayCheckbox(day, blockIndex);
+      await cb.scrollIntoViewIfNeeded();
+      await cb.setChecked(!!checked);
     }
   }
   const ranges = spec.ranges ?? [];
   for (let i = 0; i < ranges.length; i++) {
     if (i > 0) {
-      await wizard.getTimeWindowAddAnotherTimeRangeButton(blockIndex).click();
+      const addBtn = wizard.getTimeWindowAddAnotherTimeRangeButton(blockIndex);
+      await addBtn.scrollIntoViewIfNeeded();
+      await addBtn.click();
       await wizard.waitForLoad();
     }
     const range = ranges[i]!;
-    await wizard.getTimeWindowStartTimeInput(i, blockIndex).fill(range.start);
-    await wizard.getTimeWindowEndTimeInput(i, blockIndex).fill(range.end);
+    const startInput = wizard.getTimeWindowStartTimeInput(i, blockIndex);
+    await startInput.scrollIntoViewIfNeeded();
+    await startInput.fill(range.start);
+    const endInput = wizard.getTimeWindowEndTimeInput(i, blockIndex);
+    await endInput.scrollIntoViewIfNeeded();
+    await endInput.fill(range.end);
   }
   const extra = spec.extraTimeRangeRows ?? 0;
   for (let k = 0; k < extra; k++) {
@@ -242,9 +256,15 @@ async function fillAutomation(
   if (spec.addCredentialWizard) {
     await addAnsibleCredentialViaWizard(wizard, blockIndex, spec.addCredentialWizard);
   } else if (spec.existingAnsibleSecret !== undefined) {
-    await block
-      .getByPlaceholder(APP_SUBSCRIPTION_CREATE_WIZARD.automation.existingSecretPlaceholder)
-      .fill(spec.existingAnsibleSecret);
+    const page = wizard.getPage();
+    const credInput = page.locator('[data-testid="select-connection"]');
+    await credInput.scrollIntoViewIfNeeded();
+    await credInput.click();
+    await credInput.pressSequentially(spec.existingAnsibleSecret, { delay: 30 });
+    await page.waitForTimeout(1_000);
+    const option = page.locator(`#select-typeahead-${spec.existingAnsibleSecret}`);
+    await expect(option).toBeVisible({ timeout: 10_000 });
+    await option.click();
   }
   await wizard.waitForLoad();
 }
@@ -261,7 +281,11 @@ export async function applyPerBlockOptions(
   if (extras.timeWindow) {
     await fillTimeWindow(wizard, blockIndex, extras.timeWindow);
   }
-  if (extras.automation) {
+  if (
+    extras.automation?.addCredentialWizard ||
+    extras.automation?.existingAnsibleSecret !== undefined ||
+    extras.automation?.credentialTypeFilter !== undefined
+  ) {
     await fillAutomation(wizard, blockIndex, extras.automation);
   }
 }

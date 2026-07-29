@@ -142,25 +142,20 @@ fragments:
           channelDisplaySubstring: stolostron-application-lifecycle-samples
           channelRepositoryUrl: https://github.com/stolostron/application-lifecycle-samples
 
-  git_example_k8s_lars_sandbox_backend:
+  git_example_k8s_backend:
     specDomains:
       applicationExpectations:
         clusterResources:
           - - kind: Deployment
               name: example
-              namespace: lars-sandbox
             - kind: Service
               name: example
-              namespace: lars-sandbox
             - kind: ReplicaSet
               name: example
-              namespace: lars-sandbox
             - kind: Pod
               name: example
-              namespace: lars-sandbox
             - kind: PersistentVolumeClaim
               name: example-data-claim
-              namespace: lars-sandbox
 
   # Private Git repo (RHACM4K-1071): URL in YAML; username/token from env/alc.local.env at test runtime.
   git_private_mortgage:
@@ -195,6 +190,7 @@ fragments:
     perBlock:
       - timeWindow:
           mode: active
+          timezone: America/Toronto
           weekdays:
             Monday: true
             Tuesday: true
@@ -240,8 +236,9 @@ fragments:
   # Leave **Configure automation** empty (do not type Ansible credential / filter). Marker only — no `perBlock` payload.
   skip_automation_ansible: {}
 
-  # RHACM4K-20541: `application-lifecycle-samples` / `ansible` path (local-cluster ansible hooks).
-  # Cypress validates via Details **Cluster resource status** (successNumber ≥ 2), not `oc get configmap`.
+   # RHACM4K-20541: `application-lifecycle-samples` / `ansible` path (local-cluster ansible hooks).
+  # Topology: prehook/posthook AnsibleJobs attach to the subscription node (hook edges);
+  # ansible-regular-test + guestbook-cfgmap deploy under local-cluster.
   git_ansible_samples:
     repositories:
       - kind: git
@@ -251,16 +248,19 @@ fragments:
         reconcileOption: merge
     specDomains:
       applicationExpectations:
-        successMinResourceCount: 2
+        successMinResourceCount: 4
         topologyDeployableResourceTypes:
           - configmap
           - ansiblejob
         localClusterPlacement: true
+        topologySubscriptionHooks:
+          - prehook
+          - posthook
         clusterResources:
           - - kind: ConfigMap
               name: guestbook-cfgmap
             - kind: AnsibleJob
-              name: prehook-test
+              name: ansible-regular-test
         detailsClustersSummary:
           variant: localOnly
         advancedConfiguration:
@@ -275,11 +275,11 @@ fragments:
             secretName: ansible-tower-wizard
             secretNamespace: default
 
-  # RHACM4K-1560 / 3438: hub prep secret `alc-ansible-secret` (default namespace).
-  ansible_existing_alc_secret:
+  # RHACM4K-1560: CLI-created credential selected from existing secrets dropdown.
+  ansible_existing_pre_post_secret:
     perBlock:
       - automation:
-          existingAnsibleSecret: alc-ansible-secret
+          existingAnsibleSecret: ansible-pre-post-1560
 
   # RHACM4K-39666: Git URL contains underscore (`app_samples`); helloworld manifests (Route/Service/ReplicaSet).
   git_underscore:
@@ -497,7 +497,6 @@ fragments:
         topologyDeployableResourceTypes:
           - service
           - deployment
-          - configmap
           - replicaset
         clusterResources:
           - - kind: Deployment
@@ -506,13 +505,12 @@ fragments:
               name: helloworld-app-svc
             - kind: ReplicaSet
               name: helloworld-app-deploy
-            - kind: ConfigMap
-              name: helloworld-app-config
 
   timewindow_blocked_weekend_sat_sun:
     perBlock:
       - timeWindow:
           mode: blocked
+          timezone: America/New_York
           weekdays:
             Sunday: true
             Saturday: true
@@ -524,6 +522,7 @@ fragments:
     perBlock:
       - timeWindow:
           mode: active
+          timezone: America/New_York
           weekdays:
             Thursday: true
             Friday: true
@@ -537,6 +536,7 @@ fragments:
     perBlock:
       - timeWindow:
           mode: blocked
+          timezone: America/New_York
           weekdays:
             Thursday: true
             Friday: true

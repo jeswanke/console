@@ -42,7 +42,7 @@ import {
   waitForPlacementDecisionClusterCount,
 } from '../topology/drawer-poll';
 
-type MergedTopologyBlock = { blockIndex: number; clusterResourceRows: TopologyClusterResourceRef[] };
+type MergedTopologyBlock = { blockIndex: number; clusterName?: string; clusterResourceRows: TopologyClusterResourceRef[] };
 
 function resolveGraphBlocksFromMerge(
   merged: MergedTopologyBlock[],
@@ -81,9 +81,10 @@ export type VerifySubscriptionAppTopologyTabParams = {
   detailsPage: ApplicationDetailsPage;
   applicationName: string;
   namespace: string;
+  clusterName?: string;
   blockIndex?: number;
   clusterResourceRows?: TopologyClusterResourceRef[];
-  mergedSubscriptionBlocks?: { blockIndex: number; clusterResourceRows: TopologyClusterResourceRef[] }[];
+  mergedSubscriptionBlocks?: { blockIndex: number; clusterName?: string; clusterResourceRows: TopologyClusterResourceRef[] }[];
   /** 1-based block indices for multi-sub graph scope. */
   topologyMergeBlockIndices?: number[];
   subscriptionScope?: TopologySubscriptionScopeParam;
@@ -107,6 +108,7 @@ export async function verifySubscriptionAppTopologyTab(
     detailsPage,
     applicationName,
     namespace,
+    clusterName,
     nodeHydrationTimeout = 120_000,
     drawerSpotChecks: drawerSpotChecksParam,
     subscriptionScope,
@@ -125,9 +127,11 @@ export async function verifySubscriptionAppTopologyTab(
     const graphBlocks = resolveGraphBlocksFromMerge(merged, topologyMergeBlockIndices);
     if (graphBlocks.length === 1) {
       const only = graphBlocks[0]!;
+      const blockCluster = only.clusterName ?? clusterName;
       topologyDataIds = buildTopologyNodeDataIdsForSubscriptionBlock({
         applicationName,
         namespace,
+        clusterName: blockCluster,
         blockIndex: only.blockIndex,
         clusterResourceRows: only.clusterResourceRows,
         placementCrName,
@@ -138,6 +142,7 @@ export async function verifySubscriptionAppTopologyTab(
         buildTopologyDrawerSpotChecksForSubscriptionBlock({
           applicationName,
           namespace,
+          clusterName: blockCluster,
           blockIndex: only.blockIndex,
           clusterResourceRows: only.clusterResourceRows,
         });
@@ -165,6 +170,7 @@ export async function verifySubscriptionAppTopologyTab(
     topologyDataIds = buildTopologyNodeDataIdsForSubscriptionBlock({
       applicationName,
       namespace,
+      clusterName,
       blockIndex,
       clusterResourceRows,
       placementCrName,
@@ -175,6 +181,7 @@ export async function verifySubscriptionAppTopologyTab(
       buildTopologyDrawerSpotChecksForSubscriptionBlock({
         applicationName,
         namespace,
+        clusterName,
         blockIndex,
         clusterResourceRows,
         placementCrName,

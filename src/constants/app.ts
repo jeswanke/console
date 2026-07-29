@@ -166,23 +166,23 @@ export const APP_DOCS = {
     'https://docs.redhat.com/en/documentation/red_hat_advanced_cluster_management_for_kubernetes/2.16/html-single/applications/index#managing-applications',
 } as const;
 
-/** Use in assertions: href must be managing-applications docs with any 2.x product version. */
+/** Use in assertions: href must be managing-applications docs with any product version. */
 export const APP_DOCS_MANAGING_APPLICATIONS_HREF_RE =
-  /^https:\/\/docs\.redhat\.com\/en\/documentation\/red_hat_advanced_cluster_management_for_kubernetes\/2\.\d+\/html-single\/applications\/index#managing-applications$/;
+  /^https:\/\/docs\.redhat\.com\/en\/documentation\/red_hat_advanced_cluster_management_for_kubernetes\/\d+\.\d+\/html-single\/applications\/index#managing-applications$/;
 
 /**
  * "Learn more" on the Advanced configuration **page deprecation** banner (RHACM4K-63573).
  * Matches live hub: release notes → deprecations-removals-acm (not managing-applications).
  */
 export const APP_DOCS_ADVANCED_DEPRECATION_HREF_RE =
-  /^https:\/\/docs\.redhat\.com\/en\/documentation\/red_hat_advanced_cluster_management_for_kubernetes\/2\.\d+\/html-single\/release_notes\/release-notes#deprecations-removals-acm$/;
+  /^https:\/\/docs\.redhat\.com\/en\/documentation\/red_hat_advanced_cluster_management_for_kubernetes\/\d+\.\d+\/html-single\/release_notes\/release-notes#deprecations-removals-acm$/;
 
 /**
  * **Placement rule deprecation** inline alert in the subscription wizard (cluster placement section).
  * Matches `ViewDocumentationLink` / `DOC_LINKS.DEPRECATIONS_ACM` from the console.
  */
 export const APP_DOCS_ACM_DEPRECATIONS_RELEASE_NOTES_HREF_RE =
-  /^https:\/\/docs\.redhat\.com\/en\/documentation\/red_hat_advanced_cluster_management_for_kubernetes\/2\.\d+\/html-single\/release_notes\/release-notes#deprecations-removals-acm$/;
+  /^https:\/\/docs\.redhat\.com\/en\/documentation\/red_hat_advanced_cluster_management_for_kubernetes\/\d+\.\d+\/html-single\/release_notes\/release-notes#deprecations-removals-acm$/;
 
 // =============================================================================
 // Page structure
@@ -432,7 +432,7 @@ export const APP_TABLE_LABELS_CELL = {
 export const APP_LABEL_FILTER = {
   toggleId: 'acm-table-filter-select-Label',
   groupTitle: 'Label',
-  searchAriaLabel: 'Search',
+  searchAriaLabel: /Filter|Search/,
   /** MenuToggle shows "Label" with a badge when filters are active (e.g. "Label 1"). */
   toggleNamePattern: /^Label(\s+\d+)?$/i,
   operatorEquals: '=',

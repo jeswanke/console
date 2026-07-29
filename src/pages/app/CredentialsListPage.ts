@@ -2,17 +2,22 @@ import { Page, Locator } from '@playwright/test';
 import { BasePage } from '@pages/BasePage';
 import { APP_ROUTES, CREDENTIALS_LIST } from '@constants/app';
 import { pageUrlPathnameEquals } from '@lib/navigation';
+import type { OcCliService } from '@services/OcCliService';
 
 /**
  * Fleet Management → **Credentials** list (`/multicloud/credentials`).
  */
 export class CredentialsListPage extends BasePage {
-  constructor(protected readonly page: Page) {
+  constructor(
+    protected readonly page: Page,
+    readonly oc: OcCliService
+  ) {
     super(page);
   }
 
   async goto(): Promise<void> {
-    await this.page.goto(APP_ROUTES.credentials);
+    const consoleUrl = await this.oc.getConsoleUrl();
+    await this.page.goto(`${consoleUrl}${APP_ROUTES.credentials}`);
     await pageUrlPathnameEquals(this.page, APP_ROUTES.credentials);
     await this.waitForLoad();
   }
@@ -30,11 +35,13 @@ export class CredentialsListPage extends BasePage {
   }
 
   getTable(): Locator {
-    return this.page.getByRole('table', { name: CREDENTIALS_LIST.tableAccessibleName });
+    return this.page.getByRole('grid', { name: CREDENTIALS_LIST.tableAccessibleName });
   }
 
   getCredentialRow(credentialName: string): Locator {
-    return this.getTable().getByTestId(credentialName);
+    return this.getTable()
+      .getByRole('row')
+      .filter({ has: this.page.getByRole('gridcell', { name: credentialName, exact: true }) });
   }
 
   getCredentialActionsButton(credentialName: string): Locator {
@@ -54,6 +61,7 @@ export class CredentialsListPage extends BasePage {
   }
 
   async clickDeleteCredentialConfirmButton(): Promise<void> {
+    await this.page.locator('#confirm').fill('confirm');
     await this.page
       .getByRole('button', { name: CREDENTIALS_LIST.deleteConfirmButtonAccessibleName })
       .click();

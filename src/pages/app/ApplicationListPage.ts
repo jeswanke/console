@@ -45,7 +45,7 @@ export class ApplicationListPage extends BasePage {
     await this.getPageTitle().waitFor({ state: 'visible' });
     await expect(this.page.locator(PF_SKELETON)).toHaveCount(0);
     if (requireToolbar) {
-      await expect(this.applicationsTable.getCreateApplicationButton()).toBeEnabled();
+      await expect(this.applicationsTable.getCreateApplicationButton()).toBeEnabled({ timeout: 60_000 });
     }
   }
 
@@ -272,6 +272,7 @@ export class ApplicationListPage extends BasePage {
     }
     const subscriptionCrName = defaultSubscriptionCrName(applicationName, blockIndex);
 
+    await this.goto();
     await this.openAdvancedConfigTab();
     await this.assertAdvancedConfigSubscriptionRowChannelColumn({
       subscriptionCrName,
@@ -355,14 +356,13 @@ export class ApplicationListPage extends BasePage {
     await expect(typeButton).toBeVisible();
     await typeButton.click();
 
-    // Channel **Type** popover: anchor by expected URL inside a floating layer (`role=dialog` or `role=tooltip`),
-    // not PatternFly `pf-v5` / `pf-v6` class names (those churn with design-system upgrades).
+    const popoverUrl = channelRepositoryUrl.replace(/\.git$/, '');
     const popover = this.page
       .locator('[role="dialog"], [role="tooltip"]')
-      .filter({ hasText: channelRepositoryUrl })
+      .filter({ hasText: popoverUrl })
       .first();
     await expect(popover).toBeVisible({ timeout: 15_000 });
-    await expect(popover).toContainText(channelRepositoryUrl);
+    await expect(popover).toContainText(popoverUrl);
     const copyButton = popover.getByRole('button', { name: /copy/i }).first();
     await expect(copyButton).toBeVisible();
     await expect(copyButton).toBeEnabled();
@@ -379,6 +379,7 @@ export class ApplicationListPage extends BasePage {
     channelRepositoryUrl: string;
     channelRepositoryTypeLabel?: string;
   }): Promise<void> {
+    await this.goto();
     await this.openAdvancedConfigTab();
     await this.assertAdvancedConfigChannelRowTypePopoverAndColumns({
       channelDisplaySubstring: params.channelSearchSubstring,

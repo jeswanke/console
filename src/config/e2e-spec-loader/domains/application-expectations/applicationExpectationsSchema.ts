@@ -80,6 +80,8 @@ export const applicationExpectationsDomainSchema = z
     topologyDeployableResourceTypes: z.array(z.string().min(1)).optional(),
     /** When true, skip Placement advanced-table / `oc get placement` (local-cluster deploy). */
     localClusterPlacement: z.boolean().optional(),
+    /** Substrings to match in topology `data-id`s for subscription hook nodes (e.g. `['prehook', 'posthook']`). */
+    topologySubscriptionHooks: z.array(z.string().min(1)).optional(),
     detailsClustersSummary: applicationExpectationsDetailsClustersSummarySchema.optional(),
     advancedConfiguration: applicationExpectationsAdvancedConfigurationSchema.optional(),
   })

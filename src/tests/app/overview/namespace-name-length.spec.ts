@@ -85,7 +85,7 @@ test.describe(
           longNameOptions.applicationName,
           longNameOptions.namespace
         );
-        await verifyExampleK8sAppBackendOnLocalCluster(oc, applicationExpectations);
+        await verifyExampleK8sAppBackendOnLocalCluster(oc, applicationExpectations, hubNamespace);
         await applicationListPage.deleteApplicationFromOverviewViaSearch({
           applicationName: longNameOptions.applicationName,
           namespace: longNameOptions.namespace,
@@ -121,7 +121,7 @@ test.describe(
         );
         await oc.labelNamespaceForAlcTest(firstNamespace);
         await expectHubSubscriptionAndPlacementReady(oc, applicationName, firstNamespace);
-        await verifyExampleK8sAppBackendOnLocalCluster(oc, applicationExpectations);
+        await verifyExampleK8sAppBackendOnLocalCluster(oc, applicationExpectations, firstNamespace);
         await applicationListPage.deleteApplicationFromOverviewViaSearch({
           applicationName,
           namespace: firstNamespace,
@@ -137,7 +137,7 @@ test.describe(
         );
         await oc.labelNamespaceForAlcTest(secondNamespace);
         await expectHubSubscriptionAndPlacementReady(oc, applicationName, secondNamespace);
-        await verifyExampleK8sAppBackendOnLocalCluster(oc, applicationExpectations);
+        await verifyExampleK8sAppBackendOnLocalCluster(oc, applicationExpectations, secondNamespace);
         await applicationListPage.deleteApplicationFromOverviewViaSearch({
           applicationName,
           namespace: secondNamespace,

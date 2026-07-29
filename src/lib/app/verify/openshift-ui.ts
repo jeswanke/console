@@ -67,7 +67,7 @@ export async function verifyOpenshiftApplicationTopology(params: {
   });
 
   for (const resourceType of spec.topologyIcons) {
-    await expect(surface.locator(`#nodeIcon_${resourceType}`)).toBeVisible({ timeout: 120_000 });
+    await expect(surface.locator(`use[href="#nodeIcon_${resourceType}"]`).first()).toBeVisible({ timeout: 120_000 });
   }
 
   await applicationDetailsPage.openDetailTab('details');
