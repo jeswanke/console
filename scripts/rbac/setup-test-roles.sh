@@ -633,45 +633,45 @@ apply_all_mcras() {
     
     # 01-std-view: Standard kubevirt:view globally (no hub role - limited visibility)
     # Used in: RHACM4K-60309, User: clc-e2e-std-view
-    apply_mcra_single "clc-e2e-std-view-assignment" "User" "clc-e2e-std-view" \
+    apply_mcra_single "clc-e2e-std-view-assignment" "User" "clc-e2e-std-view-60309" \
         "kubevirt-view-global" "kubevirt.io:view" "rbac-hub-spoke-placement" "none"
     track_result $?
     
     # 02-std-edit: Standard kubevirt:edit globally (no hub role - limited visibility)
     # Used in: RHACM4K-60309, User: clc-e2e-std-edit
-    apply_mcra_single "clc-e2e-std-edit-assignment" "User" "clc-e2e-std-edit" \
+    apply_mcra_single "clc-e2e-std-edit-assignment" "User" "clc-e2e-std-edit-60309" \
         "kubevirt-edit-global" "kubevirt.io:edit" "rbac-hub-spoke-placement" "none"
     track_result $?
     
     # 03-std-admin: Standard kubevirt:admin globally (no hub role - limited visibility)
     # Used in: RHACM4K-60309, User: clc-e2e-std-admin
-    apply_mcra_single "clc-e2e-std-admin-assignment" "User" "clc-e2e-std-admin" \
+    apply_mcra_single "clc-e2e-std-admin-assignment" "User" "clc-e2e-std-admin-60309" \
         "kubevirt-admin-global" "kubevirt.io:admin" "rbac-hub-spoke-placement" "none"
     track_result $?
     
     # 04-hub-view-only: Hub view role only (no kubevirt:view)
     # Used in: RHACM4K-60310, User: clc-e2e-hub-view-only
-    apply_mcra_single "clc-e2e-hub-view-only-assignment" "User" "clc-e2e-hub-view-only" \
+    apply_mcra_single "clc-e2e-hub-view-only-assignment" "User" "clc-e2e-hub-view-only-60310" \
         "hub-view-access" "acm-vm-fleet:view" "rbac-hub-placement" "none"
     track_result $?
     
     # 05-hub-view: Hub view role with kubevirt:view globally
     # Used in: RHACM4K-60310, User: clc-e2e-hub-view
-    apply_mcra_multi "clc-e2e-hub-view-assignment" "User" "clc-e2e-hub-view" \
+    apply_mcra_multi "clc-e2e-hub-view-assignment" "User" "clc-e2e-hub-view-60310" \
         "hub-view-access|acm-vm-fleet:view|rbac-hub-placement|none" \
         "global-view-access|kubevirt.io:view|rbac-hub-spoke-placement|none"
     track_result $?
     
     # 06-hub-admin: Hub admin role with kubevirt:view on spoke
     # Used in: RHACM4K-60311, User: clc-e2e-hub-admin
-    apply_mcra_multi "clc-e2e-hub-admin-assignment" "User" "clc-e2e-hub-admin" \
+    apply_mcra_multi "clc-e2e-hub-admin-assignment" "User" "clc-e2e-hub-admin-60311" \
         "hub-admin-access|acm-vm-fleet:admin|rbac-hub-placement|none" \
         "spoke-view-access|kubevirt.io:view|rbac-spoke-placement|none"
     track_result $?
     
     # 07-managed-view: Managed view infrastructure role
     # Used in: RHACM4K-60467, User: clc-e2e-managed-view
-    apply_mcra_multi "clc-e2e-managed-view-assignment" "User" "clc-e2e-managed-view" \
+    apply_mcra_multi "clc-e2e-managed-view-assignment" "User" "clc-e2e-managed-view-60467" \
         "hub-view-access|acm-vm-fleet:view|rbac-hub-placement|none" \
         "managed-view-access|acm-vm-extended:view|rbac-spoke-placement|${TARGET_NAMESPACE}" \
         "kubevirt-view-access|kubevirt.io:view|rbac-spoke-placement|${TARGET_NAMESPACE}"
@@ -683,7 +683,7 @@ apply_all_mcras() {
     # - acm-vm-fleet:view (local-cluster, all namespaces)
     # - acm-vm-extended:admin (virtualization spoke, default namespace)
     # - kubevirt.io:view (virtualization spoke, all namespaces)
-    apply_mcra_multi "clc-e2e-managed-admin-assignment" "User" "clc-e2e-managed-admin" \
+    apply_mcra_multi "clc-e2e-managed-admin-assignment" "User" "clc-e2e-managed-admin-60468" \
         "hub-view-access|acm-vm-fleet:view|rbac-hub-placement|none" \
         "managed-admin-access|acm-vm-extended:admin|rbac-spoke-placement|default" \
         "kubevirt-view-access|kubevirt.io:view|rbac-spoke-placement|none"
@@ -691,13 +691,13 @@ apply_all_mcras() {
     
     # 09-spoke-view-ns: Consolidated spoke view role (namespace-scoped)
     # Used in: RHACM4K-60302, 60303, 60304, 60305, 60306, User: clc-e2e-spoke-view-ns
-    apply_mcra_single "clc-e2e-spoke-view-ns-assignment" "User" "clc-e2e-spoke-view-ns" \
+    apply_mcra_single "clc-e2e-spoke-view-ns-assignment" "User" "clc-e2e-spoke-view-ns-60302-60306" \
         "view-access-assignment" "kubevirt.io:view" "rbac-spoke-placement" "${TARGET_NAMESPACE}"
     track_result $?
     
     # 10-edit-test: Edit role for MCRA delete test
     # Used in: RHACM4K-60303, User: clc-e2e-edit-test
-    apply_mcra_single "clc-e2e-edit-test-assignment" "User" "clc-e2e-edit-test" \
+    apply_mcra_single "clc-e2e-edit-test-assignment" "User" "clc-e2e-edit-test-60303" \
         "edit-access-assignment" "kubevirt.io:edit" "rbac-spoke-placement" "${TARGET_NAMESPACE}"
     track_result $?
     
@@ -709,7 +709,7 @@ apply_all_mcras() {
     
     # 12-idp-kubevirt-htpasswd: IDP-agnostic kubevirtprojects test (HTPasswd)
     # Used in: RHACM4K-60257, User: clc-e2e-idp-kubevirt
-    apply_mcra_single "htpasswd-idp-kubevirt-assignment" "User" "clc-e2e-idp-kubevirt" \
+    apply_mcra_single "htpasswd-idp-kubevirt-assignment" "User" "clc-e2e-idp-kubevirt-60257" \
         "hub-kubevirtprojects-access" "acm-vm-fleet:view" "rbac-hub-placement" "none"
     track_result $?
     
@@ -721,7 +721,7 @@ apply_all_mcras() {
     
     # 14-idp-vm-htpasswd: IDP-agnostic VM permissions test (HTPasswd)
     # Used in: RHACM4K-60258, User: clc-e2e-idp-vm
-    apply_mcra_multi "htpasswd-idp-vm-assignment" "User" "clc-e2e-idp-vm" \
+    apply_mcra_multi "htpasswd-idp-vm-assignment" "User" "clc-e2e-idp-vm-60258" \
         "hub-view-access|acm-vm-fleet:view|rbac-hub-placement|none" \
         "kubevirt-admin-access|kubevirt.io:admin|rbac-hub-placement|${TARGET_NAMESPACE}"
     track_result $?
@@ -741,21 +741,13 @@ apply_all_mcras() {
 
     # 16-cclm-admin: CCLM full admin (consolidated)
     # Used in: RHACM4K-60989, User: clc-e2e-cclm-admin
-    apply_mcra_multi "clc-e2e-cclm-admin-assignment" "User" "clc-e2e-cclm-admin" \
+    apply_mcra_multi "clc-e2e-cclm-admin-assignment" "User" "clc-e2e-cclm-admin-60989" \
         "hub-admin-access|acm-vm-fleet:admin|rbac-hub-placement|none" \
         "kubevirt-admin-access|kubevirt.io:admin|rbac-hub-spoke-placement|${CCLM_NAMESPACE},${TARGET_NAMESPACE}" \
         "managed-admin-access|acm-vm-extended:admin|rbac-hub-spoke-placement|${CCLM_NAMESPACE},${TARGET_NAMESPACE}" \
         "cluster-migration-view|acm-vm-cluster-migration:view|rbac-hub-spoke-placement|none"
     track_result $?
     
-    # 17-cclm-view: CCLM view-only (negative test - cannot migrate)
-    # Used in: RHACM4K-NEW-CCLM-01, User: clc-e2e-cclm-view
-    apply_mcra_multi "clc-e2e-cclm-view-assignment" "User" "clc-e2e-cclm-view" \
-        "hub-view-access|acm-vm-fleet:view|rbac-hub-placement|none" \
-        "global-vm-view|kubevirt.io:view|rbac-hub-spoke-placement|none" \
-        "spoke-managed-view|acm-vm-extended:view|rbac-spoke-placement|none" \
-        "cluster-migration-view|acm-vm-cluster-migration:view|rbac-hub-spoke-placement|none"
-    track_result $?
     
     fi  # end CCLM tier MCRAs
 

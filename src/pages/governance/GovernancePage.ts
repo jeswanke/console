@@ -69,4 +69,66 @@ export class GovernancePage extends BasePage {
   getDiscoveredPolicyRow(policyName: string): Locator {
     return this.page.getByRole('link', { name: policyName, exact: true });
   }
+
+  // ---------------------------------------------------------------------------
+  // Policy labels test helpers (RHACM4K-63381)
+  // ---------------------------------------------------------------------------
+
+  getPolicyLink(policyName: string): Locator {
+    return this.page.getByRole('link', {
+      name: policyName,
+    }).first();
+  }
+
+  async gotoDiscoveredPolicies(): Promise<void> {
+    await this.goto();
+    await this.openDiscoveredPoliciesTab();
+  }
+
+  async gotoDiscoveredPolicyClusters(
+    apiGroup: string,
+    apiVersion: string,
+    kind: string,
+    policyName: string,
+  ): Promise<void> {
+    const consoleUrl = await this.oc.getConsoleUrl();
+    await this.page.goto(
+      `${consoleUrl}/multicloud/governance/discovered-policies/details/local-cluster/${apiGroup}/${apiVersion}/${kind}/${policyName}`,
+    );
+    await this.waitForLoad(30_000);
+  }
+
+  async navigateToDiscoveredPolicyClusters(
+    apiGroup: string,
+    apiVersion: string,
+    kind: string,
+    policyName: string,
+  ): Promise<void> {
+    const consoleUrl = await this.oc.getConsoleUrl();
+    await this.page
+      .goto(
+        `${consoleUrl}/multicloud/governance/discovered-policies/details/local-cluster/${apiGroup}/${apiVersion}/${kind}/${policyName}`,
+      )
+      .catch(() => {});
+  }
+
+  async gotoPolicyTemplateDetails(
+    namespace: string,
+    policyName: string,
+    clusterName: string,
+    apiGroup: string,
+    apiVersion: string,
+    kind: string,
+    templateName: string,
+  ): Promise<void> {
+    const consoleUrl = await this.oc.getConsoleUrl();
+    await this.page.goto(
+      `${consoleUrl}/multicloud/governance/policies/details/${namespace}/${policyName}/template/${clusterName}/${apiGroup}/${apiVersion}/${kind}/${templateName}`,
+    );
+    await this.waitForLoad(30_000);
+  }
+
+  getClusterLink(clusterName: string): Locator {
+    return this.page.getByRole('link', { name: clusterName, exact: true });
+  }
 }

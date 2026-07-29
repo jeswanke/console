@@ -1,0 +1,22 @@
+---
+description: In this repo, "UI snapshot" means structured code mappings—not screenshots or standalone docs.
+alwaysApply: true
+---
+
+# UI snapshot = structured mappings (console-e2e)
+
+When the user or tasks refer to a **snapshot** of a console page (ACM / OpenShift UI), they mean **capturing the page as maintainable code**, not:
+
+- A **screenshot** or image file  
+- A **markdown / doc-only** write-up (docs may supplement, but are not the snapshot)  
+- Playwright **`expect().toMatchSnapshot()`** image baselines (unless they explicitly ask for visual regression)
+
+A **snapshot** here is the same pattern used for application details and other flows:
+
+1. **Constants** — routes, tab labels, `role`/`name` strings, description-list term labels, breadcrumbs, etc. (e.g. `src/constants/app.ts`, `src/constants/selectors.ts`). Application **Topology** tab chrome is `APP_APPLICATION_TOPOLOGY` + `SELECTORS.application.topologyToolbar`.
+2. **Page object** — locators and actions scoped to that screen (e.g. `src/pages/app/*Page.ts`), preferring roles and stable copy from the live DOM (often validated with Playwriter on a real hub). Topology controls live on **`ApplicationDetailsPage`** next to Details-tab helpers.
+3. **Fixtures / wiring** — expose the page object in tests when needed (e.g. `src/fixtures/app-test.ts`).
+
+Provenance (hub build, locale, example app name) belongs in **comments** next to those constants or on the page class, not only in external docs.
+
+When asked to "snapshot" a page, **add or extend these artifacts**; do not substitute a PNG or a standalone `.md` unless the user explicitly asks for images or documentation.

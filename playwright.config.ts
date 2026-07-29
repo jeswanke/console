@@ -1,10 +1,9 @@
 // Load `.env` via config layer (see src/config/index.ts)
-import './src/config/index';
 import { defineConfig, devices } from '@playwright/test';
+import './src/config/index';
 
 /** Sample / exploratory specs — not run when TEST_MODE=integration. */
-const integrationTestMode =
-  process.env.TEST_MODE ?? process.env.PLAYWRIGHT_TEST_MODE;
+const integrationTestMode = process.env.TEST_MODE ?? process.env.PLAYWRIGHT_TEST_MODE;
 const sampleSpecIgnoreWhenIntegration =
   integrationTestMode === 'integration'
     ? ['**/applications-list.spec.ts', '**/cluster-list.spec.ts']
@@ -20,9 +19,9 @@ export default defineConfig({
   /* Clean up .auth/ before running tests */
   globalSetup: require.resolve('./src/global-setup'),
   /* Timeouts for slow-loading ACM console */
-  timeout: 60000,        // Per-test timeout
+  timeout: 60000, // Per-test timeout
   expect: {
-    timeout: 15000,      // Per-assertion timeout (ACM pages load slowly)
+    timeout: 15000, // Per-assertion timeout (ACM pages load slowly)
   },
   /* Run tests in files in parallel */
   fullyParallel: true,
@@ -33,10 +32,7 @@ export default defineConfig({
   /* Opt out of parallel tests on CI. */
   workers: process.env.CI ? 1 : undefined,
   /* Reporters: HTML locally; JUnit XML for CI / tooling (`test-results/` is gitignored). */
-  reporter: [
-    ['html'],
-    ['junit', { outputFile: 'test-results/junit.xml' }],
-  ],
+  reporter: [['html'], ['junit', { outputFile: 'test-results/junit.xml' }]],
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
@@ -48,7 +44,7 @@ export default defineConfig({
 
   /*
    * Projects: setup → admin auth; rbac-setup → RBAC users; cluster / governance / alc / fg-rbac / fleet-virt / unit.
-   * Component entrypoints: `./start.sh alc` | `clc` | `grc` | `fg-rbac` | `fleet-virt`
+   * Component entrypoints: `./start.sh alc` | `clc` | `grc` | `search` | `fg-rbac` | `fleet-virt`
    */
   projects: [
     {
@@ -88,29 +84,28 @@ export default defineConfig({
       testMatch: /governance/,
     },
 
-    // Application Lifecycle (ALC) — `src/tests/app/**` (excludes `app/rbac/`); `./start.sh alc` sets E2E_GITOPS_PREP.
     {
-      name: 'alc',
-      testMatch: 'app/**/*.spec.ts',
-      testIgnore: [...alcIntegrationTestIgnore, 'app/rbac/**'],
+      name: 'search',
       use: {
         ...devices['Desktop Chrome'],
         viewport: { width: 1920, height: 1080 },
         storageState: '.auth/admin.json',
       },
       dependencies: ['setup'],
+      testMatch: 'search/**/*.spec.ts',
     },
 
-    // ALC subscription-admin RBAC — `app-test-cluster-manager-admin` console session.
+    // Application Lifecycle (ALC) — `src/tests/app/**`; `./start.sh alc` sets E2E_GITOPS_PREP.
     {
-      name: 'alc-rbac',
-      testMatch: 'app/rbac/**/*.spec.ts',
+      name: 'alc',
+      testMatch: 'app/**/*.spec.ts',
+      testIgnore: alcIntegrationTestIgnore,
       use: {
         ...devices['Desktop Chrome'],
         viewport: { width: 1920, height: 1080 },
-        storageState: '.auth/alc-rbac-cluster-manager-admin.json',
+        storageState: '.auth/admin.json',
       },
-      dependencies: ['setup', 'rbac-setup'],
+      dependencies: ['setup'],
     },
 
     // -- RBAC test projects --

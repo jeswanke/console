@@ -35,7 +35,7 @@ type SubscriptionJson = {
 };
 
 /** Minimal validation so `applicationName` / `namespace` are safe as `oc` argv (no shell). */
-function assertSafeOcSingleArg(value: string, field: string): void {
+export function assertSafeOcSingleArg(value: string, field: string): void {
   const v = value.trim();
   if (!v || v.length > 253 || /[^a-zA-Z0-9.-]/.test(v)) {
     throw new Error(`OcCliService: invalid ${field} for oc argv (${JSON.stringify(value)})`);
@@ -70,6 +70,14 @@ export class OcCliService {
       console.error(`Error executing command: ${cmd}`, error);
       throw error;
     }
+  }
+
+  async execArgv(args: string[]): Promise<string> {
+    const { stdout } = await execFilePromise('oc', args, {
+      encoding: 'utf8',
+      maxBuffer: 1024 * 1024,
+    });
+    return stdout.trim();
   }
 
   async applyYaml(yamlPath: string): Promise<string> {
@@ -170,6 +178,19 @@ export class OcCliService {
     return `https://${host}`;
   }
 
+  async getCurrentUser(): Promise<string> {
+    const { stdout } = await execFilePromise('oc', ['whoami'], {
+      encoding: 'utf8',
+      maxBuffer: 1024 * 1024,
+    });
+    return stdout.trim();
+  }
+
+  async deleteUserPreference(username: string): Promise<void> {
+    const resourceName = username.replaceAll(':', '-');
+    await this.deleteNonNamespacedResource('userpreference', '', resourceName);
+  }
+
   /**
    * Returns true if at least one instance of the resource exists in any namespace.
    * @param resource - e.g. "subscriptions.apps.open-cluster-management.io"
@@ -208,7 +229,9 @@ export class OcCliService {
       return stdout.trim().length > 0;
     } catch (err: unknown) {
       const stderr =
-        err && typeof err === 'object' && 'stderr' in err ? String((err as { stderr?: unknown }).stderr) : '';
+        err && typeof err === 'object' && 'stderr' in err
+          ? String((err as { stderr?: unknown }).stderr)
+          : '';
       if (/NotFound|not found/i.test(stderr)) {
         return false;
       }
@@ -256,7 +279,9 @@ export class OcCliService {
       return stdout.trim().length > 0;
     } catch (err: unknown) {
       const stderr =
-        err && typeof err === 'object' && 'stderr' in err ? String((err as { stderr?: unknown }).stderr) : '';
+        err && typeof err === 'object' && 'stderr' in err
+          ? String((err as { stderr?: unknown }).stderr)
+          : '';
       if (/NotFound|not found/i.test(stderr)) {
         return false;
       }
@@ -531,11 +556,19 @@ export class OcCliService {
     const safeLabelKey = labelKey.trim();
     const safeLabelValue = labelValue.trim();
     if (!/^[a-zA-Z0-9._/-]+$/.test(safeLabelKey) || safeLabelKey.length > 253) {
-      throw new Error(`OcCliService: invalid labelKey for oc argv (${JSON.stringify(safeLabelKey)})`);
+      throw new Error(
+        `OcCliService: invalid labelKey for oc argv (${JSON.stringify(safeLabelKey)})`
+      );
     }
     await execFilePromise(
       'oc',
-      ['label', 'managedcluster', safeClusterName, `${safeLabelKey}=${safeLabelValue}`, '--overwrite'],
+      [
+        'label',
+        'managedcluster',
+        safeClusterName,
+        `${safeLabelKey}=${safeLabelValue}`,
+        '--overwrite',
+      ],
       { encoding: 'utf8', maxBuffer: 1024 * 1024 }
     );
   }
@@ -564,14 +597,29 @@ export class OcCliService {
     assertSafeOcResourceKind(resource, 'resource');
     assertSafeOcSingleArg(namespace, 'namespace');
     assertSafeOcSingleArg(name, 'name');
-    await execFilePromise(
-      'oc',
-      ['delete', resource, name, '-n', namespace, '--ignore-not-found'],
-      { encoding: 'utf8', maxBuffer: 1024 * 1024 }
-    );
+    await execFilePromise('oc', ['delete', resource, name, '-n', namespace, '--ignore-not-found'], {
+      encoding: 'utf8',
+      maxBuffer: 1024 * 1024,
+    });
   }
 
-  private async listNamespacedResourceNames(resource: string, namespace: string): Promise<string[]> {
+  private async deleteNonNamespacedResource(
+    resource: string,
+    namespace: string,
+    name: string
+  ): Promise<void> {
+    assertSafeOcResourceKind(resource, 'resource');
+    assertSafeOcSingleArg(name, 'name');
+    await execFilePromise('oc', ['delete', resource, name, '--ignore-not-found'], {
+      encoding: 'utf8',
+      maxBuffer: 1024 * 1024,
+    });
+  }
+
+  private async listNamespacedResourceNames(
+    resource: string,
+    namespace: string
+  ): Promise<string[]> {
     assertSafeOcResourceKind(resource, 'resource');
     assertSafeOcSingleArg(namespace, 'namespace');
     try {
@@ -583,7 +631,9 @@ export class OcCliService {
       return stdout.trim().split(/\s+/).filter(Boolean);
     } catch (err: unknown) {
       const stderr =
-        err && typeof err === 'object' && 'stderr' in err ? String((err as { stderr?: unknown }).stderr) : '';
+        err && typeof err === 'object' && 'stderr' in err
+          ? String((err as { stderr?: unknown }).stderr)
+          : '';
       if (/NotFound|not found|No resources found/i.test(stderr)) {
         return [];
       }
@@ -604,7 +654,11 @@ export class OcCliService {
       (name) => name === applicationName || name.startsWith(placementPrefix)
     );
     for (const placementName of placementNames) {
-      await this.deleteNamespacedResource('placementdecision', namespace, `${placementName}-decision-1`);
+      await this.deleteNamespacedResource(
+        'placementdecision',
+        namespace,
+        `${placementName}-decision-1`
+      );
       await this.deleteNamespacedResource('placement', namespace, placementName);
     }
   }
@@ -623,21 +677,19 @@ export class OcCliService {
   }
 
   async getCurrentContext(): Promise<string> {
-    const { stdout } = await execFilePromise(
-      'oc',
-      ['config', 'current-context'],
-      { encoding: 'utf8', maxBuffer: 64 * 1024 }
-    );
+    const { stdout } = await execFilePromise('oc', ['config', 'current-context'], {
+      encoding: 'utf8',
+      maxBuffer: 64 * 1024,
+    });
     return stdout.trim();
   }
 
   async useContext(context: string): Promise<void> {
     assertSafeOcContextName(context, 'context');
-    await execFilePromise(
-      'oc',
-      ['config', 'use-context', context],
-      { encoding: 'utf8', maxBuffer: 64 * 1024 }
-    );
+    await execFilePromise('oc', ['config', 'use-context', context], {
+      encoding: 'utf8',
+      maxBuffer: 64 * 1024,
+    });
   }
 
   /** Managed cluster names labeled with `cluster.open-cluster-management.io/clusterset=<clusterSet>`. */
@@ -697,11 +749,10 @@ export class OcCliService {
   async getNamespacedResourceList(resource: string, namespace: string): Promise<string> {
     assertSafeOcResourceKind(resource, 'resource');
     assertSafeOcSingleArg(namespace, 'namespace');
-    const { stdout } = await execFilePromise(
-      'oc',
-      ['get', resource, '-n', namespace],
-      { encoding: 'utf8', maxBuffer: 1024 * 1024 }
-    );
+    const { stdout } = await execFilePromise('oc', ['get', resource, '-n', namespace], {
+      encoding: 'utf8',
+      maxBuffer: 1024 * 1024,
+    });
     return stdout.trim();
   }
 
@@ -728,9 +779,20 @@ export class OcCliService {
     await this.applyManifestFromStdin(manifest);
   }
 
-  private applyManifestFromStdin(manifest: string): Promise<void> {
+  applyManifestFromStdin(manifest: string): Promise<void> {
+    return this.execOcWithStdin(['apply', '-f', '-'], manifest);
+  }
+
+  deleteManifestFromStdin(manifest: string): Promise<void> {
+    return this.execOcWithStdin(
+      ['delete', '--ignore-not-found', '--wait=false', '-f', '-'],
+      manifest
+    );
+  }
+
+  private execOcWithStdin(args: string[], stdin: string): Promise<void> {
     return new Promise((resolve, reject) => {
-      const child = spawn('oc', ['apply', '-f', '-'], { stdio: ['pipe', 'pipe', 'pipe'] });
+      const child = spawn('oc', args, { stdio: ['pipe', 'pipe', 'pipe'] });
       let stderr = '';
       child.stderr.setEncoding('utf8');
       child.stderr.on('data', (chunk: string) => {
@@ -742,9 +804,9 @@ export class OcCliService {
           resolve();
           return;
         }
-        reject(new Error(stderr.trim() || `oc apply -f - exited with code ${code}`));
+        reject(new Error(stderr.trim() || `oc ${args.join(' ')} exited with code ${code}`));
       });
-      child.stdin.write(manifest);
+      child.stdin.write(stdin);
       child.stdin.end();
     });
   }
@@ -765,7 +827,8 @@ export class OcCliService {
   ): Promise<string[]> {
     const placement = await this.getPlacementJson(namespace, placementName);
     const expressions =
-      placement.spec?.predicates?.[0]?.requiredClusterSelector?.labelSelector?.matchExpressions ?? [];
+      placement.spec?.predicates?.[0]?.requiredClusterSelector?.labelSelector?.matchExpressions ??
+      [];
     const match = expressions.find((e) => e.key === labelKey);
     return match?.values ?? [];
   }
@@ -789,7 +852,9 @@ export class OcCliService {
       return parsed.spec?.placement?.placementRef?.name?.trim() || undefined;
     } catch (err: unknown) {
       const stderr =
-        err && typeof err === 'object' && 'stderr' in err ? String((err as { stderr?: unknown }).stderr) : '';
+        err && typeof err === 'object' && 'stderr' in err
+          ? String((err as { stderr?: unknown }).stderr)
+          : '';
       if (/NotFound|not found/i.test(stderr)) {
         return undefined;
       }
@@ -891,7 +956,9 @@ export class OcCliService {
       return parsed.status?.decisions?.length ?? 0;
     } catch (err: unknown) {
       const stderr =
-        err && typeof err === 'object' && 'stderr' in err ? String((err as { stderr?: unknown }).stderr) : '';
+        err && typeof err === 'object' && 'stderr' in err
+          ? String((err as { stderr?: unknown }).stderr)
+          : '';
       if (/NotFound|not found/i.test(stderr)) {
         return 0;
       }
@@ -937,19 +1004,95 @@ export class OcCliService {
   // MCRA (MulticlusterRoleAssignment) operations
   // ---------------------------------------------------------------------------
 
-  async mcraGetAll(labelSelector?: string): Promise<Record<string, unknown>[]> {
-    const labelFlag = labelSelector ? ` -l "${labelSelector}"` : '';
-    const output = await this.run(
-      `oc get multiclusterroleassignment -A${labelFlag} -o json`
+  async mcraCreate(opts: {
+    name: string;
+    namespace: string;
+    subjectKind: 'User' | 'Group';
+    subjectName: string;
+    clusterRole: string;
+    placementName: string;
+    placementNamespace: string;
+    raName?: string;
+    targetNamespaces?: string[];
+  }): Promise<void> {
+    const ns = opts.targetNamespaces ?? [];
+    const nsLines = ns.length > 0
+      ? ['      targetNamespaces:', ...ns.map((n) => `        - ${n}`)]
+      : ['      targetNamespaces: []'];
+
+    const manifest = [
+      'apiVersion: rbac.open-cluster-management.io/v1beta1',
+      'kind: MulticlusterRoleAssignment',
+      'metadata:',
+      `  name: ${opts.name}`,
+      `  namespace: ${opts.namespace}`,
+      'spec:',
+      '  subject:',
+      '    apiGroup: rbac.authorization.k8s.io',
+      `    kind: ${opts.subjectKind}`,
+      `    name: ${opts.subjectName}`,
+      '  roleAssignments:',
+      `    - clusterRole: ${opts.clusterRole}`,
+      '      clusterSelection:',
+      '        placements:',
+      `          - name: ${opts.placementName}`,
+      `            namespace: ${opts.placementNamespace}`,
+      '        type: placements',
+      `      name: ${opts.raName ?? 'e2e-role-access'}`,
+      ...nsLines,
+      '',
+    ].join('\n');
+    await this.applyManifestFromStdin(manifest);
+  }
+
+  async mcraAddRoleAssignment(
+    mcraName: string,
+    namespace: string,
+    clusterRole: string,
+    placementName: string,
+    placementNamespace: string,
+    raName: string,
+    targetNamespaces?: string[]
+  ): Promise<void> {
+    const value = {
+      clusterRole,
+      clusterSelection: {
+        placements: [{ name: placementName, namespace: placementNamespace }],
+        type: 'placements',
+      },
+      name: raName,
+      targetNamespaces: targetNamespaces ?? [],
+    };
+    const patch = JSON.stringify([{ op: 'add', path: '/spec/roleAssignments/-', value }]);
+    await execFilePromise(
+      'oc',
+      ['patch', 'multiclusterroleassignment', mcraName, '-n', namespace, '--type=json', '-p', patch],
+      { encoding: 'utf8', maxBuffer: 1024 * 1024 }
     );
+  }
+
+  async mcraGetAll(labelSelector?: string): Promise<Record<string, unknown>[]> {
+    const args = ['get', 'multiclusterroleassignment', '-A', '-o', 'json'];
+    if (labelSelector) {
+      assertSafeOcSingleArg(labelSelector, 'labelSelector');
+      args.push('-l', labelSelector);
+    }
+    const output = await this.execArgv(args);
     const parsed = JSON.parse(output);
     return parsed.items || [];
   }
 
   async mcraDeleteByName(name: string, namespace: string): Promise<string> {
-    return this.run(
-      `oc delete multiclusterroleassignment ${name} -n ${namespace} --ignore-not-found`
-    );
+    assertSafeOcSingleArg(name, 'name');
+    assertSafeOcSingleArg(namespace, 'namespace');
+    return this.execArgv([
+      'delete',
+      'multiclusterroleassignment',
+      name,
+      '-n',
+      namespace,
+      '--ignore-not-found',
+    ]);
   }
 
   async mcraGetForUser(username: string): Promise<Record<string, unknown>[]> {
@@ -976,14 +1119,37 @@ export class OcCliService {
       for (const item of items) {
         const metadata = item.metadata as Record<string, unknown> | undefined;
         if (metadata?.name && metadata?.namespace) {
+          await this.mcraDeleteByName(metadata.name as string, metadata.namespace as string);
+        }
+      }
+    } catch (err) {
+      console.warn('mcraDeleteAllForUser cleanup failed:', err);
+    }
+  }
+
+  async mcraGetForGroup(groupName: string): Promise<Record<string, unknown>[]> {
+    const items = await this.mcraGetAll();
+    return items.filter((m) => {
+      const spec = m.spec as Record<string, unknown> | undefined;
+      const subject = spec?.subject as Record<string, unknown> | undefined;
+      return subject?.kind === 'Group' && subject?.name === groupName;
+    });
+  }
+
+  async mcraDeleteAllForGroup(groupName: string): Promise<void> {
+    try {
+      const items = await this.mcraGetForGroup(groupName);
+      for (const item of items) {
+        const metadata = item.metadata as Record<string, unknown> | undefined;
+        if (metadata?.name && metadata?.namespace) {
           await this.mcraDeleteByName(
             metadata.name as string,
             metadata.namespace as string
           );
         }
       }
-    } catch {
-      // Best-effort cleanup
+    } catch (err) {
+      console.warn('mcraDeleteAllForGroup cleanup failed:', err);
     }
   }
 
@@ -1046,6 +1212,68 @@ EOF`);
     return name;
   }
 
+  async vmEnsureTestVMWithPVC(
+    name: string,
+    namespace: string,
+    labels?: Record<string, string>
+  ): Promise<string> {
+    const exists = await this.run(
+      `oc get vm ${name} -n ${namespace} --no-headers 2>/dev/null || true`
+    );
+    if (exists.includes(name)) {
+      return name;
+    }
+
+    const labelEntries = { 'e2e-test': 'true', ...labels };
+    const labelYaml = Object.entries(labelEntries)
+      .map(([k, v]) => `      ${k}: "${v}"`)
+      .join('\n');
+
+    await this.run(`oc apply -f - <<'EOF'
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  name: ${name}
+  namespace: ${namespace}
+  labels:
+${labelYaml}
+spec:
+  runStrategy: Always
+  template:
+    metadata:
+      labels:
+        kubevirt.io/vm: ${name}
+    spec:
+      domain:
+        devices:
+          disks:
+            - disk:
+                bus: virtio
+              name: rootdisk
+        resources:
+          requests:
+            memory: 2Gi
+      volumes:
+        - dataVolume:
+            name: ${name}-dv
+          name: rootdisk
+  dataVolumeTemplates:
+    - metadata:
+        name: ${name}-dv
+      spec:
+        sourceRef:
+          kind: DataSource
+          name: fedora
+          namespace: openshift-virtualization-os-images
+        storage:
+          resources:
+            requests:
+              storage: 30Gi
+EOF`);
+
+    return name;
+  }
+
   async vmIsRunning(name: string, namespace: string): Promise<boolean> {
     const output = await this.run(
       `oc get vm ${name} -n ${namespace} -o jsonpath='{.status.printableStatus}' 2>/dev/null || true`
@@ -1055,5 +1283,95 @@ EOF`);
 
   async vmDeleteTestVM(name: string, namespace: string): Promise<void> {
     await this.run(`oc delete vm ${name} -n ${namespace} --ignore-not-found`);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Policy (ConfigurationPolicy) operations
+  // ---------------------------------------------------------------------------
+
+  async policyExists(policyName: string, namespace: string): Promise<boolean> {
+    assertSafeOcSingleArg(policyName, 'policyName');
+    assertSafeOcSingleArg(namespace, 'namespace');
+    const output = await this.execArgv([
+      'get',
+      'configurationpolicy',
+      policyName,
+      '-n',
+      namespace,
+      '--ignore-not-found',
+      '--no-headers',
+    ]);
+    return output.length > 0;
+  }
+
+  async policyAddLabels(
+    policyName: string,
+    namespace: string,
+    labels: Record<string, string>
+  ): Promise<void> {
+    assertSafeOcSingleArg(policyName, 'policyName');
+    assertSafeOcSingleArg(namespace, 'namespace');
+    const labelPairs = Object.entries(labels).map(([k, v]) => {
+      assertSafeOcSingleArg(k, 'labelKey');
+      assertSafeOcSingleArg(v, 'labelValue');
+      return `${k}=${v}`;
+    });
+    await this.execArgv([
+      'label',
+      'configurationpolicy',
+      policyName,
+      '-n',
+      namespace,
+      ...labelPairs,
+    ]);
+  }
+
+  async policyRemoveLabels(
+    policyName: string,
+    namespace: string,
+    labelKeys: string[]
+  ): Promise<void> {
+    assertSafeOcSingleArg(policyName, 'policyName');
+    assertSafeOcSingleArg(namespace, 'namespace');
+    const removeArgs = labelKeys.map((k) => {
+      assertSafeOcSingleArg(k, 'labelKey');
+      return `${k}-`;
+    });
+    await this.execArgv([
+      'label',
+      'configurationpolicy',
+      policyName,
+      '-n',
+      namespace,
+      ...removeArgs,
+    ]).catch(() => {});
+  }
+
+  async policyGetLabels(policyName: string, namespace: string): Promise<string> {
+    assertSafeOcSingleArg(policyName, 'policyName');
+    assertSafeOcSingleArg(namespace, 'namespace');
+    return this.execArgv([
+      'get',
+      'configurationpolicy',
+      policyName,
+      '-n',
+      namespace,
+      '-o',
+      'jsonpath={.metadata.labels}',
+    ]);
+  }
+
+  async rbacAuthCanI(verb: string, resource: string, namespace: string, asUser: string): Promise<boolean> {
+    try {
+      const result = await this.run(
+        `oc auth can-i ${verb} ${resource} -n ${namespace} --as=${asUser}`,
+      );
+      return result.trim() === 'yes';
+    } catch (err: unknown) {
+      if (err instanceof Error && 'stdout' in err && String((err as Record<string, unknown>).stdout).trim() === 'no') {
+        return false;
+      }
+      throw err;
+    }
   }
 }

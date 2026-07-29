@@ -38,9 +38,7 @@ export class AcmTable {
   async verifyEmpty(): Promise<void> {
     // AcmTable renders `AcmEmptyState` with title in an h4 (PF EmptyStateHeader).
     await expect(this.page.getByRole('heading', { name: /no results found/i })).toBeVisible();
-    await expect(
-      this.page.getByText(/no results match the filter criteria/i)
-    ).toBeVisible();
+    await expect(this.page.getByText(/no results match the filter criteria/i)).toBeVisible();
   }
 
   async clickRow(ouiaId: string): Promise<void> {
@@ -48,11 +46,15 @@ export class AcmTable {
   }
 
   async verifyColumnHeaderVisible(columnName: string): Promise<void> {
-    await expect(this.page.getByRole('columnheader', { name: columnName, exact: false })).toBeVisible();
+    await expect(
+      this.page.getByRole('columnheader', { name: columnName, exact: true })
+    ).toBeVisible();
   }
 
   async verifyColumnHeaderNotVisible(columnName: string): Promise<void> {
-    await expect(this.page.getByRole('columnheader', { name: columnName, exact: false })).toBeHidden();
+    await expect(
+      this.page.getByRole('columnheader', { name: columnName, exact: true })
+    ).toBeHidden();
   }
 
   async verifyColumnOrder(expectedOrder: string[]): Promise<void> {
@@ -60,7 +62,7 @@ export class AcmTable {
 
     const indices: number[] = [];
     for (const column of expectedOrder) {
-      const index = headers.findIndex(h => h.includes(column));
+      const index = headers.findIndex((h) => h.includes(column));
       if (index === -1) {
         throw new Error(`Column "${column}" not found in table headers: ${headers.join(', ')}`);
       }

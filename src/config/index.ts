@@ -46,16 +46,16 @@ export function getHubAuth(): HubAuthConfig {
 }
 
 export function getRbacUsers(domain?: string): RbacUser[] {
-  const password = process.env.RBAC_TEST_PASSWORD ?? '';
-  const idp = process.env.RBAC_IDP ?? rbacPresets.idp;
+  const defaultPassword = process.env.RBAC_TEST_PASSWORD ?? '';
+  const defaultIdp = process.env.RBAC_IDP ?? rbacPresets.idp;
 
   return rbacPresets.users
     .filter((u) => !domain || (u.domains as readonly string[]).includes(domain))
     .map((u) => ({
       role: u.role,
       username: u.username,
-      password,
-      idp: 'idp' in u && typeof u.idp === 'string' ? u.idp : idp,
+      password: ('password' in u && u.password) ? u.password as string : defaultPassword,
+      idp: ('idp' in u && u.idp) ? u.idp as string : defaultIdp,
       domains: u.domains,
     }));
 }
@@ -67,16 +67,15 @@ export function getTestConfig(): TestConfig {
 }
 
 export function getRbacConfig(): RbacConfig {
-  if (!process.env.RBAC_TEST_PASSWORD) {
-    throw new Error('RBAC_TEST_PASSWORD environment variable is required');
+  const users: Record<string, string> = {};
+  for (const u of rbacPresets.users) {
+    users[u.role.replace('fg-rbac-', '')] = u.username;
   }
+
   return {
-    testUser: process.env.RBAC_TEST_USER || 'clc-e2e-global-61726',
-    testPassword: process.env.RBAC_TEST_PASSWORD,
-    idpName: process.env.RBAC_IDP || 'clc-e2e-htpasswd',
-    managedAdminUser: process.env.RBAC_MANAGED_ADMIN_USER || 'clc-e2e-managed-admin',
-    managedAdminPassword: process.env.RBAC_MANAGED_ADMIN_PASSWORD || process.env.RBAC_TEST_PASSWORD,
+    idpName: process.env.RBAC_IDP || rbacPresets.idp,
     spokeCluster: process.env.RBAC_SPOKE_CLUSTER || process.env.VIRT_SPOKE_CLUSTER || '',
+    users,
   };
 }
 

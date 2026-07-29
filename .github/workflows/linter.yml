@@ -1,9 +1,12 @@
 # Runs ESLint + Prettier; posts a PR comment when lint fails.
 #
-# Uses pull_request_target so GITHUB_TOKEN can comment on PRs from forks. The workflow
-# definition always comes from the base branch; we checkout the PR head (including forks).
-# npm ci uses --ignore-scripts to reduce risk from malicious lifecycle hooks (see GitHub
-# security docs on pull_request_target).
+# Security model (pull_request_target):
+#   - Workflow definition always comes from the base branch (trusted).
+#   - PR code is checked out into an isolated `pr-code/` directory (untrusted).
+#   - Trusted scripts (.github/scripts/) are checked out separately from the base branch
+#     so a malicious PR cannot tamper with code that handles GITHUB_TOKEN.
+#   - npm ci uses --ignore-scripts to block malicious lifecycle hooks.
+#   - GITHUB_TOKEN is only exposed to the trusted lint_and_comment.py script.
 name: Lint Check
 
 on:
@@ -25,22 +28,29 @@ jobs:
         node-version: [22.x]
 
     steps:
-      - name: Checkout PR head (supports forks)
-        uses: actions/checkout@v4
+      - name: Checkout base branch (trusted scripts)
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
-          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          path: trusted
+          persist-credentials: false
+
+      - name: Checkout PR head (untrusted, supports private forks)
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          ref: refs/pull/${{ github.event.pull_request.number }}/head
+          path: pr-code
+          persist-credentials: false
 
       - name: Set up Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
-          cache-dependency-path: './package-lock.json'
+          cache-dependency-path: 'pr-code/package-lock.json'
 
       - name: Install dependencies
         run: npm ci --ignore-scripts
-        working-directory: ${{ github.workspace }}
+        working-directory: pr-code
 
       - name: Install Python dependencies
         run: pip install PyGithub
@@ -49,6 +59,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
-          REPO_ROOT: ${{ github.workspace }}
+          REPO_ROOT: ${{ github.workspace }}/pr-code
           COMMIT_SHA: ${{ github.event.pull_request.head.sha }}
-        run: python ${{ github.workspace }}/.github/scripts/lint_and_comment.py
+        run: python ${{ github.workspace }}/trusted/.github/scripts/lint_and_comment.py

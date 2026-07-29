@@ -52,6 +52,7 @@ function console_e2e_usage_main {
   errEcho "    alc         Application Lifecycle (src/tests/app); defaults: --grep @alc, --project alc"
   errEcho "    clc         Cluster lifecycle (src/tests/cluster); defaults: --grep @clc, --project cluster"
   errEcho "    grc         Governance (src/tests/governance); defaults: --grep @grc, --project governance"
+  errEcho "    search      ACM Search (src/tests/search); defaults: --grep @search, --project search"
   errEcho "    fg-rbac     Fleet governance RBAC (src/tests/fg-rbac)"
   errEcho "    fleet-virt  Fleet virtualization (src/tests/fleet-virt)"
   errEcho

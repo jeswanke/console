@@ -14,7 +14,7 @@ if (domain && rbacUsers.length === 0) {
 
 for (const user of rbacUsers) {
   test(`authenticate ${user.role}`, async ({ page }) => {
-    test.skip(!process.env.RBAC_TEST_PASSWORD, 'RBAC_TEST_PASSWORD not set');
+    test.skip(!user.password, 'No password available (set RBAC_TEST_PASSWORD or use per-user password in presets)');
 
     const consoleUrl = await new OcCliService().getConsoleUrl();
 

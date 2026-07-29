@@ -60,8 +60,8 @@ done
 
 # --- Tier: rbac-ui (ACM-only RBAC wizard/role tests, no Fleet UI) ---
 VIRT_USERS_RBAC_UI=(
-    "clc-e2e-edit-test"            # kubevirt:edit for MCRA edit/delete, RHACM4K-60303
-    "clc-e2e-hub-view"             # Hub view (subject content test), RHACM4K-60310
+    "clc-e2e-edit-test-60303"      # kubevirt:edit for MCRA edit/delete, RHACM4K-60303
+    "clc-e2e-hub-view-60310"       # Hub view (subject content test), RHACM4K-60310
     "clc-e2e-edgecase-61736"       # Common projects edge case, RHACM4K-61736
     "clc-e2e-edgecase-61735"       # Empty cluster set edge case, RHACM4K-61735
     "clc-e2e-edgecase-61779"       # Roles page validation, RHACM4K-61779
@@ -90,26 +90,25 @@ VIRT_USERS_RBAC_UI=(
 
 # --- Tier: vm (Fleet UI tests, needs CNV -- added on top of rbac-ui) ---
 VIRT_USERS_VM=(
-    "clc-e2e-std-view"             # Standard kubevirt:view globally, RHACM4K-60309
-    "clc-e2e-std-edit"             # Standard kubevirt:edit globally, RHACM4K-60309
-    "clc-e2e-std-admin"            # Standard kubevirt:admin globally, RHACM4K-60309
-    "clc-e2e-hub-view-only"        # Hub view only (no kubevirt:view), RHACM4K-60310
-    "clc-e2e-hub-admin"            # Hub admin + kubevirt:view on spoke, RHACM4K-60311
-    "clc-e2e-managed-view"         # Managed view infrastructure, RHACM4K-60467
-    "clc-e2e-managed-admin"        # Managed admin infrastructure, RHACM4K-60468
-    "clc-e2e-spoke-view-ns"        # kubevirt:view on spoke, RHACM4K-60302-60306
-    "clc-e2e-group-last"           # Last assignment cleanup (group-based), RHACM4K-60307
-    "clc-e2e-idp-kubevirt"         # IDP-agnostic kubevirtprojects, RHACM4K-60257
-    "clc-e2e-idp-vm"               # IDP-agnostic VM permissions, RHACM4K-60258
+    "clc-e2e-std-view-60309"       # Standard kubevirt:view globally, RHACM4K-60309
+    "clc-e2e-std-edit-60309"       # Standard kubevirt:edit globally, RHACM4K-60309
+    "clc-e2e-std-admin-60309"      # Standard kubevirt:admin globally, RHACM4K-60309
+    "clc-e2e-hub-view-only-60310"  # Hub view only (no kubevirt:view), RHACM4K-60310
+    "clc-e2e-hub-admin-60311"      # Hub admin + kubevirt:view on spoke, RHACM4K-60311
+    "clc-e2e-managed-view-60467"   # Managed view infrastructure, RHACM4K-60467
+    "clc-e2e-managed-admin-60468"  # Managed admin infrastructure, RHACM4K-60468
+    "clc-e2e-spoke-view-ns-60302-60306" # kubevirt:view on spoke, RHACM4K-60302-60306
+    "clc-e2e-group-last-60307"     # Last assignment cleanup (group-based), RHACM4K-60307
+    "clc-e2e-idp-kubevirt-60257"   # IDP-agnostic kubevirtprojects, RHACM4K-60257
+    "clc-e2e-idp-vm-60258"         # IDP-agnostic VM permissions, RHACM4K-60258
     "clc-e2e-search-61846"         # Search cluster-proxy RBAC, RHACM4K-61846
     "clc-e2e-view-cluster-59195"   # MTV provider auto-creation, RHACM4K-59195
-    "clc-e2e-operator"             # Spoke operator via group, RHACM4K-60239
+    "clc-e2e-operator-60239"       # Spoke operator via group, RHACM4K-60239
 )
 
 # --- Tier: full (CCLM tests -- added on top of vm) ---
 VIRT_USERS_CCLM=(
-    "clc-e2e-cclm-view"            # CCLM view-only (negative test), RHACM4K-NEW-CCLM-01
-    "clc-e2e-cclm-admin"           # CCLM full admin, RHACM4K-60989
+    "clc-e2e-cclm-admin-60989"     # CCLM full admin, RHACM4K-60989
 )
 
 # Build the final user list based on VIRT_TIER

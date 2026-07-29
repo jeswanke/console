@@ -26,10 +26,6 @@ export const APP_ROUTES = {
     `${APP_ROUTES.detailsTab(argoServerNamespace, applicationSetName, APP_APPLICATION_DETAILS.tabs.topology.slug)}?apiVersion=applicationset.argoproj.io`,
 } as const;
 
-// =============================================================================
-// Credentials (Fleet Management)
-// =============================================================================
-
 export const CREDENTIALS_LIST = {
   addButtonId: 'add',
   ansibleCredentialTypeTitleId: 'ansible-title',

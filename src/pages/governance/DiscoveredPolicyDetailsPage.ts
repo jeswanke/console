@@ -56,4 +56,17 @@ export class DiscoveredPolicyDetailsPage extends BasePage {
     await this.page.getByRole('button', { name: /clear all filters/i }).click();
     await this.waitForLoad(30_000);
   }
+
+  async getClusterLabelsCell(clusterName: string): Promise<Locator> {
+    const row = this.getClusterRow(clusterName);
+    const headers = this.page.locator('th');
+    const headerCount = await headers.count();
+    for (let i = 0; i < headerCount; i++) {
+      const text = await headers.nth(i).textContent();
+      if (text?.trim() === 'Labels') {
+        return row.locator('td').nth(i);
+      }
+    }
+    return row.locator('td:has-text("Labels")');
+  }
 }

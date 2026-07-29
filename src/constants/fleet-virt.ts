@@ -20,7 +20,7 @@
 // =============================================================================
 
 export const FLEET_VIRT_ROUTES = {
-  vmList: '/k8s/all-clusters/all-namespaces/kubevirt.io~v1~VirtualMachine',
+  vmList: '/fleet-virtualization/kubevirt.io~v1~VirtualMachine/all-clusters/all-namespaces',
 } as const;
 
 // =============================================================================
@@ -41,7 +41,7 @@ export const FLEET_VIRT_PAGE = {
 
 export const FLEET_VIRT_SEARCH = {
   searchInput: '[data-test="vm-search-input"] input',
-  searchResults: '[data-test="search-bar-results"]',
+  searchResults: '[data-test="search-results"]',
   resetButton: 'button[aria-label="Reset"]',
 } as const;
 
@@ -53,7 +53,7 @@ export const FLEET_VIRT_SEARCH = {
 // =============================================================================
 
 export const FLEET_VIRT_ADVANCED_SEARCH = {
-  openButton: '[data-test="vm-advanced-search"]',
+  openButton: '[data-test="vm-advanced-search-button"]',
   detailsContainer: '[data-test="adv-search-details"]',
   nameInput: '[data-test="adv-search-vm-name"]',
   cluster: {
@@ -98,4 +98,38 @@ export const FLEET_VIRT_SAVED_SEARCH = {
     deleteItem: (name: string) => `[data-test="delete-search-item-${name}"]`,
     deleteAriaLabel: 'Delete saved search',
   },
+} as const;
+
+// =============================================================================
+// Tree view sidebar
+// =============================================================================
+
+export const FLEET_VIRT_TREE_VIEW = {
+  clusterPrefix: 'clusterSelector',
+  projectPrefix: 'projectSelector',
+  nodeToggle: 'button.pf-v6-c-tree-view__node-toggle',
+  nodeText: 'button.pf-v6-c-tree-view__node-text',
+} as const;
+
+// =============================================================================
+// VM action buttons (details page icon bar)
+// =============================================================================
+
+export const FLEET_VIRT_VM_ACTIONS = {
+  dropdown: '[data-test="actions-dropdown"]',
+  startButton: '[data-test-id="vm-action-start-button"]',
+  stopButton: '[data-test-id="vm-action-stop-button"]',
+  pauseButton: '[data-test-id="vm-action-pause-button"]',
+  restartButton: '[data-test-id="vm-action-restart-button"]',
+  statusLabel: '[data-test-id="virtual-machine-overview-details-status"]',
+  confirmAction: '[data-test="confirm-action"]',
+} as const;
+
+// =============================================================================
+// Test defaults
+// =============================================================================
+
+export const FLEET_VIRT_DEFAULTS = {
+  vmNamespace: 'default',
+  spokeCluster: process.env.VIRT_SPOKE_CLUSTER?.split(',')[0] || 'local-cluster',
 } as const;

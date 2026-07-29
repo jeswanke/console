@@ -41,8 +41,12 @@ export class FleetVirtPage extends BasePage {
       }
       await expect(h1).toBeVisible({ timeout: 10000 });
     }).toPass({ intervals: [5_000, 10_000, 15_000], timeout: 120_000 });
+  }
 
-    await this.waitForLoad();
+  async gotoVmTab(): Promise<void> {
+    const vmTab = this.page.getByRole('tab', { name: 'Virtual machines' });
+    await vmTab.click();
+    await expect(vmTab).toHaveAttribute('aria-selected', 'true', { timeout: 10000 });
   }
 
   async openAdvancedSearch(): Promise<void> {
@@ -67,7 +71,7 @@ export class FleetVirtPage extends BasePage {
   }
 
   getPageHeading(): Locator {
-    return this.page.locator('h1');
+    return this.page.locator('[data-test="page-heading"] h1');
   }
 
   /**
@@ -94,7 +98,7 @@ export class FleetVirtPage extends BasePage {
   async gotoVmDetails(cluster: string, namespace: string, vmName: string): Promise<void> {
     const consoleUrl = await this.oc.getConsoleUrl();
     await this.page.goto(
-      `${consoleUrl}/k8s/cluster/${cluster}/ns/${namespace}/kubevirt.io~v1~VirtualMachine/${vmName}`
+      `${consoleUrl}/fleet-virtualization/kubevirt.io~v1~VirtualMachine/cluster/${cluster}/ns/${namespace}/${vmName}`
     );
     await this.waitForLoad();
   }
@@ -110,5 +114,15 @@ export class FleetVirtPage extends BasePage {
   async clickBackToVmList(): Promise<void> {
     await this.page.getByRole('button', { name: 'Back to VirtualMachines list' }).click();
     await this.shouldLoad();
+  }
+
+  getVmTableRows(): Locator {
+    return this.page.getByRole('grid', { name: 'VirtualMachines table' }).getByRole('row');
+  }
+
+  async clickFirstVmInTable(): Promise<void> {
+    const grid = this.page.getByRole('grid', { name: 'VirtualMachines table' });
+    const firstLink = grid.getByRole('link').first();
+    await firstLink.click();
   }
 }

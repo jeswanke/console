@@ -33,6 +33,15 @@ export const RBAC_ROUTES = {
   roleDetails: (id: string) => `/multicloud/user-management/roles/${id}`,
   roleRoleAssignments: (id: string) =>
     `/multicloud/user-management/roles/${id}/role-assignments`,
+
+  clusterSetDetails: (name: string) =>
+    `/multicloud/infrastructure/clusters/sets/details/${name}`,
+  clusterSetRoleAssignments: (name: string) =>
+    `/multicloud/infrastructure/clusters/sets/details/${name}/role-assignments`,
+  clusterDetails: (namespace: string, name: string) =>
+    `/multicloud/infrastructure/clusters/details/${namespace}/${name}`,
+  clusterRoleAssignments: (namespace: string, name: string) =>
+    `/multicloud/infrastructure/clusters/details/${namespace}/${name}/role-assignments`,
 } as const;
 
 // =============================================================================
@@ -93,10 +102,12 @@ export const RBAC_RA_TABLE = {
   },
   rowActions: {
     kebabAriaLabel: 'Actions',
+    kebabSelector: 'button.pf-v6-c-menu-toggle[aria-label="Actions"]',
     editId: 'edit-role-assignment',
     editLabel: 'Edit role assignment',
     deleteId: 'delete-role-assignment',
     deleteLabel: 'Delete role assignment',
+    confirmInput: 'confirm',
   },
   filterIds: {
     role: 'role',
@@ -131,6 +142,7 @@ export const RBAC_WIZARD = {
 
   scopeInfo: {
     global: 'all current and future resources in all clusters',
+    clusterSets: 'all current and future resources on the selected cluster set',
   },
 
   identities: {
@@ -170,6 +182,7 @@ export const RBAC_WIZARD = {
 
   editMode: {
     noChangesAlert: 'No changes have been made. Please modify or cancel to exit.',
+    dangerAlertSelector: '.pf-v6-c-alert.pf-m-danger',
   },
 } as const;
 
@@ -220,6 +233,60 @@ export const GRANULARITY_OPTIONS = {
 } as const;
 
 export type GranularityOption = (typeof GRANULARITY_OPTIONS)[keyof typeof GRANULARITY_OPTIONS];
+
+// =============================================================================
+// Roles page (expected roles and permissions keywords)
+// =============================================================================
+
+export const RBAC_ROLES = {
+  expected: [
+    'acm-vm-cluster-migration:view',
+    'acm-vm-extended:admin',
+    'acm-vm-extended:view',
+    'acm-vm-fleet:admin',
+    'acm-vm-fleet:view',
+    'kubevirt.io:admin',
+    'kubevirt.io:edit',
+    'kubevirt.io:view',
+  ],
+  permissions: [
+    { name: 'acm-vm-cluster-migration:view', keywords: ['config.openshift.io', 'operators.coreos.com'] },
+    { name: 'acm-vm-extended:admin', keywords: [
+      'cdi.kubevirt.io', 'config.openshift.io', 'events.k8s.io', 'hco.kubevirt.io',
+      'k8s.cni.cncf.io', 'metrics.k8s.io', 'migrations.kubevirt.io', 'monitoring.coreos.com',
+      'observability.open-cluster-management.io', 'project.openshift.io',
+      'snapshot.storage.k8s.io', 'storage.k8s.io', 'template.openshift.io',
+    ] },
+    { name: 'acm-vm-extended:view', keywords: [
+      'cdi.kubevirt.io', 'config.openshift.io', 'events.k8s.io', 'hco.kubevirt.io',
+      'k8s.cni.cncf.io', 'metrics.k8s.io', 'migrations.kubevirt.io', 'monitoring.coreos.com',
+      'observability.open-cluster-management.io', 'project.openshift.io',
+      'snapshot.storage.k8s.io', 'storage.k8s.io', 'template.openshift.io',
+    ] },
+    { name: 'acm-vm-fleet:admin', keywords: [
+      'cluster.open-cluster-management.io', 'clusterview.open-cluster-management.io',
+      'forklift.konveyor.io',
+    ] },
+    { name: 'acm-vm-fleet:view', keywords: [
+      'cluster.open-cluster-management.io', 'clusterview.open-cluster-management.io',
+    ] },
+    { name: 'kubevirt.io:admin', keywords: [
+      'backup.kubevirt.io', 'clone.kubevirt.io', 'export.kubevirt.io',
+      'instancetype.kubevirt.io', 'kubevirt.io', 'migrations.kubevirt.io',
+      'pool.kubevirt.io', 'snapshot.kubevirt.io', 'subresources.kubevirt.io',
+    ] },
+    { name: 'kubevirt.io:edit', keywords: [
+      'backup.kubevirt.io', 'clone.kubevirt.io', 'export.kubevirt.io',
+      'instancetype.kubevirt.io', 'kubevirt.io', 'migrations.kubevirt.io',
+      'pool.kubevirt.io', 'snapshot.kubevirt.io', 'subresources.kubevirt.io',
+    ] },
+    { name: 'kubevirt.io:view', keywords: [
+      'backup.kubevirt.io', 'clone.kubevirt.io', 'export.kubevirt.io',
+      'instancetype.kubevirt.io', 'kubevirt.io', 'migrations.kubevirt.io',
+      'pool.kubevirt.io', 'snapshot.kubevirt.io', 'subresources.kubevirt.io',
+    ] },
+  ],
+} as const;
 
 // =============================================================================
 // MCRA resource definition (backend)

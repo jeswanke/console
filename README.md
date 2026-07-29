@@ -43,8 +43,8 @@ npx playwright install chromium
 | **`rbac-setup`** | RBAC user auth (`rbac-auth.setup.ts`) — used by **`fg-rbac`** and **`fleet-virt`**          |
 | **`cluster`**    | Cluster lifecycle — `src/tests/cluster/**` (**`./start.sh clc`** → **`--project cluster`**) |
 | **`governance`** | Governance — `src/tests/governance/**` (**`./start.sh grc`** → **`--project governance`**)  |
-| **`alc`**        | Application lifecycle — `src/tests/app/**` except `app/rbac/` (**`./start.sh alc`** → **`--project alc`**) |
-| **`alc-rbac`**   | ALC subscription-admin RBAC — `src/tests/app/rbac/**` (**`--project alc-rbac`**)                            |
+| **`search`**     | Search - `src/tests/search/**` (**`./start.sh search`** → **`--project search`**)           |
+| **`alc`**        | Application lifecycle — `src/tests/app/**` (**`./start.sh alc`** → **`--project alc`**)     |
 | **`fg-rbac`**    | Fine-grained RBAC — `src/tests/fg-rbac/**`                                                  |
 | **`fleet-virt`** | Fleet virtualization — `src/tests/fleet-virt/**`                                            |
 | **`unit`**       | YAML / loader tests — `src/tests/unit/**` (no hub)                                          |
@@ -176,16 +176,7 @@ console-e2e/
 │   ├── global-setup/        # clusterPrep, gitOpsPrep, projectArgv, logPrefix
 │   ├── tests/
 │   │   ├── auth.setup.ts
-│   │   ├── app/             # ALC UI (`--project alc`; `app/rbac/` → `--project alc-rbac`)
-│   │   │   ├── subscription/   # Git, Helm, Object, Ansible subscription suites
-│   │   │   ├── argo/
-│   │   │   │   ├── push/       # Push-model ApplicationSet suites
-│   │   │   │   ├── pull/       # Pull-model ApplicationSet suites
-│   │   │   │   └── platform/   # Argo CD agent, secrets, tolerations
-│   │   │   ├── flux/           # Flux CD applications
-│   │   │   ├── openshift/      # Native OCP applications
-│   │   │   ├── overview/       # Applications list/table chrome
-│   │   │   └── rbac/           # ALC RBAC (subscription-admin)
+│   │   ├── app/             # ALC UI (`--project alc`)
 │   │   ├── cluster/         # CLC UI (`--project cluster`)
 │   │   ├── governance/      # GRC UI (`--project governance`)
 │   │   └── unit/            # Config / lib unit tests (`--project unit`)
@@ -205,59 +196,11 @@ This runs once per `npx playwright test` execution.
 
 ## Writing New Tests
 
-### Test Case Naming Convention (Mandatory)
-
-Test titles **must** follow this format:
-
-```
-RHACM4K-XXXXX: <Component>: <Title>
-```
-
-| Part | Required | Description |
-| --- | --- | --- |
-| `RHACM4K-XXXXX` | **Yes** | Polarion test case ID. Every test must trace to a Polarion ID. |
-| `<Component>` | **Yes** | Short component tag: `ALC`, `CLC`, `GRC`, `Search`, `RBAC`. |
-| `<Title>` | **Yes** | Human-readable description of what the test verifies. |
-
-**Correct:**
-```typescript
-test('RHACM4K-16762: ALC: Verify FluxCD Git Application on local cluster appears in Applications table and topology', ...)
-test('RHACM4K-6818: GRC: Verify all Filter options for the Governance policy data table', ...)
-test('RHACM4K-57212: Search: Verify Search returns and displays expected results', ...)
-test('RHACM4K-64220: CLC: Placement cluster preview in standalone Create placement wizard', ...)
-```
-
-**Wrong:**
-```typescript
-test('should load and render the search page', ...)          // Missing Polarion ID and component
-test('RHACM4K-16762: Verify FluxCD Git Application', ...)    // Missing component tag
-test('displays Applications page with title', ...)            // Missing everything
-```
-
-**Component tags:**
-
-| Tag | Area |
-| --- | --- |
-| `ALC` | Application Lifecycle (subscriptions, Argo CD, Flux, OCP apps) |
-| `CLC` | Cluster Lifecycle (cluster list, placements, cluster sets) |
-| `GRC` | Governance, Risk, Compliance (policies, policy sets, discovered policies) |
-| `Search` | Search page, saved searches, overview |
-| `RBAC` | Role-based access control |
-
-When a single Polarion ID covers multiple sub-tests in a serial `test.describe`, each `test()` should still include the Polarion ID with a distinguishing suffix:
-
-```typescript
-test('RHACM4K-64165: GRC: policy appears on the policies list', ...)
-test('RHACM4K-64165: GRC: policy details page shows placement reference', ...)
-```
-
-### Example
-
 ```typescript
 import { test, expect } from '@fixtures/acm-test';
 
 test.describe('My Feature', () => {
-  test('RHACM4K-XXXXX: CLC: should do something', async ({ page, oc, uniqueName }) => {
+  test('should do something', async ({ page, oc, uniqueName }) => {
     // page - authenticated Playwright page
     // oc - OcCliService for backend operations
     // uniqueName - random unique name for test resources

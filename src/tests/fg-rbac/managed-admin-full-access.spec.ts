@@ -53,7 +53,7 @@ test.describe('FG-RBAC - Managed Admin Full Access', { tag: ['@fg-rbac', '@fleet
     asUser,
     oc,
   }) => {
-    const user = rbacConfig.managedAdminUser;
+    const user = rbacConfig.users['managed-admin-60468'];
     const spoke = rbacConfig.spokeCluster;
 
     test.skip(!spoke, 'RBAC_SPOKE_CLUSTER not set -- need a spoke cluster for this test');
@@ -126,19 +126,25 @@ test.describe('FG-RBAC - Managed Admin Full Access', { tag: ['@fg-rbac', '@fleet
       ).toBeVisible({ timeout: 30000 });
     });
 
-    // Poll for MCRA propagation
+    // Wait for all MCRAs to reach Applied status before checking visibility
     await expect(async () => {
       const userMCRAs = await oc.mcraGetForUser(user);
       expect(userMCRAs.length).toBeGreaterThanOrEqual(1);
-    }).toPass({ intervals: [3000, 5000, 10000], timeout: 60000 });
+      for (const mcra of userMCRAs) {
+        const conditions = (mcra.status as Record<string, unknown>)?.conditions as Record<string, unknown>[] | undefined;
+        const applied = conditions?.find((c) => c.type === 'Applied');
+        expect(applied?.status).toBe('True');
+      }
+    }).toPass({ intervals: [5000, 10000, 15000], timeout: 120000 });
 
     // -- Polarion Step 4: Login as RBAC user, verify access --
-    const rbacSession = await asUser('fg-rbac-managed-admin');
+    const rbacSession = await asUser('fg-rbac-managed-admin-60468');
     const fleetVirtPage = new FleetVirtPage(rbacSession.page, oc);
     const vmDetailsPage = new VmDetailsPage(rbacSession.page);
 
     await test.step('3a: Navigate to Fleet Virt and verify VM list', async () => {
       await fleetVirtPage.goto();
+      await fleetVirtPage.gotoVmTab();
       await expect(fleetVirtPage.getNoVMsEmptyState()).toBeHidden({ timeout: 30000 });
     });
 
@@ -203,9 +209,10 @@ test.describe('FG-RBAC - Managed Admin Full Access', { tag: ['@fg-rbac', '@fleet
       const roles = await oc.mcraGetRolesForUser(user);
       expect(roles).toContain('acm-vm-fleet:view');
     });
+
   });
 
   test.afterEach(async ({ oc, rbacConfig }) => {
-    await oc.mcraDeleteAllForUser(rbacConfig.managedAdminUser);
+    await oc.mcraDeleteAllForUser(rbacConfig.users['managed-admin-60468']);
   });
 });

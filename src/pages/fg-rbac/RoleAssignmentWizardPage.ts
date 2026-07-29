@@ -5,6 +5,7 @@ import {
   SCOPE_TYPES,
   RBAC_WIZARD,
   ScopeType,
+  GranularityOption,
 } from '@constants/fg-rbac';
 
 /**
@@ -55,9 +56,30 @@ export class RoleAssignmentWizardPage extends BasePage {
     return this.page.getByRole('option', { name: scopeType });
   }
 
-  async selectClusters(names: string[]): Promise<void> {
+  private async checkTableRows(names: string[]): Promise<void> {
     for (const name of names) {
       await this.modal.getByRole('row', { name }).getByRole('checkbox').check();
+    }
+  }
+
+  async selectClusterSets(names: string[]): Promise<void> {
+    await this.checkTableRows(names);
+  }
+
+  async selectClusters(names: string[]): Promise<void> {
+    await this.checkTableRows(names);
+  }
+
+  async selectGranularity(option: GranularityOption): Promise<void> {
+    await this.modal.getByRole('combobox').click();
+    await this.page.getByRole('option', { name: option }).click();
+    await this.waitForLoad();
+  }
+
+  async selectProjects(names: string[]): Promise<void> {
+    await this.waitForLoad();
+    for (const name of names) {
+      await this.modal.getByRole('row', { name }).getByRole('checkbox').check({ timeout: 60000 });
     }
   }
 
@@ -96,9 +118,37 @@ export class RoleAssignmentWizardPage extends BasePage {
   }
 
   getSuccessNotification(): Locator { return this.page.getByText(RBAC_WIZARD.notifications.added); }
+  getUpdatedNotification(): Locator { return this.page.getByText(RBAC_WIZARD.notifications.updated); }
   getDuplicateError(): Locator { return this.page.getByText(RBAC_WIZARD.notifications.duplicate); }
+
+  async selectIdentity(username: string): Promise<void> {
+    const searchInput = this.modal.getByRole('textbox', { name: 'Search input' });
+    await searchInput.clear();
+    await searchInput.fill(username);
+    await this.modal.getByRole('radio', { name: `Select ${username}` }).click({ timeout: 30000 });
+  }
 
   getWizardTitle(): Locator { return this.modal.getByRole('heading').first(); }
 
   getModal(): Locator { return this.modal; }
+
+  // ---------------------------------------------------------------------------
+  // Edit mode support
+  // ---------------------------------------------------------------------------
+
+  getNoChangesAlert(): Locator {
+    return this.modal.locator(RBAC_WIZARD.editMode.dangerAlertSelector);
+  }
+
+  getDiffStrikethrough(): Locator {
+    return this.modal.locator('s');
+  }
+
+  getUpdateButton(): Locator {
+    return this.modal.getByRole('button', { name: 'Save', exact: true });
+  }
+
+  async submitUpdate(): Promise<void> {
+    await this.getUpdateButton().click();
+  }
 }

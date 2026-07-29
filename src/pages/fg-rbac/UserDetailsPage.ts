@@ -1,8 +1,9 @@
-import { Page, Locator, expect } from '@playwright/test';
+import { Page, Locator } from '@playwright/test';
 import { BasePage } from '@pages/BasePage';
 import { RoleAssignmentsTable } from '@components/fg-rbac/RoleAssignmentsTable';
 import { OcCliService } from '@services/OcCliService';
-import { RBAC_ROUTES, RBAC_USER_DETAIL, RBAC_RA_TABLE } from '@constants/fg-rbac';
+import { RBAC_ROUTES, RBAC_USER_DETAIL } from '@constants/fg-rbac';
+import { openCreateRoleAssignment } from '@lib/fg-rbac/role-assignment-actions';
 
 /**
  * User detail page with tabs: Details, YAML, Role assignments, Groups.
@@ -27,9 +28,29 @@ export class UserDetailsPage extends BasePage {
     this.roleAssignmentsTab = page.getByRole('tab', { name: RBAC_USER_DETAIL.tabs.roleAssignments });
   }
 
+  getPageHeading(): Locator {
+    return this.page.getByRole('heading', { level: 1 });
+  }
+
+  getGeneralInfoSection(): Locator {
+    return this.page.getByRole('heading', {
+      name: RBAC_USER_DETAIL.fields.generalInformation, level: 3,
+    }).locator('..');
+  }
+
   async goto(userId: string): Promise<void> {
     const consoleUrl = await this.oc.getConsoleUrl();
     await this.page.goto(`${consoleUrl}${RBAC_ROUTES.userDetails(userId)}`);
+    await this.waitForLoad();
+  }
+
+  async gotoUserViaSearch(username: string): Promise<void> {
+    const consoleUrl = await this.oc.getConsoleUrl();
+    await this.page.goto(`${consoleUrl}${RBAC_ROUTES.identities}`);
+    await this.waitForLoad();
+    const search = this.page.locator('input[placeholder="Search"]').first();
+    await search.fill(username);
+    await this.page.getByRole('link', { name: username, exact: true }).click();
     await this.waitForLoad();
   }
 
@@ -45,11 +66,20 @@ export class UserDetailsPage extends BasePage {
   }
 
   async openCreateRoleAssignment(): Promise<void> {
-    const createButton = this.page.getByRole('button', {
-      name: RBAC_RA_TABLE.toolbar.createButtonLabel,
-    });
-    await expect(createButton).not.toHaveAttribute('aria-disabled', 'true', { timeout: 60000 });
-    await createButton.click();
+    await openCreateRoleAssignment(this.page);
   }
 
+  // ---------------------------------------------------------------------------
+  // Group detail navigation
+  // ---------------------------------------------------------------------------
+
+  async gotoGroupDetail(groupName: string): Promise<void> {
+    const consoleUrl = await this.oc.getConsoleUrl();
+    await this.page.goto(`${consoleUrl}${RBAC_ROUTES.identities}`);
+    await this.waitForLoad();
+    await this.page.getByRole('tab', { name: 'Groups' }).click();
+    await this.waitForLoad();
+    await this.page.getByRole('link', { name: groupName, exact: true }).click();
+    await this.waitForLoad();
+  }
 }
