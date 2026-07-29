@@ -3,6 +3,7 @@
 import { Page, Locator, expect } from '@playwright/test';
 import { AcmTable } from '@components/patternfly/AcmTable';
 import {
+  GOV_TABLE,
   GOV_TABLE_COLUMNS,
   GOV_TOOLBAR,
   GOV_FILTER,
@@ -18,7 +19,7 @@ export class GovernanceTable extends AcmTable {
   private readonly drawerBody: Locator;
 
   constructor(page: Page) {
-    super(page);
+    super(page, GOV_TABLE.ariaLabel);
     this.drawerBody = page.locator('.pf-v6-c-drawer__body').first();
   }
 

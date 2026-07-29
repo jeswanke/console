@@ -253,7 +253,8 @@ export const APP_COMPARE_POPOVER = {
 // =============================================================================
 
 export const APP_TABLE = {
-  ariaLabel: 'Simple Table',
+  /** Accessible name from stolostron/console AcmTable (`t('Applications table')`, ACM-5264). */
+  ariaLabel: 'Applications table',
   role: 'grid' as const,
   /** Pagination */
   paginationTopId: 'options-menu-top-pagination',
@@ -438,7 +439,12 @@ export const APP_ADVANCED_CONFIG = {
     /** RHACM4K-64170 — removed PlacementRule sub-tab label. */
     removedTabLabelPattern: /Placement\s*Rules?/i,
   },
-  /** Same toolbar search/export/pagination ids as Overview; table uses APP_TABLE. */
+  /**
+   * Advanced configuration resource tables (Subscriptions / Channels).
+   * Accessible name from stolostron/console ToggleSelector (`t('Application resources table')`, ACM-5264).
+   */
+  tableAriaLabel: 'Application resources table',
+  /** Same toolbar search/export/pagination ids as Overview; table uses APP_TABLE / tableAriaLabel. */
   /** Empty state (when no resources). Verify title, body, and actions. */
   emptyState: {
     /** Common Advanced subscriptions empty body. */

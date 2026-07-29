@@ -5,12 +5,27 @@ import { acmToolbarSearchLocator } from '@components/patternfly/AcmSearchInput';
 /**
  * PatternFly-oriented table primitive for ACM list pages (search, rows by OUIA id).
  * Domain-specific tables extend this (e.g. ApplicationsTable).
+ *
+ * Pass `ariaLabel` when the page’s AcmTable has a meaningful accessible name
+ * (required in stolostron/console since ACM-5264; previously all were "Simple Table").
  */
 export class AcmTable {
   private readonly searchInput: Locator;
 
-  constructor(protected readonly page: Page) {
+  constructor(
+    protected readonly page: Page,
+    /** Accessible name of the PatternFly grid (AcmTable `aria-label`). */
+    protected readonly ariaLabel?: string
+  ) {
     this.searchInput = acmToolbarSearchLocator(page);
+  }
+
+  /** Root grid for this table when `ariaLabel` was provided. */
+  getGrid(): Locator {
+    if (this.ariaLabel) {
+      return this.page.getByRole('grid', { name: this.ariaLabel });
+    }
+    return this.page.getByRole('grid').first();
   }
 
   async search(text: string): Promise<void> {
@@ -38,7 +53,7 @@ export class AcmTable {
   async verifyEmpty(): Promise<void> {
     // AcmTable renders `AcmEmptyState` with title in an h4 (PF EmptyStateHeader).
     await expect(this.page.getByRole('heading', { name: /no results found/i })).toBeVisible();
-    await expect(this.page.getByText(/no results match the filter criteria/i)).toBeVisible();
+    await expect(this.page.getByText(/no results match the filter criteria/i )).toBeVisible();
   }
 
   async clickRow(ouiaId: string): Promise<void> {
@@ -46,19 +61,18 @@ export class AcmTable {
   }
 
   async verifyColumnHeaderVisible(columnName: string): Promise<void> {
-    await expect(
-      this.page.getByRole('columnheader', { name: columnName, exact: true })
-    ).toBeVisible();
+    const scope = this.ariaLabel ? this.getGrid() : this.page;
+    await expect(scope.getByRole('columnheader', { name: columnName, exact: true })).toBeVisible();
   }
 
   async verifyColumnHeaderNotVisible(columnName: string): Promise<void> {
-    await expect(
-      this.page.getByRole('columnheader', { name: columnName, exact: true })
-    ).toBeHidden();
+    const scope = this.ariaLabel ? this.getGrid() : this.page;
+    await expect(scope.getByRole('columnheader', { name: columnName, exact: true })).toBeHidden();
   }
 
   async verifyColumnOrder(expectedOrder: string[]): Promise<void> {
-    const headers = await this.page.locator('thead th').allTextContents();
+    const headerRoot = this.ariaLabel ? this.getGrid() : this.page;
+    const headers = await headerRoot.locator('thead th').allTextContents();
 
     const indices: number[] = [];
     for (const column of expectedOrder) {
