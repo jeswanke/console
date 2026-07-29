@@ -60,3 +60,4 @@ export const CLUSTER_MANAGE_COLUMNS = {
   restoreDefaults: 'Restore defaults',
   checkboxId: (columnId: string) => `checkbox-${columnId}`,
 } as const;
+

@@ -82,6 +82,9 @@ export class CclmWizardPage extends BasePage {
 
   async clickMigrate(): Promise<void> {
     await expect(this.getMigrateButton()).toBeVisible({ timeout: 10000 });
+    // Allow React state (storageMap/networkMap) to fully propagate to the submit callback
+    // after readiness checks pass -- prevents null metadata race condition in CCLM wizard.
+    await this.page.waitForTimeout(2000);
     await this.getMigrateButton().click();
   }
 

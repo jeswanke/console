@@ -15,10 +15,6 @@ import {
  * shouldLoad() is a wait guard (acceptable use of expect in page object).
  */
 export class FleetVirtPage extends BasePage {
-  override async waitForLoad(timeout = 60000): Promise<void> {
-    await super.waitForLoad(timeout);
-  }
-
   constructor(
     page: Page,
     private readonly oc: OcCliService
@@ -140,5 +136,70 @@ export class FleetVirtPage extends BasePage {
     const grid = this.page.getByRole('grid', { name: 'VirtualMachines table' });
     const firstLink = grid.getByRole('link').first();
     await firstLink.click();
+  }
+
+  getVmRow(vmName: string): Locator {
+    return this.page.getByRole('row').filter({ hasText: vmName });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Bulk VM selection and actions
+  // ---------------------------------------------------------------------------
+
+  async selectVmByCheckbox(vmName: string): Promise<void> {
+    const row = this.page.getByRole('row').filter({ hasText: vmName });
+    const checkbox = row.getByRole('checkbox');
+    await expect(checkbox).toBeVisible({ timeout: 15000 });
+    const isChecked = await checkbox.isChecked();
+    if (!isChecked) {
+      await checkbox.click();
+    }
+  }
+
+  async selectMultipleVms(vmNames: string[]): Promise<void> {
+    for (const vmName of vmNames) {
+      await this.selectVmByCheckbox(vmName);
+      await this.page.waitForTimeout(500);
+    }
+    await expect(this.page.getByText(/\d+ selected/)).toBeVisible({ timeout: 10000 });
+  }
+
+  async openBulkActions(): Promise<void> {
+    await expect(this.page.getByText(/\d+ selected/)).toBeVisible({ timeout: 10000 });
+    const tabPanel = this.page.getByRole('tabpanel', { name: 'Virtual machines' });
+    const actionsBtn = tabPanel.getByRole('button', { name: 'Actions', exact: true }).first();
+    await expect(actionsBtn).toBeEnabled({ timeout: 10000 });
+    await actionsBtn.click();
+  }
+
+  /**
+   * Trigger bulk cross-cluster migration via flyout menu.
+   * PF6 flyout menus require hover on parent to reveal the submenu.
+   */
+  async triggerBulkCrossClusterMigration(): Promise<void> {
+    await this.openBulkActions();
+    const menu = this.page.getByRole('menu');
+    const migrationBtn = menu.getByRole('button', { name: 'Migration', exact: true });
+    await migrationBtn.hover();
+    const crossClusterItem = this.page.getByRole('menuitem', { name: /Cross.?cluster/i });
+    await expect(crossClusterItem).toBeVisible({ timeout: 5000 });
+    await crossClusterItem.click();
+  }
+
+  /**
+   * Trigger a bulk control action (start/stop/pause/unpause/restart).
+   * PF6 flyout menus require hover on parent to reveal the submenu.
+   */
+  async triggerBulkControlAction(action: 'start' | 'stop' | 'pause' | 'unpause' | 'restart'): Promise<void> {
+    await this.openBulkActions();
+    const menu = this.page.getByRole('menu');
+    const controlBtn = menu.getByRole('button', { name: 'Control', exact: true });
+    await controlBtn.hover();
+    const labelMap: Record<string, string> = {
+      start: 'Start', stop: 'Stop', pause: 'Pause', unpause: 'Unpause', restart: 'Restart',
+    };
+    const actionItem = this.page.getByRole('menuitem', { name: labelMap[action], exact: true });
+    await expect(actionItem).toBeVisible({ timeout: 5000 });
+    await actionItem.click();
   }
 }

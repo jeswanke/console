@@ -19,9 +19,12 @@ export class TreeView {
   async expandCluster(clusterName: string): Promise<void> {
     const node = this.page.locator(`li[id="${FLEET_VIRT_TREE_VIEW.clusterPrefix}/${clusterName}"]`);
     await node.scrollIntoViewIfNeeded();
-    const toggle = node.locator(FLEET_VIRT_TREE_VIEW.nodeToggle);
-    if (await toggle.isVisible()) {
-      await toggle.click();
+    const isExpanded = await node.getAttribute('aria-expanded');
+    if (isExpanded !== 'true') {
+      const toggle = node.locator(FLEET_VIRT_TREE_VIEW.nodeToggle);
+      if (await toggle.isVisible()) {
+        await toggle.click();
+      }
     }
   }
 

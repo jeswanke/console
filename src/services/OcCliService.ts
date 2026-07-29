@@ -943,6 +943,76 @@ EOF`);
   }
 
   // ---------------------------------------------------------------------------
+  // ResourceQuota operations (for CCLM failure simulation)
+  // ---------------------------------------------------------------------------
+
+  async applyResourceQuota(
+    name: string,
+    namespace: string,
+    limits: { cpu?: string; memory?: string },
+    options?: { context?: string },
+  ): Promise<void> {
+    const ctx = options?.context ? ` --context=${options.context}` : '';
+    const hardLimits: string[] = [];
+    if (limits.cpu) hardLimits.push(`    limits.cpu: "${limits.cpu}"`);
+    if (limits.memory) hardLimits.push(`    limits.memory: "${limits.memory}"`);
+
+    await this.run(`oc apply${ctx} -f - <<'EOF'
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: ${name}
+  namespace: ${namespace}
+spec:
+  hard:
+${hardLimits.join('\n')}
+EOF`);
+  }
+
+  async deleteResourceQuota(
+    name: string,
+    namespace: string,
+    options?: { context?: string },
+  ): Promise<void> {
+    const ctx = options?.context ? ` --context=${options.context}` : '';
+    await this.run(
+      `oc delete resourcequota ${name} -n ${namespace}${ctx} --ignore-not-found`
+    );
+  }
+
+  async resourceQuotaExists(
+    name: string,
+    namespace: string,
+    options?: { context?: string },
+  ): Promise<boolean> {
+    const ctx = options?.context ? ` --context=${options.context}` : '';
+    const output = await this.run(
+      `oc get resourcequota ${name} -n ${namespace}${ctx} --no-headers 2>/dev/null || true`
+    );
+    return output.includes(name);
+  }
+
+  // ---------------------------------------------------------------------------
+  // StorageClass operations (for KubeVirt hosted cluster wizard validation)
+  // ---------------------------------------------------------------------------
+
+  async getStorageClasses(options?: { context?: string }): Promise<string[]> {
+    const ctx = options?.context ? ` --context=${options.context}` : '';
+    const output = await this.run(
+      `oc get sc${ctx} -o jsonpath='{.items[*].metadata.name}' 2>/dev/null || true`
+    );
+    return output.trim().split(/\s+/).filter(Boolean);
+  }
+
+  async getVolumeSnapshotClasses(options?: { context?: string }): Promise<string[]> {
+    const ctx = options?.context ? ` --context=${options.context}` : '';
+    const output = await this.run(
+      `oc get volumesnapshotclass${ctx} -o jsonpath='{.items[*].metadata.name}' 2>/dev/null || true`
+    );
+    return output.trim().split(/\s+/).filter(Boolean);
+  }
+
+  // ---------------------------------------------------------------------------
   // Policy (ConfigurationPolicy) operations
   // ---------------------------------------------------------------------------
 

@@ -2,17 +2,17 @@
  * Fleet Virtualization constants.
  *
  * Organized hierarchically by UI location:
- *   FLEET_VIRT_ROUTES       -- navigation paths
- *   FLEET_VIRT_PAGE         -- page-level elements (perspective switcher, heading)
- *   FLEET_VIRT_SEARCH       -- VM search bar (autocomplete dropdown)
+ *   FLEET_VIRT_ROUTES          -- navigation paths
+ *   FLEET_VIRT_PAGE            -- page-level elements (perspective switcher, heading)
+ *   FLEET_VIRT_SEARCH          -- VM search bar (autocomplete dropdown)
  *   FLEET_VIRT_ADVANCED_SEARCH -- advanced search modal (cluster/project/name filters)
- *   FLEET_VIRT_SAVED_SEARCH -- save/load/remove saved searches
- *   FLEET_VIRT_VM_TABLE     -- VM list table (VirtualizedTable, NOT AcmTable)
- *   FLEET_VIRT_TREE_VIEW    -- left sidebar tree view
+ *   FLEET_VIRT_SAVED_SEARCH    -- save/load/remove saved searches
+ *   FLEET_VIRT_TREE_VIEW       -- left sidebar tree view
+ *   FLEET_VIRT_VM_ACTIONS      -- VM details page action buttons
+ *   FLEET_VIRT_VM_CREATION     -- VM creation wizard (RHACM4K-60559)
  *
- * Selectors verified against kubevirt-ui/kubevirt-plugin release-4.21 via acm-ui MCP.
- * Fleet Virt uses VirtualizedTable from @openshift-console/dynamic-plugin-sdk,
- * not AcmTable from stolostron/console.
+ * Selectors verified against kubevirt-ui/kubevirt-plugin source (main branch)
+ * and live ACM 2.16 + CNV environment via browser MCP (2026-07-28).
  */
 
 // =============================================================================
@@ -123,6 +123,44 @@ export const FLEET_VIRT_VM_ACTIONS = {
   restartButton: '[data-test-id="vm-action-restart-button"]',
   statusLabel: '[data-test-id="virtual-machine-overview-details-status"]',
   confirmAction: '[data-test="confirm-action"]',
+} as const;
+
+// =============================================================================
+// VM creation wizard (RHACM4K-60559)
+//
+// Verified via kubevirt-plugin Playwright page objects + live DOM inspection.
+// Key pattern: the primary button selector resolves to "Next" or "Create VirtualMachine"
+// depending on wizard step. PF6 uses aria-disabled for loading states.
+// =============================================================================
+
+export const FLEET_VIRT_VM_CREATION = {
+  wizardContainer: '.pf-v6-c-wizard.vm-creation-wizard',
+  wizardRoute: (cluster: string) =>
+    `/fleet-virtualization/vm-wizard/cluster/${cluster}/all-namespaces`,
+
+  vmNameInput: '#vm-name',
+  generateNameButton: '[data-test="generate-vm-name-button"]',
+
+  primaryButton: '.pf-v6-c-wizard button.pf-v6-c-button.pf-m-primary',
+  backButton: '.pf-v6-c-wizard button.pf-v6-c-button.pf-m-secondary',
+  cancelButton: '.pf-v6-c-wizard button.pf-v6-c-button.pf-m-link',
+
+  creationMethod: {
+    customConfigCard: '#instance-type.pf-v6-c-card',
+    templateCard: '#template.pf-v6-c-card',
+    cloneCard: '#clone.pf-v6-c-card',
+  },
+
+  templateCatalog: {
+    tile: '.templates-catalog-tile',
+    tileByName: (name: string) => `[data-test-id="${name}"]`,
+    selectedClass: 'pf-m-selected',
+  },
+
+  bootSource: {
+    tableRow: '.pf-v6-c-wizard table tbody tr',
+    nameCell: 'td[id="name"]',
+  },
 } as const;
 
 // =============================================================================

@@ -59,6 +59,91 @@ export async function cleanupVmAndSnapshots(name: string, namespace: string): Pr
 }
 
 // ---------------------------------------------------------------------------
+// Multi-VM lifecycle (bulk migration)
+// ---------------------------------------------------------------------------
+
+export async function ensureMultipleVmsWithPvcReady(
+  names: string[],
+  namespace: string,
+  labels: Record<string, string>,
+): Promise<void> {
+  for (const name of names) {
+    await oc.vmEnsureTestVMWithPVC(name, namespace, labels);
+  }
+  for (const name of names) {
+    await expect(async () => {
+      const running = await oc.vmIsRunning(name, namespace);
+      expect(running).toBeTruthy();
+    }).toPass({ intervals: [10000, 15000, 30000], timeout: 300000 });
+  }
+}
+
+export async function cleanupMultipleCclmResources(
+  names: string[],
+  namespace: string,
+  spokeCluster: string,
+): Promise<void> {
+  for (const name of names) {
+    await oc.vmDeleteTestVM(name, namespace);
+    await oc.deleteDataVolume(`${name}-dv`, namespace);
+    await oc.vmDeleteTestVM(name, namespace, { context: spokeCluster });
+  }
+  await oc.cleanupForkliftResources('mtv-integrations');
+  await cleanupOrphanedVmims(namespace, spokeCluster);
+}
+
+export async function cleanupOrphanedVmims(
+  namespace: string,
+  spokeContext: string,
+): Promise<void> {
+  // Clean VMIMs on spoke
+  const spokeVmims = await oc.run(
+    `oc get virtualmachineinstancemigrations -n ${namespace} --context ${spokeContext} -o jsonpath='{.items[*].metadata.name}' 2>/dev/null || true`,
+  );
+  for (const vmim of spokeVmims.trim().split(/\s+/).filter(Boolean)) {
+    await oc.run(
+      `oc patch virtualmachineinstancemigration ${vmim} -n ${namespace} --context ${spokeContext} --type=merge -p '{"metadata":{"finalizers":null}}' 2>/dev/null || true`,
+    );
+    await oc.run(
+      `oc delete virtualmachineinstancemigration ${vmim} -n ${namespace} --context ${spokeContext} --force --grace-period=0 2>/dev/null || true`,
+    );
+  }
+  // Clean VMIMs on hub (source-side VMIMs from previous CCLM runs)
+  const hubVmims = await oc.run(
+    `oc get virtualmachineinstancemigrations -n ${namespace} -o jsonpath='{.items[*].metadata.name}' 2>/dev/null || true`,
+  );
+  for (const vmim of hubVmims.trim().split(/\s+/).filter(Boolean)) {
+    await oc.run(
+      `oc patch virtualmachineinstancemigration ${vmim} -n ${namespace} --type=merge -p '{"metadata":{"finalizers":null}}' 2>/dev/null || true`,
+    );
+    await oc.run(
+      `oc delete virtualmachineinstancemigration ${vmim} -n ${namespace} --force --grace-period=0 2>/dev/null || true`,
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// ResourceQuota helpers (failed migration simulation)
+// ---------------------------------------------------------------------------
+
+export async function applySpokeResourceQuota(
+  namespace: string,
+  spokeContext: string,
+): Promise<void> {
+  await oc.applyResourceQuota('mtv-migration-deny', namespace, {
+    cpu: '100m',
+    memory: '256Mi',
+  }, { context: spokeContext });
+}
+
+export async function deleteSpokeResourceQuota(
+  namespace: string,
+  spokeContext: string,
+): Promise<void> {
+  await oc.deleteResourceQuota('mtv-migration-deny', namespace, { context: spokeContext });
+}
+
+// ---------------------------------------------------------------------------
 // MCRA / user cleanup
 // ---------------------------------------------------------------------------
 
@@ -87,6 +172,7 @@ export async function cleanupCclmResources(
   await oc.deleteDataVolume(`${vmName}-dv`, vmNamespace);
   await oc.vmDeleteTestVM(vmName, vmNamespace, { context: spokeCluster });
   await oc.cleanupForkliftResources('mtv-integrations');
+  await cleanupOrphanedVmims(vmNamespace, spokeCluster);
 }
 
 // ---------------------------------------------------------------------------
