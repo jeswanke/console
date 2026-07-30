@@ -308,8 +308,15 @@ test.describe(
           'topology'
         );
         const { applicationName, namespace } = addOptions;
-        const block1Clusters = await oc.getPlacementDecisionClusterNames(namespace, `${applicationName}-placement-1`);
-        const block2Clusters = await oc.getPlacementDecisionClusterNames(namespace, `${applicationName}-placement-2`);
+        const subs = await oc.run(
+          `oc get subscription.apps.open-cluster-management.io -n ${namespace} --no-headers -o custom-columns=NAME:.metadata.name`
+        ).then((out) => out.trim().split('\n').filter((s) => s.includes(applicationName) && !s.includes('-local')).sort());
+        const sub1Idx = parseInt(subs[0]?.match(/-(\d+)$/)?.[1] ?? '1', 10);
+        const sub2Idx = parseInt(subs[1]?.match(/-(\d+)$/)?.[1] ?? '2', 10);
+        const placement1 = `${applicationName}-placement-${sub1Idx}`;
+        const placement2 = `${applicationName}-placement-${sub2Idx}`;
+        const block1Clusters = await oc.getPlacementDecisionClusterNames(namespace, placement1);
+        const block2Clusters = await oc.getPlacementDecisionClusterNames(namespace, placement2);
         await verifySubscriptionAppTopologyTab({
           page,
           detailsPage: applicationDetailsPage,
@@ -317,8 +324,8 @@ test.describe(
           namespace,
           subscriptionScope: 'all',
           mergedSubscriptionBlocks: [
-            { blockIndex: 1, clusterName: [...block1Clusters].sort().join('--') || 'local-cluster', clusterResourceRows: expectations.topologyClusterResourceBlocks[1]! },
-            { blockIndex: 2, clusterName: [...block2Clusters].sort().join('--') || 'local-cluster', clusterResourceRows: expectations.topologyClusterResourceBlocks[0]! },
+            { blockIndex: sub1Idx, clusterName: [...block1Clusters].sort().join('--') || 'local-cluster', clusterResourceRows: expectations.topologyClusterResourceBlocks[1]! },
+            { blockIndex: sub2Idx, clusterName: [...block2Clusters].sort().join('--') || 'local-cluster', clusterResourceRows: expectations.topologyClusterResourceBlocks[0]! },
           ],
         });
       }
