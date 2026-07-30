@@ -9,7 +9,7 @@ import {
 
 test.describe(
   'Applications Advanced configuration — RHACM4K-64170',
-  { tag: ['@app', '@alc', '@UI'] },
+  { tag: ['@app', '@alc'] },
   () => {
     test(
       'RHACM4K-64170: ALC: As an application admin, I can verify removal of the PlacementRule tab, and removal of PlacementRule terminology',

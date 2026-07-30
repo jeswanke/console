@@ -4,7 +4,7 @@ import { APP_TABLE_COLUMNS, APP_TABLE_MANAGE_COLUMNS } from '@constants/app';
 
 test.describe(
   'Applications list manage columns',
-  { tag: ['@app', '@alc', '@UI'] },
+  { tag: ['@app', '@alc'] },
   () => {
     test(
       'RHACM4K-63768: ALC: As a cluster admin, I can manage additional columns for different applications',

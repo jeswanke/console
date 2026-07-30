@@ -14,7 +14,7 @@ import { skipUnlessPrimaryManagedCluster } from '@lib/cluster/managedClusterCont
 import { test } from '@fixtures/app-test';
 
 test.describe('Ansible Large Scale', {
-  tag: ['@ALC', '@ansible', '@ansible-scale', '@alc', '@app'],
+  tag: ['@ansible', '@ansible-scale', '@alc', '@app'],
 }, () => {
   test.describe.configure({ mode: 'serial' });
 
@@ -28,7 +28,7 @@ test.describe('Ansible Large Scale', {
 
   test(
     'RHACM4K-42375: ALC: Ansible large scale integration - Deploy and sync an ansible appsub with only 1 prehook job on a real managed cluster',
-    { tag: ['@RHACM4K-42375', '@UI', '@e2e-ansible'] },
+    { tag: ['@RHACM4K-42375', '@e2e'] },
     async ({ oc, applicationDetailsPage, managedClusterContext }) => {
       test.setTimeout(900_000);
 
@@ -73,7 +73,7 @@ test.describe('Ansible Large Scale', {
 
   test(
     'RHACM4K-42376: ALC: Ansible large scale integration - Deploy and sync an ansible appsub with only 1 posthook job on a real managed cluster',
-    { tag: ['@RHACM4K-42376', '@UI', '@e2e-ansible'] },
+    { tag: ['@RHACM4K-42376', '@e2e'] },
     async ({ oc, applicationDetailsPage, managedClusterContext }) => {
       test.setTimeout(900_000);
 

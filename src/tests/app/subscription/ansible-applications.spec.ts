@@ -26,7 +26,7 @@ const POST_CREATE_POLL_TIMEOUT = 300_000;
 const RHACM4K_3442_CREDENTIAL_NAME = 'rhacm4k-3442';
 
 test.describe('Ansible Applications', {
-  tag: ['@ALC', '@ansible', '@ansible-main', '@alc', '@app'],
+  tag: ['@ansible', '@ansible-main', '@alc', '@app'],
 }, () => {
   test.describe.configure({ mode: 'serial' });
 
@@ -36,7 +36,7 @@ test.describe('Ansible Applications', {
 
   test(
     'RHACM4K-20541: ALC: Ansible integration - Add new secret using credential pop-up wizard on Ansible Application Creation page',
-    { tag: ['@e2e-ansible', '@RHACM4K-20541', '@UI'] },
+    { tag: ['@e2e', '@RHACM4K-20541'] },
     async ({
       page,
       oc,
@@ -98,7 +98,7 @@ test.describe('Ansible Applications', {
 
   test(
     'RHACM4K-1560: ALC: Ansible integration - Pre and Post subscription',
-    { tag: ['@e2e-ansible', '@RHACM4K-1560', '@UI', '@pre-restore', '@post-restore'] },
+    { tag: ['@e2e', '@RHACM4K-1560', '@pre-restore', '@post-restore'] },
     async ({
       page,
       oc,
@@ -162,7 +162,7 @@ test.describe('Ansible Applications', {
 
   test(
     'RHACM4K-3442: ALC: Ansible Integration - Add Ansible Tower Secret using Credentials Tab',
-    { tag: ['@e2e-ansible', '@RHACM4K-3442', '@UI'] },
+    { tag: ['@e2e', '@RHACM4K-3442'] },
     async ({ page, oc }) => {
       test.setTimeout(600_000);
 

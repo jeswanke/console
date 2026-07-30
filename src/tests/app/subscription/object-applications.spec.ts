@@ -1,5 +1,5 @@
 /**
- * RHACM4K-7485, 7812–7815, 7561, 45792, 37154–37156, 54900, 54904, 54915, 59696 — Object storage ALC suite.
+ * RHACM4K-7485, 7812–7815, 7561, 45792 — Object storage ALC suite.
  *
  * Cypress: `Object_Storage_Application_Test_Suite.cy.js`.
  * Scenario data: `object-applications.yaml` + `_shared.yaml` object storage fragments.
@@ -11,7 +11,6 @@ import {
 import {
   applyObjectStoreAuthToSubscriptionOptions,
   skipUnlessObjectStoreAuthConfigured,
-  skipUnlessObjectStoreTlsConfigured,
 } from '@lib/app/auth/object-store-auth';
 import {
   addSubscriptionToExistingApplication,
@@ -20,18 +19,7 @@ import {
   deleteSubscriptionFromExistingApplication,
 } from '@lib/app/subscription';
 import {
-  applyObjectAddSubscriptionYaml,
-  applyObjectKustomizeAppYaml,
-  applyObjectMultiSubscriptionApiYaml,
-  applyObjectTlsSubscriptionYaml,
-  deleteObjectMultiApiSubscription,
   deleteObjectMultiApplicationViaOc,
-  expectManagedClusterRouteReady,
-  expectNamespaceDeployableResources,
-  expectObjectApplicationApiResourcesReady,
-  expectObjectKustomizeResourcesReady,
-  expectObjectTlsBadCertPropagationFailed,
-  expectObjectTlsHelloworldReadyOnHubAndManaged,
 } from '@lib/app/setup/object-subscription-api';
 import { skipUnlessPrimaryManagedCluster } from '@lib/cluster/managedClusterContext';
 import {
@@ -48,7 +36,7 @@ import { expect, test } from '@fixtures/app-test';
 
 test.describe(
   'ALC: Object Storage Application Test Suite',
-  { tag: ['@ALC', '@fresh-install', '@placement', '@obj-apps', '@alc', '@app'] },
+  { tag: ['@fresh-install', '@placement', '@obj-apps', '@alc', '@app'] },
   () => {
     test.describe.configure({ mode: 'serial' });
 
@@ -65,7 +53,6 @@ test.describe(
           '@create',
           '@ocpInterop',
           '@post-release',
-          '@UI',
           '@pre-upgrade',
           '@post-upgrade',
         ],
@@ -110,7 +97,7 @@ test.describe(
 
     test(
       'RHACM4K-7815: ALC: Delete an Object Storage Application Deployed on All Online Clusters and Local Cluster',
-      { tag: ['@e2e-common', '@RHACM4K-7815', '@destroy', '@ocpInterop', '@UI'] },
+      { tag: ['@e2e-common', '@RHACM4K-7815', '@destroy', '@ocpInterop'] },
       async ({ oc, applicationListPage }) => {
         test.setTimeout(300_000);
         const { subscription: options } = resolveSubscriptionScenarioByTestId('RHACM4K-7815');
@@ -128,7 +115,7 @@ test.describe(
 
     test(
       'RHACM4K-7814: ALC: Create an Object Storage Application with Multiple Subscriptions',
-      { tag: ['@e2e-common', '@RHACM4K-7814', '@create', '@ocpInterop', '@UI'] },
+      { tag: ['@e2e-common', '@RHACM4K-7814', '@create', '@ocpInterop'] },
       async ({
         page,
         oc,
@@ -200,7 +187,7 @@ test.describe(
 
     test(
       'RHACM4K-7561: ALC: Delete An Object Storage Subscription from an Existing Multi-Subscription Object Storage Application',
-      { tag: ['@e2e-common', '@RHACM4K-7516', '@edit', '@UI'] },
+      { tag: ['@e2e-common', '@RHACM4K-7516', '@edit'] },
       async ({
         page,
         applicationListPage,
@@ -256,7 +243,7 @@ test.describe(
 
     test(
       'RHACM4K-7812: ALC: Add An Object Storage Subscription to An Existing Object Storage Application',
-      { tag: ['@e2e-common', '@RHACM4K-7812', '@edit', '@UI'] },
+      { tag: ['@e2e-common', '@RHACM4K-7812', '@edit'] },
       async ({
         page,
         applicationListPage,
@@ -326,7 +313,7 @@ test.describe(
 
     test(
       'RHACM4K-7813: ALC: Delete a Object Storage Application with Multiple Subscriptions',
-      { tag: ['@e2e-common', '@RHACM4K-7813', '@destroy', '@ocpInterop', '@UI'] },
+      { tag: ['@e2e-common', '@RHACM4K-7813', '@destroy', '@ocpInterop'] },
       async ({ oc }) => {
         test.setTimeout(300_000);
         const { subscription: options } = resolveSubscriptionScenarioByTestId('RHACM4K-7813');
@@ -335,88 +322,6 @@ test.describe(
           options.applicationName,
           options.namespace
         );
-      }
-    );
-
-    test(
-      'RHACM4K-37154: ALC: Create an Object Storage Application with Multiple Subscriptions via CLI',
-      { tag: ['@RHACM4K-37154', '@create', '@obj', '@non-ui'] },
-      async ({ oc, managedClusterContext }) => {
-        test.setTimeout(900_000);
-        const auth = skipUnlessObjectStoreAuthConfigured(test, 'RHACM4K-37154');
-        if (!auth) return;
-        const managedCluster = skipUnlessPrimaryManagedCluster(
-          test,
-          managedClusterContext,
-          'RHACM4K-37154'
-        );
-        if (!managedCluster) return;
-        const managedClusterName =
-          process.env.E2E_MANAGED_CLUSTER_NAME?.trim() || managedCluster.name;
-
-        const appName = 'api-obj-multi';
-        const namespace = `${appName}-ns`;
-
-        await applyObjectMultiSubscriptionApiYaml(oc, managedClusterName, auth);
-        await oc.labelNamespaceForAlcTest(namespace);
-        await expectObjectApplicationApiResourcesReady(oc, appName, namespace);
-
-        const subs = await oc.getNamespacedResourceList('subscription', namespace);
-        expect(subs).toContain(`${appName}-subscription-2`);
-        const placements = await oc.getNamespacedResourceList('placement', namespace);
-        expect(placements).toContain(`${appName}-placement-2`);
-
-        await expectManagedClusterRouteReady(
-          oc,
-          managedClusterName,
-          namespace,
-          'helloworld-app-route'
-        );
-        await expectNamespaceDeployableResources(oc, namespace, 'helloworld-app');
-        await expectNamespaceDeployableResources(oc, namespace, 'mortgage-app');
-      }
-    );
-
-    test(
-      'RHACM4K-37155: ALC: Delete An Object Storage Subscription from an Existing Multi-Subscription Object Storage Application via CLI',
-      { tag: ['@RHACM4K-37155', '@edit', '@obj', '@non-ui'] },
-      async ({ oc }) => {
-        test.setTimeout(120_000);
-        const appName = 'api-obj-multi';
-        const namespace = `${appName}-ns`;
-
-        await deleteObjectMultiApiSubscription(oc, appName, namespace, 1);
-
-        const subs = await oc.getNamespacedResourceList('subscription', namespace);
-        expect(subs).toContain(`${appName}-subscription-2`);
-
-        const placements = await oc.run(
-          `oc get placement -n ${namespace} -o custom-columns='name:.metadata.name' --no-headers`
-        );
-        expect(placements).toContain(`${appName}-placement-1`);
-        expect(placements).toContain(`${appName}-placement-2`);
-      }
-    );
-
-    test(
-      'RHACM4K-37156: ALC: Add An Object Storage Subscription to An Existing Object Storage Application via CLI',
-      { tag: ['@RHACM4K-37156', '@edit', '@obj', '@non-ui'] },
-      async ({ oc }) => {
-        test.setTimeout(120_000);
-        const appName = 'api-obj-multi';
-        const namespace = `${appName}-ns`;
-
-        await applyObjectAddSubscriptionYaml(oc);
-
-        const subs = await oc.getNamespacedResourceList('subscription', namespace);
-        expect(subs).toContain(`${appName}-subscription-3`);
-        expect(subs).toContain(`${appName}-subscription-2`);
-
-        const placements = await oc.run(
-          `oc get placement -n ${namespace} -o custom-columns='name:.metadata.name' --no-headers`
-        );
-        expect(placements).toContain(`${appName}-placement-1`);
-        expect(placements).toContain(`${appName}-placement-2`);
       }
     );
 
@@ -462,104 +367,5 @@ test.describe(
       }
     );
 
-    test(
-      'RHACM4K-54900: ALC: Create an InsecureSkipVerify Object Storage Application Deployed on Local Cluster and Managed Cluster',
-      { tag: ['@e2e-common', '@RHACM4K-54900', '@obj', '@obj-tls', '@non-ui'] },
-      async ({ oc, managedClusterContext }) => {
-        test.setTimeout(900_000);
-        const tlsAuth = skipUnlessObjectStoreTlsConfigured(test, 'RHACM4K-54900');
-        if (!tlsAuth) return;
-        const managedCluster = skipUnlessPrimaryManagedCluster(
-          test,
-          managedClusterContext,
-          'RHACM4K-54900'
-        );
-        if (!managedCluster) return;
-        const managedClusterName =
-          process.env.E2E_MANAGED_CLUSTER_NAME?.trim() || managedCluster.name;
-
-        await applyObjectTlsSubscriptionYaml(
-          oc,
-          'obj-tls-insecure.yaml',
-          tlsAuth,
-          managedClusterName
-        );
-        await oc.labelNamespaceForAlcTest('obj-insecure-test-ns');
-        await expectObjectTlsHelloworldReadyOnHubAndManaged(
-          oc,
-          managedClusterName,
-          'obj-insecure-test-ns',
-          'obj-insecure-test-subscription-1'
-        );
-      }
-    );
-
-    test(
-      'RHACM4K-54904: ALC: Create an TLS Object Storage Application Deployed on Local Cluster and Managed Cluster',
-      { tag: ['@e2e-common', '@RHACM4K-54904', '@obj', '@obj-tls', '@non-ui'] },
-      async ({ oc, managedClusterContext }) => {
-        test.setTimeout(900_000);
-        const tlsAuth = skipUnlessObjectStoreTlsConfigured(test, 'RHACM4K-54904');
-        if (!tlsAuth) return;
-        const managedCluster = skipUnlessPrimaryManagedCluster(
-          test,
-          managedClusterContext,
-          'RHACM4K-54904'
-        );
-        if (!managedCluster) return;
-        const managedClusterName =
-          process.env.E2E_MANAGED_CLUSTER_NAME?.trim() || managedCluster.name;
-
-        await applyObjectTlsSubscriptionYaml(
-          oc,
-          'obj-tls-correct.yaml',
-          tlsAuth,
-          managedClusterName
-        );
-        await oc.labelNamespaceForAlcTest('obj-tls-test-ns');
-        await expectObjectTlsHelloworldReadyOnHubAndManaged(
-          oc,
-          managedClusterName,
-          'obj-tls-test-ns',
-          'obj-tls-test-subscription-1'
-        );
-      }
-    );
-
-    test(
-      'RHACM4K-54915: ALC: Create an TLS Object Storage Application with Incorrect caCert Deployed on Local Cluster',
-      { tag: ['@e2e-common', '@RHACM4K-54915', '@obj', '@obj-tls', '@non-ui'] },
-      async ({ oc }) => {
-        test.setTimeout(600_000);
-        const tlsAuth = skipUnlessObjectStoreTlsConfigured(test, 'RHACM4K-54915');
-        if (!tlsAuth) return;
-
-        await applyObjectTlsSubscriptionYaml(oc, 'obj-tls-incorrect.yaml', tlsAuth);
-        await oc.labelNamespaceForAlcTest('obj-tls-bad-cert-ns');
-        await expectObjectTlsBadCertPropagationFailed(
-          oc,
-          'obj-tls-bad-cert-ns',
-          'obj-tls-bad-cert-subscription-1'
-        );
-      }
-    );
-
-    test(
-      'RHACM4K-59696: ALC: Create an Object Storage Subscription with Kustomization',
-      { tag: ['@e2e-common', '@RHACM4K-59696', '@obj', '@kustomization', '@non-ui'] },
-      async ({ oc }) => {
-        test.setTimeout(900_000);
-        const auth = skipUnlessObjectStoreAuthConfigured(test, 'RHACM4K-59696');
-        if (!auth) return;
-
-        await applyObjectKustomizeAppYaml(oc, auth);
-        await oc.labelNamespaceForAlcTest('obj-kustomize-app-ns');
-        await expectObjectKustomizeResourcesReady(
-          oc,
-          'obj-kustomize-app-ns',
-          'obj-kustomize-resources-ns'
-        );
-      }
-    );
   }
 );

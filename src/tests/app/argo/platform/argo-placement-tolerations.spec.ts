@@ -10,7 +10,7 @@ import {
 
 test.describe(
   'Argo ApplicationSet create wizard — Placement tolerations',
-  { tag: ['@app', '@alc', '@UI', '@placement', '@gitops', '@argo-pull', '@argo-push'] },
+  { tag: ['@app', '@alc', '@placement', '@gitops', '@argo-pull', '@argo-push'] },
   () => {
     test(
       'RHACM4K-61724: ALC: Default Placement CRs include unreachable and unavailable tolerations (pull and push)',

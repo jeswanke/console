@@ -31,7 +31,7 @@ import { test } from '@fixtures/app-test';
 
 test.describe(
   'Application Lifecycle UI: Pull Model Applications Test Suite',
-  { tag: ['@ALC', '@e2e-pullmodel', '@pullmodel', '@alc', '@app', '@gitops', '@argo'] },
+  { tag: ['@e2e', '@pullmodel', '@alc', '@app', '@gitops', '@argo'] },
   () => {
     test.describe.configure({ mode: 'serial' });
 
@@ -41,7 +41,7 @@ test.describe(
 
     test(
       'RHACM4K-38202: ALC: Topology and app table display correctly for pull model',
-      { tag: ['@RHACM4K-38202', '@UI'] },
+      { tag: ['@RHACM4K-38202'] },
       async ({ oc, applicationListPage, applicationDetailsPage, managedClusterContext }) => {
         test.setTimeout(900_000);
         const managedCluster = skipUnlessPrimaryManagedCluster(
@@ -109,7 +109,7 @@ test.describe(
 
     test(
       'RHACM4K-42703: ALC: Git Pull model type application set can be created successfully on UI',
-      { tag: ['@RHACM4K-42703', '@UI'] },
+      { tag: ['@RHACM4K-42703'] },
       async ({
         oc,
         applicationListPage,
@@ -154,7 +154,7 @@ test.describe(
 
     test(
       'RHACM4K-42705: ALC: Helm Pull model type application set can be created successfully on UI',
-      { tag: ['@RHACM4K-42705', '@UI'] },
+      { tag: ['@RHACM4K-42705'] },
       async ({
         oc,
         applicationListPage,
@@ -200,7 +200,7 @@ test.describe(
 
     test(
       'RHACM4K-60049: ALC: Sync Argo CD Pull Model ApplicationSet on Console',
-      { tag: ['@RHACM4K-60049', '@UI'] },
+      { tag: ['@RHACM4K-60049'] },
       async ({
         oc,
         applicationListPage,

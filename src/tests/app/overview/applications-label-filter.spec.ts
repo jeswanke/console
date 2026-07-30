@@ -17,7 +17,7 @@ import {
 
 test.describe(
   'Applications list — label filter',
-  { tag: ['@app', '@alc', '@UI', '@RHACM4K-64616'] },
+  { tag: ['@app', '@alc', '@RHACM4K-64616'] },
   () => {
     test(
       'RHACM4K-64616: ALC: As an application admin, I can filter applications through labels',

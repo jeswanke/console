@@ -25,7 +25,7 @@ import { test } from '@fixtures/app-test';
 
 test.describe(
   'Application Lifecycle UI: Flux Application Test Suite - Local Cluster',
-  { tag: ['@ALC', '@flux', '@flux-local', '@e2e-flux', '@UI'] },
+  { tag: ['@alc', '@flux', '@flux-local', '@e2e'] },
   () => {
     test.describe.configure({ mode: 'serial' });
 
@@ -43,7 +43,6 @@ test.describe(
       {
         tag: [
           '@RHACM4K-16762',
-          '@UI',
           '@pre-restore',
           '@post-restore',
           '@pre-upgrade',
@@ -66,7 +65,7 @@ test.describe(
 
     test(
       'RHACM4K-16763: ALC: Verify FluxCD Helm Application on local cluster appears in Applications table and topology',
-      { tag: ['@RHACM4K-16763', '@UI', '@e2e-flux'] },
+      { tag: ['@RHACM4K-16763', '@e2e'] },
       async ({ oc, applicationListPage, applicationDetailsPage }) => {
         test.setTimeout(600_000);
         const { flux } = resolveFluxScenarioByTestId('RHACM4K-16763');
@@ -83,7 +82,7 @@ test.describe(
 
     test(
       'RHACM4K-16764: ALC: Verify FluxCD Git Application update after edit is reflected in table and topology',
-      { tag: ['@RHACM4K-16764', '@UI', '@e2e-flux'] },
+      { tag: ['@RHACM4K-16764', '@e2e'] },
       async ({ oc, applicationListPage, applicationDetailsPage }) => {
         test.setTimeout(900_000);
         const { base, delta } = resolveFluxScenarioPair({
@@ -112,7 +111,7 @@ test.describe(
 
     test(
       'RHACM4K-16769: ALC: Verify FluxCD Helm Application update after edit is reflected in table and topology',
-      { tag: ['@RHACM4K-16769', '@UI', '@e2e-flux'] },
+      { tag: ['@RHACM4K-16769', '@e2e'] },
       async ({ oc, applicationListPage, applicationDetailsPage }) => {
         test.setTimeout(900_000);
         const { base, delta } = resolveFluxScenarioPair({
@@ -141,7 +140,7 @@ test.describe(
 
     test(
       'RHACM4K-16779: ALC: Verify FluxCD Git Application deletion is reflected in Applications table',
-      { tag: ['@RHACM4K-16779', '@UI', '@e2e-flux'] },
+      { tag: ['@RHACM4K-16779', '@e2e'] },
       async ({ oc, applicationListPage, applicationDetailsPage }) => {
         test.setTimeout(600_000);
         const { flux } = resolveFluxScenarioByTestId('RHACM4K-16779');
@@ -162,7 +161,7 @@ test.describe(
 
     test(
       'RHACM4K-16781: ALC: Verify FluxCD Helm Application deletion is reflected in Applications table',
-      { tag: ['@RHACM4K-16781', '@UI', '@e2e-flux'] },
+      { tag: ['@RHACM4K-16781', '@e2e'] },
       async ({ oc, applicationListPage, applicationDetailsPage }) => {
         test.setTimeout(600_000);
         const { flux } = resolveFluxScenarioByTestId('RHACM4K-16781');

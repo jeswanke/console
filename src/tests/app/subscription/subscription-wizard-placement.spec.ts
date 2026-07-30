@@ -14,7 +14,7 @@ import {
 
 test.describe(
   'Subscription wizard placement',
-  { tag: ['@app', '@alc', '@UI', '@placement'] },
+  { tag: ['@app', '@alc', '@placement'] },
   () => {
     test.afterEach(async ({ oc }) => {
       await cleanupPlacementTestResources(oc);

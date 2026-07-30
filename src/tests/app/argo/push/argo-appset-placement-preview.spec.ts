@@ -13,7 +13,7 @@ import { applyGitopsPlacementPreviewSetup } from '@lib/app/argo/gitops-placement
 
 test.describe(
   'Argo ApplicationSet create wizard — Placement cluster preview',
-  { tag: ['@app', '@alc', '@UI', '@placement', '@placement-preview', '@gitops', '@argo-pull'] },
+  { tag: ['@app', '@alc', '@placement', '@placement-preview', '@gitops', '@argo-pull'] },
   () => {
     const { argoPush: options } = resolveArgoPushScenarioByTestId('RHACM4K-64219');
 

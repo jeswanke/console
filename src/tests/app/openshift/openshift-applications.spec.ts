@@ -35,7 +35,7 @@ import { test } from '@fixtures/app-test';
 
 test.describe(
   'Application Lifecycle UI: Openshift Applications Test Suite',
-  { tag: ['@ALC', '@openshiftApps', '@alc', '@app'] },
+  { tag: ['@openshiftApps', '@alc', '@app'] },
   () => {
     test.describe.configure({ mode: 'serial' });
 
@@ -45,7 +45,7 @@ test.describe(
 
     test(
       'RHACM4K-16793: ALC: Verify OCP Application deployed on Local Cluster is shown in ACM',
-      { tag: ['@RHACM4K-16793', '@e2e-ocpapp', '@UI'] },
+      { tag: ['@RHACM4K-16793', '@e2e'] },
       async ({ oc, applicationListPage, applicationDetailsPage }) => {
         test.setTimeout(600_000);
         const { openshift: spec } = resolveOpenshiftScenarioByTestId('RHACM4K-16793');
@@ -66,7 +66,7 @@ test.describe(
 
     test(
       'RHACM4K-16794: ALC: Verify OCP Application deployed on Local Cluster is updated in ACM after Edit',
-      { tag: ['@RHACM4K-16794', '@e2e-ocpapp', '@UI'] },
+      { tag: ['@RHACM4K-16794', '@e2e'] },
       async ({ oc, applicationListPage, applicationDetailsPage }) => {
         test.setTimeout(900_000);
         const { base, edit } = resolveOpenshiftScenarioPair({
@@ -96,7 +96,7 @@ test.describe(
 
     test(
       'RHACM4K-16795: ALC: Verify OCP Application Deletion on Local Cluster is reflected in ACM',
-      { tag: ['@RHACM4K-16795', '@destroy', '@UI', '@e2e-ocpapp'] },
+      { tag: ['@RHACM4K-16795', '@destroy', '@e2e'] },
       async ({ oc, applicationListPage }) => {
         test.setTimeout(120_000);
         const { openshift: spec } = resolveOpenshiftScenarioByTestId('RHACM4K-16795');
@@ -113,7 +113,7 @@ test.describe(
 
     test(
       'RHACM4K-16796: ALC: Verify OCP Application deployed on a Managed Cluster is shown in ACM',
-      { tag: ['@e2e-ocpapp', '@RHACM4K-16796', '@UI'] },
+      { tag: ['@e2e', '@RHACM4K-16796'] },
       async ({ oc, managedClusterContext, applicationListPage, applicationDetailsPage }) => {
         test.setTimeout(900_000);
         const managedCluster = skipUnlessPrimaryManagedCluster(
@@ -142,7 +142,7 @@ test.describe(
 
     test(
       'RHACM4K-16797: ALC: Verify OCP Application deployed on a Managed Cluster is updated in ACM after Edit',
-      { tag: ['@RHACM4K-16797', '@UI', '@e2e-ocpapp'] },
+      { tag: ['@RHACM4K-16797', '@e2e'] },
       async ({
         oc,
         managedClusterContext,
@@ -187,7 +187,7 @@ test.describe(
 
     test(
       'RHACM4K-16798: ALC: Verify OCP Application Deletion on a Managed Cluster is reflected in ACM',
-      { tag: ['@e2e-ocpapp', '@RHACM4K-16798', '@destroy', '@UI'] },
+      { tag: ['@e2e', '@RHACM4K-16798', '@destroy'] },
       async ({ oc, managedClusterContext, applicationListPage }) => {
         test.setTimeout(300_000);
         const managedCluster = skipUnlessPrimaryManagedCluster(
@@ -227,7 +227,7 @@ test.describe(
     test(
       'RHACM4K-45793: ALC: Restore Test Verify OCP Application deployed on Local Cluster is shown in ACM',
       {
-        tag: ['@RHACM4K-45793', '@e2e-ocpapp', '@UI', '@pre-restore', '@post-restore', '@create'],
+        tag: ['@RHACM4K-45793', '@e2e', '@pre-restore', '@post-restore', '@create'],
       },
       async ({ oc, applicationListPage, applicationDetailsPage }) => {
         test.setTimeout(600_000);

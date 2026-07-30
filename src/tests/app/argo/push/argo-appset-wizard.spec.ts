@@ -11,7 +11,7 @@ import { test } from '@fixtures/app-test';
 
 test.describe(
   'Application Lifecycle UI: Argo Appset Wizard Test Suite',
-  { tag: ['@ALC', '@gitops', '@argo-wizard', '@e2e-argo'] },
+  { tag: ['@alc', '@gitops', '@argo-wizard', '@e2e'] },
   () => {
     test.describe.configure({ mode: 'serial' });
 
@@ -21,7 +21,7 @@ test.describe(
 
     test(
       'RHACM4K-6735: ALC: Edit an existing Argo appset via wizard (mortgage path)',
-      { tag: ['@RHACM4K-6735', '@UI', '@e2e-argo'] },
+      { tag: ['@RHACM4K-6735', '@e2e'] },
       async ({
         oc,
         applicationListPage,
@@ -48,7 +48,7 @@ test.describe(
 
     test(
       'RHACM4K-6773: ALC: Edit deployed Argo appset path back to helloworld-argo via wizard',
-      { tag: ['@RHACM4K-6773', '@UI', '@e2e-argo'] },
+      { tag: ['@RHACM4K-6773', '@e2e'] },
       async ({
         oc,
         applicationListPage,

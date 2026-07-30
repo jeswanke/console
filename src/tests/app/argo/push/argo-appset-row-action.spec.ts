@@ -18,7 +18,7 @@ const MATCHING_LABEL_VALUE = 'auto';
 
 test.describe(
   'Application Lifecycle UI: Argo Appset Row Action Test Suite',
-  { tag: ['@ALC', '@gitops', '@argo-row-action', '@e2e-argo'] },
+  { tag: ['@alc', '@gitops', '@argo-row-action', '@e2e'] },
   () => {
     test.describe.configure({ mode: 'serial' });
 
@@ -28,7 +28,7 @@ test.describe(
 
     test(
       'RHACM4K-6772: ALC: View deployed Argo appsets via row action View',
-      { tag: ['@RHACM4K-6772', '@UI', '@e2e-argo'] },
+      { tag: ['@RHACM4K-6772', '@e2e'] },
       async ({
         oc,
         applicationListPage,
@@ -58,7 +58,7 @@ test.describe(
 
     test(
       'RHACM4K-6774: ALC: Search from row action for Argo AppSet',
-      { tag: ['@RHACM4K-6774', '@UI', '@e2e-argo'] },
+      { tag: ['@RHACM4K-6774', '@e2e'] },
       async ({
         oc,
         applicationListPage,
@@ -87,7 +87,7 @@ test.describe(
 
     test(
       'RHACM4K-7006: ALC: View, Edit, and Search row actions for Argo AppSet',
-      { tag: ['@RHACM4K-7006', '@UI', '@e2e-argo', '@post-release'] },
+      { tag: ['@RHACM4K-7006', '@e2e', '@post-release'] },
       async ({
         oc,
         applicationListPage,

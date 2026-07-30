@@ -11,7 +11,7 @@ import {
 
 test.describe(
   'Applications Advanced configuration — RHACM4K-63573',
-  { tag: ['@app', '@alc', '@UI'] },
+  { tag: ['@app', '@alc'] },
   () => {
     test(
       'RHACM4K-63573: ALC: As an application admin, I can verify the page deprecation notice, removal of the Placements tab, and removal of placement terminology',

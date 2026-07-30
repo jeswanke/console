@@ -48,7 +48,7 @@ import { expect, test } from '@fixtures/app-test';
 
 /** Polarion-aligned tags for `--grep` in CI. */
 test.describe('Git Applications', {
-  tag: ['@ALC', '@git', '@fresh-install', '@placement', '@git-apps', '@alc', '@app'],
+  tag: ['@git', '@fresh-install', '@placement', '@git-apps', '@alc', '@app'],
 }, () => {
   test.describe.configure({ mode: 'serial' });
 
@@ -65,7 +65,6 @@ test.describe('Git Applications', {
         '@create',
         '@post-release',
         '@ocpInterop',
-        '@UI',
         '@pre-upgrade',
         '@post-upgrade',
       ],
@@ -126,7 +125,7 @@ test.describe('Git Applications', {
 
   test(
     'RHACM4K-1071: ALC: Create a private git application and its resources via application wizard',
-    { tag: ['@e2e-common', '@RHACM4K-1071', '@create', '@UI'] },
+    { tag: ['@e2e-common', '@RHACM4K-1071', '@create'] },
     async ({
     page,
     oc,
@@ -194,7 +193,7 @@ test.describe('Git Applications', {
 
   test(
     'RHACM4K-7556: ALC: Create a Git Application with Multiple Subscriptions',
-    { tag: ['@e2e-common', '@RHACM4K-7556', '@create', '@ocpInterop', '@UI', '@post-upgrade'] },
+    { tag: ['@e2e-common', '@RHACM4K-7556', '@create', '@ocpInterop', '@post-upgrade'] },
     async ({
     page,
     applicationListPage,
@@ -294,7 +293,7 @@ test.describe('Git Applications', {
 
   test(
     'RHACM4K-7554: ALC: Add A Git Subscription to An Existing Git Application',
-    { tag: ['@e2e-common', '@RHACM4K-7554', '@edit', '@UI', '@post-upgrade'] },
+    { tag: ['@e2e-common', '@RHACM4K-7554', '@edit', '@post-upgrade'] },
     async ({
     page,
     oc,
@@ -369,7 +368,7 @@ test.describe('Git Applications', {
 
   test(
     'RHACM4K-1427: ALC: Edit an existing Git application',
-    { tag: ['@e2e-common', '@RHACM4K-1427', '@edit', '@UI'] },
+    { tag: ['@e2e-common', '@RHACM4K-1427', '@edit'] },
     async ({
     page,
     oc,
@@ -454,7 +453,7 @@ test.describe('Git Applications', {
 
   test(
     'RHACM4K-7555: ALC: Delete A Git Subscription from an Existing Multi-Subscription Git Application',
-    { tag: ['@e2e-common', '@RHACM4K-7555', '@edit', '@UI', '@post-upgrade'] },
+    { tag: ['@e2e-common', '@RHACM4K-7555', '@edit', '@post-upgrade'] },
     async ({
     page,
     oc,
@@ -513,7 +512,7 @@ test.describe('Git Applications', {
 
   test(
     'RHACM4K-7557: ALC: Delete a Git Application with Multiple Subscriptions',
-    { tag: ['@e2e-common', '@RHACM4K-7557', '@destroy', '@ocpInterop', '@UI', '@post-upgrade'] },
+    { tag: ['@e2e-common', '@RHACM4K-7557', '@destroy', '@ocpInterop', '@post-upgrade'] },
     async ({
     applicationListPage,
     subscriptionApplicationCreateWizardPage,
@@ -534,7 +533,7 @@ test.describe('Git Applications', {
 
   test(
     'RHACM4K-39232: ALC: Display more placement info for the topology node details tab',
-    { tag: ['@e2e-common', '@RHACM4K-39232', '@create', '@UI'] },
+    { tag: ['@e2e-common', '@RHACM4K-39232', '@create'] },
     async ({
     page,
     oc,
@@ -601,7 +600,7 @@ test.describe('Git Applications', {
 
   test(
     'RHACM4K-41356: ALC: Verify each topology node has correct status',
-    { tag: ['@e2e-common', '@RHACM4K-41356', '@create', '@UI'] },
+    { tag: ['@e2e-common', '@RHACM4K-41356', '@create'] },
     async ({
       page,
       oc,
@@ -738,7 +737,7 @@ test.describe('Git Applications', {
 
   test(
     'RHACM4K-49630: ALC: Enable to deploy and edit an appsub with no placementrule name in subscription and edit without error',
-    { tag: ['@e2e-common', '@RHACM4K-49630', '@edit', '@UI'] },
+    { tag: ['@e2e-common', '@RHACM4K-49630', '@edit'] },
     async ({
       page,
       oc,
@@ -819,7 +818,7 @@ test.describe('Git Applications', {
 
   test(
     'RHACM4K-39666: ALC: Create an appsub with repo urls contains underscore',
-    { tag: ['@e2e-common', '@RHACM4K-39666', '@create', '@UI'] },
+    { tag: ['@e2e-common', '@RHACM4K-39666', '@create'] },
     async ({
     oc,
     applicationListPage,
@@ -851,7 +850,7 @@ test.describe('Git Applications', {
 
   test(
     'RHACM4K-7487: ALC: Delete a Git Application deployed on a Local Cluster',
-    { tag: ['@e2e-common', '@RHACM4K-7487', '@destroy', '@ocpInterop', '@UI'] },
+    { tag: ['@e2e-common', '@RHACM4K-7487', '@destroy', '@ocpInterop'] },
     async ({
     applicationListPage,
     subscriptionApplicationCreateWizardPage,
@@ -871,7 +870,7 @@ test.describe('Git Applications', {
 
   test(
     'RHACM4K-10668: ALC: Deploying CRD via Application should update status in ACM console',
-    { tag: ['@e2e-common', '@RHACM4K-10668', '@create', '@UI'] },
+    { tag: ['@e2e-common', '@RHACM4K-10668', '@create'] },
     async ({
     page,
     oc,

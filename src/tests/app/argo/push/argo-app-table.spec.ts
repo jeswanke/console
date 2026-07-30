@@ -20,7 +20,7 @@ import { test } from '@fixtures/app-test';
 
 test.describe(
   'Application Lifecycle UI: Argo Application Type Table Test Suite',
-  { tag: ['@ALC', '@gitops', '@argo-app-table', '@app', '@alc', '@argo'] },
+  { tag: ['@gitops', '@argo-app-table', '@app', '@alc', '@argo'] },
   () => {
     test.describe.configure({ mode: 'serial' });
 
@@ -36,7 +36,7 @@ test.describe(
 
     test(
       'RHACM4K-6902: ALC: The user should be able to filter between application types on the Application table page',
-      { tag: ['@RHACM4K-6902', '@e2e-argo', '@UI'] },
+      { tag: ['@RHACM4K-6902', '@e2e'] },
       async ({
         oc,
         applicationListPage,
@@ -62,7 +62,7 @@ test.describe(
 
     test(
       'RHACM4K-6903: ALC: Verify type column on application table page works correctly',
-      { tag: ['@RHACM4K-6903', '@e2e-argo', '@UI'] },
+      { tag: ['@RHACM4K-6903', '@e2e'] },
       async ({
         oc,
         applicationListPage,

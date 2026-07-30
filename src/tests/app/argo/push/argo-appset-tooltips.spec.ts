@@ -19,11 +19,11 @@ import { expect } from '@playwright/test';
 
 test.describe(
   'Application Lifecycle UI: Argo ApplicationSet wizard tooltips',
-  { tag: ['@ALC', '@gitops', '@e2e-argo', '@applicationset', '@argo-wizard-tooltips'] },
+  { tag: ['@alc', '@gitops', '@e2e', '@applicationset', '@argo-wizard-tooltips'] },
   () => {
     test(
       'RHACM4K-61725: ALC: Verify tooltips in the Argo ApplicationSet creation wizard',
-      { tag: ['@RHACM4K-61725', '@UI', '@e2e-argo'] },
+      { tag: ['@RHACM4K-61725', '@e2e'] },
       async ({ applicationListPage, argoPullApplicationCreateWizardPage: pullWizard }) => {
         test.setTimeout(600_000);
         const page = pullWizard.getPage();

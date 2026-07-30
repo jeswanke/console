@@ -6,12 +6,7 @@
  */
 import { clearE2eSpecDataCache, resolveSubscriptionScenarioById } from '@config';
 import { createSubscription } from '@lib/app/subscription';
-import {
-  applyGitLongPrefixInitialFixtures,
-  applyGitLongPrefixSecondSubscription,
-  cleanupGitLongPrefixFixtures,
-  waitForGitLongPrefixWorkloads,
-} from '@lib/app/setup/git-long-prefix-apps';
+
 import {
   expectHubSubscriptionAndPlacementReady,
   verifyExampleK8sAppBackendOnLocalCluster,
@@ -22,7 +17,7 @@ import { test } from '@fixtures/app-test';
 
 test.describe(
   'Application Lifecycle UI: Application supports names and namespaces with varying lengths',
-  { tag: ['@ALC', '@e2e-common', '@namespace-name-length', '@alc', '@app'] },
+  { tag: ['@e2e-common', '@namespace-name-length', '@alc', '@app'] },
   () => {
     test.describe.configure({ mode: 'serial' });
 
@@ -32,7 +27,7 @@ test.describe(
 
     test(
       'RHACM4K-6883: ALC: Application supports names with varying lengths',
-      { tag: ['@RHACM4K-6883', '@UI'] },
+      { tag: ['@RHACM4K-6883'] },
       async ({
         oc,
         applicationListPage,
@@ -97,7 +92,7 @@ test.describe(
 
     test(
       'RHACM4K-6904: ALC: Application supports namespaces with varying lengths',
-      { tag: ['@RHACM4K-6904', '@UI'] },
+      { tag: ['@RHACM4K-6904'] },
       async ({
         oc,
         applicationListPage,
@@ -149,16 +144,5 @@ test.describe(
       }
     );
 
-    test(
-      'RHACM4K-16864: ALC: The first application is removed if the second application with the same long name prefix is deployed on the same namespace',
-      { tag: ['@RHACM4K-16864', '@non-ui'] },
-      async ({ oc }) => {
-        test.setTimeout(600_000);
-        await applyGitLongPrefixInitialFixtures(oc);
-        await applyGitLongPrefixSecondSubscription(oc);
-        await waitForGitLongPrefixWorkloads(oc);
-        await cleanupGitLongPrefixFixtures(oc);
-      }
-    );
   }
 );

@@ -11,11 +11,11 @@ import { test } from '@fixtures/app-test';
 
 test.describe(
   'Application Lifecycle UI: Argo CD ApplicationSet Push Model - Manual sync',
-  { tag: ['@ALC', '@gitops', '@e2e-argo', '@applicationset', '@push-model'] },
+  { tag: ['@alc', '@gitops', '@e2e', '@applicationset', '@push-model'] },
   () => {
     test(
       'RHACM4K-61942: ALC: Manually sync an ApplicationSet created with automated sync disabled',
-      { tag: ['@RHACM4K-61942', '@UI', '@applicationset'] },
+      { tag: ['@RHACM4K-61942', '@applicationset'] },
       async ({
         oc,
         applicationListPage,

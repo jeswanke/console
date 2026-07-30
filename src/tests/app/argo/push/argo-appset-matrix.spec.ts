@@ -20,7 +20,7 @@ const PLACEMENT_NAMESPACE = 'openshift-gitops';
 
 test.describe(
   'Application Lifecycle UI: ApplicationSet matrix (Cluster Decision + Git)',
-  { tag: ['@ALC', '@gitops', '@e2e-argo', '@applicationset', '@pullmodel', '@argo-matrix'] },
+  { tag: ['@alc', '@gitops', '@e2e', '@applicationset', '@pullmodel', '@argo-matrix'] },
   () => {
     test.describe.configure({ mode: 'serial' });
 
@@ -64,7 +64,7 @@ test.describe(
 
     test(
       'RHACM4K-58916: ALC: Create matrix ApplicationSet, verify applications and topology',
-      { tag: ['@RHACM4K-58916', '@UI', '@e2e-argo', '@applicationset'] },
+      { tag: ['@RHACM4K-58916', '@e2e', '@applicationset'] },
       async ({ applicationListPage, applicationDetailsPage }) => {
         test.setTimeout(600_000);
         await verifyArgoMatrixAppsetInUi({

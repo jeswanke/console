@@ -13,7 +13,7 @@ import { test } from '@fixtures/app-test';
 
 test.describe(
   'Application Lifecycle UI: Argo Long Lived Secret Test Suite',
-  { tag: ['@ALC', '@e2e-argo', '@gitops', '@argo-long-lived-secret'] },
+  { tag: ['@alc', '@e2e', '@gitops', '@argo-long-lived-secret'] },
   () => {
     test.describe.configure({ mode: 'serial' });
 
@@ -26,7 +26,7 @@ test.describe(
 
     test(
       'RHACM4K-54897: ALC: Verify Application Manager ManagedServiceAccount secret creation',
-      { tag: ['@RHACM4K-54897', '@UI', '@e2e-argo'] },
+      { tag: ['@RHACM4K-54897', '@e2e'] },
       async ({
         oc,
         applicationListPage,
@@ -48,7 +48,7 @@ test.describe(
 
     test(
       'RHACM4K-54902: ALC: Verify ManagedServiceAccount secret after delete and recreate',
-      { tag: ['@RHACM4K-54902', '@UI', '@e2e-argo'] },
+      { tag: ['@RHACM4K-54902', '@e2e'] },
       async ({
         oc,
         applicationListPage,

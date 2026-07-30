@@ -10,7 +10,7 @@ import { test } from '@fixtures/subscription-admin-test';
 
 test.describe(
   'Application Lifecycle UI: Subscription admin Role Test Suite',
-  { tag: ['@ALC', '@subadmin', '@alc-rbac', '@e2e-rbac'] },
+  { tag: ['@alc', '@subadmin', '@alc-rbac', '@e2e'] },
   () => {
     test.describe.configure({ mode: 'serial' });
 
@@ -20,7 +20,6 @@ test.describe(
         tag: [
           '@RHACM4K-41355',
           '@create',
-          '@UI',
           '@pre-restore',
           '@post-restore',
         ],

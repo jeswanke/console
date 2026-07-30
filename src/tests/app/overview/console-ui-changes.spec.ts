@@ -8,11 +8,11 @@ import { test } from '@fixtures/app-test';
 
 test.describe(
   'Application Lifecycle UI: Console UI Changes',
-  { tag: ['@ALC', '@e2e-common', '@console-ui', '@UI'] },
+  { tag: ['@alc', '@e2e-common', '@console-ui'] },
   () => {
     test(
       'RHACM4K-32401: ALC: Clicking on git and helm application links copy instead of redirecting the user',
-      { tag: ['@RHACM4K-32401', '@UI', '@console-ui'] },
+      { tag: ['@RHACM4K-32401', '@console-ui'] },
       async ({ oc, applicationListPage }) => {
         test.setTimeout(600_000);
         await runConsoleUiChannelCopyLinksScenario({ oc, applicationListPage });

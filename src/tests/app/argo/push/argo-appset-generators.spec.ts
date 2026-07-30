@@ -11,7 +11,7 @@ import { test } from '@fixtures/app-test';
 
 test.describe(
   'Application Lifecycle UI: Argo ApplicationSet (Pull Model) - Generators',
-  { tag: ['@ALC', '@gitops', '@e2e-argo', '@applicationset', '@generators', '@argo-appset-generators'] },
+  { tag: ['@alc', '@gitops', '@e2e', '@applicationset', '@generators', '@argo-appset-generators'] },
   () => {
     test.describe.configure({ mode: 'serial' });
 

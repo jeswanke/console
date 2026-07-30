@@ -22,7 +22,7 @@ import { test } from '@fixtures/app-test';
 
 test.describe(
   'Application Lifecycle UI: Argo Application Test Suite',
-  { tag: ['@ALC', '@gitops', '@argo-apps', '@app', '@alc', '@argo'] },
+  { tag: ['@gitops', '@argo-apps', '@app', '@alc', '@argo'] },
   () => {
     test.describe.configure({ mode: 'serial' });
 
@@ -32,7 +32,7 @@ test.describe(
 
     test(
       'RHACM4K-4043: ALC: Application owned by applicationSet shows up under the applicationSet name',
-      { tag: ['@RHACM4K-4043', '@e2e-argo', '@UI', '@post-upgrade'] },
+      { tag: ['@RHACM4K-4043', '@e2e', '@post-upgrade'] },
       async ({ oc, applicationListPage, argoPushApplicationCreateWizardPage }) => {
         test.setTimeout(600_000);
 
@@ -49,7 +49,7 @@ test.describe(
 
     test(
       'RHACM4K-37185: ALC: Add multiple sources support for ApplicationSet in App UI',
-      { tag: ['@RHACM4K-37185', '@e2e-argo', '@UI', '@applicationset'] },
+      { tag: ['@RHACM4K-37185', '@e2e', '@applicationset'] },
       async ({ oc, applicationListPage, argoPushApplicationCreateWizardPage }) => {
         test.setTimeout(600_000);
 
@@ -78,7 +78,7 @@ test.describe(
 
     test(
       'RHACM4K-37186: ALC: Delete A Git Source from an Existing Multiple Source ApplicationSet',
-      { tag: ['@RHACM4K-37186', '@e2e-argo', '@UI', '@applicationset'] },
+      { tag: ['@RHACM4K-37186', '@e2e', '@applicationset'] },
       async ({ oc, applicationListPage, argoPushApplicationCreateWizardPage }) => {
         test.setTimeout(600_000);
 
@@ -100,7 +100,7 @@ test.describe(
 
     test(
       'RHACM4K-37187: ALC: Add A Git Source to An Existing ApplicationSet',
-      { tag: ['@RHACM4K-37187', '@e2e-argo', '@UI', '@applicationset'] },
+      { tag: ['@RHACM4K-37187', '@e2e', '@applicationset'] },
       async ({ applicationListPage, argoPushApplicationCreateWizardPage }) => {
         test.setTimeout(600_000);
 
@@ -116,7 +116,7 @@ test.describe(
 
     test(
       'RHACM4K-37191: ALC: Delete A Helm Source from an Existing Multiple Source ApplicationSet',
-      { tag: ['@RHACM4K-37191', '@e2e-argo', '@UI', '@applicationset'] },
+      { tag: ['@RHACM4K-37191', '@e2e', '@applicationset'] },
       async ({ oc, applicationListPage, argoPushApplicationCreateWizardPage }) => {
         test.setTimeout(600_000);
 
@@ -141,7 +141,7 @@ test.describe(
 
     test(
       'RHACM4K-37192: ALC: Add A Helm Source to An Existing ApplicationSet',
-      { tag: ['@RHACM4K-37192', '@e2e-argo', '@UI', '@applicationset'] },
+      { tag: ['@RHACM4K-37192', '@e2e', '@applicationset'] },
       async ({ oc, applicationListPage, argoPushApplicationCreateWizardPage }) => {
         test.setTimeout(600_000);
 
@@ -166,7 +166,7 @@ test.describe(
 
     test(
       'RHACM4K-37193: ALC: Delete an ApplicationSet with Multiple Sources',
-      { tag: ['@RHACM4K-37193', '@e2e-argo', '@UI', '@applicationset'] },
+      { tag: ['@RHACM4K-37193', '@e2e', '@applicationset'] },
       async ({ oc, applicationListPage }) => {
         test.setTimeout(300_000);
 
@@ -179,7 +179,7 @@ test.describe(
 
     test(
       'RHACM4K-40996: ALC: UI should not throw ClusterSets failed to load error while deploying application set using a GitOpsCluster without cluster set',
-      { tag: ['@RHACM4K-40996', '@UI', '@e2e-argo', '@applicationset', '@pre-restore', '@post-restore'] },
+      { tag: ['@RHACM4K-40996', '@e2e', '@applicationset', '@pre-restore', '@post-restore'] },
       async ({ oc, applicationListPage, argoPushApplicationCreateWizardPage }) => {
         test.setTimeout(600_000);
 
@@ -196,7 +196,7 @@ test.describe(
 
     test(
       'RHACM4K-42704: ALC: Compare application types popup always displays when users click on the link',
-      { tag: ['@RHACM4K-42704', '@UI', '@e2e-argo', '@applicationset'] },
+      { tag: ['@RHACM4K-42704', '@e2e', '@applicationset'] },
       async ({ applicationListPage }) => {
         await verifyCompareApplicationTypesPopover(applicationListPage);
       }
@@ -204,7 +204,7 @@ test.describe(
 
     test(
       'RHACM4K-59973: ALC: Sync Argo CD Push Model ApplicationSet on Console',
-      { tag: ['@RHACM4K-59973', '@e2e-argo', '@UI', '@applicationset'] },
+      { tag: ['@RHACM4K-59973', '@e2e', '@applicationset'] },
       async ({ oc, applicationListPage, applicationDetailsPage }) => {
         test.setTimeout(600_000);
 

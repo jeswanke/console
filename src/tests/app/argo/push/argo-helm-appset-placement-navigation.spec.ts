@@ -21,7 +21,7 @@ import { test } from '@fixtures/app-test';
 
 test.describe(
   'Argo Helm ApplicationSet — Placement navigation',
-  { tag: ['@app', '@alc', '@UI', '@placement', '@gitops', '@argo-push'] },
+  { tag: ['@app', '@alc', '@placement', '@gitops', '@argo-push'] },
   () => {
     test(
       'RHACM4K-64417: ALC: As an application admin, I can view and navigate to the associated Placement from the ApplicationSet details page',

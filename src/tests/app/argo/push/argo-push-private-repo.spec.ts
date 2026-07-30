@@ -21,7 +21,7 @@ import { expect, test } from '@fixtures/app-test';
 
 test.describe(
   'Argo push ApplicationSet private repository',
-  { tag: ['@app', '@alc', '@UI', '@argo', '@push-model', '@gitops', '@private-git'] },
+  { tag: ['@app', '@alc', '@argo', '@push-model', '@gitops', '@private-git'] },
   () => {
     test.describe.configure({ mode: 'serial' });
 
