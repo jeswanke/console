@@ -195,8 +195,11 @@ test.describe(
         subscriptionApplicationCreateWizardPage,
       }) => {
         test.setTimeout(300_000);
-        const { subscription: options, applicationExpectations: expectations } =
+        const auth = skipUnlessObjectStoreAuthConfigured(test, 'RHACM4K-7561');
+        if (!auth) return;
+        const { subscription: baseOptions, applicationExpectations: expectations } =
           resolveSubscriptionScenarioByTestId('RHACM4K-7561');
+        const options = applyObjectStoreAuthToSubscriptionOptions(baseOptions, auth);
         expect(options.repositories).toHaveLength(2);
 
         await deleteSubscriptionFromExistingApplication(
