@@ -254,6 +254,7 @@ test.describe(
       { tag: ['@e2e-common', '@e2e', '@RHACM4K-7812', '@edit'] },
       async ({
         page,
+        oc,
         applicationListPage,
         applicationDetailsPage,
         subscriptionApplicationCreateWizardPage,
@@ -306,15 +307,18 @@ test.describe(
           addOptions.applicationName,
           'topology'
         );
+        const { applicationName, namespace } = addOptions;
+        const block1Clusters = await oc.getPlacementDecisionClusterNames(namespace, `${applicationName}-placement-1`);
+        const block2Clusters = await oc.getPlacementDecisionClusterNames(namespace, `${applicationName}-placement-2`);
         await verifySubscriptionAppTopologyTab({
           page,
           detailsPage: applicationDetailsPage,
-          applicationName: addOptions.applicationName,
-          namespace: addOptions.namespace,
+          applicationName,
+          namespace,
           subscriptionScope: 'all',
           mergedSubscriptionBlocks: [
-            { blockIndex: 1, clusterResourceRows: expectations.topologyClusterResourceBlocks[1]! },
-            { blockIndex: 2, clusterResourceRows: expectations.topologyClusterResourceBlocks[0]! },
+            { blockIndex: 1, clusterName: [...block1Clusters].sort().join('--') || 'local-cluster', clusterResourceRows: expectations.topologyClusterResourceBlocks[1]! },
+            { blockIndex: 2, clusterName: [...block2Clusters].sort().join('--') || 'local-cluster', clusterResourceRows: expectations.topologyClusterResourceBlocks[0]! },
           ],
         });
       }
