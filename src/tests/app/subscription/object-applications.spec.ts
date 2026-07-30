@@ -48,7 +48,7 @@ test.describe(
       'RHACM4K-7485: ALC: Create an Object Storage Application Deployed on All Online Clusters and Local Cluster',
       {
         tag: [
-          '@e2e-common',
+          '@e2e-common', '@e2e',
           '@RHACM4K-7485',
           '@create',
           '@ocpInterop',
@@ -97,7 +97,7 @@ test.describe(
 
     test(
       'RHACM4K-7815: ALC: Delete an Object Storage Application Deployed on All Online Clusters and Local Cluster',
-      { tag: ['@e2e-common', '@RHACM4K-7815', '@destroy', '@ocpInterop'] },
+      { tag: ['@e2e-common', '@e2e', '@RHACM4K-7815', '@destroy', '@ocpInterop'] },
       async ({ oc, applicationListPage }) => {
         test.setTimeout(300_000);
         const { subscription: options } = resolveSubscriptionScenarioByTestId('RHACM4K-7815');
@@ -115,7 +115,7 @@ test.describe(
 
     test(
       'RHACM4K-7814: ALC: Create an Object Storage Application with Multiple Subscriptions',
-      { tag: ['@e2e-common', '@RHACM4K-7814', '@create', '@ocpInterop'] },
+      { tag: ['@e2e-common', '@e2e', '@RHACM4K-7814', '@create', '@ocpInterop'] },
       async ({
         page,
         oc,
@@ -187,7 +187,7 @@ test.describe(
 
     test(
       'RHACM4K-7561: ALC: Delete An Object Storage Subscription from an Existing Multi-Subscription Object Storage Application',
-      { tag: ['@e2e-common', '@RHACM4K-7516', '@edit'] },
+      { tag: ['@e2e-common', '@e2e', '@RHACM4K-7516', '@edit'] },
       async ({
         page,
         applicationListPage,
@@ -243,7 +243,7 @@ test.describe(
 
     test(
       'RHACM4K-7812: ALC: Add An Object Storage Subscription to An Existing Object Storage Application',
-      { tag: ['@e2e-common', '@RHACM4K-7812', '@edit'] },
+      { tag: ['@e2e-common', '@e2e', '@RHACM4K-7812', '@edit'] },
       async ({
         page,
         applicationListPage,
@@ -313,7 +313,7 @@ test.describe(
 
     test(
       'RHACM4K-7813: ALC: Delete a Object Storage Application with Multiple Subscriptions',
-      { tag: ['@e2e-common', '@RHACM4K-7813', '@destroy', '@ocpInterop'] },
+      { tag: ['@e2e-common', '@e2e', '@RHACM4K-7813', '@destroy', '@ocpInterop'] },
       async ({ oc }) => {
         test.setTimeout(300_000);
         const { subscription: options } = resolveSubscriptionScenarioByTestId('RHACM4K-7813');
@@ -327,7 +327,7 @@ test.describe(
 
     test(
       'RHACM4K-45792: ALC: Create an Object Storage Application Deployed on All Online Clusters and Local Cluster',
-      { tag: ['@e2e-common', '@RHACM4K-45792', '@pre-restore', '@post-restore'] },
+      { tag: ['@e2e-common', '@e2e', '@RHACM4K-45792', '@pre-restore', '@post-restore'] },
       async ({
         page,
         oc,

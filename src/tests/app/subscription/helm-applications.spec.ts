@@ -89,7 +89,7 @@ test.describe(
       'RHACM4K-7486: ALC: Create a Helm Application Deployed on a Specific Cluster',
       {
         tag: [
-          '@e2e-common',
+          '@e2e-common', '@e2e',
           '@RHACM4K-7486',
           '@create',
           '@ocpInterop',
@@ -140,7 +140,7 @@ test.describe(
 
     test(
       'RHACM4K-7489: ALC: Delete a Helm Application Deployed on a Specific Cluster',
-      { tag: ['@e2e-common', '@RHACM4K-7489', '@destroy', '@ocpInterop'] },
+      { tag: ['@e2e-common', '@e2e', '@RHACM4K-7489', '@destroy', '@ocpInterop'] },
       async ({ oc }) => {
         test.setTimeout(120_000);
         const { subscription: options } = resolveSubscriptionScenarioByTestId('RHACM4K-7489');
@@ -150,7 +150,7 @@ test.describe(
 
     test(
       'RHACM4K-7560: ALC: Create a Helm Application with Multiple Subscriptions',
-      { tag: ['@e2e-common', '@RHACM4K-7560', '@create', '@ocpInterop', '@post-upgrade'] },
+      { tag: ['@e2e-common', '@e2e', '@RHACM4K-7560', '@create', '@ocpInterop', '@post-upgrade'] },
       async ({
         page,
         oc,
@@ -215,7 +215,7 @@ test.describe(
 
     test(
       'RHACM4K-7563: ALC: Delete A Helm Subscription from an Existing Multi-Subscription Helm Application',
-      { tag: ['@e2e-common', '@RHACM4K-7563', '@edit', '@post-upgrade'] },
+      { tag: ['@e2e-common', '@e2e', '@RHACM4K-7563', '@edit', '@post-upgrade'] },
       async ({
         page,
         applicationListPage,
@@ -271,7 +271,7 @@ test.describe(
 
     test(
       'RHACM4K-7562: ALC: Add A Helm Subscription to An Existing Helm Application',
-      { tag: ['@e2e-common', '@RHACM4K-7562', '@edit', '@post-upgrade'] },
+      { tag: ['@e2e-common', '@e2e', '@RHACM4K-7562', '@edit', '@post-upgrade'] },
       async ({
         page,
         applicationListPage,
@@ -337,7 +337,7 @@ test.describe(
 
     test(
       'RHACM4K-7564: ALC: Delete a Helm Application with Multiple Subscriptions',
-      { tag: ['@e2e-common', '@RHACM4K-7564', '@destroy', '@ocpInterop', '@post-upgrade'] },
+      { tag: ['@e2e-common', '@e2e', '@RHACM4K-7564', '@destroy', '@ocpInterop', '@post-upgrade'] },
       async ({ oc }) => {
         test.setTimeout(300_000);
         const { subscription: options } = resolveSubscriptionScenarioByTestId('RHACM4K-7564');
@@ -351,7 +351,7 @@ test.describe(
 
     test(
       'RHACM4K-45791: ALC: Restore Test Create a Helm Application with Multiple Subscriptions',
-      { tag: ['@e2e-common', '@RHACM4K-45791', '@pre-restore', '@post-restore'] },
+      { tag: ['@e2e-common', '@e2e', '@RHACM4K-45791', '@pre-restore', '@post-restore'] },
       async ({
         page,
         oc,

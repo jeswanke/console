@@ -27,7 +27,7 @@ test.describe(
 
     test(
       'RHACM4K-63608: ALC: As an application admin, I can create an application using a private repository via the AppSet wizard',
-      { tag: ['@RHACM4K-63608', '@create', '@e2e-common'] },
+      { tag: ['@RHACM4K-63608', '@create', '@e2e-common', '@e2e'] },
       async ({
         oc,
         applicationListPage,

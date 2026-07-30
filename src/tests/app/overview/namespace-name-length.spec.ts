@@ -17,7 +17,7 @@ import { test } from '@fixtures/app-test';
 
 test.describe(
   'Application Lifecycle UI: Application supports names and namespaces with varying lengths',
-  { tag: ['@e2e-common', '@namespace-name-length', '@alc', '@app'] },
+  { tag: ['@e2e-common', '@e2e', '@namespace-name-length', '@alc', '@app'] },
   () => {
     test.describe.configure({ mode: 'serial' });
 

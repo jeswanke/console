@@ -8,7 +8,7 @@ import { test } from '@fixtures/app-test';
 
 test.describe(
   'Application Lifecycle UI: Console UI Changes',
-  { tag: ['@alc', '@e2e-common', '@console-ui'] },
+  { tag: ['@alc', '@e2e-common', '@e2e', '@console-ui'] },
   () => {
     test(
       'RHACM4K-32401: ALC: Clicking on git and helm application links copy instead of redirecting the user',
