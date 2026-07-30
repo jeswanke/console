@@ -263,9 +263,10 @@ test.describe(
         if (!auth) return;
 
         const { subscription: addBaseOptions } = resolveSubscriptionScenarioByTestId('RHACM4K-7812');
-        const { subscription: multiOptions, applicationExpectations: expectations } =
+        const { subscription: multiBaseOptions, applicationExpectations: expectations } =
           resolveSubscriptionScenarioByTestId('RHACM4K-7814');
         const addOptions = applyObjectStoreAuthToSubscriptionOptions(addBaseOptions, auth);
+        const multiOptions = applyObjectStoreAuthToSubscriptionOptions(multiBaseOptions, auth);
         expect(addOptions.repositories).toHaveLength(1);
 
         await addSubscriptionToExistingApplication(
