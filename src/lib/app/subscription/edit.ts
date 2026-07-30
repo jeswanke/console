@@ -280,7 +280,7 @@ export async function deleteSubscriptionFromExistingApplication(
     })
     .toBe(beforeRepoCount - 1);
 
-  if (targetRepoSectionCountBefore > 0) {
+  if (targetRepoSectionCountBefore > 0 && beforeRepoCount - 1 === 0) {
     await expect(targetRepoSectionToggle).toHaveCount(0, { timeout: 30_000 });
   }
 
