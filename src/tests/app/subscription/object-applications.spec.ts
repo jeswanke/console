@@ -144,15 +144,19 @@ test.describe(
         );
         expect(options.repositories).toHaveLength(2);
 
+        const { applicationName, namespace } = options;
+        if (await oc.applicationsAppK8sIoExists(namespace, applicationName)) {
+          await oc.deleteNamespace(namespace);
+        }
+
         await applicationListPage.goto();
         await createSubscription(
           applicationListPage,
           subscriptionApplicationCreateWizardPage,
           options
         );
-        await oc.labelNamespaceForAlcTest(options.namespace);
+        await oc.labelNamespaceForAlcTest(namespace);
 
-        const { applicationName, namespace } = options;
         const block1Clusters = await oc.getPlacementDecisionClusterNames(namespace, `${applicationName}-placement-1`);
         const block2Clusters = await oc.getPlacementDecisionClusterNames(namespace, `${applicationName}-placement-2`);
         const mergedSubscriptionBlocks = [
