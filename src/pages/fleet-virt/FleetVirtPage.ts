@@ -15,6 +15,10 @@ import {
  * shouldLoad() is a wait guard (acceptable use of expect in page object).
  */
 export class FleetVirtPage extends BasePage {
+  override async waitForLoad(): Promise<void> {
+    // no-op: persistent loading indicators are expected for restricted RBAC users
+  }
+
   constructor(
     page: Page,
     private readonly oc: OcCliService
@@ -25,7 +29,7 @@ export class FleetVirtPage extends BasePage {
   async goto(): Promise<void> {
     const consoleUrl = await this.oc.getConsoleUrl();
     await this.page.goto(
-      `${consoleUrl}${FLEET_VIRT_ROUTES.vmList}?perspective=fleet-virtualization-perspective`,
+      `${consoleUrl}${FLEET_VIRT_ROUTES.vmList}?perspective=fleet-virtualization-perspective`
     );
     await this.shouldLoad();
   }
@@ -62,9 +66,9 @@ export class FleetVirtPage extends BasePage {
       await siblingButton.click();
     }
 
-    await expect(
-      this.page.getByRole('heading', { name: 'Advanced search', level: 1 })
-    ).toBeVisible({ timeout: 10000 });
+    await expect(this.page.getByRole('heading', { name: 'Advanced search', level: 1 })).toBeVisible(
+      { timeout: 10000 }
+    );
   }
 
   getCreateVmButton(): Locator {
@@ -86,7 +90,10 @@ export class FleetVirtPage extends BasePage {
    */
   async getFirstVmInfo(): Promise<{ name: string; namespace: string }> {
     const grid = this.page.getByRole('grid').last();
-    const firstRow = grid.getByRole('row').filter({ has: this.page.getByRole('gridcell') }).first();
+    const firstRow = grid
+      .getByRole('row')
+      .filter({ has: this.page.getByRole('gridcell') })
+      .first();
     await expect(firstRow).toBeVisible({ timeout: 30000 });
 
     const nameCell = firstRow.getByRole('gridcell').nth(1);
@@ -143,6 +150,18 @@ export class FleetVirtPage extends BasePage {
   }
 
   // ---------------------------------------------------------------------------
+  // Tree view and grid locators
+  // ---------------------------------------------------------------------------
+
+  getTreeViewContainer(): Locator {
+    return this.page.locator('[class*="tree-view"]').first();
+  }
+
+  getVmGrid(): Locator {
+    return this.page.getByRole('grid');
+  }
+
+  // ---------------------------------------------------------------------------
   // Bulk VM selection and actions
   // ---------------------------------------------------------------------------
 
@@ -150,18 +169,21 @@ export class FleetVirtPage extends BasePage {
     const row = this.page.getByRole('row').filter({ hasText: vmName });
     const checkbox = row.getByRole('checkbox');
     await expect(checkbox).toBeVisible({ timeout: 15000 });
-    const isChecked = await checkbox.isChecked();
-    if (!isChecked) {
-      await checkbox.click();
-    }
+    await expect(async () => {
+      if (!(await checkbox.isChecked())) {
+        await checkbox.check({ force: true });
+      }
+      await expect(checkbox).toBeChecked();
+    }).toPass({ intervals: [1000, 2000], timeout: 30000 });
   }
 
   async selectMultipleVms(vmNames: string[]): Promise<void> {
     for (const vmName of vmNames) {
       await this.selectVmByCheckbox(vmName);
-      await this.page.waitForTimeout(500);
     }
-    await expect(this.page.getByText(/\d+ selected/)).toBeVisible({ timeout: 10000 });
+    await expect(this.page.getByText(new RegExp(`${vmNames.length} selected`))).toBeVisible({
+      timeout: 15000,
+    });
   }
 
   async openBulkActions(): Promise<void> {
@@ -190,13 +212,19 @@ export class FleetVirtPage extends BasePage {
    * Trigger a bulk control action (start/stop/pause/unpause/restart).
    * PF6 flyout menus require hover on parent to reveal the submenu.
    */
-  async triggerBulkControlAction(action: 'start' | 'stop' | 'pause' | 'unpause' | 'restart'): Promise<void> {
+  async triggerBulkControlAction(
+    action: 'start' | 'stop' | 'pause' | 'unpause' | 'restart'
+  ): Promise<void> {
     await this.openBulkActions();
     const menu = this.page.getByRole('menu');
     const controlBtn = menu.getByRole('button', { name: 'Control', exact: true });
     await controlBtn.hover();
     const labelMap: Record<string, string> = {
-      start: 'Start', stop: 'Stop', pause: 'Pause', unpause: 'Unpause', restart: 'Restart',
+      start: 'Start',
+      stop: 'Stop',
+      pause: 'Pause',
+      unpause: 'Unpause',
+      restart: 'Restart',
     };
     const actionItem = this.page.getByRole('menuitem', { name: labelMap[action], exact: true });
     await expect(actionItem).toBeVisible({ timeout: 5000 });

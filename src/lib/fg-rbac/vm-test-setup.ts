@@ -18,7 +18,7 @@ export async function ensureVmReady(
   name: string,
   namespace: string,
   labels: Record<string, string>,
-  options?: { context?: string },
+  options?: { context?: string }
 ): Promise<void> {
   await oc.vmEnsureTestVM(name, namespace, labels, options);
   await expect(async () => {
@@ -30,7 +30,7 @@ export async function ensureVmReady(
 export async function ensureVmWithPvcReady(
   name: string,
   namespace: string,
-  labels: Record<string, string>,
+  labels: Record<string, string>
 ): Promise<void> {
   await oc.vmEnsureTestVMWithPVC(name, namespace, labels);
   await expect(async () => {
@@ -48,7 +48,7 @@ export async function ensureVmWithPvcReady(
 export async function cleanupVm(
   name: string,
   namespace: string,
-  options?: { context?: string },
+  options?: { context?: string }
 ): Promise<void> {
   await oc.vmDeleteTestVM(name, namespace, options);
 }
@@ -65,7 +65,7 @@ export async function cleanupVmAndSnapshots(name: string, namespace: string): Pr
 export async function ensureMultipleVmsWithPvcReady(
   names: string[],
   namespace: string,
-  labels: Record<string, string>,
+  labels: Record<string, string>
 ): Promise<void> {
   for (const name of names) {
     await oc.vmEnsureTestVMWithPVC(name, namespace, labels);
@@ -81,7 +81,7 @@ export async function ensureMultipleVmsWithPvcReady(
 export async function cleanupMultipleCclmResources(
   names: string[],
   namespace: string,
-  spokeCluster: string,
+  spokeCluster: string
 ): Promise<void> {
   for (const name of names) {
     await oc.vmDeleteTestVM(name, namespace);
@@ -92,32 +92,29 @@ export async function cleanupMultipleCclmResources(
   await cleanupOrphanedVmims(namespace, spokeCluster);
 }
 
-export async function cleanupOrphanedVmims(
-  namespace: string,
-  spokeContext: string,
-): Promise<void> {
+export async function cleanupOrphanedVmims(namespace: string, spokeContext: string): Promise<void> {
   // Clean VMIMs on spoke
   const spokeVmims = await oc.run(
-    `oc get virtualmachineinstancemigrations -n ${namespace} --context ${spokeContext} -o jsonpath='{.items[*].metadata.name}' 2>/dev/null || true`,
+    `oc get virtualmachineinstancemigrations -n ${namespace} --context ${spokeContext} -o jsonpath='{.items[*].metadata.name}' 2>/dev/null || true`
   );
   for (const vmim of spokeVmims.trim().split(/\s+/).filter(Boolean)) {
     await oc.run(
-      `oc patch virtualmachineinstancemigration ${vmim} -n ${namespace} --context ${spokeContext} --type=merge -p '{"metadata":{"finalizers":null}}' 2>/dev/null || true`,
+      `oc patch virtualmachineinstancemigration ${vmim} -n ${namespace} --context ${spokeContext} --type=merge -p '{"metadata":{"finalizers":null}}' 2>/dev/null || true`
     );
     await oc.run(
-      `oc delete virtualmachineinstancemigration ${vmim} -n ${namespace} --context ${spokeContext} --force --grace-period=0 2>/dev/null || true`,
+      `oc delete virtualmachineinstancemigration ${vmim} -n ${namespace} --context ${spokeContext} --force --grace-period=0 2>/dev/null || true`
     );
   }
   // Clean VMIMs on hub (source-side VMIMs from previous CCLM runs)
   const hubVmims = await oc.run(
-    `oc get virtualmachineinstancemigrations -n ${namespace} -o jsonpath='{.items[*].metadata.name}' 2>/dev/null || true`,
+    `oc get virtualmachineinstancemigrations -n ${namespace} -o jsonpath='{.items[*].metadata.name}' 2>/dev/null || true`
   );
   for (const vmim of hubVmims.trim().split(/\s+/).filter(Boolean)) {
     await oc.run(
-      `oc patch virtualmachineinstancemigration ${vmim} -n ${namespace} --type=merge -p '{"metadata":{"finalizers":null}}' 2>/dev/null || true`,
+      `oc patch virtualmachineinstancemigration ${vmim} -n ${namespace} --type=merge -p '{"metadata":{"finalizers":null}}' 2>/dev/null || true`
     );
     await oc.run(
-      `oc delete virtualmachineinstancemigration ${vmim} -n ${namespace} --force --grace-period=0 2>/dev/null || true`,
+      `oc delete virtualmachineinstancemigration ${vmim} -n ${namespace} --force --grace-period=0 2>/dev/null || true`
     );
   }
 }
@@ -128,17 +125,22 @@ export async function cleanupOrphanedVmims(
 
 export async function applySpokeResourceQuota(
   namespace: string,
-  spokeContext: string,
+  spokeContext: string
 ): Promise<void> {
-  await oc.applyResourceQuota('mtv-migration-deny', namespace, {
-    cpu: '100m',
-    memory: '256Mi',
-  }, { context: spokeContext });
+  await oc.applyResourceQuota(
+    'mtv-migration-deny',
+    namespace,
+    {
+      cpu: '100m',
+      memory: '256Mi',
+    },
+    { context: spokeContext }
+  );
 }
 
 export async function deleteSpokeResourceQuota(
   namespace: string,
-  spokeContext: string,
+  spokeContext: string
 ): Promise<void> {
   await oc.deleteResourceQuota('mtv-migration-deny', namespace, { context: spokeContext });
 }
@@ -166,7 +168,7 @@ export async function checkCclmPrerequisites(spokeCluster: string): Promise<bool
 export async function cleanupCclmResources(
   vmName: string,
   vmNamespace: string,
-  spokeCluster: string,
+  spokeCluster: string
 ): Promise<void> {
   await oc.vmDeleteTestVM(vmName, vmNamespace);
   await oc.deleteDataVolume(`${vmName}-dv`, vmNamespace);
@@ -180,16 +182,14 @@ export async function cleanupCclmResources(
 // ---------------------------------------------------------------------------
 
 export async function verifyUserExists(username: string): Promise<boolean> {
-  const output = await oc.run(
-    `oc get user ${username} --no-headers 2>/dev/null || echo NOT_FOUND`,
-  );
+  const output = await oc.run(`oc get user ${username} --no-headers 2>/dev/null || echo NOT_FOUND`);
   return !output.includes('NOT_FOUND');
 }
 
 export async function verifyVmDeleted(name: string, namespace: string): Promise<void> {
   await expect(async () => {
     const output = await oc.run(
-      `oc get vm ${name} -n ${namespace} --no-headers 2>/dev/null || echo "NotFound"`,
+      `oc get vm ${name} -n ${namespace} --no-headers 2>/dev/null || echo "NotFound"`
     );
     expect(output).toContain('NotFound');
   }).toPass({ intervals: [5000, 10000], timeout: 60000 });
@@ -197,15 +197,18 @@ export async function verifyVmDeleted(name: string, namespace: string): Promise<
 
 export async function verifyNoMcvForVm(vmName: string, clusterName: string): Promise<number> {
   const mcvCount = await oc.run(
-    `oc get managedclusterview -n ${clusterName} -o json 2>/dev/null | jq -r '[.items[] | select(.spec.scope.name == "${vmName}")] | length'`,
+    `oc get managedclusterview -n ${clusterName} -o json 2>/dev/null | jq -r '[.items[] | select(.spec.scope.name == "${vmName}")] | length'`
   );
   return parseInt(mcvCount.trim());
 }
 
-export async function verifySnapshotDeleted(snapshotName: string, namespace: string): Promise<void> {
+export async function verifySnapshotDeleted(
+  snapshotName: string,
+  namespace: string
+): Promise<void> {
   await expect(async () => {
     const output = await oc.run(
-      `oc get virtualmachinesnapshot ${snapshotName} -n ${namespace} --no-headers 2>/dev/null || echo "NotFound"`,
+      `oc get virtualmachinesnapshot ${snapshotName} -n ${namespace} --no-headers 2>/dev/null || echo "NotFound"`
     );
     expect(output).toContain('NotFound');
   }).toPass({ intervals: [5000, 10000], timeout: 60000 });
@@ -214,7 +217,7 @@ export async function verifySnapshotDeleted(snapshotName: string, namespace: str
 export async function verifySnapshotReady(snapshotName: string, namespace: string): Promise<void> {
   await expect(async () => {
     const phase = await oc.run(
-      `oc get virtualmachinesnapshot ${snapshotName} -n ${namespace} -o jsonpath='{.status.phase}' 2>/dev/null || echo "Pending"`,
+      `oc get virtualmachinesnapshot ${snapshotName} -n ${namespace} -o jsonpath='{.status.phase}' 2>/dev/null || echo "Pending"`
     );
     expect(phase).toContain('Succeeded');
   }).toPass({ intervals: [5000, 10000], timeout: 60000 });
@@ -222,7 +225,7 @@ export async function verifySnapshotReady(snapshotName: string, namespace: strin
 
 export async function checkSnapshotExists(vmName: string, namespace: string): Promise<number> {
   const output = await oc.run(
-    `oc get virtualmachinesnapshot -n ${namespace} --no-headers 2>/dev/null | grep "${vmName}" | wc -l`,
+    `oc get virtualmachinesnapshot -n ${namespace} --no-headers 2>/dev/null | grep "${vmName}" | wc -l`
   );
   return parseInt(output.trim());
 }
@@ -230,10 +233,56 @@ export async function checkSnapshotExists(vmName: string, namespace: string): Pr
 export async function createSnapshotViaCli(
   snapshotName: string,
   vmName: string,
-  namespace: string,
+  namespace: string
 ): Promise<void> {
   await oc.vmCreateSnapshot(snapshotName, vmName, namespace);
   await verifySnapshotReady(snapshotName, namespace);
+}
+
+// ---------------------------------------------------------------------------
+// Forklift lifecycle (CCLM)
+// ---------------------------------------------------------------------------
+
+export async function cleanupForkliftPlansAndMigrations(
+  namespace = 'mtv-integrations',
+): Promise<void> {
+  await oc.cleanupForkliftResources(namespace);
+}
+
+export async function haltAndRestartVmsOnSpoke(
+  names: string[],
+  namespace: string,
+  spokeCluster: string,
+  kcPath: string
+): Promise<void> {
+  for (const name of names) {
+    await oc.run(
+      `oc patch vm ${name} -n ${namespace} --context ${spokeCluster} --kubeconfig ${kcPath} --type=merge -p '{"spec":{"runStrategy":"Halted"}}' 2>/dev/null || true`
+    );
+  }
+  await new Promise((r) => setTimeout(r, 15000));
+  for (const name of names) {
+    await oc.run(
+      `oc patch vm ${name} -n ${namespace} --context ${spokeCluster} --kubeconfig ${kcPath} --type=merge -p '{"spec":{"runStrategy":"Always"}}' 2>/dev/null || true`
+    );
+  }
+}
+
+export async function deleteHubVms(names: string[], namespace: string): Promise<void> {
+  for (const name of names) {
+    await oc.run(
+      `oc delete vm ${name} -n ${namespace} --force --grace-period=0 2>/dev/null || true`
+    );
+  }
+}
+
+export async function verifyHubVmsDeleted(names: string[], namespace: string): Promise<void> {
+  for (const name of names) {
+    const result = await oc.run(`oc get vm ${name} -n ${namespace} --no-headers 2>&1 || true`);
+    if (!result.includes('NotFound')) {
+      throw new Error(`VM ${name} still exists on hub`);
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -241,14 +290,12 @@ export async function createSnapshotViaCli(
 // ---------------------------------------------------------------------------
 
 export async function getForkliftPlans(): Promise<string> {
-  return oc.run(
-    'oc get plans.forklift.konveyor.io -A --no-headers 2>/dev/null || echo "none"',
-  );
+  return oc.run('oc get plans.forklift.konveyor.io -A --no-headers 2>/dev/null || echo "none"');
 }
 
 export async function getForkliftPlanStatus(namespace: string): Promise<string> {
   return oc.run(
-    `oc get plans.forklift.konveyor.io -n ${namespace} -o jsonpath='{range .items[*]}{.metadata.name}: phase={.status.migration.vms[*].phase} conditions={.status.conditions[*].type}{end}' 2>/dev/null || echo "no-plans"`,
+    `oc get plans.forklift.konveyor.io -n ${namespace} -o jsonpath='{range .items[*]}{.metadata.name}: phase={.status.migration.vms[*].phase} conditions={.status.conditions[*].type}{end}' 2>/dev/null || echo "no-plans"`
   );
 }
 
@@ -256,10 +303,10 @@ export async function getVmStatusOnSpoke(
   vmName: string,
   namespace: string,
   spokeCluster: string,
-  kcPath: string,
+  kcPath: string
 ): Promise<string> {
   const status = await oc.run(
-    `KUBECONFIG="${kcPath}" oc get vm ${vmName} -n ${namespace} --context=${spokeCluster} -o jsonpath='{.status.printableStatus}' 2>/dev/null || echo "NotFound"`,
+    `KUBECONFIG="${kcPath}" oc get vm ${vmName} -n ${namespace} --context=${spokeCluster} -o jsonpath='{.status.printableStatus}' 2>/dev/null || echo "NotFound"`
   );
   return status.trim();
 }

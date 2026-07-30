@@ -139,23 +139,7 @@ export const FLEET_VIRT_VM_CREATION = {
     `/fleet-virtualization/vm-wizard/cluster/${cluster}/all-namespaces`,
 
   vmNameInput: '#vm-name',
-  generateNameButton: '[data-test="generate-vm-name-button"]',
-
   primaryButton: '.pf-v6-c-wizard button.pf-v6-c-button.pf-m-primary',
-  backButton: '.pf-v6-c-wizard button.pf-v6-c-button.pf-m-secondary',
-  cancelButton: '.pf-v6-c-wizard button.pf-v6-c-button.pf-m-link',
-
-  creationMethod: {
-    customConfigCard: '#instance-type.pf-v6-c-card',
-    templateCard: '#template.pf-v6-c-card',
-    cloneCard: '#clone.pf-v6-c-card',
-  },
-
-  templateCatalog: {
-    tile: '.templates-catalog-tile',
-    tileByName: (name: string) => `[data-test-id="${name}"]`,
-    selectedClass: 'pf-m-selected',
-  },
 
   bootSource: {
     tableRow: '.pf-v6-c-wizard table tbody tr',

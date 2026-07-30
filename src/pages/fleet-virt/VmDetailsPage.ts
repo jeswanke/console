@@ -109,6 +109,12 @@ export class VmDetailsPage extends BasePage {
     return this.getEventsHeading();
   }
 
+  getEventEntries(): Locator {
+    return this.page
+      .locator('[class*="event"]')
+      .or(this.page.getByText(/Created|Started|Scheduled/i));
+  }
+
   // ---------------------------------------------------------------------------
   // Snapshots tab
   // ---------------------------------------------------------------------------
@@ -157,7 +163,9 @@ export class VmDetailsPage extends BasePage {
   // Configuration tab (has sub-navigation)
   // ---------------------------------------------------------------------------
 
-  getConfigurationTab(): Locator { return this.page.getByRole('link', { name: 'Configuration' }); }
+  getConfigurationTab(): Locator {
+    return this.page.getByRole('link', { name: 'Configuration' });
+  }
 
   getConfigSubTab(name: string): Locator {
     return this.page.getByRole('tab', { name });
@@ -234,6 +242,30 @@ export class VmDetailsPage extends BasePage {
     } catch {
       // No confirmation dialog — action executed directly
     }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Diagnostics tab
+  // ---------------------------------------------------------------------------
+
+  getDiagnosticsContent(textPattern: RegExp): Locator {
+    return this.page.getByText(textPattern);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Dashboard utilization (Fleet Virt Overview tab)
+  // ---------------------------------------------------------------------------
+
+  getUtilizationCard(): Locator {
+    return this.page.locator('.VirtualMachinesOverviewTabUtilization--main');
+  }
+
+  getUtilSummary(metric: string): Locator {
+    return this.page.getByTestId(`util-summary-${metric}`);
+  }
+
+  getErrorBanner(): Locator {
+    return this.page.getByText('Something wrong happened');
   }
 
   // ---------------------------------------------------------------------------

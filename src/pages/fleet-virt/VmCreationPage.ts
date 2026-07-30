@@ -17,6 +17,14 @@ import { FLEET_VIRT_VM_CREATION } from '@constants/fleet-virt';
  * Key pattern: navigation button is `.pf-v6-c-wizard button.pf-v6-c-button.pf-m-primary`
  * (resolves to "Next" or "Create VirtualMachine" depending on wizard step).
  * PF6 uses `aria-disabled` for temporary loading states.
+ *
+ * Step transition detection: `.pf-v6-c-wizard__nav-link[aria-current="step"]` moves
+ * to the new step after clicking Next. This is the definitive signal that the PF6
+ * wizard completed its internal state transition (verified on live DOM).
+ *
+ * Creation method selection: PF6 selectable cards have role="radio" in the
+ * accessibility tree. Click the card via getByRole('radio', { name }) to trigger
+ * React state change (hidden input force-click does NOT fire onChange).
  */
 export class VmCreationPage extends BasePage {
   private readonly wizard: Locator;
@@ -24,7 +32,7 @@ export class VmCreationPage extends BasePage {
 
   constructor(
     page: Page,
-    private readonly oc: OcCliService,
+    private readonly oc: OcCliService
   ) {
     super(page);
     this.wizard = page.locator(FLEET_VIRT_VM_CREATION.wizardContainer);
@@ -37,27 +45,25 @@ export class VmCreationPage extends BasePage {
 
   async openCreateWizard(cluster = 'local-cluster'): Promise<void> {
     const consoleUrl = await this.oc.getConsoleUrl();
-    await this.page.goto(
-      `${consoleUrl}${FLEET_VIRT_VM_CREATION.wizardRoute(cluster)}`,
-    );
+    await this.page.goto(`${consoleUrl}${FLEET_VIRT_VM_CREATION.wizardRoute(cluster)}`);
     await expect(this.wizard).toBeVisible({ timeout: 30000 });
-    // Allow wizard form to fully initialize (react-hook-form + async validators)
-    await this.page.waitForTimeout(2000);
+    await this.page
+      .locator(FLEET_VIRT_VM_CREATION.vmNameInput)
+      .or(this.page.getByRole('textbox', { name: 'Name' }))
+      .first()
+      .waitFor({ state: 'visible', timeout: 15000 });
   }
 
   // ---------------------------------------------------------------------------
-  // Creation method selection (PF6 selectable cards with hidden radios)
+  // Creation method selection (PF6 selectable cards with role="radio")
   // ---------------------------------------------------------------------------
-
-  async selectCustomConfigMethod(): Promise<void> {
-    await this.page.locator(FLEET_VIRT_VM_CREATION.creationMethod.customConfigCard).click();
-    await this.page.waitForTimeout(2000);
-  }
 
   async selectTemplateMethod(): Promise<void> {
-    await this.page.locator(FLEET_VIRT_VM_CREATION.creationMethod.templateCard).click();
-    // PF6 wizard processes method switch asynchronously — wait for aria-disabled to settle
-    await this.page.waitForTimeout(2000);
+    const card = this.page.getByRole('radio', { name: /Create from Template/ });
+    await card.click();
+    await expect(
+      this.page.locator('.pf-v6-c-wizard__nav-link', { hasText: 'Template' })
+    ).toBeVisible({ timeout: 10000 });
   }
 
   // ---------------------------------------------------------------------------
@@ -65,43 +71,14 @@ export class VmCreationPage extends BasePage {
   // ---------------------------------------------------------------------------
 
   async fillVmName(name: string): Promise<void> {
-    const input = this.page.locator(FLEET_VIRT_VM_CREATION.vmNameInput);
+    const input = this.page
+      .locator(FLEET_VIRT_VM_CREATION.vmNameInput)
+      .or(this.page.getByRole('textbox', { name: 'Name' }))
+      .first();
     await input.waitFor({ state: 'visible', timeout: 10000 });
     await input.fill(name);
-    // Tab triggers form validation which enables the Next button
     await input.press('Tab');
-    await this.page.waitForTimeout(500);
-  }
-
-  async generateVmName(): Promise<void> {
-    await this.page.locator(FLEET_VIRT_VM_CREATION.generateNameButton).first().click();
-    await this.page.waitForTimeout(500);
-  }
-
-  // ---------------------------------------------------------------------------
-  // Template step — select template card by data-test-id
-  // ---------------------------------------------------------------------------
-
-  async selectTemplate(templateName: string): Promise<void> {
-    const card = this.page.locator(FLEET_VIRT_VM_CREATION.templateCatalog.tileByName(templateName));
-    await card.waitFor({ state: 'visible', timeout: 15000 });
-    await card.click();
-    await expect(card).toHaveClass(new RegExp(FLEET_VIRT_VM_CREATION.templateCatalog.selectedClass), {
-      timeout: 5000,
-    });
-  }
-
-  // ---------------------------------------------------------------------------
-  // Boot source step — select first available volume
-  // ---------------------------------------------------------------------------
-
-  async selectFirstBootVolume(): Promise<void> {
-    const nameCell = this.page
-      .locator(FLEET_VIRT_VM_CREATION.bootSource.tableRow)
-      .first()
-      .locator(FLEET_VIRT_VM_CREATION.bootSource.nameCell);
-    await nameCell.waitFor({ state: 'visible', timeout: 15000 });
-    await nameCell.click();
+    await this.waitForPrimaryButtonEnabled();
   }
 
   // ---------------------------------------------------------------------------
@@ -114,31 +91,26 @@ export class VmCreationPage extends BasePage {
    */
   private async waitForPrimaryButtonEnabled(timeout = 15000): Promise<void> {
     await expect(async () => {
-      const isDisabled = await this.primaryBtn.isDisabled();
-      const ariaDisabled = await this.primaryBtn.getAttribute('aria-disabled');
-      expect(isDisabled).toBe(false);
-      expect(ariaDisabled).not.toBe('true');
+      await expect(this.primaryBtn).toBeEnabled();
+      await expect(this.primaryBtn).not.toHaveAttribute('aria-disabled', 'true');
     }).toPass({ intervals: [500, 1000, 2000], timeout });
   }
 
   async clickNext(): Promise<void> {
     await this.waitForPrimaryButtonEnabled();
+    const activeStepLocator = this.page.locator('.pf-v6-c-wizard__nav-link[aria-current="step"]');
+    const currentStepText = await activeStepLocator.textContent();
     await this.primaryBtn.click();
-    await this.page.waitForTimeout(1000);
-  }
-
-  async clickBack(): Promise<void> {
-    await this.page.locator(FLEET_VIRT_VM_CREATION.backButton).first().click();
-  }
-
-  async clickCancel(): Promise<void> {
-    await this.page.locator(FLEET_VIRT_VM_CREATION.cancelButton).first().click();
+    await expect(activeStepLocator).not.toHaveText(currentStepText || '', { timeout: 15000 });
   }
 
   async clickCreateVm(): Promise<void> {
     await this.waitForPrimaryButtonEnabled();
     await this.primaryBtn.click();
-    await this.page.waitForTimeout(2000);
+    await expect(async () => {
+      const url = this.page.url();
+      expect(url).toMatch(/kubevirt\.io~v1~VirtualMachine\//);
+    }).toPass({ intervals: [1000, 2000], timeout: 60000 });
   }
 
   /**
@@ -151,33 +123,34 @@ export class VmCreationPage extends BasePage {
    * Keeps clicking Next until the primary button text becomes "Create VirtualMachine".
    */
   async navigateToReviewStep(): Promise<void> {
+    const activeStepLocator = this.page.locator('.pf-v6-c-wizard__nav-link[aria-current="step"]');
+
     await expect(async () => {
       const btnText = await this.primaryBtn.textContent();
       if (btnText?.trim() === 'Create VirtualMachine') {
         return;
       }
 
-      const isDisabled = await this.primaryBtn.isDisabled();
+      const isEnabled = await this.primaryBtn.isEnabled();
       const ariaDisabled = await this.primaryBtn.getAttribute('aria-disabled');
-      const isActionable = !isDisabled && ariaDisabled !== 'true';
+      const isActionable = isEnabled && ariaDisabled !== 'true';
 
       if (isActionable) {
+        const stepBefore = await activeStepLocator.textContent();
         await this.primaryBtn.click();
-        await this.page.waitForTimeout(1500);
+        await expect(activeStepLocator).not.toHaveText(stepBefore || '', { timeout: 10000 });
       } else {
-        // Try selecting boot volume if we're on the boot source step
         const bootRow = this.page.locator(FLEET_VIRT_VM_CREATION.bootSource.tableRow).first();
         if (await bootRow.isVisible({ timeout: 2000 }).catch(() => false)) {
           const nameCell = bootRow.locator(FLEET_VIRT_VM_CREATION.bootSource.nameCell);
           if (await nameCell.isVisible({ timeout: 1000 }).catch(() => false)) {
             await nameCell.click();
-            await this.page.waitForTimeout(1000);
+            await this.waitForPrimaryButtonEnabled();
           }
         }
       }
 
-      const finalText = await this.primaryBtn.textContent();
-      expect(finalText?.trim()).toBe('Create VirtualMachine');
+      await expect(this.primaryBtn).toHaveText('Create VirtualMachine', { timeout: 5000 });
     }).toPass({ intervals: [3000, 4000, 5000], timeout: 90000 });
   }
 
@@ -201,7 +174,9 @@ export class VmCreationPage extends BasePage {
     const cliTab = this.page.locator('.pf-v6-c-modal-box__body button:has-text("CLI")');
     await cliTab.waitFor({ state: 'visible', timeout: 10000 });
     await cliTab.click();
-    await this.page.waitForTimeout(500);
+    await expect(
+      this.page.locator('.pf-v6-c-modal-box__body').getByText(/virtctl|oc|kubectl/)
+    ).toBeVisible({ timeout: 10000 });
   }
 
   async verifyCliContentVisible(): Promise<void> {
@@ -220,21 +195,94 @@ export class VmCreationPage extends BasePage {
   }
 
   // ---------------------------------------------------------------------------
-  // Bootable volume explicit selection (InstanceTypes flow)
+  // Composed wizard step: fill name + advance to boot source + select volume
+  // Handles PF6 wizard race conditions with retry logic.
   // ---------------------------------------------------------------------------
 
-  async selectBootableVolumeByName(volumeName: string): Promise<void> {
-    const filterInput = this.page.locator('[data-test="item-filter"]')
-      .or(this.page.locator('[data-test="name-filter-input"]')).first();
-    if (await filterInput.isVisible({ timeout: 5000 }).catch(() => false)) {
-      await filterInput.clear();
-      await filterInput.fill(volumeName);
-      await this.page.waitForTimeout(1000);
-    }
-    const volumeCell = this.page.locator(`td[id="name"]`).filter({ hasText: volumeName }).first();
-    await volumeCell.waitFor({ state: 'visible', timeout: 15000 });
-    await volumeCell.click();
-    await this.page.waitForTimeout(500);
+  async advanceWithNameFillAndVolumeSelect(name: string): Promise<void> {
+    await expect(async () => {
+      const activeStep = this.page.locator('.pf-v6-c-wizard__nav-link[aria-current="step"]');
+      const currentStep = (await activeStep.textContent())?.trim() ?? '';
+
+      if (currentStep === 'Boot source') {
+        const volumeTable = this.page
+          .locator(FLEET_VIRT_VM_CREATION.bootSource.tableRow)
+          .first()
+          .locator(FLEET_VIRT_VM_CREATION.bootSource.nameCell);
+        await expect(volumeTable).toBeVisible({ timeout: 10000 });
+        const fedoraVol = this.page
+          .locator('td[id="name"]')
+          .filter({ hasText: /fedora/i })
+          .first();
+        if (await fedoraVol.isVisible({ timeout: 5000 }).catch(() => false)) {
+          await fedoraVol.click();
+        } else {
+          await volumeTable.click();
+        }
+        return;
+      }
+
+      if (currentStep === 'Deployment details') {
+        const nameInput = this.page.locator(FLEET_VIRT_VM_CREATION.vmNameInput);
+        const value = await nameInput.inputValue();
+        if (!value) {
+          await nameInput.fill(name);
+          await nameInput.press('Tab');
+        }
+      }
+
+      await expect(this.primaryBtn).toBeEnabled({ timeout: 15000 });
+      await this.primaryBtn.click();
+      throw new Error(`Advancing from: ${currentStep}`);
+    }).toPass({ intervals: [3000, 5000], timeout: 90000 });
+  }
+
+  // ---------------------------------------------------------------------------
+  // YAML & CLI modal content verification
+  // ---------------------------------------------------------------------------
+
+  getYamlModalContent(pattern: RegExp): Locator {
+    return this.page.locator('.pf-v6-c-modal-box__body').getByText(pattern);
+  }
+
+  isYamlCliButtonVisible(): Promise<boolean> {
+    return this.page
+      .locator('button:has-text("View YAML & CLI")')
+      .isVisible({ timeout: 10000 })
+      .catch(() => false);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Template catalog step
+  // ---------------------------------------------------------------------------
+
+  async waitForTemplateCatalogVisible(): Promise<void> {
+    await expect(async () => {
+      const filterBtn = this.page.locator('button:has-text("Filter")');
+      const catalogGrid = this.page
+        .locator('[id="vm-catalog-grid"], .templates-catalog-tile, [data-test-id*="fedora"]')
+        .first();
+      const catalogPresent =
+        (await filterBtn.isVisible({ timeout: 3000 }).catch(() => false)) ||
+        (await catalogGrid.isVisible({ timeout: 3000 }).catch(() => false));
+      expect(catalogPresent, 'Template catalog should be visible').toBeTruthy();
+    }).toPass({ intervals: [3000, 5000], timeout: 60000 });
+  }
+
+  async selectFedoraTemplateCard(): Promise<void> {
+    await expect(async () => {
+      const fedoraCard = this.page
+        .locator('[data-test-id*="fedora"]')
+        .first()
+        .or(
+          this.page
+            .locator('.templates-catalog-tile')
+            .filter({ hasText: /fedora/i })
+            .first()
+        );
+      await expect(fedoraCard).toBeVisible({ timeout: 10000 });
+      await fedoraCard.click();
+    }).toPass({ intervals: [3000, 5000], timeout: 30000 });
   }
 
   // ---------------------------------------------------------------------------
@@ -246,17 +294,21 @@ export class VmCreationPage extends BasePage {
     if (await filterBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
       const expanded = await filterBtn.getAttribute('aria-expanded');
       if (expanded !== 'true') await filterBtn.click();
-      const checkbox = this.page.locator('[data-test-row-filter="only-available"] input[type="checkbox"]');
+      const checkbox = this.page.locator(
+        '[data-test-row-filter="only-available"] input[type="checkbox"]'
+      );
       await checkbox.waitFor({ state: 'visible', timeout: 5000 });
       if (!(await checkbox.isChecked())) await checkbox.check({ force: true });
       await filterBtn.click();
     } else {
-      const bootSourceFilter = this.page.locator('[data-test="boot-source-available-Boot source available"] input[type="checkbox"]');
+      const bootSourceFilter = this.page.locator(
+        '[data-test="boot-source-available-Boot source available"] input[type="checkbox"]'
+      );
       if (await bootSourceFilter.isVisible({ timeout: 3000 }).catch(() => false)) {
         await bootSourceFilter.check({ force: true });
       }
     }
-    await this.page.waitForTimeout(1000);
+    await this.waitForTemplateCatalogUpdated();
   }
 
   async filterByOSName(osName: 'RHEL' | 'Windows' | 'Fedora' | 'CentOS'): Promise<void> {
@@ -265,28 +317,29 @@ export class VmCreationPage extends BasePage {
     if (await filterBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
       const expanded = await filterBtn.getAttribute('aria-expanded');
       if (expanded !== 'true') await filterBtn.click();
-      const checkbox = this.page.locator(`[data-test-row-filter="${filterKey}"] input[type="checkbox"]`);
+      const checkbox = this.page.locator(
+        `[data-test-row-filter="${filterKey}"] input[type="checkbox"]`
+      );
       await checkbox.waitFor({ state: 'visible', timeout: 5000 });
       if (!(await checkbox.isChecked())) await checkbox.check({ force: true });
       await filterBtn.click();
     } else {
-      const osFilter = this.page.locator(`input#filter-osName-${filterKey}`)
+      const osFilter = this.page
+        .locator(`input#filter-osName-${filterKey}`)
         .or(this.page.locator(`[data-test="osName-${osName}"] input[type="checkbox"]`));
       await osFilter.first().check({ force: true });
     }
-    await this.page.waitForTimeout(1000);
+    await this.waitForTemplateCatalogUpdated();
   }
 
-  // ---------------------------------------------------------------------------
-  // Customize VM (opens sidebar wizard for template or instance-type flows)
-  // ---------------------------------------------------------------------------
-
-  async clickCustomizeVm(): Promise<void> {
-    const customizeBtn = this.page.locator('button:has-text("Customize VirtualMachine")')
-      .or(this.page.locator('[data-test="customize-vm-btn"]'));
-    await customizeBtn.first().waitFor({ state: 'visible', timeout: 15000 });
-    await customizeBtn.first().click();
-    await this.page.waitForTimeout(2000);
+  /**
+   * Wait for template catalog to reflect filter changes by checking
+   * that at least one template card is visible or the empty state is shown.
+   */
+  private async waitForTemplateCatalogUpdated(): Promise<void> {
+    const catalogTile = this.page.locator('.templates-catalog-tile');
+    const emptyState = this.page.getByText(/No templates found|No results/);
+    await expect(catalogTile.first().or(emptyState.first())).toBeVisible({ timeout: 10000 });
   }
 
   // ---------------------------------------------------------------------------
@@ -295,9 +348,5 @@ export class VmCreationPage extends BasePage {
 
   getWizard(): Locator {
     return this.wizard;
-  }
-
-  getPrimaryButton(): Locator {
-    return this.primaryBtn;
   }
 }

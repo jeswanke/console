@@ -583,9 +583,10 @@ export class OcCliService {
     targetNamespaces?: string[];
   }): Promise<void> {
     const ns = opts.targetNamespaces ?? [];
-    const nsLines = ns.length > 0
-      ? ['      targetNamespaces:', ...ns.map((n) => `        - ${n}`)]
-      : ['      targetNamespaces: []'];
+    const nsLines =
+      ns.length > 0
+        ? ['      targetNamespaces:', ...ns.map((n) => `        - ${n}`)]
+        : ['      targetNamespaces: []'];
 
     const manifest = [
       'apiVersion: rbac.open-cluster-management.io/v1beta1',
@@ -633,7 +634,16 @@ export class OcCliService {
     const patch = JSON.stringify([{ op: 'add', path: '/spec/roleAssignments/-', value }]);
     await execFilePromise(
       'oc',
-      ['patch', 'multiclusterroleassignment', mcraName, '-n', namespace, '--type=json', '-p', patch],
+      [
+        'patch',
+        'multiclusterroleassignment',
+        mcraName,
+        '-n',
+        namespace,
+        '--type=json',
+        '-p',
+        patch,
+      ],
       { encoding: 'utf8', maxBuffer: 1024 * 1024 }
     );
   }
@@ -709,10 +719,7 @@ export class OcCliService {
       for (const item of items) {
         const metadata = item.metadata as Record<string, unknown> | undefined;
         if (metadata?.name && metadata?.namespace) {
-          await this.mcraDeleteByName(
-            metadata.name as string,
-            metadata.namespace as string
-          );
+          await this.mcraDeleteByName(metadata.name as string, metadata.namespace as string);
         }
       }
     } catch (err) {
@@ -733,7 +740,7 @@ export class OcCliService {
     name: string,
     namespace: string,
     labels?: Record<string, string>,
-    options?: { context?: string },
+    options?: { context?: string }
   ): Promise<string> {
     const ctx = options?.context ? ` --context=${options.context}` : '';
     const exists = await this.run(
@@ -847,16 +854,25 @@ EOF`);
     return name;
   }
 
+  async vmGetPrintableStatus(
+    name: string,
+    namespace: string,
+    options?: { context?: string }
+  ): Promise<string> {
+    const ctx = options?.context ? ` --context=${options.context}` : '';
+    const output = await this.run(
+      `oc get vm ${name} -n ${namespace}${ctx} -o jsonpath='{.status.printableStatus}' 2>/dev/null || echo "Unknown"`
+    );
+    return output.trim().replace(/'/g, '');
+  }
+
   async vmIsRunning(
     name: string,
     namespace: string,
-    options?: { context?: string },
+    options?: { context?: string }
   ): Promise<boolean> {
-    const ctx = options?.context ? ` --context=${options.context}` : '';
-    const output = await this.run(
-      `oc get vm ${name} -n ${namespace}${ctx} -o jsonpath='{.status.printableStatus}' 2>/dev/null || true`
-    );
-    return output.includes('Running');
+    const status = await this.vmGetPrintableStatus(name, namespace, options);
+    return status === 'Running';
   }
 
   async vmIsLiveMigratable(name: string, namespace: string): Promise<boolean> {
@@ -869,7 +885,7 @@ EOF`);
   async vmDeleteTestVM(
     name: string,
     namespace: string,
-    options?: { context?: string },
+    options?: { context?: string }
   ): Promise<void> {
     const ctx = options?.context ? ` --context=${options.context}` : '';
     await this.run(`oc delete vm ${name} -n ${namespace}${ctx} --ignore-not-found`);
@@ -881,11 +897,7 @@ EOF`);
     );
   }
 
-  async vmCreateSnapshot(
-    snapshotName: string,
-    vmName: string,
-    namespace: string,
-  ): Promise<void> {
+  async vmCreateSnapshot(snapshotName: string, vmName: string, namespace: string): Promise<void> {
     await this.run(`oc apply -f - <<'EOF'
 apiVersion: snapshot.kubevirt.io/v1beta1
 kind: VirtualMachineSnapshot
@@ -928,15 +940,11 @@ EOF`);
   }
 
   async deleteDataVolume(name: string, namespace: string): Promise<void> {
-    await this.run(
-      `oc delete datavolume ${name} -n ${namespace} --ignore-not-found`
-    );
+    await this.run(`oc delete datavolume ${name} -n ${namespace} --ignore-not-found`);
   }
 
   async cleanupForkliftResources(namespace: string): Promise<void> {
-    await this.run(
-      `oc delete plans.forklift.konveyor.io --all -n ${namespace} --ignore-not-found`
-    );
+    await this.run(`oc delete plans.forklift.konveyor.io --all -n ${namespace} --ignore-not-found`);
     await this.run(
       `oc delete migrations.forklift.konveyor.io --all -n ${namespace} --ignore-not-found`
     );
@@ -950,7 +958,7 @@ EOF`);
     name: string,
     namespace: string,
     limits: { cpu?: string; memory?: string },
-    options?: { context?: string },
+    options?: { context?: string }
   ): Promise<void> {
     const ctx = options?.context ? ` --context=${options.context}` : '';
     const hardLimits: string[] = [];
@@ -972,18 +980,16 @@ EOF`);
   async deleteResourceQuota(
     name: string,
     namespace: string,
-    options?: { context?: string },
+    options?: { context?: string }
   ): Promise<void> {
     const ctx = options?.context ? ` --context=${options.context}` : '';
-    await this.run(
-      `oc delete resourcequota ${name} -n ${namespace}${ctx} --ignore-not-found`
-    );
+    await this.run(`oc delete resourcequota ${name} -n ${namespace}${ctx} --ignore-not-found`);
   }
 
   async resourceQuotaExists(
     name: string,
     namespace: string,
-    options?: { context?: string },
+    options?: { context?: string }
   ): Promise<boolean> {
     const ctx = options?.context ? ` --context=${options.context}` : '';
     const output = await this.run(
@@ -993,25 +999,6 @@ EOF`);
   }
 
   // ---------------------------------------------------------------------------
-  // StorageClass operations (for KubeVirt hosted cluster wizard validation)
-  // ---------------------------------------------------------------------------
-
-  async getStorageClasses(options?: { context?: string }): Promise<string[]> {
-    const ctx = options?.context ? ` --context=${options.context}` : '';
-    const output = await this.run(
-      `oc get sc${ctx} -o jsonpath='{.items[*].metadata.name}' 2>/dev/null || true`
-    );
-    return output.trim().split(/\s+/).filter(Boolean);
-  }
-
-  async getVolumeSnapshotClasses(options?: { context?: string }): Promise<string[]> {
-    const ctx = options?.context ? ` --context=${options.context}` : '';
-    const output = await this.run(
-      `oc get volumesnapshotclass${ctx} -o jsonpath='{.items[*].metadata.name}' 2>/dev/null || true`
-    );
-    return output.trim().split(/\s+/).filter(Boolean);
-  }
-
   // ---------------------------------------------------------------------------
   // Policy (ConfigurationPolicy) operations
   // ---------------------------------------------------------------------------
@@ -1088,14 +1075,23 @@ EOF`);
     ]);
   }
 
-  async rbacAuthCanI(verb: string, resource: string, namespace: string, asUser: string): Promise<boolean> {
+  async rbacAuthCanI(
+    verb: string,
+    resource: string,
+    namespace: string,
+    asUser: string
+  ): Promise<boolean> {
     try {
       const result = await this.run(
-        `oc auth can-i ${verb} ${resource} -n ${namespace} --as=${asUser}`,
+        `oc auth can-i ${verb} ${resource} -n ${namespace} --as=${asUser}`
       );
       return result.trim() === 'yes';
     } catch (err: unknown) {
-      if (err instanceof Error && 'stdout' in err && String((err as Record<string, unknown>).stdout).trim() === 'no') {
+      if (
+        err instanceof Error &&
+        'stdout' in err &&
+        String((err as Record<string, unknown>).stdout).trim() === 'no'
+      ) {
         return false;
       }
       throw err;
