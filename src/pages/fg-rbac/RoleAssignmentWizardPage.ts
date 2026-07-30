@@ -76,11 +76,22 @@ export class RoleAssignmentWizardPage extends BasePage {
     await this.waitForLoad();
   }
 
+  async searchProjects(query: string): Promise<void> {
+    const search = this.modal.getByPlaceholder(RBAC_WIZARD.projects.searchPlaceholder);
+    await search.clear();
+    await search.fill(query);
+    await this.waitForLoad();
+  }
+
   async selectProjects(names: string[]): Promise<void> {
     await this.waitForLoad();
     for (const name of names) {
       await this.modal.getByRole('row', { name }).getByRole('checkbox').check({ timeout: 60000 });
     }
+  }
+
+  getProjectTableRows(): Locator {
+    return this.modal.getByRole('row').filter({ has: this.page.getByRole('checkbox') });
   }
 
   async selectRole(roleName: string): Promise<void> {

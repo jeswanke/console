@@ -35,8 +35,7 @@ export class FleetVirtPage extends BasePage {
   async shouldLoad(): Promise<void> {
     await expect(async () => {
       const h1 = this.page.locator('h1');
-      const isVisible = await h1.isVisible().catch(() => false);
-      if (!isVisible) {
+      if (!(await h1.isVisible())) {
         await this.page.reload();
       }
       await expect(h1).toBeVisible({ timeout: 10000 });
@@ -51,9 +50,8 @@ export class FleetVirtPage extends BasePage {
 
   async openAdvancedSearch(): Promise<void> {
     const advSearchButton = this.page.locator(FLEET_VIRT_ADVANCED_SEARCH.openButton);
-    const isVisible = await advSearchButton.isVisible().catch(() => false);
 
-    if (isVisible) {
+    if (await advSearchButton.isVisible()) {
       await advSearchButton.click();
     } else {
       const searchInput = this.page.locator(FLEET_VIRT_SEARCH.searchInput).first();
@@ -64,6 +62,10 @@ export class FleetVirtPage extends BasePage {
     await expect(
       this.page.getByRole('heading', { name: 'Advanced search', level: 1 })
     ).toBeVisible({ timeout: 10000 });
+  }
+
+  getCreateVmButton(): Locator {
+    return this.page.getByRole('button', { name: 'Create VirtualMachine' });
   }
 
   getNoVMsEmptyState(): Locator {
@@ -105,7 +107,7 @@ export class FleetVirtPage extends BasePage {
 
   async clearAllFilters(): Promise<void> {
     const clearButton = this.page.getByRole('button', { name: 'Clear all filters' });
-    if (await clearButton.isVisible().catch(() => false)) {
+    if (await clearButton.isVisible()) {
       await clearButton.click();
       await this.waitForLoad();
     }

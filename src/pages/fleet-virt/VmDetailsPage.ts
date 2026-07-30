@@ -155,7 +155,7 @@ export class VmDetailsPage extends BasePage {
     };
     await this.page.locator(buttonMap[action]).click();
     const confirmBtn = this.page.locator(FLEET_VIRT_VM_ACTIONS.confirmAction);
-    if (await confirmBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await confirmBtn.isVisible()) {
       await confirmBtn.click();
     }
   }
