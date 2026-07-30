@@ -228,6 +228,7 @@ test.describe(
           applicationName: options.applicationName,
           namespace: options.namespace,
           applicationExpectations: expectations,
+          clustersSummary: { variant: 'localOnly' },
           repositories: [options.repositories[1]!],
           detailsValuesTimeout: 120_000,
         });
