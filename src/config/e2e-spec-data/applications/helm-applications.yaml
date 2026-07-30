@@ -21,21 +21,21 @@ scenarios:
         applicationName: auto-helm-helloworld
         namespace: auto-helm-helloworld-ns
 
-  auto_helm_nginx_managed:
+  auto_helm_helloworld_upgrade:
     enabled: true
     tests:
       - RHACM4K-46737
     blocks:
       - use:
-          - helm_nginx_bitnami
+          - helm_helloworld_30
           - skip_automation_ansible
           - timewindow_default
     extends:
       - subscription_submit
     specDomains:
       subscription:
-        applicationName: auto-helm-nginx
-        namespace: auto-helm-nginx-ns
+        applicationName: auto-helm-helloworld-upgrade
+        namespace: auto-helm-helloworld-upgrade-ns
 
   auto_helm_multi:
     enabled: true
