@@ -1,5 +1,5 @@
 import { Page, Locator } from '@playwright/test';
-import { BasePage } from '../BasePage';
+import { BasePage } from '@pages/BasePage';
 import { AcmTable } from '@components/patternfly/AcmTable';
 import { OcCliService } from '@services/OcCliService';
 import { pageUrlPathnameEquals } from '@lib/navigation';

@@ -11,10 +11,12 @@ export class ClusterAddonsPage extends BasePage {
     super(page);
   }
 
+  // ACM console doesn't deep-link to tabs via URL — navigate to the detail
+  // page first, then click the Add-ons tab.
   async goto(namespace: string, name: string): Promise<void> {
     const consoleUrl = await this.oc.getConsoleUrl();
     await this.page.goto(
-      `${consoleUrl}${CLUSTER_ROUTES.detailOverview(namespace, name)}`
+      `${consoleUrl}${CLUSTER_ROUTES.details(namespace, name)}`
     );
     await this.waitForLoad();
     await this.page.getByRole('tab', { name: 'Add-ons' }).click();

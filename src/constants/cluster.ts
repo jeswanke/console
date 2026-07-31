@@ -17,8 +17,8 @@ export const CLUSTER_ROUTES = {
     `/multicloud/infrastructure/clusters/details/${namespace}/${name}`,
   detailOverview: (namespace: string, name: string) =>
     `/multicloud/infrastructure/clusters/details/${namespace}/${name}/overview`,
-  detailAddons: (namespace: string, name: string) =>
-    `/multicloud/infrastructure/clusters/details/${namespace}/${name}/addons`,
+  // Note: ACM console doesn't deep-link to detail tabs — /addons redirects to overview.
+  // Navigate to details() and click the tab via page.getByRole('tab', { name: 'Add-ons' }).
   nodes: (namespace: string, name: string) =>
     `/multicloud/infrastructure/clusters/details/${namespace}/${name}/nodes`,
 } as const;

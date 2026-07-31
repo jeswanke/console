@@ -5,6 +5,7 @@
  * Migrated from: clc-ui-e2e/cypress/tests/clusters/managedClusters/clusterAddons.spec.js
  */
 import { test, expect } from '@fixtures/acm-test';
+import { CLUSTER_ROUTES } from '@constants/cluster';
 
 const CLUSTER_NAME = 'local-cluster';
 
@@ -36,7 +37,7 @@ test.describe('Cluster Addons', { tag: ['@cluster', '@clc', '@addons'] }, () => 
     async ({ page, oc }) => {
       await test.step('Navigate to overview page', async () => {
         const consoleUrl = await oc.getConsoleUrl();
-        await page.goto(`${consoleUrl}/multicloud/home/overview`);
+        await page.goto(`${consoleUrl}${CLUSTER_ROUTES.overview}`);
       });
 
       await test.step('Verify addon chart is visible', async () => {
