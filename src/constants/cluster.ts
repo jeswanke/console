@@ -12,8 +12,13 @@
 export const CLUSTER_ROUTES = {
   managed: '/multicloud/infrastructure/clusters/managed',
   sets: '/multicloud/infrastructure/clusters/sets',
+  overview: '/multicloud/home/overview',
   details: (namespace: string, name: string) =>
     `/multicloud/infrastructure/clusters/details/${namespace}/${name}`,
+  detailOverview: (namespace: string, name: string) =>
+    `/multicloud/infrastructure/clusters/details/${namespace}/${name}/overview`,
+  detailAddons: (namespace: string, name: string) =>
+    `/multicloud/infrastructure/clusters/details/${namespace}/${name}/addons`,
   nodes: (namespace: string, name: string) =>
     `/multicloud/infrastructure/clusters/details/${namespace}/${name}/nodes`,
 } as const;

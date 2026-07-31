@@ -234,6 +234,43 @@ export class OcCliService {
     );
   }
 
+  async removeManagedClusterLabel(
+    clusterName: string,
+    labelKey: string
+  ): Promise<void> {
+    assertSafeOcContextName(clusterName, 'clusterName');
+    const safeLabelKey = labelKey.trim();
+    if (!/^[a-zA-Z0-9._/-]+$/.test(safeLabelKey) || safeLabelKey.length > 253) {
+      throw new Error(
+        `OcCliService: invalid labelKey for oc argv (${JSON.stringify(safeLabelKey)})`
+      );
+    }
+    await execFilePromise(
+      'oc',
+      ['label', 'managedcluster', clusterName, `${safeLabelKey}-`],
+      { encoding: 'utf8', maxBuffer: 1024 * 1024 }
+    );
+  }
+
+  async getManagedClusterLabels(
+    clusterName: string
+  ): Promise<Record<string, string>> {
+    assertSafeOcContextName(clusterName, 'clusterName');
+    const json = await this.execArgv([
+      'get', 'managedcluster', clusterName,
+      '-o', 'jsonpath={.metadata.labels}',
+    ]);
+    return JSON.parse(json) as Record<string, string>;
+  }
+
+  async getManagedClusterLabel(
+    clusterName: string,
+    labelKey: string
+  ): Promise<string | undefined> {
+    const labels = await this.getManagedClusterLabels(clusterName);
+    return labels[labelKey];
+  }
+
   async deleteSecret(
     namespace: string,
     secretName: string,

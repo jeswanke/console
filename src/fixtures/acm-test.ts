@@ -6,6 +6,7 @@ import { CreateClusterWizardPage } from '@pages/cluster/CreateClusterWizardPage'
 import { CredentialsListPage } from '@pages/cluster/CredentialsListPage';
 import { CredentialWizardPage } from '@pages/cluster/CredentialWizardPage';
 import { ClusterOverviewPage } from '@pages/cluster/ClusterOverviewPage';
+import { ClusterAddonsPage } from '@pages/cluster/ClusterAddonsPage';
 import { ImportClusterWizardPage } from '@pages/cluster/ImportClusterWizardPage';
 import { PlacementsListPage } from '@pages/cluster/PlacementsListPage';
 import { CreatePlacementWizardPage } from '@pages/cluster/CreatePlacementWizardPage';
@@ -24,6 +25,7 @@ type AcmFixtures = {
   clusterListPage: ClusterListPage;
   clusterNodesPage: ClusterNodesPage;
   clusterOverviewPage: ClusterOverviewPage;
+  clusterAddonsPage: ClusterAddonsPage;
   createClusterWizardPage: CreateClusterWizardPage;
   importClusterWizardPage: ImportClusterWizardPage;
   credentialsListPage: CredentialsListPage;
@@ -58,8 +60,12 @@ export const test = base.extend<AcmFixtures>({
     await use(new ClusterNodesPage(page, oc));
   },
 
-  clusterOverviewPage: async ({ page }, use) => {
-    await use(new ClusterOverviewPage(page));
+  clusterOverviewPage: async ({ page, oc }, use) => {
+    await use(new ClusterOverviewPage(page, oc));
+  },
+
+  clusterAddonsPage: async ({ page, oc }, use) => {
+    await use(new ClusterAddonsPage(page, oc));
   },
 
   createClusterWizardPage: async ({ page, oc }, use) => {
