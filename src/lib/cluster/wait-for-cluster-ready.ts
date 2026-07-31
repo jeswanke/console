@@ -208,3 +208,52 @@ export async function waitForClusterDetached(
 
   throw new Error(`Cluster ${clusterName} was not detached within ${timeoutMs / 60_000} minutes`);
 }
+
+/**
+ * Annotate auto-import-secret to prevent cleanup. Retries because the secret
+ * is created asynchronously by the import controller after import starts.
+ */
+export async function retainAutoImportSecret(
+  oc: OcCliService,
+  clusterName: string,
+  opts?: { timeout?: number }
+): Promise<void> {
+  const timeoutMs = opts?.timeout ?? 30_000;
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    try {
+      await oc.execArgv([
+        'annotate', 'secret', 'auto-import-secret',
+        '-n', clusterName,
+        'managedcluster-import-controller.open-cluster-management.io/keeping-auto-import-secret=',
+        '--overwrite',
+      ]);
+      return;
+    } catch (e) {
+      if (!(e as Error).message.includes('NotFound')) throw e;
+      await new Promise((r) => setTimeout(r, 3_000));
+    }
+  }
+  throw new Error(`auto-import-secret not found in ${clusterName} within ${timeoutMs / 1000}s`);
+}
+
+/**
+ * Poll until vendor/cloud labels resolve from `auto-detect` to their final values.
+ */
+export async function waitForLabelsResolved(
+  oc: OcCliService,
+  clusterName: string,
+  opts?: { timeout?: number }
+): Promise<Record<string, string>> {
+  const timeoutMs = opts?.timeout ?? 120_000;
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const json = await oc.execArgv([
+      'get', 'managedcluster', clusterName, '-o', 'json',
+    ]);
+    const labels = JSON.parse(json).metadata.labels as Record<string, string>;
+    if (labels.vendor && labels.vendor !== 'auto-detect') return labels;
+    await new Promise((r) => setTimeout(r, 5_000));
+  }
+  throw new Error(`Labels for ${clusterName} not resolved within ${timeoutMs / 1000}s`);
+}

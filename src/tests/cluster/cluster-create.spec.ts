@@ -93,9 +93,7 @@ test.describe('Cluster Creation', { tag: ['@cluster', '@clc', '@create'] }, () =
 
         if (scenario.cluster.architecture) {
           await test.step('Apply nodeArchitecture label', async () => {
-            await oc.run(
-              `oc label managedcluster ${clusterName} nodeArchitecture=${scenario.cluster.architecture} --overwrite`
-            );
+            await oc.labelManagedCluster(clusterName, 'nodeArchitecture', scenario.cluster.architecture!);
           });
         }
 

@@ -199,15 +199,7 @@ export async function setupCredential(
   config: ClcConfig,
 ): Promise<void> {
   const yaml = buildCredentialYaml(credential, provider, config);
-  const tmpPath = `/tmp/e2e-credential-${credential.name}-${Date.now()}.yaml`;
-
-  const { writeFile, unlink } = await import('fs/promises');
-  try {
-    await writeFile(tmpPath, yaml, 'utf-8');
-    await oc.run(`oc apply -f ${tmpPath}`);
-  } finally {
-    await unlink(tmpPath).catch(() => {});
-  }
+  await oc.applyManifestFromStdin(yaml);
 }
 
 /**

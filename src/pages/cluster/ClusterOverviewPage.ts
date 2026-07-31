@@ -34,7 +34,7 @@ export class ClusterOverviewPage extends BasePage {
     });
   }
 
-  clickTab(tabName: string): Locator {
+  getTab(tabName: string): Locator {
     return this.page.getByRole('tab', { name: tabName });
   }
 

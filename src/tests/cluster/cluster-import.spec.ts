@@ -12,7 +12,11 @@ import fs from 'fs';
 import path from 'path';
 import { test, expect } from '@fixtures/acm-test';
 import { importClusterViaKubeconfig } from '@lib/cluster/import-cluster';
-import { assertManagedClusterJoined } from '@lib/cluster/wait-for-cluster-ready';
+import {
+  assertManagedClusterJoined,
+  retainAutoImportSecret,
+  waitForLabelsResolved,
+} from '@lib/cluster/wait-for-cluster-ready';
 import { detectPlatformType } from '@constants/cluster-import';
 
 const importDir =
@@ -88,27 +92,7 @@ test.describe('Cluster Import', { tag: ['@cluster', '@clc', '@import'] }, () => 
         });
 
         await test.step('Retain auto-import-secret', async () => {
-          // Retry — the secret is created asynchronously by the import controller
-          let annotated = false;
-          for (let i = 0; i < 10; i++) {
-            try {
-              await oc.execArgv([
-                'annotate',
-                'secret',
-                'auto-import-secret',
-                '-n',
-                scenario.clusterName,
-                'managedcluster-import-controller.open-cluster-management.io/keeping-auto-import-secret=',
-                '--overwrite',
-              ]);
-              annotated = true;
-              break;
-            } catch (e) {
-              if (!(e as Error).message.includes('NotFound')) throw e;
-              await new Promise((r) => setTimeout(r, 3_000));
-            }
-          }
-          expect(annotated, 'auto-import-secret annotation should succeed').toBe(true);
+          await retainAutoImportSecret(oc, scenario.clusterName);
         });
 
         await test.step('Verify overview page', async () => {
@@ -122,21 +106,7 @@ test.describe('Cluster Import', { tag: ['@cluster', '@clc', '@import'] }, () => 
         });
 
         await test.step('Verify vendor and cloud labels', async () => {
-          // ACM initially sets vendor=auto-detect, then resolves after klusterlet reports.
-          // Poll until vendor is resolved (up to 2 min).
-          let labels: Record<string, string> = {};
-          for (let i = 0; i < 24; i++) {
-            const json = await oc.execArgv([
-              'get',
-              'managedcluster',
-              scenario.clusterName,
-              '-o',
-              'json',
-            ]);
-            labels = JSON.parse(json).metadata.labels;
-            if (labels.vendor && labels.vendor !== 'auto-detect') break;
-            await new Promise((r) => setTimeout(r, 5_000));
-          }
+          const labels = await waitForLabelsResolved(oc, scenario.clusterName);
           expect(labels.vendor, 'vendor label').toBe(scenario.vendor);
           expect(labels.cloud, 'cloud label').toBe(scenario.cloud);
         });

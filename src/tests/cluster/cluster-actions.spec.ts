@@ -5,6 +5,7 @@
  * Migrated from: clc-ui-e2e/cypress/tests/clusters/managedClusters/clusterAction.spec.js
  */
 import { test, expect } from '@fixtures/acm-test';
+import { CLUSTER_ROW_ACTIONS } from '@constants/cluster-create';
 
 const CLUSTER_NAME = 'local-cluster';
 const TEST_LABEL_KEY = 'clc-qe';
@@ -45,7 +46,7 @@ test.describe('Cluster Actions', { tag: ['@cluster', '@clc', '@actions'] }, () =
       await test.step('Open edit labels dialog', async () => {
         await clusterListPage.searchCluster(CLUSTER_NAME);
         await clusterListPage.openRowActions(CLUSTER_NAME);
-        const editLabels = page.locator('#edit-labels');
+        const editLabels = page.locator(CLUSTER_ROW_ACTIONS.editLabels);
         await expect(editLabels).toBeEnabled({ timeout: 10_000 });
         await editLabels.click();
       });
