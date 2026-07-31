@@ -48,5 +48,14 @@ export {
   type ResolvedPlacementScenario,
 } from './cluster-api';
 
+export {
+  resolveClusterCreateScenarioById,
+  resolveClusterCreateScenarioByTestId,
+  resolveEnabledClusterCreateScenarios,
+  type ClusterCreateCredentialPayload,
+  type ClusterCreateParamsPayload,
+  type ResolvedClusterCreateScenario,
+} from './cluster-create-api';
+
 export { buildResolvedGovernanceScenario } from './resolve/buildResolvedGovernanceScenario';
 export { buildResolvedClusterScenario } from './resolve/buildResolvedClusterScenario';

@@ -1,5 +1,6 @@
-import { Page, Locator } from '@playwright/test';
+import { Page, Locator, expect } from '@playwright/test';
 import { BasePage } from '@pages/BasePage';
+import { PF_SKELETON } from '@constants/selectors';
 import { AcmTable } from '@components/patternfly/AcmTable';
 import { ClusterTable } from '@components/cluster/ClusterTable';
 import { ManageColumnsDialog } from '@components/patternfly/ManageColumnsDialog';
@@ -31,16 +32,31 @@ export class ClusterListPage extends BasePage {
     );
   }
 
+  // Cluster list has persistent status spinners (e.g. Creating/Destroying indicators)
+  // that never reach count=0 — skip the global spinner check, rely on skeleton only.
+  override async waitForLoad(timeout = 30000): Promise<void> {
+    await expect(this.page.locator(PF_SKELETON)).toHaveCount(0, { timeout });
+  }
+
   private static readonly managedClustersPath = '/multicloud/infrastructure/clusters/managed';
 
   async goto(): Promise<void> {
     if (pageUrlPathnameEquals(this.page, ClusterListPage.managedClustersPath)) {
       await this.waitForLoad();
+      await this.dismissWelcomeModal();
       return;
     }
     const consoleUrl = await this.oc.getConsoleUrl();
     await this.page.goto(`${consoleUrl}${ClusterListPage.managedClustersPath}`);
     await this.waitForLoad();
+    await this.dismissWelcomeModal();
+  }
+
+  private async dismissWelcomeModal(): Promise<void> {
+    const closeButton = this.page.getByRole('dialog').getByRole('button', { name: 'Close' });
+    if (await closeButton.isVisible({ timeout: 2_000 }).catch(() => false)) {
+      await closeButton.click();
+    }
   }
 
   async clickCreate(): Promise<void> {
@@ -69,6 +85,25 @@ export class ClusterListPage extends BasePage {
 
   async forceNativeTableLayout(): Promise<void> {
     return this.clusterTable.forceNativeTableLayout();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Search & row actions
+  // ---------------------------------------------------------------------------
+
+  async searchCluster(name: string): Promise<void> {
+    const searchInput = this.page.getByPlaceholder('Search');
+    await searchInput.fill(name);
+    await this.page.getByRole('row', { name }).waitFor({ state: 'visible', timeout: 15_000 });
+  }
+
+  async openRowActions(clusterName: string): Promise<void> {
+    const row = this.page.getByRole('row', { name: clusterName });
+    await row.getByRole('button', { name: 'Actions' }).click();
+  }
+
+  getRowActionItem(menuItemId: string): Locator {
+    return this.page.locator(menuItemId);
   }
 
   // ---------------------------------------------------------------------------

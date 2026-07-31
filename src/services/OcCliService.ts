@@ -440,6 +440,48 @@ export class OcCliService {
     await this.applyManifestFromStdin(manifest);
   }
 
+  async getLatestClusterImageSetVersion(): Promise<string> {
+    const json = await this.run('oc get clusterimagesets -l visible=true -o json');
+    const items = JSON.parse(json).items as { metadata: { name: string } }[];
+    items.sort((a, b) => {
+      const partsA = a.metadata.name.split('.');
+      const partsB = b.metadata.name.split('.');
+      for (let i = 0; i < Math.max(partsA.length, partsB.length); i++) {
+        const numA = parseInt(partsA[i]?.split('-')[0] ?? '0', 10);
+        const numB = parseInt(partsB[i]?.split('-')[0] ?? '0', 10);
+        if (numA !== numB) return numA - numB;
+      }
+      return 0;
+    });
+    const latest = items[items.length - 1];
+    if (!latest) throw new Error('No ClusterImageSets found on the hub');
+    const match = latest.metadata.name.match(/(\d+\.\d+\.\d+)/);
+    if (!match) throw new Error(`Cannot extract version from ClusterImageSet: ${latest.metadata.name}`);
+    return match[1];
+  }
+
+  async getManagedClustersByLabel(labelSelector: string): Promise<string[]> {
+    const json = await this.run(
+      `oc get managedclusters -l "${labelSelector}" -o json`,
+    );
+    const items = JSON.parse(json).items as { metadata: { name: string } }[];
+    return items
+      .map((item) => item.metadata.name)
+      .filter((name) => name !== 'local-cluster');
+  }
+
+  async ensureManagedClusterSet(name: string): Promise<void> {
+    assertSafeOcSingleArg(name, 'clusterSet name');
+    const manifest = [
+      'apiVersion: cluster.open-cluster-management.io/v1beta2',
+      'kind: ManagedClusterSet',
+      'metadata:',
+      `  name: ${name}`,
+      '',
+    ].join('\n');
+    await this.applyManifestFromStdin(manifest);
+  }
+
   applyManifestFromStdin(manifest: string): Promise<void> {
     return this.execOcWithStdin(['apply', '-f', '-'], manifest);
   }
