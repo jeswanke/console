@@ -89,19 +89,26 @@ test.describe('Cluster Import', { tag: ['@cluster', '@clc', '@import'] }, () => 
 
         await test.step('Retain auto-import-secret', async () => {
           // Retry — the secret is created asynchronously by the import controller
+          let annotated = false;
           for (let i = 0; i < 10; i++) {
             try {
-              await oc.run(
-                `oc annotate secret auto-import-secret -n ${scenario.clusterName} ` +
-                  `managedcluster-import-controller.open-cluster-management.io/keeping-auto-import-secret="" ` +
-                  `--overwrite`
-              );
+              await oc.execArgv([
+                'annotate',
+                'secret',
+                'auto-import-secret',
+                '-n',
+                scenario.clusterName,
+                'managedcluster-import-controller.open-cluster-management.io/keeping-auto-import-secret=',
+                '--overwrite',
+              ]);
+              annotated = true;
               break;
             } catch (e) {
               if (!(e as Error).message.includes('NotFound')) throw e;
               await new Promise((r) => setTimeout(r, 3_000));
             }
           }
+          expect(annotated, 'auto-import-secret annotation should succeed').toBe(true);
         });
 
         await test.step('Verify overview page', async () => {
@@ -119,10 +126,14 @@ test.describe('Cluster Import', { tag: ['@cluster', '@clc', '@import'] }, () => 
           // Poll until vendor is resolved (up to 2 min).
           let labels: Record<string, string> = {};
           for (let i = 0; i < 24; i++) {
-            const labelsJson = await oc.run(
-              `oc get managedcluster ${scenario.clusterName} -o jsonpath='{.metadata.labels}'`
-            );
-            labels = JSON.parse(labelsJson.replace(/'/g, ''));
+            const json = await oc.execArgv([
+              'get',
+              'managedcluster',
+              scenario.clusterName,
+              '-o',
+              'json',
+            ]);
+            labels = JSON.parse(json).metadata.labels;
             if (labels.vendor && labels.vendor !== 'auto-detect') break;
             await new Promise((r) => setTimeout(r, 5_000));
           }

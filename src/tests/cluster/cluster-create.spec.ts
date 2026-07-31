@@ -129,10 +129,8 @@ test.describe('Cluster Creation', { tag: ['@cluster', '@clc', '@create'] }, () =
         });
 
         await test.step('Verify work-manager addon available', async () => {
-          const labelsJson = await oc.run(
-            `oc get managedcluster ${clusterName} -o jsonpath='{.metadata.labels}'`
-          );
-          const labels = JSON.parse(labelsJson.replace(/'/g, ''));
+          const json = await oc.execArgv(['get', 'managedcluster', clusterName, '-o', 'json']);
+          const labels = JSON.parse(json).metadata.labels;
           expect(
             labels['feature.open-cluster-management.io/addon-work-manager'],
             'work-manager addon label'

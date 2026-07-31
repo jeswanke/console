@@ -24,14 +24,14 @@ const DEFAULT_TIMEOUT_MS = 50 * 60 * 1000;
 export async function waitForClusterReady(
   oc: OcCliService,
   clusterName: string,
-  options: WaitOptions = {},
+  options: WaitOptions = {}
 ): Promise<void> {
   const namespace = options.namespace ?? clusterName;
   const timeoutSec = Math.floor((options.timeout ?? DEFAULT_TIMEOUT_MS) / 1000);
 
   await oc.run(
     `oc wait clusterdeployment/${clusterName} -n ${namespace} ` +
-      `--for=condition=Ready --timeout=${timeoutSec}s`,
+      `--for=condition=Ready --timeout=${timeoutSec}s`
   );
 }
 
@@ -41,14 +41,14 @@ export async function waitForClusterReady(
 export async function waitForHostedClusterReady(
   oc: OcCliService,
   clusterName: string,
-  options: WaitOptions = {},
+  options: WaitOptions = {}
 ): Promise<void> {
   const namespace = options.namespace ?? 'clusters';
   const timeoutSec = Math.floor((options.timeout ?? DEFAULT_TIMEOUT_MS) / 1000);
 
   await oc.run(
     `oc wait hostedcluster/${clusterName} -n ${namespace} ` +
-      `--for=condition=Available --timeout=${timeoutSec}s`,
+      `--for=condition=Available --timeout=${timeoutSec}s`
   );
 }
 
@@ -57,11 +57,10 @@ export async function waitForHostedClusterReady(
  */
 export async function assertManagedClusterJoined(
   oc: OcCliService,
-  clusterName: string,
+  clusterName: string
 ): Promise<void> {
   await oc.run(
-    `oc wait managedcluster/${clusterName} ` +
-      `--for=condition=ManagedClusterJoined --timeout=300s`,
+    `oc wait managedcluster/${clusterName} ` + `--for=condition=ManagedClusterJoined --timeout=300s`
   );
 }
 
@@ -71,12 +70,12 @@ export async function assertManagedClusterJoined(
 export async function getClusterDeploymentStatus(
   oc: OcCliService,
   clusterName: string,
-  namespace?: string,
+  namespace?: string
 ): Promise<string> {
   const ns = namespace ?? clusterName;
   return oc.run(
     `oc get clusterdeployment/${clusterName} -n ${ns} ` +
-      `-o jsonpath='{.status.conditions[?(@.type=="Ready")].status}'`,
+      `-o jsonpath='{.status.conditions[?(@.type=="Ready")].status}'`
   );
 }
 
@@ -87,16 +86,17 @@ export async function assertInstallAttemptCount(
   oc: OcCliService,
   clusterName: string,
   maxAttempts: number,
-  namespace?: string,
+  namespace?: string
 ): Promise<void> {
   const ns = namespace ?? clusterName;
   const result = await oc.run(
-    `oc get clusterdeployment/${clusterName} -n ${ns} ` +
-      `-o jsonpath='{.status.installAttempts}'`,
+    `oc get clusterdeployment/${clusterName} -n ${ns} ` + `-o jsonpath='{.status.installAttempts}'`
   );
   const cleaned = result.replace(/'/g, '').trim();
   const attempts = cleaned ? parseInt(cleaned, 10) : 1;
-  expect(attempts, `ClusterDeployment ${clusterName} install attempts`).toBeLessThanOrEqual(maxAttempts);
+  expect(attempts, `ClusterDeployment ${clusterName} install attempts`).toBeLessThanOrEqual(
+    maxAttempts
+  );
 }
 
 const PROVIDER_CRED_SECRET_SUFFIX: Record<string, string> = {
@@ -110,7 +110,7 @@ export async function assertClusterSecrets(
   oc: OcCliService,
   clusterName: string,
   provider: string,
-  namespace?: string,
+  namespace?: string
 ): Promise<void> {
   const ns = namespace ?? clusterName;
   const credSuffix = PROVIDER_CRED_SECRET_SUFFIX[provider];
@@ -121,9 +121,7 @@ export async function assertClusterSecrets(
   ];
 
   for (const secretName of secrets) {
-    const result = await oc.run(
-      `oc get secret ${secretName} -n ${ns} --ignore-not-found -o name`,
-    );
+    const result = await oc.run(`oc get secret ${secretName} -n ${ns} --ignore-not-found -o name`);
     expect(result.trim(), `Secret ${secretName} in namespace ${ns}`).toBeTruthy();
   }
 }
@@ -131,13 +129,11 @@ export async function assertClusterSecrets(
 export async function assertClusterLabels(
   oc: OcCliService,
   clusterName: string,
-  expectedLabels?: Record<string, string>,
+  expectedLabels?: Record<string, string>
 ): Promise<void> {
   if (!expectedLabels || Object.keys(expectedLabels).length === 0) return;
 
-  const labelsJson = await oc.run(
-    `oc get managedcluster ${clusterName} -o json`,
-  );
+  const labelsJson = await oc.run(`oc get managedcluster ${clusterName} -o json`);
   const labels = JSON.parse(labelsJson).metadata.labels;
 
   for (const [key, value] of Object.entries(expectedLabels)) {
@@ -148,12 +144,10 @@ export async function assertClusterLabels(
 export async function assertAcmAutoLabels(
   oc: OcCliService,
   clusterName: string,
-  provider: string,
+  provider: string
 ): Promise<void> {
-  const labelsJson = await oc.run(
-    `oc get managedcluster ${clusterName} -o jsonpath='{.metadata.labels}'`,
-  );
-  const labels = JSON.parse(labelsJson.replace(/'/g, ''));
+  const json = await oc.execArgv(['get', 'managedcluster', clusterName, '-o', 'json']);
+  const labels = JSON.parse(json).metadata.labels;
 
   const expectedCloud = PROVIDER_CLOUD_LABEL[provider];
   if (expectedCloud) {
@@ -169,20 +163,20 @@ const DETACH_DEFAULT_TIMEOUT_MS = 5 * 60 * 1000;
 export async function waitForClusterDestroyed(
   oc: OcCliService,
   clusterName: string,
-  options: WaitOptions = {},
+  options: WaitOptions = {}
 ): Promise<void> {
   const timeoutMs = options.timeout ?? DESTROY_DEFAULT_TIMEOUT_MS;
   const namespace = options.namespace ?? clusterName;
   const deadline = Date.now() + timeoutMs;
 
   while (Date.now() < deadline) {
-    const mcResult = await oc.run(
-      `oc get managedcluster ${clusterName} --ignore-not-found -o name`,
-    ).catch(() => '');
+    const mcResult = await oc
+      .run(`oc get managedcluster ${clusterName} --ignore-not-found -o name`)
+      .catch(() => '');
 
-    const nsResult = await oc.run(
-      `oc get namespace ${namespace} --ignore-not-found -o name`,
-    ).catch(() => '');
+    const nsResult = await oc
+      .run(`oc get namespace ${namespace} --ignore-not-found -o name`)
+      .catch(() => '');
 
     if (!mcResult.trim() && !nsResult.trim()) return;
 
@@ -190,29 +184,27 @@ export async function waitForClusterDestroyed(
   }
 
   throw new Error(
-    `Cluster ${clusterName} was not fully destroyed within ${timeoutMs / 60_000} minutes`,
+    `Cluster ${clusterName} was not fully destroyed within ${timeoutMs / 60_000} minutes`
   );
 }
 
 export async function waitForClusterDetached(
   oc: OcCliService,
   clusterName: string,
-  options: WaitOptions = {},
+  options: WaitOptions = {}
 ): Promise<void> {
   const timeoutMs = options.timeout ?? DETACH_DEFAULT_TIMEOUT_MS;
   const deadline = Date.now() + timeoutMs;
 
   while (Date.now() < deadline) {
-    const result = await oc.run(
-      `oc get managedcluster ${clusterName} --ignore-not-found -o name`,
-    ).catch(() => '');
+    const result = await oc
+      .run(`oc get managedcluster ${clusterName} --ignore-not-found -o name`)
+      .catch(() => '');
 
     if (!result.trim()) return;
 
     await new Promise((r) => setTimeout(r, CLEANUP_POLL_INTERVAL_MS));
   }
 
-  throw new Error(
-    `Cluster ${clusterName} was not detached within ${timeoutMs / 60_000} minutes`,
-  );
+  throw new Error(`Cluster ${clusterName} was not detached within ${timeoutMs / 60_000} minutes`);
 }
