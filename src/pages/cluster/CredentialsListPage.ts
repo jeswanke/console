@@ -1,5 +1,6 @@
 import { Page, Locator, expect } from '@playwright/test';
 import { BasePage } from '@pages/BasePage';
+import { PF_SKELETON } from '@constants/selectors';
 import { OcCliService } from '@services/OcCliService';
 import { pageUrlPathnameEquals } from '@lib/navigation';
 import {
@@ -14,6 +15,10 @@ export class CredentialsListPage extends BasePage {
     private readonly oc: OcCliService
   ) {
     super(page);
+  }
+
+  override async waitForLoad(timeout = 30000): Promise<void> {
+    await expect(this.page.locator(PF_SKELETON)).toHaveCount(0, { timeout });
   }
 
   async goto(): Promise<void> {

@@ -14,10 +14,8 @@ test.describe(
   'Import Wizard Validation',
   { tag: ['@cluster', '@clc', '@import', '@RHACM4K-62281'] },
   () => {
-    test.beforeEach(async ({ clusterListPage, importClusterWizardPage }) => {
-      await clusterListPage.goto();
-      await clusterListPage.clickImport();
-      await importClusterWizardPage.waitForLoad();
+    test.beforeEach(async ({ importClusterWizardPage }) => {
+      await importClusterWizardPage.goto();
     });
 
     test('RHACM4K-62281: Cluster name is required', async ({ page, importClusterWizardPage }) => {
