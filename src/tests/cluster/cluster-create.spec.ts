@@ -27,8 +27,7 @@ import {
 
 const allScenarios = resolveEnabledClusterCreateScenarios();
 
-const providerFilter = process.env.CLC_PROVIDERS
-  ?.split(',')
+const providerFilter = process.env.CLC_PROVIDERS?.split(',')
   .map((p) => p.trim().toLowerCase())
   .filter(Boolean);
 
@@ -51,11 +50,18 @@ test.describe('Cluster Creation', { tag: ['@cluster', '@clc', '@create'] }, () =
     test(
       `${testId}: Create ${provider.toUpperCase()} cluster`,
       { tag: [`@${testId}`, `@${provider}`] },
-      async ({ page, oc, clusterListPage, createClusterWizardPage, clcConfig }) => {
+      async ({
+        page,
+        oc,
+        clusterListPage,
+        clusterOverviewPage,
+        createClusterWizardPage,
+        clcConfig,
+      }) => {
         test.setTimeout(3_600_000);
 
-        const clusterName = scenario.cluster.fixedClusterName
-          ?? `${scenario.cluster.namePrefix}-${Date.now()}`;
+        const clusterName =
+          scenario.cluster.fixedClusterName ?? `${scenario.cluster.namePrefix}-${Date.now()}`;
 
         const ocpRelease = process.env.CLC_OCP_IMAGE_VERSION
           ? clcConfig.ocpRelease
@@ -88,16 +94,16 @@ test.describe('Cluster Creation', { tag: ['@cluster', '@clc', '@create'] }, () =
         if (scenario.cluster.architecture) {
           await test.step('Apply nodeArchitecture label', async () => {
             await oc.run(
-              `oc label managedcluster ${clusterName} nodeArchitecture=${scenario.cluster.architecture} --overwrite`,
+              `oc label managedcluster ${clusterName} nodeArchitecture=${scenario.cluster.architecture} --overwrite`
             );
           });
         }
 
         await test.step('Verify cluster status Ready in UI', async () => {
-          await createClusterWizardPage.expectOnOverviewPage(clusterName);
-          const statusButton = page.locator('.pf-v6-c-description-list')
-            .getByRole('button', { name: 'Ready' });
-          await expect(statusButton).toBeVisible({ timeout: 60_000 });
+          await clusterOverviewPage.expectOnOverviewPage(clusterName);
+          await expect(clusterOverviewPage.getStatusButton('Ready')).toBeVisible({
+            timeout: 60_000,
+          });
         });
 
         if (!isHosted) {
@@ -124,12 +130,12 @@ test.describe('Cluster Creation', { tag: ['@cluster', '@clc', '@create'] }, () =
 
         await test.step('Verify work-manager addon available', async () => {
           const labelsJson = await oc.run(
-            `oc get managedcluster ${clusterName} -o jsonpath='{.metadata.labels}'`,
+            `oc get managedcluster ${clusterName} -o jsonpath='{.metadata.labels}'`
           );
           const labels = JSON.parse(labelsJson.replace(/'/g, ''));
           expect(
             labels['feature.open-cluster-management.io/addon-work-manager'],
-            'work-manager addon label',
+            'work-manager addon label'
           ).toBe('available');
         });
 
@@ -139,7 +145,7 @@ test.describe('Cluster Creation', { tag: ['@cluster', '@clc', '@create'] }, () =
           const row = page.getByRole('row', { name: clusterName });
           await expect(row.getByText('Ready')).toBeVisible({ timeout: 30_000 });
         });
-      },
+      }
     );
   }
 });

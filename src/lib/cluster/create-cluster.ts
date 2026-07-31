@@ -30,7 +30,7 @@ export interface CreateClusterOptions {
 export async function fillCreateClusterWizard(
   clusterListPage: ClusterListPage,
   wizard: CreateClusterWizardPage,
-  options: CreateClusterOptions,
+  options: CreateClusterOptions
 ): Promise<void> {
   const { cluster, credentialName, clusterName, ocpRelease } = options;
 
@@ -58,17 +58,16 @@ export async function fillCreateClusterWizard(
 }
 
 // =============================================================================
-// AWS / GCP / Azure / Azure Gov — standard cloud provider wizard
+// Shared — cluster details step (credential, name, set, FIPS, release, labels)
 // =============================================================================
 
-async function fillStandaloneCloudWizard(
+async function fillClusterDetailsStep(
   wizard: CreateClusterWizardPage,
   cluster: ClusterCreateParamsPayload,
   credentialName: string,
   clusterName: string,
-  ocpRelease: ClcOcpRelease,
+  ocpRelease: ClcOcpRelease
 ): Promise<void> {
-  // Step: Cluster details
   await wizard.selectCredential(credentialName);
   await wizard.fillClusterName(clusterName);
   if (cluster.clusterSet) {
@@ -82,6 +81,20 @@ async function fillStandaloneCloudWizard(
     await wizard.fillAdditionalLabels(cluster.additionalLabels);
   }
   await wizard.clickNext();
+}
+
+// =============================================================================
+// AWS / GCP / Azure / Azure Gov — standard cloud provider wizard
+// =============================================================================
+
+async function fillStandaloneCloudWizard(
+  wizard: CreateClusterWizardPage,
+  cluster: ClusterCreateParamsPayload,
+  credentialName: string,
+  clusterName: string,
+  ocpRelease: ClcOcpRelease
+): Promise<void> {
+  await fillClusterDetailsStep(wizard, cluster, credentialName, clusterName, ocpRelease);
 
   // Step: Node pools
   if (cluster.region) {
@@ -131,22 +144,9 @@ async function fillVmwareWizard(
   cluster: ClusterCreateParamsPayload,
   credentialName: string,
   clusterName: string,
-  ocpRelease: ClcOcpRelease,
+  ocpRelease: ClcOcpRelease
 ): Promise<void> {
-  // Step: Cluster details
-  await wizard.selectCredential(credentialName);
-  await wizard.fillClusterName(clusterName);
-  if (cluster.clusterSet) {
-    await wizard.selectClusterSet(cluster.clusterSet);
-  }
-  if (cluster.fips) {
-    await wizard.enableFips();
-  }
-  await wizard.selectReleaseImage(ocpRelease.version);
-  if (cluster.additionalLabels && Object.keys(cluster.additionalLabels).length > 0) {
-    await wizard.fillAdditionalLabels(cluster.additionalLabels);
-  }
-  await wizard.clickNext();
+  await fillClusterDetailsStep(wizard, cluster, credentialName, clusterName, ocpRelease);
 
   // Step: Node pools (no region for VMware, just accept defaults)
   await wizard.clickNext();
@@ -185,22 +185,9 @@ async function fillOpenstackWizard(
   cluster: ClusterCreateParamsPayload,
   credentialName: string,
   clusterName: string,
-  ocpRelease: ClcOcpRelease,
+  ocpRelease: ClcOcpRelease
 ): Promise<void> {
-  // Step: Cluster details
-  await wizard.selectCredential(credentialName);
-  await wizard.fillClusterName(clusterName);
-  if (cluster.clusterSet) {
-    await wizard.selectClusterSet(cluster.clusterSet);
-  }
-  if (cluster.fips) {
-    await wizard.enableFips();
-  }
-  await wizard.selectReleaseImage(ocpRelease.version);
-  if (cluster.additionalLabels && Object.keys(cluster.additionalLabels).length > 0) {
-    await wizard.fillAdditionalLabels(cluster.additionalLabels);
-  }
-  await wizard.clickNext();
+  await fillClusterDetailsStep(wizard, cluster, credentialName, clusterName, ocpRelease);
 
   // Step: Node pools
   if (cluster.architecture) {
@@ -243,7 +230,7 @@ async function fillKubevirtWizard(
   cluster: ClusterCreateParamsPayload,
   credentialName: string,
   clusterName: string,
-  ocpRelease: ClcOcpRelease,
+  ocpRelease: ClcOcpRelease
 ): Promise<void> {
   // Step: Cluster details (KubeVirt hosted uses different field IDs)
   await wizard.selectCredential(credentialName);

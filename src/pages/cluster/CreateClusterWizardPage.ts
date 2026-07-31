@@ -21,7 +21,7 @@ type InfraProviderKey = keyof typeof INFRA_PROVIDER_IDS;
 export class CreateClusterWizardPage extends BasePage {
   constructor(
     page: Page,
-    private readonly oc: OcCliService,
+    private readonly oc: OcCliService
   ) {
     super(page);
   }
@@ -113,7 +113,7 @@ export class CreateClusterWizardPage extends BasePage {
     await input.waitFor({ state: 'visible', timeout: 30_000 });
     await input.click();
     await input.fill(imageVersion);
-    const option = this.page.getByRole('option').first();
+    const option = this.page.getByRole('option', { name: new RegExp(imageVersion) }).first();
     await option.waitFor({ state: 'visible', timeout: 15_000 });
     await option.click();
   }
@@ -221,9 +221,7 @@ export class CreateClusterWizardPage extends BasePage {
     await this.page
       .locator(CLUSTER_WIZARD_FIELDS.openstackExternalNetwork)
       .fill(opts.externalNetwork);
-    await this.page
-      .locator(CLUSTER_WIZARD_FIELDS.openstackApiFloatingIp)
-      .fill(opts.apiFloatingIp);
+    await this.page.locator(CLUSTER_WIZARD_FIELDS.openstackApiFloatingIp).fill(opts.apiFloatingIp);
     await this.page
       .locator(CLUSTER_WIZARD_FIELDS.openstackIngressFloatingIp)
       .fill(opts.ingressFloatingIp);
@@ -250,7 +248,7 @@ export class CreateClusterWizardPage extends BasePage {
     await input.waitFor({ state: 'visible', timeout: 30_000 });
     await input.click();
     await input.fill(imageVersion);
-    const option = this.page.getByRole('option').first();
+    const option = this.page.getByRole('option', { name: new RegExp(imageVersion) }).first();
     await option.waitFor({ state: 'visible', timeout: 15_000 });
     await option.click();
   }
@@ -292,10 +290,9 @@ export class CreateClusterWizardPage extends BasePage {
   // ---------------------------------------------------------------------------
 
   async expectOnOverviewPage(clusterName: string): Promise<void> {
-    await expect(this.page).toHaveURL(
-      new RegExp(`/clusters/details/.*/${clusterName}`),
-      { timeout: 30_000 },
-    );
+    await expect(this.page).toHaveURL(new RegExp(`/clusters/details/.*/${clusterName}`), {
+      timeout: 30_000,
+    });
   }
 
   // ---------------------------------------------------------------------------
@@ -315,10 +312,7 @@ export class CreateClusterWizardPage extends BasePage {
     return mapping[provider];
   }
 
-  private async selectFromTypeahead(
-    containerSelector: string,
-    value: string,
-  ): Promise<void> {
+  private async selectFromTypeahead(containerSelector: string, value: string): Promise<void> {
     const container = this.page.locator(containerSelector);
     const input = container.locator('input').first();
     await input.waitFor({ state: 'visible', timeout: 15_000 });

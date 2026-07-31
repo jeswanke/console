@@ -14,12 +14,14 @@ export async function importClusterViaKubeconfig(
   const { clusterName, kubeconfig, clusterSet, additionalLabels } = options;
 
   await wizard.goto();
-  await wizard.fillClusterName(clusterName);
 
+  // Select cluster set before filling name — the dropdown triggers a React
+  // re-render that clears the name input.
   if (clusterSet) {
     await wizard.selectClusterSet(clusterSet);
   }
 
+  await wizard.fillClusterName(clusterName);
   await wizard.selectImportMode('kubeconfig');
   await wizard.pasteKubeconfig(kubeconfig);
 
