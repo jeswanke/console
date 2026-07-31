@@ -13,7 +13,6 @@
  */
 import type { CreateClusterWizardPage } from '@pages/cluster/CreateClusterWizardPage';
 import type { ClusterListPage } from '@pages/cluster/ClusterListPage';
-import type { ClcProvider } from '@config';
 import type { ClusterCreateParamsPayload } from '@config';
 import type { ClcOcpRelease } from '../../config/schema';
 

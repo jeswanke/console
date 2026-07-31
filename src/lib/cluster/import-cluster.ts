@@ -16,6 +16,10 @@ export async function importClusterViaKubeconfig(
   await wizard.goto();
   await wizard.fillClusterName(clusterName);
 
+  if (clusterSet) {
+    await wizard.selectClusterSet(clusterSet);
+  }
+
   await wizard.selectImportMode('kubeconfig');
   await wizard.pasteKubeconfig(kubeconfig);
 

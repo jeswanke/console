@@ -53,6 +53,15 @@ export class ImportClusterWizardPage extends BasePage {
     await textarea.fill(content);
   }
 
+  async selectClusterSet(name: string): Promise<void> {
+    const combobox = this.page.getByRole('combobox', { name: 'Select a cluster set' });
+    await combobox.click();
+    await combobox.fill(name);
+    const option = this.page.getByRole('option', { name }).first();
+    await option.waitFor({ state: 'visible', timeout: 15_000 });
+    await option.click();
+  }
+
   async fillAdditionalLabels(labels: Record<string, string>): Promise<void> {
     const input = this.page.locator(IMPORT_WIZARD_FIELDS.additionalLabels);
     for (const [key, value] of Object.entries(labels)) {

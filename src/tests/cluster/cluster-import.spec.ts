@@ -75,6 +75,7 @@ test.describe('Cluster Import', { tag: ['@cluster', '@clc', '@import'] }, () => 
           await importClusterViaKubeconfig(importClusterWizardPage, {
             clusterName: scenario.clusterName,
             kubeconfig,
+            clusterSet: 'auto-gitops-cluster-set',
             additionalLabels: {
               owner: 'acmqe-e2e-auto',
               'clc-e2e': 'true',

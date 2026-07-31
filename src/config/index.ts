@@ -10,6 +10,7 @@
  *   getRbacConfig()   -- RBAC area config (rbac-test.ts fixture)
  *   getVirtConfig()   -- Fleet Virt area config (fleet-virt-test.ts fixture)
  */
+import { execSync } from 'child_process';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
@@ -136,7 +137,6 @@ function readFileOrInline(envVar: string | undefined): string {
 /** Extract pull secret from the hub cluster via oc (synchronous fallback). */
 function getPullSecretFromHub(): string {
   try {
-    const { execSync } = require('child_process');
     const result = execSync(
       'oc get secret/pull-secret -n openshift-config -o jsonpath="{.data.\\.dockerconfigjson}"',
       { encoding: 'utf-8', timeout: 30_000, stdio: ['pipe', 'pipe', 'pipe'] },
