@@ -173,7 +173,7 @@ export const PROVIDER_CLOUD_LABEL: Record<string, string> = {
   gcp: 'Google',
   azure: 'Azure',
   azgov: 'Azure',
-  vmware: 'VSphere',
+  vmware: 'vSphere',
   openstack: 'OpenStack',
   kubevirt: 'BareMetal',
 } as const;
