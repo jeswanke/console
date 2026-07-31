@@ -4,6 +4,7 @@ import { ClusterListPage } from '@pages/cluster/ClusterListPage';
 import { ClusterNodesPage } from '@pages/cluster/ClusterNodesPage';
 import { CreateClusterWizardPage } from '@pages/cluster/CreateClusterWizardPage';
 import { CredentialsListPage } from '@pages/cluster/CredentialsListPage';
+import { CredentialWizardPage } from '@pages/cluster/CredentialWizardPage';
 import { ClusterOverviewPage } from '@pages/cluster/ClusterOverviewPage';
 import { ImportClusterWizardPage } from '@pages/cluster/ImportClusterWizardPage';
 import { PlacementsListPage } from '@pages/cluster/PlacementsListPage';
@@ -26,6 +27,7 @@ type AcmFixtures = {
   createClusterWizardPage: CreateClusterWizardPage;
   importClusterWizardPage: ImportClusterWizardPage;
   credentialsListPage: CredentialsListPage;
+  credentialWizardPage: CredentialWizardPage;
   placementsListPage: PlacementsListPage;
   createPlacementWizardPage: CreatePlacementWizardPage;
   policiesListPage: PoliciesListPage;
@@ -70,6 +72,10 @@ export const test = base.extend<AcmFixtures>({
 
   credentialsListPage: async ({ page, oc }, use) => {
     await use(new CredentialsListPage(page, oc));
+  },
+
+  credentialWizardPage: async ({ page, oc }, use) => {
+    await use(new CredentialWizardPage(page, oc));
   },
 
   placementsListPage: async ({ page, oc }, use) => {
