@@ -3,11 +3,7 @@ import { BasePage } from '@pages/BasePage';
 import { PF_SKELETON } from '@constants/selectors';
 import { OcCliService } from '@services/OcCliService';
 import { pageUrlPathnameEquals } from '@lib/navigation';
-import {
-  CREDENTIAL_ROUTES,
-  CREDENTIAL_ROW_ACTIONS,
-  CREDENTIAL_BULK_ACTIONS,
-} from '@constants/credential-wizard';
+import { CREDENTIAL_ROUTES, CREDENTIAL_BULK_ACTIONS } from '@constants/credential-wizard';
 
 export class CredentialsListPage extends BasePage {
   constructor(
@@ -67,16 +63,18 @@ export class CredentialsListPage extends BasePage {
   // ---------------------------------------------------------------------------
 
   async deleteCredentialByKebab(name: string): Promise<void> {
+    await this.searchCredential(name);
     const row = this.getCredentialRow(name);
     await row.getByRole('button', { name: 'Actions' }).click();
-    await this.page.locator(CREDENTIAL_ROW_ACTIONS.delete).click();
+    await this.page.getByRole('menuitem', { name: /Delete credential/i }).click();
     await this.confirmDeleteModal();
   }
 
   async openEditCredential(name: string): Promise<void> {
+    await this.searchCredential(name);
     const row = this.getCredentialRow(name);
     await row.getByRole('button', { name: 'Actions' }).click();
-    await this.page.locator(CREDENTIAL_ROW_ACTIONS.edit).click();
+    await this.page.getByRole('menuitem', { name: /Edit credential/i }).click();
     await this.waitForLoad();
   }
 
@@ -99,8 +97,10 @@ export class CredentialsListPage extends BasePage {
   // ---------------------------------------------------------------------------
 
   private async confirmDeleteModal(): Promise<void> {
+    const confirmInput = this.page.getByRole('textbox');
+    await expect(confirmInput).toBeVisible({ timeout: 5_000 });
+    await confirmInput.fill('confirm');
     const deleteButton = this.page.getByRole('button', { name: 'Delete', exact: true });
-    await expect(deleteButton).toBeVisible({ timeout: 5_000 });
     await deleteButton.click();
     await this.waitForLoad();
   }
@@ -110,10 +110,12 @@ export class CredentialsListPage extends BasePage {
   // ---------------------------------------------------------------------------
 
   async assertCredentialExists(name: string, timeout = 10_000): Promise<void> {
+    await this.searchCredential(name);
     await expect(this.getCredentialRow(name)).toBeVisible({ timeout });
   }
 
   async assertCredentialNotExists(name: string, timeout = 10_000): Promise<void> {
+    await this.searchCredential(name);
     await expect(this.getCredentialRow(name)).not.toBeVisible({ timeout });
   }
 }

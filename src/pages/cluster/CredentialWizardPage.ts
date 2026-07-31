@@ -46,7 +46,13 @@ export class CredentialWizardPage extends BasePage {
     baseDomain?: string;
     azureCloudName?: string;
   }): Promise<void> {
-    await this.page.locator(CREDENTIAL_WIZARD_FIELDS.credentialsName).fill(opts.name);
+    const nameInput = this.page.locator(CREDENTIAL_WIZARD_FIELDS.credentialsName);
+    await nameInput.waitFor({ state: 'visible', timeout: 15_000 });
+    // React re-renders the form after initial load and clears inputs.
+    await expect(async () => {
+      await nameInput.fill(opts.name);
+      await expect(nameInput).toHaveValue(opts.name);
+    }).toPass({ timeout: 15_000 });
 
     const nsInput = this.page.getByRole('combobox', { name: 'Namespace' });
     await nsInput.click();

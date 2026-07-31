@@ -96,6 +96,8 @@ test.describe('Credential Edit', { tag: ['@cluster', '@clc', '@credential'] }, (
 
         await test.step('Edit field and save', async () => {
           const field = page.locator(scenario.fieldSelector);
+          await field.scrollIntoViewIfNeeded();
+          await field.waitFor({ state: 'visible', timeout: 15_000 });
           await field.clear();
           await field.fill(scenario.editValue);
           await page.getByRole('button', { name: 'Save', exact: true }).click();
