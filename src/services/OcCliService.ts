@@ -456,18 +456,15 @@ export class OcCliService {
     const latest = items[items.length - 1];
     if (!latest) throw new Error('No ClusterImageSets found on the hub');
     const match = latest.metadata.name.match(/(\d+\.\d+\.\d+)/);
-    if (!match) throw new Error(`Cannot extract version from ClusterImageSet: ${latest.metadata.name}`);
+    if (!match)
+      throw new Error(`Cannot extract version from ClusterImageSet: ${latest.metadata.name}`);
     return match[1];
   }
 
   async getManagedClustersByLabel(labelSelector: string): Promise<string[]> {
-    const json = await this.run(
-      `oc get managedclusters -l "${labelSelector}" -o json`,
-    );
+    const json = await this.execArgv(['get', 'managedclusters', '-l', labelSelector, '-o', 'json']);
     const items = JSON.parse(json).items as { metadata: { name: string } }[];
-    return items
-      .map((item) => item.metadata.name)
-      .filter((name) => name !== 'local-cluster');
+    return items.map((item) => item.metadata.name).filter((name) => name !== 'local-cluster');
   }
 
   async ensureManagedClusterSet(name: string): Promise<void> {
@@ -625,9 +622,10 @@ export class OcCliService {
     targetNamespaces?: string[];
   }): Promise<void> {
     const ns = opts.targetNamespaces ?? [];
-    const nsLines = ns.length > 0
-      ? ['      targetNamespaces:', ...ns.map((n) => `        - ${n}`)]
-      : ['      targetNamespaces: []'];
+    const nsLines =
+      ns.length > 0
+        ? ['      targetNamespaces:', ...ns.map((n) => `        - ${n}`)]
+        : ['      targetNamespaces: []'];
 
     const manifest = [
       'apiVersion: rbac.open-cluster-management.io/v1beta1',
@@ -675,7 +673,16 @@ export class OcCliService {
     const patch = JSON.stringify([{ op: 'add', path: '/spec/roleAssignments/-', value }]);
     await execFilePromise(
       'oc',
-      ['patch', 'multiclusterroleassignment', mcraName, '-n', namespace, '--type=json', '-p', patch],
+      [
+        'patch',
+        'multiclusterroleassignment',
+        mcraName,
+        '-n',
+        namespace,
+        '--type=json',
+        '-p',
+        patch,
+      ],
       { encoding: 'utf8', maxBuffer: 1024 * 1024 }
     );
   }
@@ -751,10 +758,7 @@ export class OcCliService {
       for (const item of items) {
         const metadata = item.metadata as Record<string, unknown> | undefined;
         if (metadata?.name && metadata?.namespace) {
-          await this.mcraDeleteByName(
-            metadata.name as string,
-            metadata.namespace as string
-          );
+          await this.mcraDeleteByName(metadata.name as string, metadata.namespace as string);
         }
       }
     } catch (err) {
@@ -970,14 +974,23 @@ EOF`);
     ]);
   }
 
-  async rbacAuthCanI(verb: string, resource: string, namespace: string, asUser: string): Promise<boolean> {
+  async rbacAuthCanI(
+    verb: string,
+    resource: string,
+    namespace: string,
+    asUser: string
+  ): Promise<boolean> {
     try {
       const result = await this.run(
-        `oc auth can-i ${verb} ${resource} -n ${namespace} --as=${asUser}`,
+        `oc auth can-i ${verb} ${resource} -n ${namespace} --as=${asUser}`
       );
       return result.trim() === 'yes';
     } catch (err: unknown) {
-      if (err instanceof Error && 'stdout' in err && String((err as Record<string, unknown>).stdout).trim() === 'no') {
+      if (
+        err instanceof Error &&
+        'stdout' in err &&
+        String((err as Record<string, unknown>).stdout).trim() === 'no'
+      ) {
         return false;
       }
       throw err;
