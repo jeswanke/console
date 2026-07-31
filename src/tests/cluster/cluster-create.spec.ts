@@ -122,6 +122,17 @@ test.describe('Cluster Creation', { tag: ['@cluster', '@clc', '@create'] }, () =
           await assertClusterLabels(oc, clusterName, scenario.cluster.additionalLabels);
         });
 
+        await test.step('Verify work-manager addon available', async () => {
+          const labelsJson = await oc.run(
+            `oc get managedcluster ${clusterName} -o jsonpath='{.metadata.labels}'`,
+          );
+          const labels = JSON.parse(labelsJson.replace(/'/g, ''));
+          expect(
+            labels['feature.open-cluster-management.io/addon-work-manager'],
+            'work-manager addon label',
+          ).toBe('available');
+        });
+
         await test.step('Verify cluster visible in cluster list', async () => {
           await clusterListPage.goto();
           await clusterListPage.searchCluster(clusterName);
