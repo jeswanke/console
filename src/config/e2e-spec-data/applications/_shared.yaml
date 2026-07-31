@@ -54,7 +54,7 @@ fragments:
               name: helloworld-app-deploy
         # Advanced configuration → Subscriptions **Channel** / Channels **Name** (console Git-URL slug, not CR name).
         advancedConfiguration:
-          channelDisplaySubstring: stolostron-application-lifecycle-samples
+          channelDisplaySubstring: ggithubcom-stolostron-application-lifecycle-samples
           channelRepositoryUrl: *stolostron-app-lifecycle-samples-git
 
   # RHACM4K-10668: `crd/` path deploys Secret + CustomResourceDefinition (console topology: secret + other icons).
@@ -74,7 +74,7 @@ fragments:
               name: foos.stable.example.com
         # No detailsClustersSummary: vendor/OpenShift fleet size varies; RHACM4K-10668 asserts topology status.
         advancedConfiguration:
-          channelDisplaySubstring: stolostron-application-lifecycle-samples
+          channelDisplaySubstring: ggithubcom-stolostron-application-lifecycle-samples
           channelRepositoryUrl: *stolostron-app-lifecycle-samples-git
 
   # Same naming pattern as `git_helloworld`: `kind` + `path` for this stream’s repo + expectations.
@@ -99,7 +99,7 @@ fragments:
             - kind: Pod
               name: mortgage-app-deploy
         advancedConfiguration:
-          channelDisplaySubstring: stolostron-application-lifecycle-samples
+          channelDisplaySubstring: ggithubcom-stolostron-application-lifecycle-samples
           channelRepositoryUrl: *stolostron-app-lifecycle-samples-git
 
   # RHACM4K-7513: `test7513` branch / `example-k8s-app` with pinned initial commit hash.
@@ -120,7 +120,7 @@ fragments:
             - kind: ReplicaSet
               name: example
         advancedConfiguration:
-          channelDisplaySubstring: stolostron-application-lifecycle-samples
+          channelDisplaySubstring: ggithubcom-stolostron-application-lifecycle-samples
           channelRepositoryUrl: *stolostron-app-lifecycle-samples-git
 
   # RHACM4K-6883 / RHACM4K-6904 — `example-k8s-app` on main (deploys to `lars-sandbox` on local-cluster).
@@ -139,7 +139,7 @@ fragments:
         detailsClustersSummary:
           variant: localOnly
         advancedConfiguration:
-          channelDisplaySubstring: stolostron-application-lifecycle-samples
+          channelDisplaySubstring: ggithubcom-stolostron-application-lifecycle-samples
           channelRepositoryUrl: https://github.com/stolostron/application-lifecycle-samples
 
   git_example_k8s_backend:
@@ -177,7 +177,7 @@ fragments:
             - kind: Pod
               name: mortgage-app-deploy
         advancedConfiguration:
-          channelDisplaySubstring: stolostron-application-lifecycle-samples-private
+          channelDisplaySubstring: ggithubcom-stolostron-application-lifecycle-samples-private
           channelRepositoryUrl: *stolostron-app-lifecycle-samples-private-git
 
   # Three wizard modes: `default` (no schedule), `active` (deploy in windows), `blocked` (suppress in windows).
@@ -264,7 +264,7 @@ fragments:
         detailsClustersSummary:
           variant: localOnly
         advancedConfiguration:
-          channelDisplaySubstring: stolostron-application-lifecycle-samples
+          channelDisplaySubstring: ggithubcom-stolostron-application-lifecycle-samples
           channelRepositoryUrl: *stolostron-app-lifecycle-samples-git
 
   # Opens **Add credential** wizard instead of picking an existing hub secret (host/token from env at runtime).
@@ -364,7 +364,7 @@ fragments:
           variant: remoteOnly
           remoteCount: 1
         advancedConfiguration:
-          channelDisplaySubstring: stolostron-application-lifecycle-samples
+          channelDisplaySubstring: ggithubcom-stolostron-application-lifecycle-samples
           channelRepositoryUrl: *helm_repo_samples_main
 
   helm_helloworld_02:
@@ -393,7 +393,7 @@ fragments:
             - kind: ConfigMap
               name: helloworld-app-config
         advancedConfiguration:
-          channelDisplaySubstring: stolostron-application-lifecycle-samples
+          channelDisplaySubstring: ggithubcom-stolostron-application-lifecycle-samples
           channelRepositoryUrl: *helm_repo_samples_main
 
   helm_mortgage_01:
@@ -418,7 +418,7 @@ fragments:
         detailsClustersSummary:
           variant: localOnly
         advancedConfiguration:
-          channelDisplaySubstring: stolostron-application-lifecycle-samples
+          channelDisplaySubstring: ggithubcom-stolostron-application-lifecycle-samples
           channelRepositoryUrl: *helm_repo_samples_main
 
   helm_nginx_bitnami:

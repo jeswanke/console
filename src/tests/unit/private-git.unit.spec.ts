@@ -108,7 +108,7 @@ test.describe('private-git', () => {
       disableAutoReconcile: true,
     });
     expect(appExp.advancedConfiguration?.channelDisplaySubstring).toBe(
-      'stolostron-application-lifecycle-samples-private'
+      'ggithubcom-stolostron-application-lifecycle-samples-private'
     );
     expect(appExp.detailsClustersSummary).toEqual({ variant: 'localOnly' });
   });

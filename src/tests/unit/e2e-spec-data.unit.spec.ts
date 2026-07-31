@@ -414,7 +414,7 @@ test.describe('e2e-spec-data YAML processing', () => {
     );
     expect(appExp.detailsClustersSummary).toEqual({ variant: 'localOnly' });
     expect(appExp.advancedConfiguration?.channelDisplaySubstring).toBe(
-      'stolostron-application-lifecycle-samples'
+      'ggithubcom-stolostron-application-lifecycle-samples'
     );
     expect(appExp.advancedConfiguration?.channelRepositoryUrl).toBe(
       'https://github.com/stolostron/application-lifecycle-samples.git'

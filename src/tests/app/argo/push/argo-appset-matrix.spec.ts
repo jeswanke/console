@@ -58,9 +58,9 @@ test.describe(
       );
     });
 
-    test.afterAll(async ({ oc }) => {
-      await cleanupArgoMatrixAppsetSetup(oc);
-    });
+    // test.afterAll(async ({ oc }) => {
+    //   await cleanupArgoMatrixAppsetSetup(oc);
+    // });
 
     test(
       'RHACM4K-58916: ALC: Create matrix ApplicationSet, verify applications and topology',

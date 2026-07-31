@@ -31,7 +31,7 @@ import { test } from '@fixtures/app-test';
 
 test.describe(
   'Application Lifecycle UI: Pull Model Applications Test Suite',
-  { tag: ['@e2e', '@pullmodel', '@alc', '@app', '@gitops', '@argo'] },
+  { tag: ['@e2e', '@pullmodel', '@pull-model-apps', '@alc', '@app', '@gitops', '@argo'] },
   () => {
     test.describe.configure({ mode: 'serial' });
 
