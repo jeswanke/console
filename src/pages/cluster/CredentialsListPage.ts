@@ -64,18 +64,28 @@ export class CredentialsListPage extends BasePage {
 
   async deleteCredentialByKebab(name: string): Promise<void> {
     await this.searchCredential(name);
-    const row = this.getCredentialRow(name);
-    await row.getByRole('button', { name: 'Actions' }).click();
-    await this.page.getByRole('menuitem', { name: /Delete credential/i }).click();
+    await this.clickEnabledKebabAction(name, /Delete credential/i);
     await this.confirmDeleteModal();
   }
 
   async openEditCredential(name: string): Promise<void> {
     await this.searchCredential(name);
-    const row = this.getCredentialRow(name);
-    await row.getByRole('button', { name: 'Actions' }).click();
-    await this.page.getByRole('menuitem', { name: /Edit credential/i }).click();
+    await this.clickEnabledKebabAction(name, /Edit credential/i);
     await this.waitForLoad();
+  }
+
+  // Retry kebab open → click: ACM runs an async RBAC check after
+  // search re-renders the table. Menu items stay aria-disabled until
+  // the check completes. Closing and reopening the kebab picks up
+  // the resolved RBAC state.
+  private async clickEnabledKebabAction(rowName: string, actionName: RegExp): Promise<void> {
+    await expect(async () => {
+      const row = this.getCredentialRow(rowName);
+      await row.getByRole('button', { name: 'Actions' }).click();
+      const item = this.page.getByRole('menuitem', { name: actionName });
+      await expect(item).not.toHaveAttribute('aria-disabled', 'true', { timeout: 2_000 });
+      await item.click();
+    }).toPass({ timeout: 30_000 });
   }
 
   // ---------------------------------------------------------------------------

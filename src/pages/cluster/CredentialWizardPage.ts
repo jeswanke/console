@@ -117,13 +117,13 @@ export class CredentialWizardPage extends BasePage {
     datacenter: string;
     datastore: string;
   }): Promise<void> {
-    await this.page.locator(CREDENTIAL_WIZARD_FIELDS.vmwareVcenter).fill(opts.vCenter);
-    await this.page.locator(CREDENTIAL_WIZARD_FIELDS.vmwareUsername).fill(opts.username);
-    await this.page.locator(CREDENTIAL_WIZARD_FIELDS.vmwarePassword).fill(opts.password);
+    await this.stableFill(CREDENTIAL_WIZARD_FIELDS.vmwareVcenter, opts.vCenter);
+    await this.stableFill(CREDENTIAL_WIZARD_FIELDS.vmwareUsername, opts.username);
+    await this.stableFill(CREDENTIAL_WIZARD_FIELDS.vmwarePassword, opts.password);
     await this.page.locator(CREDENTIAL_WIZARD_FIELDS.vmwareCaCertificate).fill(opts.caCertificate);
-    await this.page.locator(CREDENTIAL_WIZARD_FIELDS.vmwareCluster).fill(opts.cluster);
-    await this.page.locator(CREDENTIAL_WIZARD_FIELDS.vmwareDatacenter).fill(opts.datacenter);
-    await this.page.locator(CREDENTIAL_WIZARD_FIELDS.vmwareDatastore).fill(opts.datastore);
+    await this.stableFill(CREDENTIAL_WIZARD_FIELDS.vmwareCluster, opts.cluster);
+    await this.stableFill(CREDENTIAL_WIZARD_FIELDS.vmwareDatacenter, opts.datacenter);
+    await this.stableFill(CREDENTIAL_WIZARD_FIELDS.vmwareDatastore, opts.datastore);
     await this.clickNext();
   }
 
@@ -205,5 +205,17 @@ export class CredentialWizardPage extends BasePage {
 
   async expectOnCredentialsList(): Promise<void> {
     await expect(this.page).toHaveURL(/\/credentials$/, { timeout: 30_000 });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Helpers
+  // ---------------------------------------------------------------------------
+
+  private async stableFill(selector: string, value: string): Promise<void> {
+    const field = this.page.locator(selector);
+    await expect(async () => {
+      await field.fill(value);
+      await expect(field).toHaveValue(value);
+    }).toPass({ timeout: 15_000 });
   }
 }

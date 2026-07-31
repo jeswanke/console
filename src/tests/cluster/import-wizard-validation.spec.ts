@@ -18,14 +18,22 @@ test.describe(
     });
 
     test('RHACM4K-62281: Cluster name is required', async ({ page, importClusterWizardPage }) => {
-      await test.step('Click Next without cluster name shows validation', async () => {
+      await test.step('Click Next without cluster name stays on same page', async () => {
+        const urlBefore = page.url();
         await page.getByRole('button', { name: IMPORT_BUTTONS.next, exact: true }).click();
-        await expect(page.getByText(/required/i)).toBeVisible({ timeout: 5_000 });
+        // Wizard should not advance without a name — URL stays the same
+        await expect(page).toHaveURL(urlBefore);
+        // Name input should still be visible (didn't advance)
+        const nameInput = page.locator(IMPORT_WIZARD_FIELDS.clusterName);
+        await expect(nameInput).toBeVisible();
       });
 
       await test.step('Filling name allows advancing', async () => {
         await importClusterWizardPage.fillClusterName('validation-test');
-        await expect(page.getByText(/required/i)).not.toBeVisible({ timeout: 5_000 });
+        await page.getByRole('button', { name: IMPORT_BUTTONS.next, exact: true }).click();
+        // Should advance to step 2
+        const nameInput = page.locator(IMPORT_WIZARD_FIELDS.clusterName);
+        await expect(nameInput).not.toBeVisible({ timeout: 5_000 });
       });
     });
 
