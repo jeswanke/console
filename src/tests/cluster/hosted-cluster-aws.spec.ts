@@ -53,8 +53,7 @@ test.describe('Hosted Cluster - AWS', { tag: ['@cluster', '@clc', '@hypershift',
       await test.step('Click hosted card to view instructions', async () => {
         const hostedCard = page.locator(CONTROL_PLANE_IDS.hosted);
         await hostedCard.scrollIntoViewIfNeeded();
-        await page.waitForLoadState('networkidle');
-        await hostedCard.click({ delay: 100 });
+        await hostedCard.click();
         await expect(
           page.getByText('Prerequisites and Configuration')
         ).toBeVisible({ timeout: 30_000 });

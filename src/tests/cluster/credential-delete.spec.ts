@@ -9,7 +9,7 @@
  * Consolidated: Cypress had 9 per-provider tests; delete UI is identical
  * regardless of provider type, so one test per deletion method suffices.
  */
-import { test, expect } from '@fixtures/acm-test';
+import { test } from '@fixtures/acm-test';
 import { fillCredentialWizard } from '@lib/cluster/credential-wizard';
 import type { ClcProvider, ClcConfig } from '@config';
 
