@@ -13,13 +13,11 @@ import { IMPORT_PLATFORM_TYPES } from '@constants/cluster-import';
 import { detachClusterViaUI } from '@lib/cluster/detach-cluster';
 import { waitForClusterDetached } from '@lib/cluster/wait-for-cluster-ready';
 
-const typeFilter = process.env.CLC_IMPORT_TYPES
-  ?.split(',')
+const typeFilter = process.env.CLC_IMPORT_TYPES?.split(',')
   .map((t) => t.trim().toLowerCase())
   .filter(Boolean);
 
-const platforms = IMPORT_PLATFORM_TYPES
-  .filter((p) => !typeFilter || typeFilter.includes(p.key));
+const platforms = IMPORT_PLATFORM_TYPES.filter((p) => !typeFilter || typeFilter.includes(p.key));
 
 test.describe('Cluster Detach', { tag: ['@cluster', '@clc', '@detach'] }, () => {
   for (const platform of platforms) {
@@ -29,8 +27,7 @@ test.describe('Cluster Detach', { tag: ['@cluster', '@clc', '@detach'] }, () => 
       async ({ page, oc, clusterListPage }) => {
         test.setTimeout(600_000);
 
-        const labelSelector =
-          `owner=acmqe-e2e-auto,clc-e2e=true,vendor=${platform.vendor},name!=local-cluster`;
+        const labelSelector = `owner=acmqe-e2e-auto,clc-e2e=true,vendor=${platform.vendor},name!=local-cluster`;
 
         const clusters = await test.step('Discover clusters by label', async () => {
           const names = await oc.getManagedClustersByLabel(labelSelector);
@@ -48,12 +45,15 @@ test.describe('Cluster Detach', { tag: ['@cluster', '@clc', '@detach'] }, () => 
           });
 
           await test.step(`Verify ${clusterName} gone from UI`, async () => {
-            await clusterListPage.goto();
+            // Force reload — page is stale after long CLI poll
+            await page.reload({ waitUntil: 'domcontentloaded' });
+            await clusterListPage.waitForLoad();
+            await page.getByPlaceholder('Search').fill(clusterName);
             const row = page.getByRole('row', { name: clusterName });
             await expect(row).not.toBeVisible({ timeout: 10_000 });
           });
         }
-      },
+      }
     );
   }
 });

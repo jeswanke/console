@@ -14,10 +14,7 @@ export type {
   ClusterCreateParamsPayload,
 } from './domains/cluster-create/clusterCreateSchema';
 
-function resolveInternal(
-  scenarioId: string,
-  configPath?: string,
-): ResolvedClusterCreateScenario {
+function resolveInternal(scenarioId: string, configPath?: string): ResolvedClusterCreateScenario {
   const spec = loadE2eSpecData(configPath);
   const scenarioBody = spec.scenarios[scenarioId];
   if (!scenarioBody) {
@@ -29,16 +26,12 @@ function resolveInternal(
 
   const credential = resolveClusterCreateCredential(spec, scenarioId, scenarioBody);
   if (!credential) {
-    throw new Error(
-      `e2e-spec-data: scenario "${scenarioId}" has no credential domain payload`,
-    );
+    throw new Error(`e2e-spec-data: scenario "${scenarioId}" has no credential domain payload`);
   }
 
   const cluster = resolveClusterCreateParams(spec, scenarioId, scenarioBody);
   if (!cluster) {
-    throw new Error(
-      `e2e-spec-data: scenario "${scenarioId}" has no cluster domain payload`,
-    );
+    throw new Error(`e2e-spec-data: scenario "${scenarioId}" has no cluster domain payload`);
   }
 
   return {
@@ -53,7 +46,7 @@ function resolveInternal(
 
 export function resolveClusterCreateScenarioByTestId(
   testId: string,
-  configPath?: string,
+  configPath?: string
 ): ResolvedClusterCreateScenario {
   const spec = loadE2eSpecData(configPath);
   const scenarioIds = findScenarioIdsByTestId(spec, testId);
@@ -62,7 +55,7 @@ export function resolveClusterCreateScenarioByTestId(
   }
   if (scenarioIds.length > 1) {
     throw new Error(
-      `e2e-spec-data: multiple scenarios for test id "${testId}": ${scenarioIds.join(', ')}`,
+      `e2e-spec-data: multiple scenarios for test id "${testId}": ${scenarioIds.join(', ')}`
     );
   }
   return resolveInternal(scenarioIds[0]!, configPath);
@@ -70,13 +63,13 @@ export function resolveClusterCreateScenarioByTestId(
 
 export function resolveClusterCreateScenarioById(
   scenarioId: string,
-  configPath?: string,
+  configPath?: string
 ): ResolvedClusterCreateScenario {
   return resolveInternal(scenarioId, configPath);
 }
 
 export function resolveEnabledClusterCreateScenarios(
-  configPath?: string,
+  configPath?: string
 ): ResolvedClusterCreateScenario[] {
   const spec = loadE2eSpecData(configPath);
   return Object.entries(spec.scenarios)
@@ -84,7 +77,8 @@ export function resolveEnabledClusterCreateScenarios(
     .map(([id]) => {
       try {
         return resolveInternal(id, configPath);
-      } catch {
+      } catch (e) {
+        console.warn(`e2e-spec-data: skipping scenario "${id}":`, (e as Error).message);
         return null;
       }
     })

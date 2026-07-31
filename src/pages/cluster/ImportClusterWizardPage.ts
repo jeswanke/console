@@ -12,7 +12,7 @@ import {
 export class ImportClusterWizardPage extends BasePage {
   constructor(
     page: Page,
-    private readonly oc: OcCliService,
+    private readonly oc: OcCliService
   ) {
     super(page);
   }
@@ -32,12 +32,10 @@ export class ImportClusterWizardPage extends BasePage {
     await input.waitFor({ state: 'visible', timeout: 15_000 });
     // React re-renders the form after initial load and clears inputs.
     // Retry fill until the value sticks.
-    for (let i = 0; i < 5; i++) {
+    await expect(async () => {
       await input.fill(name);
-      await this.page.waitForTimeout(1_000);
-      if ((await input.inputValue()) === name) return;
-    }
-    await input.fill(name);
+      await expect(input).toHaveValue(name);
+    }).toPass({ timeout: 15_000 });
   }
 
   async selectImportMode(mode: keyof typeof IMPORT_MODES): Promise<void> {
@@ -76,15 +74,12 @@ export class ImportClusterWizardPage extends BasePage {
   }
 
   async clickImport(): Promise<void> {
-    await this.page
-      .getByRole('button', { name: IMPORT_BUTTONS.import, exact: true })
-      .click();
+    await this.page.getByRole('button', { name: IMPORT_BUTTONS.import, exact: true }).click();
   }
 
   async expectOnOverviewPage(clusterName: string): Promise<void> {
-    await expect(this.page).toHaveURL(
-      new RegExp(`/clusters/details/.*/${clusterName}`),
-      { timeout: 30_000 },
-    );
+    await expect(this.page).toHaveURL(new RegExp(`/clusters/details/.*/${clusterName}`), {
+      timeout: 30_000,
+    });
   }
 }

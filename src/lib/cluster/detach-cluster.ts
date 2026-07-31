@@ -5,7 +5,7 @@ import { CLUSTER_ROW_ACTIONS, CLUSTER_MODAL } from '@constants/cluster-create';
 export async function detachClusterViaUI(
   page: Page,
   clusterListPage: ClusterListPage,
-  clusterName: string,
+  clusterName: string
 ): Promise<void> {
   await clusterListPage.goto();
   await clusterListPage.searchCluster(clusterName);
@@ -22,4 +22,5 @@ export async function detachClusterViaUI(
   const detachButton = dialog.getByRole('button', { name: 'Detach', exact: true });
   await expect(detachButton).toBeEnabled({ timeout: 5_000 });
   await detachButton.click();
+  await expect(dialog).not.toBeVisible({ timeout: 10_000 });
 }

@@ -5,7 +5,7 @@ import { CLUSTER_ROW_ACTIONS, CLUSTER_MODAL } from '@constants/cluster-create';
 export async function destroyClusterViaUI(
   page: Page,
   clusterListPage: ClusterListPage,
-  clusterName: string,
+  clusterName: string
 ): Promise<void> {
   await clusterListPage.goto();
   await clusterListPage.searchCluster(clusterName);
@@ -22,4 +22,5 @@ export async function destroyClusterViaUI(
   const destroyButton = dialog.getByRole('button', { name: 'Destroy', exact: true });
   await expect(destroyButton).toBeEnabled({ timeout: 5_000 });
   await destroyButton.click();
+  await expect(dialog).not.toBeVisible({ timeout: 10_000 });
 }

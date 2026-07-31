@@ -29,8 +29,7 @@ test.describe('Cluster Destroy', { tag: ['@cluster', '@clc', '@destroy'] }, () =
       async ({ page, oc, clusterListPage }) => {
         test.setTimeout(1_800_000);
 
-        const labelSelector =
-          `owner=acmqe-e2e-auto,clc-e2e=true,cloud=${cloudLabel},name!=local-cluster`;
+        const labelSelector = `owner=acmqe-e2e-auto,clc-e2e=true,cloud=${cloudLabel},name!=local-cluster`;
 
         const clusters = await test.step('Discover clusters by label', async () => {
           const names = await oc.getManagedClustersByLabel(labelSelector);
@@ -48,12 +47,15 @@ test.describe('Cluster Destroy', { tag: ['@cluster', '@clc', '@destroy'] }, () =
           });
 
           await test.step(`Verify ${clusterName} gone from UI`, async () => {
-            await clusterListPage.goto();
+            // Force reload — page is stale after long CLI poll
+            await page.reload({ waitUntil: 'domcontentloaded' });
+            await clusterListPage.waitForLoad();
+            await page.getByPlaceholder('Search').fill(clusterName);
             const row = page.getByRole('row', { name: clusterName });
             await expect(row).not.toBeVisible({ timeout: 10_000 });
           });
         }
-      },
+      }
     );
   }
 });
