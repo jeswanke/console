@@ -145,10 +145,6 @@ export class FleetVirtPage extends BasePage {
     await firstLink.click();
   }
 
-  getVmRow(vmName: string): Locator {
-    return this.page.getByRole('row').filter({ hasText: vmName });
-  }
-
   // ---------------------------------------------------------------------------
   // Tree view and grid locators
   // ---------------------------------------------------------------------------
@@ -166,7 +162,7 @@ export class FleetVirtPage extends BasePage {
   // ---------------------------------------------------------------------------
 
   async selectVmByCheckbox(vmName: string): Promise<void> {
-    const row = this.page.getByRole('row').filter({ hasText: vmName });
+    const row = this.getVmRow(vmName).first();
     const checkbox = row.getByRole('checkbox');
     await expect(checkbox).toBeVisible({ timeout: 15000 });
     await expect(async () => {

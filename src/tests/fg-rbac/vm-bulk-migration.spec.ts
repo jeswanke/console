@@ -30,7 +30,6 @@ import {
   cleanupMultipleCclmResources,
   cleanupOrphanedVmims,
   cleanupForkliftPlansAndMigrations,
-  haltAndRestartVmsOnSpoke,
   deleteHubVms,
   verifyHubVmsDeleted,
   checkCclmPrerequisites,
@@ -129,26 +128,11 @@ test.describe(
           }
         }).toPass({ intervals: [30000, 45000], timeout: 600000 });
 
-        // Wait for VMs to reach Running on spoke.
-        // "Migrating" = disk copy in progress (valid, takes ~5min per VM with PVC).
-        // "WaitingForReceiver" = stuck without Submariner → recovery needed.
-        let restarted = false;
-        const startTime = Date.now();
+        // Wait for VMs to reach Running on spoke
         await expect(async () => {
           for (const vmName of VM_NAMES) {
             const status = await getVmStatusOnSpoke(vmName, VM_NAMESPACE, spokeCluster, kcPath);
             console.log(`[Step 4 wait-Running] VM ${vmName} on spoke: ${status}`);
-
-            if (
-              !restarted &&
-              (status === 'WaitingForReceiver' || status === 'Provisioning') &&
-              Date.now() - startTime > 180000
-            ) {
-              console.log('[Step 4] VMs stuck — halting and restarting to boot from copied disk');
-              await haltAndRestartVmsOnSpoke(VM_NAMES, VM_NAMESPACE, spokeCluster, kcPath);
-              restarted = true;
-            }
-
             expect(status, `VM ${vmName} must reach Running state`).toBe('Running');
           }
         }).toPass({ intervals: [30000, 45000, 60000], timeout: 900000 });

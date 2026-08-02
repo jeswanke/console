@@ -75,6 +75,11 @@ export async function ensureMultipleVmsWithPvcReady(
       const running = await oc.vmIsRunning(name, namespace);
       expect(running).toBeTruthy();
     }).toPass({ intervals: [10000, 15000, 30000], timeout: 300000 });
+
+    await expect(async () => {
+      const liveMigratable = await oc.vmIsLiveMigratable(name, namespace);
+      expect(liveMigratable, `VM ${name} must be LiveMigratable=True (requires RWX storage)`).toBeTruthy();
+    }).toPass({ intervals: [5000, 10000], timeout: 60000 });
   }
 }
 
@@ -249,24 +254,6 @@ export async function cleanupForkliftPlansAndMigrations(
   await oc.cleanupForkliftResources(namespace);
 }
 
-export async function haltAndRestartVmsOnSpoke(
-  names: string[],
-  namespace: string,
-  spokeCluster: string,
-  kcPath: string
-): Promise<void> {
-  for (const name of names) {
-    await oc.run(
-      `oc patch vm ${name} -n ${namespace} --context ${spokeCluster} --kubeconfig ${kcPath} --type=merge -p '{"spec":{"runStrategy":"Halted"}}' 2>/dev/null || true`
-    );
-  }
-  await new Promise((r) => setTimeout(r, 15000));
-  for (const name of names) {
-    await oc.run(
-      `oc patch vm ${name} -n ${namespace} --context ${spokeCluster} --kubeconfig ${kcPath} --type=merge -p '{"spec":{"runStrategy":"Always"}}' 2>/dev/null || true`
-    );
-  }
-}
 
 export async function deleteHubVms(names: string[], namespace: string): Promise<void> {
   for (const name of names) {

@@ -84,7 +84,18 @@ test.describe(
         }).toPass({ intervals: [10000, 15000], timeout: 120000 });
       });
 
-      await test.step('2: Trigger cross-cluster migration', async () => {
+      await test.step('2: Apply ResourceQuota on spoke to block VM scheduling', async () => {
+        await applySpokeResourceQuota(VM_NAMESPACE, spokeCluster);
+
+        const exists = await oc.resourceQuotaExists('mtv-migration-deny', VM_NAMESPACE, {
+          context: spokeCluster,
+        });
+        expect(exists).toBeTruthy();
+      });
+
+      await test.step('3: Trigger cross-cluster migration', async () => {
+        await fleetPage.gotoVmDetails(CLUSTER, VM_NAMESPACE, VM_NAME);
+        await expect(vmDetails.getPageHeading()).toBeVisible({ timeout: 15000 });
         await page.keyboard.press('Escape');
         await vmDetails.openMigrationMenu();
         await vmDetails.getCrossClusterMigrationItem().click();
@@ -96,15 +107,6 @@ test.describe(
         await cclmWizard.clickMigrate();
         await expect(cclmWizard.getSuccessMessage()).toBeVisible({ timeout: 60000 });
         await cclmWizard.close();
-      });
-
-      await test.step('3: Apply ResourceQuota on spoke to block VM scheduling', async () => {
-        await applySpokeResourceQuota(VM_NAMESPACE, spokeCluster);
-
-        const exists = await oc.resourceQuotaExists('mtv-migration-deny', VM_NAMESPACE, {
-          context: spokeCluster,
-        });
-        expect(exists).toBeTruthy();
       });
 
       await test.step('4: Verify error display — migration stalls on spoke', async () => {
@@ -139,11 +141,12 @@ test.describe(
         ).toMatch(/WaitingForReceiver|Provisioning|Scheduling|Pending/i);
         expect(statusText).not.toMatch(/^.*Running$/);
 
-        // Check Diagnostics tab for scheduling/migration error details (if available)
-        // Diagnostics tab only exists when VMI is created (WaitingForReceiver state).
-        // In Provisioning state, skip gracefully since the core failure is already verified.
-        const diagnosticsTab = vmDetails.getTabLink('Diagnostics');
-        if (await diagnosticsTab.isVisible({ timeout: 5000 }).catch(() => false)) {
+        // Check Diagnostics tab for scheduling/migration error details.
+        // Diagnostics tab exists when VMI is created (WaitingForReceiver state).
+        // In Provisioning state (no VMI), the tab won't be present — verified by status above.
+        if (statusText?.match(/WaitingForReceiver/i)) {
+          const diagnosticsTab = vmDetails.getTabLink('Diagnostics');
+          await expect(diagnosticsTab).toBeVisible({ timeout: 10000 });
           await diagnosticsTab.click();
           const diagnosticsContent = vmDetails.getDiagnosticsContent(
             /not yet been scheduled|virt-launcher pod|scheduling/i
@@ -151,7 +154,9 @@ test.describe(
           await expect(diagnosticsContent.first()).toBeVisible({ timeout: 15000 });
           console.log('Diagnostics message confirms: virt-launcher pod scheduling blocked');
         } else {
-          console.log('Diagnostics tab not available (VM in Provisioning state — no VMI created)');
+          console.log(
+            `Diagnostics tab not applicable (VM status: ${statusText?.trim()} — no VMI, hence no Diagnostics)`
+          );
         }
       });
 

@@ -70,18 +70,14 @@ test.describe(
       });
 
       await test.step('4: View YAML & CLI modal', async () => {
-        if (await vmCreation.isYamlCliButtonVisible()) {
-          await vmCreation.clickViewYamlAndCli();
-          await vmCreation.verifyYamlModalVisible();
-          await expect(
-            vmCreation.getYamlModalContent(/kind|VirtualMachine|apiVersion/)
-          ).toBeVisible({ timeout: 10000 });
-          await vmCreation.clickCliTab();
-          await vmCreation.verifyCliContentVisible();
-          await vmCreation.closeYamlCliModal();
-        } else {
-          console.log('YAML & CLI button not visible at current step — continuing');
-        }
+        await vmCreation.clickViewYamlAndCli();
+        await vmCreation.verifyYamlModalVisible();
+        await expect(
+          vmCreation.getYamlModalContent(/kind|VirtualMachine|apiVersion/)
+        ).toBeVisible({ timeout: 10000 });
+        await vmCreation.clickCliTab();
+        await vmCreation.verifyCliContentVisible();
+        await vmCreation.closeYamlCliModal();
       });
 
       await test.step('5: Navigate to review and create VM', async () => {

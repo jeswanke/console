@@ -141,12 +141,15 @@ export class VmCreationPage extends BasePage {
         await expect(activeStepLocator).not.toHaveText(stepBefore || '', { timeout: 10000 });
       } else {
         const bootRow = this.page.locator(FLEET_VIRT_VM_CREATION.bootSource.tableRow).first();
-        if (await bootRow.isVisible({ timeout: 2000 }).catch(() => false)) {
+        const bootRowVisible = await bootRow
+          .waitFor({ state: 'visible', timeout: 2000 })
+          .then(() => true)
+          .catch(() => false);
+        if (bootRowVisible) {
           const nameCell = bootRow.locator(FLEET_VIRT_VM_CREATION.bootSource.nameCell);
-          if (await nameCell.isVisible({ timeout: 1000 }).catch(() => false)) {
-            await nameCell.click();
-            await this.waitForPrimaryButtonEnabled();
-          }
+          await nameCell.waitFor({ state: 'visible', timeout: 3000 });
+          await nameCell.click();
+          await this.waitForPrimaryButtonEnabled();
         }
       }
 
@@ -186,7 +189,11 @@ export class VmCreationPage extends BasePage {
 
   async closeYamlCliModal(): Promise<void> {
     const closeBtn = this.page.locator('.pf-v6-c-modal-box button[aria-label="Close"]');
-    if (await closeBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+    const isCloseVisible = await closeBtn
+      .waitFor({ state: 'visible', timeout: 3000 })
+      .then(() => true)
+      .catch(() => false);
+    if (isCloseVisible) {
       await closeBtn.click();
     } else {
       await this.page.keyboard.press('Escape');
@@ -214,7 +221,11 @@ export class VmCreationPage extends BasePage {
           .locator('td[id="name"]')
           .filter({ hasText: /fedora/i })
           .first();
-        if (await fedoraVol.isVisible({ timeout: 5000 }).catch(() => false)) {
+        const fedoraVisible = await fedoraVol
+          .waitFor({ state: 'visible', timeout: 5000 })
+          .then(() => true)
+          .catch(() => false);
+        if (fedoraVisible) {
           await fedoraVol.click();
         } else {
           await volumeTable.click();
@@ -245,28 +256,17 @@ export class VmCreationPage extends BasePage {
     return this.page.locator('.pf-v6-c-modal-box__body').getByText(pattern);
   }
 
-  isYamlCliButtonVisible(): Promise<boolean> {
-    return this.page
-      .locator('button:has-text("View YAML & CLI")')
-      .isVisible({ timeout: 10000 })
-      .catch(() => false);
-  }
 
   // ---------------------------------------------------------------------------
   // Template catalog step
   // ---------------------------------------------------------------------------
 
   async waitForTemplateCatalogVisible(): Promise<void> {
-    await expect(async () => {
-      const filterBtn = this.page.locator('button:has-text("Filter")');
-      const catalogGrid = this.page
-        .locator('[id="vm-catalog-grid"], .templates-catalog-tile, [data-test-id*="fedora"]')
-        .first();
-      const catalogPresent =
-        (await filterBtn.isVisible({ timeout: 3000 }).catch(() => false)) ||
-        (await catalogGrid.isVisible({ timeout: 3000 }).catch(() => false));
-      expect(catalogPresent, 'Template catalog should be visible').toBeTruthy();
-    }).toPass({ intervals: [3000, 5000], timeout: 60000 });
+    const filterBtn = this.page.locator('button:has-text("Filter")');
+    const catalogGrid = this.page
+      .locator('[id="vm-catalog-grid"], .templates-catalog-tile, [data-test-id*="fedora"]')
+      .first();
+    await expect(filterBtn.or(catalogGrid)).toBeVisible({ timeout: 60000 });
   }
 
   async selectFedoraTemplateCard(): Promise<void> {
@@ -291,7 +291,11 @@ export class VmCreationPage extends BasePage {
 
   async filterByBootSourceAvailable(): Promise<void> {
     const filterBtn = this.page.locator('button:has-text("Filter")');
-    if (await filterBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
+    const filterVisible = await filterBtn
+      .waitFor({ state: 'visible', timeout: 5000 })
+      .then(() => true)
+      .catch(() => false);
+    if (filterVisible) {
       const expanded = await filterBtn.getAttribute('aria-expanded');
       if (expanded !== 'true') await filterBtn.click();
       const checkbox = this.page.locator(
@@ -304,9 +308,8 @@ export class VmCreationPage extends BasePage {
       const bootSourceFilter = this.page.locator(
         '[data-test="boot-source-available-Boot source available"] input[type="checkbox"]'
       );
-      if (await bootSourceFilter.isVisible({ timeout: 3000 }).catch(() => false)) {
-        await bootSourceFilter.check({ force: true });
-      }
+      await bootSourceFilter.waitFor({ state: 'visible', timeout: 5000 });
+      await bootSourceFilter.check({ force: true });
     }
     await this.waitForTemplateCatalogUpdated();
   }
@@ -314,7 +317,11 @@ export class VmCreationPage extends BasePage {
   async filterByOSName(osName: 'RHEL' | 'Windows' | 'Fedora' | 'CentOS'): Promise<void> {
     const filterKey = osName.toLowerCase();
     const filterBtn = this.page.locator('button:has-text("Filter")');
-    if (await filterBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
+    const filterVisible = await filterBtn
+      .waitFor({ state: 'visible', timeout: 5000 })
+      .then(() => true)
+      .catch(() => false);
+    if (filterVisible) {
       const expanded = await filterBtn.getAttribute('aria-expanded');
       if (expanded !== 'true') await filterBtn.click();
       const checkbox = this.page.locator(
