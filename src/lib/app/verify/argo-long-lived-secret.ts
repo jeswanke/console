@@ -155,6 +155,18 @@ async function verifyLongLivedSecretAppsetUi(params: {
   }
 }
 
+async function cleanupLongLivedSecretResources(
+  oc: OcCliService,
+  argoPush: CreateArgoPushApplicationOptions
+): Promise<void> {
+  const argoServer = argoPush.argoServerLabel;
+  await oc.run(`oc delete managedclustersetbindings -n ${GITOPS_NS} global --ignore-not-found`);
+  await oc.deleteApplicationPlacementsInNamespace(GITOPS_NS, argoPush.applicationName);
+  await oc.run(`oc delete gitopscluster -n ${GITOPS_NS} ${argoServer} --ignore-not-found`);
+  await oc.deleteApplicationSet(GITOPS_NS, argoPush.applicationName);
+  await oc.deleteNamespace(argoPush.destinationNamespace);
+}
+
 /** RHACM4K-54897: token parity, wizard AppSet, UI topology, destructive GitOps teardown. */
 export async function runLongLivedSecret54897Scenario(params: {
   oc: OcCliService;
@@ -173,7 +185,8 @@ export async function runLongLivedSecret54897Scenario(params: {
     clusterName,
   } = params;
   const argoPush = buildLongLivedSecretOptions(base, 'rhacm4k-54897', clusterName);
-  const argoServer = argoPush.argoServerLabel;
+
+  await cleanupLongLivedSecretResources(oc, argoPush);
 
   await oc.labelManagedCluster(clusterName, 'name', clusterName);
   await assertApplicationManagerTokensMatch(oc, clusterName);
@@ -187,11 +200,7 @@ export async function runLongLivedSecret54897Scenario(params: {
     clusterName,
   });
 
-  await oc.run(`oc delete managedclustersetbindings -n ${GITOPS_NS} global --ignore-not-found`);
-  await oc.run(`oc delete placement -n ${GITOPS_NS} ${argoServer}-placement --ignore-not-found`);
-  await oc.run(`oc delete gitopscluster -n ${GITOPS_NS} ${argoServer} --ignore-not-found`);
-  await oc.deleteApplicationSet(GITOPS_NS, argoPush.applicationName);
-  await oc.deleteNamespace(argoPush.destinationNamespace);
+  await cleanupLongLivedSecretResources(oc, argoPush);
 }
 
 /** RHACM4K-54902: AppSet UI, delete/recreate MSA, token parity, UI re-verify. */
@@ -214,6 +223,8 @@ export async function runLongLivedSecret54902Scenario(params: {
     repoRoot,
   } = params;
   const argoPush = buildLongLivedSecretOptions(base, 'rhacm4k-54902', clusterName);
+
+  await cleanupLongLivedSecretResources(oc, argoPush);
 
   await oc.labelManagedCluster(clusterName, 'name', clusterName);
 
@@ -239,6 +250,5 @@ export async function runLongLivedSecret54902Scenario(params: {
     clusterName,
   });
 
-  await oc.deleteApplicationSet(GITOPS_NS, argoPush.applicationName);
-  await oc.deleteNamespace(argoPush.destinationNamespace);
+  await cleanupLongLivedSecretResources(oc, argoPush);
 }
