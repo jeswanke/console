@@ -97,7 +97,7 @@ scenarios:
         namespace: auto-flux-helm-local-ns
         helm:
           chartName: helloworld-helm
-          packageVersion: "0.2.0"
+          packageVersion: '0.2.0'
 
   flux_git_edit_local_initial:
     enabled: true
@@ -145,7 +145,7 @@ scenarios:
         namespace: auto-flux-helm-edit-local-ns
         helm:
           chartName: helloworld-helm
-          packageVersion: "0.2.0"
+          packageVersion: '0.2.0'
 
   flux_helm_edit_mortgage_16769:
     enabled: true
@@ -163,7 +163,7 @@ scenarios:
         namespace: auto-flux-helm-edit-local-ns
         helm:
           chartName: mortgage-helm
-          packageVersion: "0.1.0"
+          packageVersion: '0.1.0'
 
   flux_git_del_16779:
     enabled: true
@@ -198,7 +198,7 @@ scenarios:
         namespace: auto-flux-helm-del-local-ns
         helm:
           chartName: helloworld-helm
-          packageVersion: "0.2.0"
+          packageVersion: '0.2.0'
 
   flux_git_managed_16783:
     enabled: true
@@ -231,7 +231,7 @@ scenarios:
         namespace: auto-flux-helm-managed-ns
         helm:
           chartName: helloworld-helm
-          packageVersion: "0.2.0"
+          packageVersion: '0.2.0'
 
   flux_git_edit_managed_initial:
     enabled: true
@@ -276,7 +276,7 @@ scenarios:
         namespace: auto-flux-helm-edit-managed-ns
         helm:
           chartName: helloworld-helm
-          packageVersion: "0.2.0"
+          packageVersion: '0.2.0'
 
   flux_helm_edit_mortgage_16786:
     enabled: true
@@ -293,7 +293,7 @@ scenarios:
         namespace: auto-flux-helm-edit-managed-ns
         helm:
           chartName: mortgage-helm
-          packageVersion: "0.1.0"
+          packageVersion: '0.1.0'
 
   flux_git_del_managed_16787:
     enabled: true
@@ -326,4 +326,4 @@ scenarios:
         namespace: auto-flux-helm-del-managed-ns
         helm:
           chartName: helloworld-helm
-          packageVersion: "0.2.0"
+          packageVersion: '0.2.0'

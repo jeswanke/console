@@ -236,7 +236,7 @@ fragments:
   # Leave **Configure automation** empty (do not type Ansible credential / filter). Marker only — no `perBlock` payload.
   skip_automation_ansible: {}
 
-   # RHACM4K-20541: `application-lifecycle-samples` / `ansible` path (local-cluster ansible hooks).
+    # RHACM4K-20541: `application-lifecycle-samples` / `ansible` path (local-cluster ansible hooks).
   # Topology: prehook/posthook AnsibleJobs attach to the subscription node (hook edges);
   # ansible-regular-test + guestbook-cfgmap deploy under local-cluster.
   git_ansible_samples:
@@ -342,7 +342,7 @@ fragments:
         url: &helm_repo_samples_main https://raw.githubusercontent.com/stolostron/application-lifecycle-samples/main
         chartName: helloworld-helm
         packageAlias: helloworld-helm
-        packageVersion: "3.0.0-stable"
+        packageVersion: '3.0.0-stable'
     specDomains:
       applicationExpectations:
         successMinResourceCount: 4
@@ -373,7 +373,7 @@ fragments:
         url: *helm_repo_samples_main
         chartName: helloworld-helm
         packageAlias: helloworld-helm
-        packageVersion: "0.2.0"
+        packageVersion: '0.2.0'
         reconcileRate: medium
     specDomains:
       applicationExpectations:
@@ -401,7 +401,7 @@ fragments:
       - kind: helm
         url: *helm_repo_samples_main
         chartName: mortgage-helm
-        packageVersion: "0.1.0"
+        packageVersion: '0.1.0'
     specDomains:
       applicationExpectations:
         successMinResourceCount: 2
@@ -454,8 +454,8 @@ fragments:
           weekdays:
             Monday: true
           ranges:
-            - start: "08:10 AM"
-              end: "08:11 AM"
+            - start: '08:10 AM'
+              end: '08:11 AM'
 
   placement_use_existing_rule:
     perBlock:
