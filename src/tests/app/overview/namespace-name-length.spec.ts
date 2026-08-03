@@ -96,7 +96,7 @@ test.describe(
       async ({
         oc,
         applicationListPage,
-        applicationDetailsPage,
+        
         subscriptionApplicationCreateWizardPage,
       }) => {
         test.setTimeout(900_000);

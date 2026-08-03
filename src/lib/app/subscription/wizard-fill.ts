@@ -3,7 +3,7 @@
  */
 import { expect, type Locator } from '@playwright/test';
 import {
-  APP_SUBSCRIPTION_CREATE_WIZARD,
+
   type SubscriptionWizardRepositoryCardKind,
 } from '@constants/app';
 import type { SubscriptionApplicationCreateWizardPage } from '@pages/app/SubscriptionApplicationCreateWizardPage';
@@ -247,7 +247,6 @@ async function fillAutomation(
   spec: AutomationSpec
 ): Promise<void> {
   await wizard.expandConfigurePrePostAutomationSectionForRepositoryBlock(blockIndex);
-  const block = wizard.getRepositoryBlockContainer(blockIndex);
   if (spec.credentialTypeFilter !== undefined) {
     await wizard
       .getAnsibleCredentialTypeFilterComboboxInRepositoryBlock(blockIndex)

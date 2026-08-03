@@ -7,6 +7,7 @@ export function extractOpenshiftLayer(blob: Record<string, unknown>): Record<str
       return openshift as Record<string, unknown>;
     }
   }
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { specDomains: _sd, ...rest } = blob;
   return rest;
 }

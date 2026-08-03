@@ -4,7 +4,6 @@
  * Cypress: `Argo_Appset_Tooltips_Test_Suite.cy.js`.
  */
 import { ARGO_WIZARD_TOOLTIPS, ARGO_WIZARD_MORE_INFO_BUTTON } from '@constants/argo-wizard-tooltips';
-import type { ArgoGeneratorDisplayName } from '@constants/argo-appset-generators';
 import {
   openArgoPullWizardGeneralStep,
   selectPullWizardRepositoryGit,

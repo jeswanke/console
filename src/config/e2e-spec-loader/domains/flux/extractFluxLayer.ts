@@ -7,6 +7,7 @@ export function extractFluxLayer(blob: Record<string, unknown>): Record<string, 
       return flux as Record<string, unknown>;
     }
   }
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { specDomains: _sd, ...rest } = blob;
   return rest;
 }

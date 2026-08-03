@@ -1,7 +1,6 @@
 import { expect } from '@playwright/test';
 import path from 'node:path';
 
-import { APP_ARGO_APPLICATION_SYNC } from '@constants/app';
 import type { ApplicationDetailsPage } from '@pages/app/ApplicationDetailsPage';
 import type { ApplicationListPage } from '@pages/app/ApplicationListPage';
 import type { OcCliService } from '@services/OcCliService';

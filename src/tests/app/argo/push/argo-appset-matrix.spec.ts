@@ -8,7 +8,7 @@ import { expect } from '@playwright/test';
 import { APP_ARGO_MATRIX_APPSET } from '@constants/app';
 import {
   applyArgoMatrixAppsetSetup,
-  cleanupArgoMatrixAppsetSetup,
+
   prepareMatrixManagedClusterNamespaces,
   verifyArgoMatrixAppsetInUi,
   waitForMatrixDeployedNamespaces,
