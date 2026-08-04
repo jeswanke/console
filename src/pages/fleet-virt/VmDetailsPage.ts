@@ -25,12 +25,12 @@ export class VmDetailsPage extends BasePage {
   }
 
   async dismissWelcomeModal(): Promise<void> {
-    const closeBtn = this.page
-      .getByRole('dialog', { name: 'Welcome modal' })
-      .getByRole('button', { name: 'Close' });
+    const skipTourBtn = this.page.getByRole('button', { name: 'Skip tour' });
+    const closeBtn = this.page.getByRole('dialog').getByRole('button', { name: 'Close' });
     try {
-      await closeBtn.waitFor({ state: 'visible', timeout: 3000 });
-      await closeBtn.click();
+      const target = skipTourBtn.or(closeBtn);
+      await target.first().waitFor({ state: 'visible', timeout: 5000 });
+      await target.first().click();
     } catch {
       // Modal not present — expected for most users
     }
@@ -244,23 +244,16 @@ export class VmDetailsPage extends BasePage {
       .locator('xpath=following-sibling::dd[1]//button')
       .first();
     const btnText = await statusButton
-      .innerText({ timeout: 10000 })
+      .innerText({ timeout: 5000 })
       .catch(() => '');
     if (btnText.trim()) return btnText.trim();
 
-    // Fallback: walk heading DOM to extract text nodes + img alt attributes
+    // Fallback: extract status from heading textContent
+    // Heading format: "VM <vm-name> <status>"
     const heading = this.getPageHeading();
-    const computed = await heading.evaluate((el) => {
-      let text = '';
-      const walk = (node: Node) => {
-        if (node.nodeType === 3) text += node.textContent;
-        else if (node instanceof HTMLImageElement) text += node.alt || '';
-        else for (const child of node.childNodes) walk(child);
-      };
-      walk(el);
-      return text.replace(/\s+/g, ' ').trim();
-    });
-    const match = computed.match(/^VM\s+\S+\s+(.+)$/);
+    const headingText = await heading.textContent().catch(() => '');
+    const normalized = (headingText ?? '').replace(/\s+/g, ' ').trim();
+    const match = normalized.match(/^VM\s+\S+\s+(.+)$/);
     return match?.[1]?.trim() ?? '';
   }
 

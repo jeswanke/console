@@ -70,11 +70,7 @@ test.describe(
       });
 
       await test.step('4: View YAML & CLI modal (Polarion step 2.4)', async () => {
-        const yamlCliBtn = page.locator('button:has-text("View YAML & CLI")');
-        const btnExists = await yamlCliBtn
-          .waitFor({ state: 'visible', timeout: 10000 })
-          .then(() => true)
-          .catch(() => false);
+        const btnExists = await vmCreation.isYamlCliButtonVisible();
 
         if (btnExists) {
           await vmCreation.clickViewYamlAndCli();

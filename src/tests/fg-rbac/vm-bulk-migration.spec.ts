@@ -153,33 +153,26 @@ test.describe(
         // 4a: Verify VM detail page loads for migrated VM (Polarion: "dashboard metrics populated")
         await test.step('4a: Verify VM detail page on spoke', async () => {
           await fleetPage.gotoVmDetails(spokeCluster, VM_NAMESPACE, VM_NAMES[0]);
-          // Verify VM heading shows Running on the details page
-          const vmHeading = page.locator('h1').filter({ hasText: VM_NAMES[0] });
-          await expect(vmHeading).toBeVisible({ timeout: 30000 });
-          await expect(vmHeading.getByText('Running')).toBeVisible({ timeout: 10000 });
+          await expect(vmDetails.getPageHeading()).toBeVisible({ timeout: 30000 });
+          // Status text is populated asynchronously after React fetches VM state
+          await expect(async () => {
+            const statusText = await vmDetails.getStatusFromHeading();
+            expect(statusText, `VM ${VM_NAMES[0]} should be Running on spoke`).toBe('Running');
+          }).toPass({ timeout: 30000 });
 
-          // Attempt dashboard metrics verification — multicluster metrics require
-          // direct Prometheus access to spoke which may not be available via proxy.
-          const utilizationCard = vmDetails.getUtilizationCard();
-          const metricsAvailable = await utilizationCard
-            .waitFor({ state: 'visible', timeout: 15000 })
-            .then(() => true)
-            .catch(() => false);
-
-          if (metricsAvailable) {
+          // Dashboard metrics verification — Fleet Virt uses useFleetPrometheusPoll to fetch
+          // Prometheus data from managed clusters via the hub's rbac-query-proxy.
+          // After migration, the proxy may briefly show "Error" while establishing the connection.
+          // Metrics propagation: spoke collector (30s) → Thanos receive → proxy → UI.
+          // Retry with page refresh to handle transient proxy errors post-migration.
+          await expect(async () => {
+            await fleetPage.gotoVmDetails(spokeCluster, VM_NAMESPACE, VM_NAMES[0]);
+            const utilizationCard = vmDetails.getUtilizationCard();
+            await expect(utilizationCard).toBeVisible({ timeout: 15000 });
             await expect(
-              vmDetails.getUtilSummary('cpu').or(utilizationCard.getByText('CPU'))
-            ).toBeVisible({ timeout: 15000 });
-            await expect(
-              vmDetails.getUtilSummary('memory').or(utilizationCard.getByText('Memory'))
-            ).toBeVisible({ timeout: 15000 });
-          } else {
-            console.log(
-              '[RHACM4K-59218 Step 4a] Utilization metrics not available for spoke VM — ' +
-                'Fleet Virt multicluster proxy does not relay Prometheus data from managed clusters. ' +
-                'VM Running status verified via UI heading. Product limitation — not a test defect.'
-            );
-          }
+              utilizationCard.getByText('Memory')
+            ).toBeVisible({ timeout: 10000 });
+          }).toPass({ intervals: [30000, 45000, 60000], timeout: 300000 });
         });
 
         // 4b: Verify hub no longer shows VMs on source cluster (Polarion expected result)
@@ -220,17 +213,6 @@ test.describe(
       });
 
       await test.step('5: Validate migrated VMs are controllable from hub (Pause/Stop/Start)', async () => {
-        // Helper: navigate to spoke VMs page (with retry for tree view + grid)
-        const navigateToSpokeVms = async () => {
-          await expect(async () => {
-            const consoleUrl = await oc.getConsoleUrl();
-            await page.goto(
-              `${consoleUrl}/fleet-virtualization/kubevirt.io~v1~VirtualMachine/cluster/${spokeCluster}/ns/${VM_NAMESPACE}?perspective=fleet-virtualization-perspective&tab=vms`
-            );
-            await expect(page.locator('h1')).toBeVisible({ timeout: 15000 });
-            await expect(fleetPage.getVmGrid()).toBeVisible({ timeout: 30000 });
-          }).toPass({ intervals: [15000, 20000], timeout: 120000 });
-        };
 
         // Helper: check if all VMs already have target status via CLI
         const allVmsHaveStatus = async (targetStatus: string): Promise<boolean> => {
@@ -243,7 +225,7 @@ test.describe(
 
         // Test Pause: trigger bulk pause, then verify via CLI + UI
         if (!(await allVmsHaveStatus('Paused'))) {
-          await navigateToSpokeVms();
+          await fleetPage.gotoClusterVmList(spokeCluster, VM_NAMESPACE);
           await fleetPage.selectMultipleVms(VM_NAMES);
           await fleetPage.triggerBulkControlAction('pause');
         }
@@ -253,14 +235,14 @@ test.describe(
             expect(status, `VM ${vmName} should be Paused`).toBe('Paused');
           }
         }).toPass({ intervals: [10000, 15000], timeout: 120000 });
-        await navigateToSpokeVms();
+        await fleetPage.gotoClusterVmList(spokeCluster, VM_NAMESPACE);
         for (const vmName of VM_NAMES) {
           const row = fleetPage.getVmRow(vmName).first();
           await expect(row.getByText('Paused', { exact: true })).toBeVisible({ timeout: 15000 });
         }
 
         // Test Stop: trigger bulk stop, then verify via CLI + UI
-        await navigateToSpokeVms();
+        await fleetPage.gotoClusterVmList(spokeCluster, VM_NAMESPACE);
         await fleetPage.selectMultipleVms(VM_NAMES);
         await fleetPage.triggerBulkControlAction('stop');
         await expect(async () => {
@@ -269,14 +251,14 @@ test.describe(
             expect(status, `VM ${vmName} should be Stopped`).toBe('Stopped');
           }
         }).toPass({ intervals: [10000, 15000], timeout: 120000 });
-        await navigateToSpokeVms();
+        await fleetPage.gotoClusterVmList(spokeCluster, VM_NAMESPACE);
         for (const vmName of VM_NAMES) {
           const row = fleetPage.getVmRow(vmName).first();
           await expect(row.getByText('Stopped', { exact: true })).toBeVisible({ timeout: 15000 });
         }
 
         // Test Start: trigger bulk start, then verify via CLI + UI
-        await navigateToSpokeVms();
+        await fleetPage.gotoClusterVmList(spokeCluster, VM_NAMESPACE);
         await fleetPage.selectMultipleVms(VM_NAMES);
         await fleetPage.triggerBulkControlAction('start');
         await expect(async () => {
@@ -285,7 +267,7 @@ test.describe(
             expect(status, `VM ${vmName} should be Running`).toBe('Running');
           }
         }).toPass({ intervals: [15000, 20000], timeout: 300000 });
-        await navigateToSpokeVms();
+        await fleetPage.gotoClusterVmList(spokeCluster, VM_NAMESPACE);
         for (const vmName of VM_NAMES) {
           const row = fleetPage.getVmRow(vmName).first();
           await expect(row.getByText('Running', { exact: true })).toBeVisible({ timeout: 15000 });

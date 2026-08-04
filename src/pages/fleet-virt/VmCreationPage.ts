@@ -161,6 +161,14 @@ export class VmCreationPage extends BasePage {
   // YAML & CLI view (InstanceTypes flow)
   // ---------------------------------------------------------------------------
 
+  async isYamlCliButtonVisible(): Promise<boolean> {
+    const yamlCliBtn = this.page.locator('button:has-text("View YAML & CLI")');
+    return yamlCliBtn
+      .waitFor({ state: 'visible', timeout: 10000 })
+      .then(() => true)
+      .catch(() => false);
+  }
+
   async clickViewYamlAndCli(): Promise<void> {
     const yamlCliBtn = this.page.locator('button:has-text("View YAML & CLI")');
     await yamlCliBtn.waitFor({ state: 'visible', timeout: 15000 });

@@ -60,6 +60,11 @@ function assertSafeOcResourceKind(value: string, field: string): void {
  * Service for executing OpenShift CLI (oc) commands.
  */
 export class OcCliService {
+  private getMergedKubeconfigPrefix(): string {
+    const kcPath = `${process.cwd()}/.auth/MC_MERGED_kubeconfig`;
+    return `KUBECONFIG="${kcPath}" `;
+  }
+
   async run(cmd: string): Promise<string> {
     try {
       const { stdout } = await execPromise(cmd);
@@ -743,8 +748,9 @@ export class OcCliService {
     options?: { context?: string }
   ): Promise<string> {
     const ctx = options?.context ? ` --context=${options.context}` : '';
+    const kcPrefix = options?.context ? this.getMergedKubeconfigPrefix() : '';
     const exists = await this.run(
-      `oc get vm ${name} -n ${namespace}${ctx} --no-headers 2>/dev/null || true`
+      `${kcPrefix}oc get vm ${name} -n ${namespace}${ctx} --no-headers 2>/dev/null || true`
     );
     if (exists.includes(name)) {
       return name;
@@ -755,7 +761,7 @@ export class OcCliService {
       .map(([k, v]) => `      ${k}: "${v}"`)
       .join('\n');
 
-    await this.run(`oc apply${ctx} -f - <<'EOF'
+    await this.run(`${kcPrefix}oc apply${ctx} -f - <<'EOF'
 apiVersion: kubevirt.io/v1
 kind: VirtualMachine
 metadata:
@@ -860,8 +866,9 @@ EOF`);
     options?: { context?: string }
   ): Promise<string> {
     const ctx = options?.context ? ` --context=${options.context}` : '';
+    const kcPrefix = options?.context ? this.getMergedKubeconfigPrefix() : '';
     const output = await this.run(
-      `oc get vm ${name} -n ${namespace}${ctx} -o jsonpath='{.status.printableStatus}' 2>/dev/null || echo "Unknown"`
+      `${kcPrefix}oc get vm ${name} -n ${namespace}${ctx} -o jsonpath='{.status.printableStatus}' 2>/dev/null || echo "Unknown"`
     );
     return output.trim().replace(/'/g, '');
   }
@@ -888,7 +895,8 @@ EOF`);
     options?: { context?: string }
   ): Promise<void> {
     const ctx = options?.context ? ` --context=${options.context}` : '';
-    await this.run(`oc delete vm ${name} -n ${namespace}${ctx} --ignore-not-found`);
+    const kcPrefix = options?.context ? this.getMergedKubeconfigPrefix() : '';
+    await this.run(`${kcPrefix}oc delete vm ${name} -n ${namespace}${ctx} --ignore-not-found`);
   }
 
   async vmDeleteSnapshots(vmName: string, namespace: string): Promise<void> {
@@ -961,11 +969,12 @@ EOF`);
     options?: { context?: string }
   ): Promise<void> {
     const ctx = options?.context ? ` --context=${options.context}` : '';
+    const kcPrefix = options?.context ? this.getMergedKubeconfigPrefix() : '';
     const hardLimits: string[] = [];
     if (limits.cpu) hardLimits.push(`    limits.cpu: "${limits.cpu}"`);
     if (limits.memory) hardLimits.push(`    limits.memory: "${limits.memory}"`);
 
-    await this.run(`oc apply${ctx} -f - <<'EOF'
+    await this.run(`${kcPrefix}oc apply${ctx} -f - <<'EOF'
 apiVersion: v1
 kind: ResourceQuota
 metadata:
@@ -983,7 +992,8 @@ EOF`);
     options?: { context?: string }
   ): Promise<void> {
     const ctx = options?.context ? ` --context=${options.context}` : '';
-    await this.run(`oc delete resourcequota ${name} -n ${namespace}${ctx} --ignore-not-found`);
+    const kcPrefix = options?.context ? this.getMergedKubeconfigPrefix() : '';
+    await this.run(`${kcPrefix}oc delete resourcequota ${name} -n ${namespace}${ctx} --ignore-not-found`);
   }
 
   async resourceQuotaExists(
@@ -992,8 +1002,9 @@ EOF`);
     options?: { context?: string }
   ): Promise<boolean> {
     const ctx = options?.context ? ` --context=${options.context}` : '';
+    const kcPrefix = options?.context ? this.getMergedKubeconfigPrefix() : '';
     const output = await this.run(
-      `oc get resourcequota ${name} -n ${namespace}${ctx} --no-headers 2>/dev/null || true`
+      `${kcPrefix}oc get resourcequota ${name} -n ${namespace}${ctx} --no-headers 2>/dev/null || true`
     );
     return output.includes(name);
   }

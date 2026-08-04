@@ -31,6 +31,7 @@ export class FleetVirtPage extends BasePage {
     await this.page.goto(
       `${consoleUrl}${FLEET_VIRT_ROUTES.vmList}?perspective=fleet-virtualization-perspective`
     );
+    await this.dismissGuidedTour();
     await this.shouldLoad();
   }
 
@@ -112,7 +113,35 @@ export class FleetVirtPage extends BasePage {
     await this.page.goto(
       `${consoleUrl}/fleet-virtualization/kubevirt.io~v1~VirtualMachine/cluster/${cluster}/ns/${namespace}/${vmName}?perspective=fleet-virtualization-perspective`
     );
+    await this.dismissGuidedTour();
     await this.waitForLoad();
+  }
+
+  private async dismissGuidedTour(): Promise<void> {
+    const skipBtn = this.page.getByRole('button', { name: 'Skip tour' });
+    const closeBtn = this.page.getByRole('dialog').getByRole('button', { name: 'Close' });
+    try {
+      const target = skipBtn.or(closeBtn);
+      await target.first().waitFor({ state: 'visible', timeout: 3000 });
+      await target.first().click();
+    } catch {
+      // Tour not present — expected for most sessions
+    }
+  }
+
+  /**
+   * Navigate directly to the VM list for a specific cluster/namespace.
+   * Retries with reload to handle ACM plugin 404 on first navigation.
+   */
+  async gotoClusterVmList(cluster: string, namespace: string): Promise<void> {
+    await expect(async () => {
+      const consoleUrl = await this.oc.getConsoleUrl();
+      await this.page.goto(
+        `${consoleUrl}/fleet-virtualization/kubevirt.io~v1~VirtualMachine/cluster/${cluster}/ns/${namespace}?perspective=fleet-virtualization-perspective&tab=vms`
+      );
+      await expect(this.page.locator('h1')).toBeVisible({ timeout: 15000 });
+      await expect(this.getVmGrid()).toBeVisible({ timeout: 30000 });
+    }).toPass({ intervals: [15000, 20000], timeout: 120000 });
   }
 
   async clearAllFilters(): Promise<void> {
