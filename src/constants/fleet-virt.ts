@@ -2,17 +2,19 @@
  * Fleet Virtualization constants.
  *
  * Organized hierarchically by UI location:
- *   FLEET_VIRT_ROUTES          -- navigation paths
- *   FLEET_VIRT_PAGE            -- page-level elements (perspective switcher, heading)
- *   FLEET_VIRT_SEARCH          -- VM search bar (autocomplete dropdown)
+ *   FLEET_VIRT_ROUTES       -- navigation paths
+ *   FLEET_VIRT_PAGE         -- page-level elements (perspective switcher, heading)
+ *   FLEET_VIRT_SEARCH       -- VM search bar (autocomplete dropdown)
  *   FLEET_VIRT_ADVANCED_SEARCH -- advanced search modal (cluster/project/name filters)
- *   FLEET_VIRT_SAVED_SEARCH    -- save/load/remove saved searches
- *   FLEET_VIRT_TREE_VIEW       -- left sidebar tree view
- *   FLEET_VIRT_VM_ACTIONS      -- VM details page action buttons
- *   FLEET_VIRT_VM_CREATION     -- VM creation wizard (RHACM4K-60559)
+ *   FLEET_VIRT_SAVED_SEARCH -- save/load/remove saved searches
+ *   FLEET_VIRT_VM_TABLE     -- VM list table (VirtualizedTable, NOT AcmTable)
+ *   FLEET_VIRT_TREE_VIEW    -- left sidebar tree view
+ *   FLEET_VIRT_VM_ACTIONS   -- VM details page action buttons
+ *   FLEET_VIRT_VM_CREATION  -- VM creation wizard (RHACM4K-60559)
  *
- * Selectors verified against kubevirt-ui/kubevirt-plugin source (main branch)
- * and live ACM 2.16 + CNV environment via browser MCP (2026-07-28).
+ * Selectors verified against kubevirt-ui/kubevirt-plugin release-4.21 via acm-ui MCP.
+ * Fleet Virt uses VirtualizedTable from @openshift-console/dynamic-plugin-sdk,
+ * not AcmTable from stolostron/console.
  */
 
 // =============================================================================

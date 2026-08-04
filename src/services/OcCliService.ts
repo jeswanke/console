@@ -588,10 +588,9 @@ export class OcCliService {
     targetNamespaces?: string[];
   }): Promise<void> {
     const ns = opts.targetNamespaces ?? [];
-    const nsLines =
-      ns.length > 0
-        ? ['      targetNamespaces:', ...ns.map((n) => `        - ${n}`)]
-        : ['      targetNamespaces: []'];
+    const nsLines = ns.length > 0
+      ? ['      targetNamespaces:', ...ns.map((n) => `        - ${n}`)]
+      : ['      targetNamespaces: []'];
 
     const manifest = [
       'apiVersion: rbac.open-cluster-management.io/v1beta1',
@@ -639,16 +638,7 @@ export class OcCliService {
     const patch = JSON.stringify([{ op: 'add', path: '/spec/roleAssignments/-', value }]);
     await execFilePromise(
       'oc',
-      [
-        'patch',
-        'multiclusterroleassignment',
-        mcraName,
-        '-n',
-        namespace,
-        '--type=json',
-        '-p',
-        patch,
-      ],
+      ['patch', 'multiclusterroleassignment', mcraName, '-n', namespace, '--type=json', '-p', patch],
       { encoding: 'utf8', maxBuffer: 1024 * 1024 }
     );
   }
@@ -724,7 +714,10 @@ export class OcCliService {
       for (const item of items) {
         const metadata = item.metadata as Record<string, unknown> | undefined;
         if (metadata?.name && metadata?.namespace) {
-          await this.mcraDeleteByName(metadata.name as string, metadata.namespace as string);
+          await this.mcraDeleteByName(
+            metadata.name as string,
+            metadata.namespace as string
+          );
         }
       }
     } catch (err) {
@@ -745,7 +738,7 @@ export class OcCliService {
     name: string,
     namespace: string,
     labels?: Record<string, string>,
-    options?: { context?: string }
+    options?: { context?: string },
   ): Promise<string> {
     const ctx = options?.context ? ` --context=${options.context}` : '';
     const kcPrefix = options?.context ? this.getMergedKubeconfigPrefix() : '';
@@ -863,7 +856,7 @@ EOF`);
   async vmGetPrintableStatus(
     name: string,
     namespace: string,
-    options?: { context?: string }
+    options?: { context?: string },
   ): Promise<string> {
     const ctx = options?.context ? ` --context=${options.context}` : '';
     const kcPrefix = options?.context ? this.getMergedKubeconfigPrefix() : '';
@@ -876,7 +869,7 @@ EOF`);
   async vmIsRunning(
     name: string,
     namespace: string,
-    options?: { context?: string }
+    options?: { context?: string },
   ): Promise<boolean> {
     const status = await this.vmGetPrintableStatus(name, namespace, options);
     return status === 'Running';
@@ -892,7 +885,7 @@ EOF`);
   async vmDeleteTestVM(
     name: string,
     namespace: string,
-    options?: { context?: string }
+    options?: { context?: string },
   ): Promise<void> {
     const ctx = options?.context ? ` --context=${options.context}` : '';
     const kcPrefix = options?.context ? this.getMergedKubeconfigPrefix() : '';
@@ -905,7 +898,11 @@ EOF`);
     );
   }
 
-  async vmCreateSnapshot(snapshotName: string, vmName: string, namespace: string): Promise<void> {
+  async vmCreateSnapshot(
+    snapshotName: string,
+    vmName: string,
+    namespace: string,
+  ): Promise<void> {
     await this.run(`oc apply -f - <<'EOF'
 apiVersion: snapshot.kubevirt.io/v1beta1
 kind: VirtualMachineSnapshot
@@ -948,11 +945,15 @@ EOF`);
   }
 
   async deleteDataVolume(name: string, namespace: string): Promise<void> {
-    await this.run(`oc delete datavolume ${name} -n ${namespace} --ignore-not-found`);
+    await this.run(
+      `oc delete datavolume ${name} -n ${namespace} --ignore-not-found`
+    );
   }
 
   async cleanupForkliftResources(namespace: string): Promise<void> {
-    await this.run(`oc delete plans.forklift.konveyor.io --all -n ${namespace} --ignore-not-found`);
+    await this.run(
+      `oc delete plans.forklift.konveyor.io --all -n ${namespace} --ignore-not-found`
+    );
     await this.run(
       `oc delete migrations.forklift.konveyor.io --all -n ${namespace} --ignore-not-found`
     );
@@ -1086,23 +1087,14 @@ EOF`);
     ]);
   }
 
-  async rbacAuthCanI(
-    verb: string,
-    resource: string,
-    namespace: string,
-    asUser: string
-  ): Promise<boolean> {
+  async rbacAuthCanI(verb: string, resource: string, namespace: string, asUser: string): Promise<boolean> {
     try {
       const result = await this.run(
-        `oc auth can-i ${verb} ${resource} -n ${namespace} --as=${asUser}`
+        `oc auth can-i ${verb} ${resource} -n ${namespace} --as=${asUser}`,
       );
       return result.trim() === 'yes';
     } catch (err: unknown) {
-      if (
-        err instanceof Error &&
-        'stdout' in err &&
-        String((err as Record<string, unknown>).stdout).trim() === 'no'
-      ) {
+      if (err instanceof Error && 'stdout' in err && String((err as Record<string, unknown>).stdout).trim() === 'no') {
         return false;
       }
       throw err;

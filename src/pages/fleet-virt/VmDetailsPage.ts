@@ -163,9 +163,7 @@ export class VmDetailsPage extends BasePage {
   // Configuration tab (has sub-navigation)
   // ---------------------------------------------------------------------------
 
-  getConfigurationTab(): Locator {
-    return this.page.getByRole('link', { name: 'Configuration' });
-  }
+  getConfigurationTab(): Locator { return this.page.getByRole('link', { name: 'Configuration' }); }
 
   getConfigSubTab(name: string): Locator {
     return this.page.getByRole('tab', { name });

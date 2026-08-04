@@ -15,8 +15,8 @@ import {
  * shouldLoad() is a wait guard (acceptable use of expect in page object).
  */
 export class FleetVirtPage extends BasePage {
-  override async waitForLoad(): Promise<void> {
-    // no-op: persistent loading indicators are expected for restricted RBAC users
+  override async waitForLoad(timeout = 60000): Promise<void> {
+    await super.waitForLoad(timeout);
   }
 
   constructor(
@@ -29,7 +29,7 @@ export class FleetVirtPage extends BasePage {
   async goto(): Promise<void> {
     const consoleUrl = await this.oc.getConsoleUrl();
     await this.page.goto(
-      `${consoleUrl}${FLEET_VIRT_ROUTES.vmList}?perspective=fleet-virtualization-perspective`
+      `${consoleUrl}${FLEET_VIRT_ROUTES.vmList}?perspective=fleet-virtualization-perspective`,
     );
     await this.dismissGuidedTour();
     await this.shouldLoad();
@@ -67,9 +67,9 @@ export class FleetVirtPage extends BasePage {
       await siblingButton.click();
     }
 
-    await expect(this.page.getByRole('heading', { name: 'Advanced search', level: 1 })).toBeVisible(
-      { timeout: 10000 }
-    );
+    await expect(
+      this.page.getByRole('heading', { name: 'Advanced search', level: 1 })
+    ).toBeVisible({ timeout: 10000 });
   }
 
   getCreateVmButton(): Locator {
@@ -91,10 +91,7 @@ export class FleetVirtPage extends BasePage {
    */
   async getFirstVmInfo(): Promise<{ name: string; namespace: string }> {
     const grid = this.page.getByRole('grid').last();
-    const firstRow = grid
-      .getByRole('row')
-      .filter({ has: this.page.getByRole('gridcell') })
-      .first();
+    const firstRow = grid.getByRole('row').filter({ has: this.page.getByRole('gridcell') }).first();
     await expect(firstRow).toBeVisible({ timeout: 30000 });
 
     const nameCell = firstRow.getByRole('gridcell').nth(1);
