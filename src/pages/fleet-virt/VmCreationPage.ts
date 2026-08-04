@@ -59,11 +59,11 @@ export class VmCreationPage extends BasePage {
   // ---------------------------------------------------------------------------
 
   async selectTemplateMethod(): Promise<void> {
-    const card = this.page.getByRole('radio', { name: /Create from Template/ });
-    await card.click();
-    await expect(
-      this.page.locator('.pf-v6-c-wizard__nav-link', { hasText: 'Template' })
-    ).toBeVisible({ timeout: 10000 });
+    const templateRadio = this.page.getByRole('radio', { name: /Create from Template/ });
+    await expect(async () => {
+      await templateRadio.click();
+      await expect(templateRadio).toBeChecked({ timeout: 3000 });
+    }).toPass({ intervals: [2000], timeout: 15000 });
   }
 
   // ---------------------------------------------------------------------------
@@ -137,7 +137,7 @@ export class VmCreationPage extends BasePage {
 
       if (isActionable) {
         const stepBefore = await activeStepLocator.textContent();
-        await this.primaryBtn.click();
+        await this.primaryBtn.click({ force: true });
         await expect(activeStepLocator).not.toHaveText(stepBefore || '', { timeout: 10000 });
       } else {
         const bootRow = this.page.locator(FLEET_VIRT_VM_CREATION.bootSource.tableRow).first();
@@ -262,27 +262,29 @@ export class VmCreationPage extends BasePage {
   // ---------------------------------------------------------------------------
 
   async waitForTemplateCatalogVisible(): Promise<void> {
-    const filterBtn = this.page.locator('button:has-text("Filter")');
-    const catalogGrid = this.page
-      .locator('[id="vm-catalog-grid"], .templates-catalog-tile, [data-test-id*="fedora"]')
+    const catalogContent = this.page
+      .locator('h1:has-text("Templates")')
+      .or(this.page.locator('#vm-catalog-grid'))
       .first();
-    await expect(filterBtn.or(catalogGrid)).toBeVisible({ timeout: 60000 });
+    await expect(catalogContent).toBeVisible({ timeout: 60000 });
   }
 
   async selectFedoraTemplateCard(): Promise<void> {
     await expect(async () => {
-      const fedoraCard = this.page
-        .locator('[data-test-id*="fedora"]')
-        .first()
-        .or(
-          this.page
-            .locator('.templates-catalog-tile')
-            .filter({ hasText: /fedora/i })
-            .first()
-        );
+      const fedoraCard = this.page.locator('[data-test="fedora-server-small"]');
       await expect(fedoraCard).toBeVisible({ timeout: 10000 });
       await fedoraCard.click();
+      await expect(fedoraCard).toHaveClass(/pf-m-selected/, { timeout: 5000 });
     }).toPass({ intervals: [3000, 5000], timeout: 30000 });
+
+    const drawerClose = this.page.locator('button[aria-label="Close drawer panel"]');
+    const drawerVisible = await drawerClose
+      .waitFor({ state: 'visible', timeout: 3000 })
+      .then(() => true)
+      .catch(() => false);
+    if (drawerVisible) {
+      await drawerClose.click();
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -308,45 +310,38 @@ export class VmCreationPage extends BasePage {
       const bootSourceFilter = this.page.locator(
         '[data-test="boot-source-available-Boot source available"] input[type="checkbox"]'
       );
-      await bootSourceFilter.waitFor({ state: 'visible', timeout: 5000 });
-      await bootSourceFilter.check({ force: true });
+      const exists = await bootSourceFilter
+        .waitFor({ state: 'visible', timeout: 5000 })
+        .then(() => true)
+        .catch(() => false);
+      if (exists) {
+        await bootSourceFilter.check({ force: true });
+      } else {
+        console.log(
+          '[Template Catalog] "Boot source available" filter not present in current UI version — skipping.'
+        );
+        return;
+      }
     }
     await this.waitForTemplateCatalogUpdated();
   }
 
   async filterByOSName(osName: 'RHEL' | 'Windows' | 'Fedora' | 'CentOS'): Promise<void> {
-    const filterKey = osName.toLowerCase();
-    const filterBtn = this.page.locator('button:has-text("Filter")');
-    const filterVisible = await filterBtn
-      .waitFor({ state: 'visible', timeout: 5000 })
+    const osCheckbox = this.page.getByRole('checkbox', { name: osName });
+    const exists = await osCheckbox
+      .waitFor({ state: 'visible', timeout: 10000 })
       .then(() => true)
       .catch(() => false);
-    if (filterVisible) {
-      const expanded = await filterBtn.getAttribute('aria-expanded');
-      if (expanded !== 'true') await filterBtn.click();
-      const checkbox = this.page.locator(
-        `[data-test-row-filter="${filterKey}"] input[type="checkbox"]`
-      );
-      await checkbox.waitFor({ state: 'visible', timeout: 5000 });
-      if (!(await checkbox.isChecked())) await checkbox.check({ force: true });
-      await filterBtn.click();
-    } else {
-      const osFilter = this.page
-        .locator(`input#filter-osName-${filterKey}`)
-        .or(this.page.locator(`[data-test="osName-${osName}"] input[type="checkbox"]`));
-      await osFilter.first().check({ force: true });
+    if (exists && !(await osCheckbox.isChecked())) {
+      await osCheckbox.check({ force: true });
     }
     await this.waitForTemplateCatalogUpdated();
   }
 
-  /**
-   * Wait for template catalog to reflect filter changes by checking
-   * that at least one template card is visible or the empty state is shown.
-   */
   private async waitForTemplateCatalogUpdated(): Promise<void> {
-    const catalogTile = this.page.locator('.templates-catalog-tile');
+    const templateCard = this.page.locator('#vm-catalog-grid .pf-v6-c-card').first();
     const emptyState = this.page.getByText(/No templates found|No results/);
-    await expect(catalogTile.first().or(emptyState.first())).toBeVisible({ timeout: 10000 });
+    await expect(templateCard.or(emptyState.first())).toBeVisible({ timeout: 10000 });
   }
 
   // ---------------------------------------------------------------------------

@@ -193,10 +193,11 @@ export class VmDetailsPage extends BasePage {
   // ---------------------------------------------------------------------------
 
   async openMigrationMenu(): Promise<void> {
-    await this.openActions();
-    const migrationBtn = this.page.getByRole('button', { name: 'Migration' }).last();
-    await migrationBtn.waitFor({ state: 'visible', timeout: 10000 });
-    await migrationBtn.click();
+    await expect(async () => {
+      await this.openActions();
+      const migrationBtn = this.page.getByRole('button', { name: 'Migration' }).last();
+      await migrationBtn.click({ timeout: 5000 });
+    }).toPass({ intervals: [2000, 3000], timeout: 30000 });
   }
 
   getCrossClusterMigrationItem(): Locator {
@@ -225,6 +226,42 @@ export class VmDetailsPage extends BasePage {
 
   getStatusLabel(): Locator {
     return this.page.locator(FLEET_VIRT_VM_ACTIONS.statusLabel);
+  }
+
+  /**
+   * Get the VM status text from the details page.
+   * Fleet Virt renders status as an icon (img alt) + optional text in the heading,
+   * and also as a button in the Details description list.
+   * This method uses the Details panel "Status" field (most reliable) with
+   * a fallback to the heading's accessible content (text nodes + img alt).
+   */
+  async getStatusFromHeading(): Promise<string> {
+    // Primary: get status from the Details description list button
+    // Structure: <dt>Status</dt> <dd><button>Provisioning</button></dd>
+    const statusButton = this.page
+      .locator('dt')
+      .filter({ hasText: /^Status$/ })
+      .locator('xpath=following-sibling::dd[1]//button')
+      .first();
+    const btnText = await statusButton
+      .innerText({ timeout: 10000 })
+      .catch(() => '');
+    if (btnText.trim()) return btnText.trim();
+
+    // Fallback: walk heading DOM to extract text nodes + img alt attributes
+    const heading = this.getPageHeading();
+    const computed = await heading.evaluate((el) => {
+      let text = '';
+      const walk = (node: Node) => {
+        if (node.nodeType === 3) text += node.textContent;
+        else if (node instanceof HTMLImageElement) text += node.alt || '';
+        else for (const child of node.childNodes) walk(child);
+      };
+      walk(el);
+      return text.replace(/\s+/g, ' ').trim();
+    });
+    const match = computed.match(/^VM\s+\S+\s+(.+)$/);
+    return match?.[1]?.trim() ?? '';
   }
 
   async clickActionButton(action: 'start' | 'stop' | 'pause' | 'restart'): Promise<void> {

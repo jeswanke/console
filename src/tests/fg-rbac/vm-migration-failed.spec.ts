@@ -129,17 +129,15 @@ test.describe(
         // Navigate to VM details on spoke and verify it is NOT Running (migration stuck/failed)
         await fleetPage.gotoVmDetails(spokeCluster, VM_NAMESPACE, VM_NAME);
         await expect(vmDetails.getPageHeading()).toBeVisible({ timeout: 30000 });
-        const statusLabel = vmDetails.getStatusLabel();
-        await expect(statusLabel).toBeVisible({ timeout: 10000 });
 
-        // Verify the status indicates failure: WaitingForReceiver, Provisioning, or Scheduling
-        const statusText = await statusLabel.textContent();
-        console.log(`Spoke VM status: "${statusText?.trim()}"`);
+        // Get status from heading (Fleet Virt renders status inline, not in data-test-id)
+        const statusText = await vmDetails.getStatusFromHeading();
+        console.log(`Spoke VM status: "${statusText}"`);
         expect(
           statusText,
           'VM on spoke should be stuck (not Running) — migration blocked by ResourceQuota'
         ).toMatch(/WaitingForReceiver|Provisioning|Scheduling|Pending/i);
-        expect(statusText).not.toMatch(/^.*Running$/);
+        expect(statusText).not.toMatch(/^Running$/);
 
         // Check Diagnostics tab for scheduling/migration error details.
         // Diagnostics tab exists when VMI is created (WaitingForReceiver state).

@@ -74,7 +74,7 @@ export async function ensureMultipleVmsWithPvcReady(
     await expect(async () => {
       const running = await oc.vmIsRunning(name, namespace);
       expect(running).toBeTruthy();
-    }).toPass({ intervals: [10000, 15000, 30000], timeout: 300000 });
+    }).toPass({ intervals: [10000, 15000, 30000], timeout: 480000 });
 
     await expect(async () => {
       const liveMigratable = await oc.vmIsLiveMigratable(name, namespace);

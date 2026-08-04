@@ -139,7 +139,7 @@ export const FLEET_VIRT_VM_CREATION = {
     `/fleet-virtualization/vm-wizard/cluster/${cluster}/all-namespaces`,
 
   vmNameInput: '#vm-name',
-  primaryButton: '.pf-v6-c-wizard button.pf-v6-c-button.pf-m-primary',
+  primaryButton: '.pf-v6-c-wizard__footer button.pf-v6-c-button.pf-m-primary',
 
   bootSource: {
     tableRow: '.pf-v6-c-wizard table tbody tr',
