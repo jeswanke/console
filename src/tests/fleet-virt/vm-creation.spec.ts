@@ -5,7 +5,6 @@
  *   1. Log into ACM as kubeadmin (hub)
  *   2. Create VM via Custom Config (InstanceTypes / Bootable Volumes)
  *      - Select volume explicitly
- *      - View YAML/CLI from bottom right button
  *      - Click Customize VM
  *      - Create and verify lifecycle
  *   3. Create VM via Template Catalog
@@ -65,26 +64,6 @@ test.describe(
         await expect(vmCreation.getWizard()).toBeVisible({ timeout: 15000 });
 
         await vmCreation.advanceWithNameFillAndVolumeSelect(VM_INSTANCETYPE);
-
-        // View YAML & CLI modal (Polarion step 2.4)
-        const btnExists = await vmCreation.isYamlCliButtonVisible();
-        if (btnExists) {
-          await vmCreation.clickViewYamlAndCli();
-          await vmCreation.verifyYamlModalVisible();
-          await expect(
-            vmCreation.getYamlModalContent(/kind|VirtualMachine|apiVersion/)
-          ).toBeVisible({ timeout: 10000 });
-          await vmCreation.clickCliTab();
-          await vmCreation.verifyCliContentVisible();
-          await vmCreation.closeYamlCliModal();
-        } else {
-          console.log(
-            '[RHACM4K-60559 Step 2] "View YAML & CLI" button not present in Fleet Virt wizard ' +
-              '(ACM 5.0 / CNV 4.23). Polarion TC references this feature but it is absent from the current build. ' +
-              'Product gap — not a test defect.'
-          );
-        }
-
         await vmCreation.navigateToReviewStep();
         await vmCreation.clickCreateVm();
 

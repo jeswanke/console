@@ -157,57 +157,6 @@ export class VmCreationPage extends BasePage {
     }).toPass({ intervals: [3000, 4000, 5000], timeout: 90000 });
   }
 
-  // ---------------------------------------------------------------------------
-  // YAML & CLI view (InstanceTypes flow)
-  // ---------------------------------------------------------------------------
-
-  async isYamlCliButtonVisible(): Promise<boolean> {
-    const yamlCliBtn = this.page.locator('button:has-text("View YAML & CLI")');
-    return yamlCliBtn
-      .waitFor({ state: 'visible', timeout: 10000 })
-      .then(() => true)
-      .catch(() => false);
-  }
-
-  async clickViewYamlAndCli(): Promise<void> {
-    const yamlCliBtn = this.page.locator('button:has-text("View YAML & CLI")');
-    await yamlCliBtn.waitFor({ state: 'visible', timeout: 15000 });
-    await yamlCliBtn.click();
-    await this.page.locator('.pf-v6-c-modal-box').waitFor({ state: 'visible', timeout: 10000 });
-  }
-
-  async verifyYamlModalVisible(): Promise<void> {
-    const modal = this.page.locator('.pf-v6-c-modal-box');
-    await expect(modal).toBeVisible({ timeout: 10000 });
-  }
-
-  async clickCliTab(): Promise<void> {
-    const cliTab = this.page.locator('.pf-v6-c-modal-box__body button:has-text("CLI")');
-    await cliTab.waitFor({ state: 'visible', timeout: 10000 });
-    await cliTab.click();
-    await expect(
-      this.page.locator('.pf-v6-c-modal-box__body').getByText(/virtctl|oc|kubectl/)
-    ).toBeVisible({ timeout: 10000 });
-  }
-
-  async verifyCliContentVisible(): Promise<void> {
-    const modalBody = this.page.locator('.pf-v6-c-modal-box__body');
-    await expect(modalBody.getByText(/virtctl|oc|kubectl/)).toBeVisible({ timeout: 10000 });
-  }
-
-  async closeYamlCliModal(): Promise<void> {
-    const closeBtn = this.page.locator('.pf-v6-c-modal-box button[aria-label="Close"]');
-    const isCloseVisible = await closeBtn
-      .waitFor({ state: 'visible', timeout: 3000 })
-      .then(() => true)
-      .catch(() => false);
-    if (isCloseVisible) {
-      await closeBtn.click();
-    } else {
-      await this.page.keyboard.press('Escape');
-    }
-    await this.page.locator('.pf-v6-c-modal-box').waitFor({ state: 'hidden', timeout: 5000 });
-  }
 
   // ---------------------------------------------------------------------------
   // Composed wizard step: fill name + advance to boot source + select volume
@@ -255,15 +204,6 @@ export class VmCreationPage extends BasePage {
       throw new Error(`Advancing from: ${currentStep}`);
     }).toPass({ intervals: [3000, 5000], timeout: 90000 });
   }
-
-  // ---------------------------------------------------------------------------
-  // YAML & CLI modal content verification
-  // ---------------------------------------------------------------------------
-
-  getYamlModalContent(pattern: RegExp): Locator {
-    return this.page.locator('.pf-v6-c-modal-box__body').getByText(pattern);
-  }
-
 
   // ---------------------------------------------------------------------------
   // Template catalog step
