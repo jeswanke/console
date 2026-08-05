@@ -15,11 +15,6 @@ import {
 async function globalSetup() {
   const authDir = path.join(__dirname, '../.auth');
 
-  if (process.env.SKIP_SETUP === 'true' && fs.existsSync(path.join(authDir, 'admin.json'))) {
-    console.log(`${LOG_GLOBAL_SETUP} SKIP_SETUP=true and admin.json exists — preserving .auth`);
-    return;
-  }
-
   // Clean up .auth directory before each test run
   if (fs.existsSync(authDir)) {
     fs.rmSync(authDir, { recursive: true });
