@@ -157,7 +157,6 @@ export class VmCreationPage extends BasePage {
     }).toPass({ intervals: [3000, 4000, 5000], timeout: 90000 });
   }
 
-
   // ---------------------------------------------------------------------------
   // Composed wizard step: fill name + advance to boot source + select volume
   // Handles PF6 wizard race conditions with retry logic.

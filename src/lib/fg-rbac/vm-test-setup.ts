@@ -254,7 +254,6 @@ export async function cleanupForkliftPlansAndMigrations(
   await oc.cleanupForkliftResources(namespace);
 }
 
-
 export async function deleteHubVms(names: string[], namespace: string): Promise<void> {
   for (const name of names) {
     await oc.run(

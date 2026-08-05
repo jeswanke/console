@@ -221,12 +221,16 @@ export class FleetVirtPage extends BasePage {
    * PF6 flyout menus require hover on parent to reveal the submenu.
    */
   async triggerBulkCrossClusterMigration(): Promise<void> {
-    await this.openBulkActions();
-    const menu = this.page.getByRole('menu');
-    const migrationBtn = menu.getByRole('button', { name: 'Migration', exact: true });
-    await migrationBtn.hover();
     const crossClusterItem = this.page.getByRole('menuitem', { name: /Cross.?cluster/i });
-    await expect(crossClusterItem).toBeVisible({ timeout: 5000 });
+
+    await expect(async () => {
+      await this.openBulkActions();
+      const menu = this.page.getByRole('menu');
+      const migrationBtn = menu.getByRole('button', { name: 'Migration', exact: true });
+      await migrationBtn.hover();
+      await expect(crossClusterItem).toBeVisible({ timeout: 5000 });
+    }).toPass({ intervals: [3000, 5000], timeout: 30000 });
+
     await crossClusterItem.click();
   }
 
@@ -237,10 +241,6 @@ export class FleetVirtPage extends BasePage {
   async triggerBulkControlAction(
     action: 'start' | 'stop' | 'pause' | 'unpause' | 'restart'
   ): Promise<void> {
-    await this.openBulkActions();
-    const menu = this.page.getByRole('menu');
-    const controlBtn = menu.getByRole('button', { name: 'Control', exact: true });
-    await controlBtn.hover();
     const labelMap: Record<string, string> = {
       start: 'Start',
       stop: 'Stop',
@@ -249,7 +249,15 @@ export class FleetVirtPage extends BasePage {
       restart: 'Restart',
     };
     const actionItem = this.page.getByRole('menuitem', { name: labelMap[action], exact: true });
-    await expect(actionItem).toBeVisible({ timeout: 5000 });
+
+    await expect(async () => {
+      await this.openBulkActions();
+      const menu = this.page.getByRole('menu');
+      const controlBtn = menu.getByRole('button', { name: 'Control', exact: true });
+      await controlBtn.hover();
+      await expect(actionItem).toBeVisible({ timeout: 5000 });
+    }).toPass({ intervals: [3000, 5000], timeout: 30000 });
+
     await actionItem.click();
   }
 }

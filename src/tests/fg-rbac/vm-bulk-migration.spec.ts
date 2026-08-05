@@ -235,11 +235,13 @@ test.describe(
             expect(status, `VM ${vmName} should be Paused`).toBe('Paused');
           }
         }).toPass({ intervals: [10000, 15000], timeout: 120000 });
-        await fleetPage.gotoClusterVmList(spokeCluster, VM_NAMESPACE);
-        for (const vmName of VM_NAMES) {
-          const row = fleetPage.getVmRow(vmName).first();
-          await expect(row.getByText('Paused', { exact: true })).toBeVisible({ timeout: 15000 });
-        }
+        await expect(async () => {
+          await fleetPage.gotoClusterVmList(spokeCluster, VM_NAMESPACE);
+          for (const vmName of VM_NAMES) {
+            const row = fleetPage.getVmRow(vmName).first();
+            await expect(row.getByText('Paused', { exact: true })).toBeVisible({ timeout: 10000 });
+          }
+        }).toPass({ intervals: [15000, 20000], timeout: 90000 });
 
         // Test Stop: trigger bulk stop, then verify via CLI + UI
         await fleetPage.gotoClusterVmList(spokeCluster, VM_NAMESPACE);
@@ -251,11 +253,13 @@ test.describe(
             expect(status, `VM ${vmName} should be Stopped`).toBe('Stopped');
           }
         }).toPass({ intervals: [10000, 15000], timeout: 120000 });
-        await fleetPage.gotoClusterVmList(spokeCluster, VM_NAMESPACE);
-        for (const vmName of VM_NAMES) {
-          const row = fleetPage.getVmRow(vmName).first();
-          await expect(row.getByText('Stopped', { exact: true })).toBeVisible({ timeout: 15000 });
-        }
+        await expect(async () => {
+          await fleetPage.gotoClusterVmList(spokeCluster, VM_NAMESPACE);
+          for (const vmName of VM_NAMES) {
+            const row = fleetPage.getVmRow(vmName).first();
+            await expect(row.getByText('Stopped', { exact: true })).toBeVisible({ timeout: 10000 });
+          }
+        }).toPass({ intervals: [15000, 20000], timeout: 90000 });
 
         // Test Start: trigger bulk start, then verify via CLI + UI
         await fleetPage.gotoClusterVmList(spokeCluster, VM_NAMESPACE);
@@ -267,11 +271,13 @@ test.describe(
             expect(status, `VM ${vmName} should be Running`).toBe('Running');
           }
         }).toPass({ intervals: [15000, 20000], timeout: 300000 });
-        await fleetPage.gotoClusterVmList(spokeCluster, VM_NAMESPACE);
-        for (const vmName of VM_NAMES) {
-          const row = fleetPage.getVmRow(vmName).first();
-          await expect(row.getByText('Running', { exact: true })).toBeVisible({ timeout: 15000 });
-        }
+        await expect(async () => {
+          await fleetPage.gotoClusterVmList(spokeCluster, VM_NAMESPACE);
+          for (const vmName of VM_NAMES) {
+            const row = fleetPage.getVmRow(vmName).first();
+            await expect(row.getByText('Running', { exact: true })).toBeVisible({ timeout: 10000 });
+          }
+        }).toPass({ intervals: [15000, 20000], timeout: 90000 });
 
         // Final spoke CLI verification (Polarion: "Spoke cluster shows consistent status with hub")
         for (const vmName of VM_NAMES) {

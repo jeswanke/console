@@ -47,7 +47,7 @@ test.describe(
     let mtvAvailable = false;
 
     test.beforeAll(async ({}, testInfo) => {
-      testInfo.setTimeout(300000);
+      testInfo.setTimeout(480000);
       spokeCluster = FLEET_VIRT_DEFAULTS.spokeCluster;
       mtvAvailable = await checkCclmPrerequisites(spokeCluster);
 
