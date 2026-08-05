@@ -131,31 +131,15 @@ test.describe(
         await expect(vmDetails.getPageHeading()).toBeVisible({ timeout: 30000 });
 
         // Get status from heading (Fleet Virt renders status inline, not in data-test-id)
+        // With ResourceQuota blocking DV import, Forklift cannot complete the disk transfer,
+        // so the VM stays in "Provisioning" (no VMI created, no Diagnostics tab).
         const statusText = await vmDetails.getStatusFromHeading();
         console.log(`Spoke VM status: "${statusText}"`);
         expect(
           statusText,
-          'VM on spoke should be stuck (not Running) — migration blocked by ResourceQuota'
-        ).toMatch(/WaitingForReceiver|Provisioning|Scheduling|Pending/i);
+          'VM on spoke should be in Provisioning — DV import blocked by ResourceQuota'
+        ).toMatch(/Provisioning/i);
         expect(statusText).not.toMatch(/^Running$/);
-
-        // Check Diagnostics tab for scheduling/migration error details.
-        // Diagnostics tab exists when VMI is created (WaitingForReceiver state).
-        // In Provisioning state (no VMI), the tab won't be present — verified by status above.
-        if (statusText?.match(/WaitingForReceiver/i)) {
-          const diagnosticsTab = vmDetails.getTabLink('Diagnostics');
-          await expect(diagnosticsTab).toBeVisible({ timeout: 10000 });
-          await diagnosticsTab.click();
-          const diagnosticsContent = vmDetails.getDiagnosticsContent(
-            /not yet been scheduled|virt-launcher pod|scheduling/i
-          );
-          await expect(diagnosticsContent.first()).toBeVisible({ timeout: 15000 });
-          console.log('Diagnostics message confirms: virt-launcher pod scheduling blocked');
-        } else {
-          console.log(
-            `Diagnostics tab not applicable (VM status: ${statusText?.trim()} — no VMI, hence no Diagnostics)`
-          );
-        }
       });
 
       await test.step('5: Verify VM remains safe on source cluster', async () => {

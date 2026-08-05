@@ -214,21 +214,10 @@ test.describe(
 
       await test.step('5: Validate migrated VMs are controllable from hub (Pause/Stop/Start)', async () => {
 
-        // Helper: check if all VMs already have target status via CLI
-        const allVmsHaveStatus = async (targetStatus: string): Promise<boolean> => {
-          for (const vmName of VM_NAMES) {
-            const status = await getVmStatusOnSpoke(vmName, VM_NAMESPACE, spokeCluster, kcPath);
-            if (status !== targetStatus) return false;
-          }
-          return true;
-        };
-
         // Test Pause: trigger bulk pause, then verify via CLI + UI
-        if (!(await allVmsHaveStatus('Paused'))) {
-          await fleetPage.gotoClusterVmList(spokeCluster, VM_NAMESPACE);
-          await fleetPage.selectMultipleVms(VM_NAMES);
-          await fleetPage.triggerBulkControlAction('pause');
-        }
+        await fleetPage.gotoClusterVmList(spokeCluster, VM_NAMESPACE);
+        await fleetPage.selectMultipleVms(VM_NAMES);
+        await fleetPage.triggerBulkControlAction('pause');
         await expect(async () => {
           for (const vmName of VM_NAMES) {
             const status = await getVmStatusOnSpoke(vmName, VM_NAMESPACE, spokeCluster, kcPath);
