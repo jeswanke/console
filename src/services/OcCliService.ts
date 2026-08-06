@@ -732,10 +732,12 @@ export class OcCliService {
   async vmEnsureTestVM(
     name: string,
     namespace: string,
-    labels?: Record<string, string>
+    labels?: Record<string, string>,
+    options?: { context?: string },
   ): Promise<string> {
+    const ctx = options?.context ? ` --context=${options.context}` : '';
     const exists = await this.run(
-      `oc get vm ${name} -n ${namespace} --no-headers 2>/dev/null || true`
+      `oc get vm ${name} -n ${namespace}${ctx} --no-headers 2>/dev/null || true`
     );
     if (exists.includes(name)) {
       return name;
@@ -746,7 +748,7 @@ export class OcCliService {
       .map(([k, v]) => `      ${k}: "${v}"`)
       .join('\n');
 
-    await this.run(`oc apply -f - <<'EOF'
+    await this.run(`oc apply${ctx} -f - <<'EOF'
 apiVersion: kubevirt.io/v1
 kind: VirtualMachine
 metadata:
@@ -833,6 +835,10 @@ spec:
           name: fedora
           namespace: openshift-virtualization-os-images
         storage:
+          storageClassName: azurefile-csi-nfs
+          accessModes:
+            - ReadWriteMany
+          volumeMode: Filesystem
           resources:
             requests:
               storage: 30Gi
@@ -841,15 +847,99 @@ EOF`);
     return name;
   }
 
-  async vmIsRunning(name: string, namespace: string): Promise<boolean> {
+  async vmIsRunning(
+    name: string,
+    namespace: string,
+    options?: { context?: string },
+  ): Promise<boolean> {
+    const ctx = options?.context ? ` --context=${options.context}` : '';
     const output = await this.run(
-      `oc get vm ${name} -n ${namespace} -o jsonpath='{.status.printableStatus}' 2>/dev/null || true`
+      `oc get vm ${name} -n ${namespace}${ctx} -o jsonpath='{.status.printableStatus}' 2>/dev/null || true`
     );
     return output.includes('Running');
   }
 
-  async vmDeleteTestVM(name: string, namespace: string): Promise<void> {
-    await this.run(`oc delete vm ${name} -n ${namespace} --ignore-not-found`);
+  async vmIsLiveMigratable(name: string, namespace: string): Promise<boolean> {
+    const output = await this.run(
+      `oc get vmi ${name} -n ${namespace} -o jsonpath='{.status.conditions[?(@.type=="LiveMigratable")].status}' 2>/dev/null || echo "False"`
+    );
+    return output.includes('True');
+  }
+
+  async vmDeleteTestVM(
+    name: string,
+    namespace: string,
+    options?: { context?: string },
+  ): Promise<void> {
+    const ctx = options?.context ? ` --context=${options.context}` : '';
+    await this.run(`oc delete vm ${name} -n ${namespace}${ctx} --ignore-not-found`);
+  }
+
+  async vmDeleteSnapshots(vmName: string, namespace: string): Promise<void> {
+    await this.run(
+      `oc delete virtualmachinesnapshot -n ${namespace} -l vm.kubevirt.io/name=${vmName} --ignore-not-found`
+    );
+  }
+
+  async vmCreateSnapshot(
+    snapshotName: string,
+    vmName: string,
+    namespace: string,
+  ): Promise<void> {
+    await this.run(`oc apply -f - <<'EOF'
+apiVersion: snapshot.kubevirt.io/v1beta1
+kind: VirtualMachineSnapshot
+metadata:
+  name: ${snapshotName}
+  namespace: ${namespace}
+spec:
+  source:
+    apiGroup: kubevirt.io
+    kind: VirtualMachine
+    name: ${vmName}
+EOF`);
+  }
+
+  async deleteUser(username: string): Promise<void> {
+    await this.run(`oc delete user ${username} --ignore-not-found`);
+    await this.run(`oc delete identity htpasswd:${username} --ignore-not-found`);
+  }
+
+  async mtvIsInstalled(): Promise<boolean> {
+    const output = await this.run(
+      'oc get csv -n openshift-mtv --no-headers 2>/dev/null | grep -iE "forklift|mtv-operator" || true'
+    );
+    return output.trim().length > 0;
+  }
+
+  async cnvIsAvailableOnCluster(clusterName: string): Promise<boolean> {
+    // Check via ACM addon first
+    const addonOutput = await this.run(
+      `oc get managedclusteraddon -n ${clusterName} --no-headers 2>/dev/null | grep -iE 'hci-controller|hyperconverged|kubevirt' || true`
+    );
+    if (addonOutput.trim().length > 0) return true;
+
+    // Fallback: directly query spoke via merged kubeconfig context
+    const kcPath = `${process.cwd()}/.auth/MC_MERGED_kubeconfig`;
+    const output = await this.run(
+      `KUBECONFIG="${kcPath}" oc get csv -n openshift-cnv --context=${clusterName} --no-headers 2>/dev/null | grep -i kubevirt || true`
+    );
+    return output.trim().length > 0;
+  }
+
+  async deleteDataVolume(name: string, namespace: string): Promise<void> {
+    await this.run(
+      `oc delete datavolume ${name} -n ${namespace} --ignore-not-found`
+    );
+  }
+
+  async cleanupForkliftResources(namespace: string): Promise<void> {
+    await this.run(
+      `oc delete plans.forklift.konveyor.io --all -n ${namespace} --ignore-not-found`
+    );
+    await this.run(
+      `oc delete migrations.forklift.konveyor.io --all -n ${namespace} --ignore-not-found`
+    );
   }
 
   // ---------------------------------------------------------------------------

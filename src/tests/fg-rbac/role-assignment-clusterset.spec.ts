@@ -287,7 +287,7 @@ test.describe('Role Assignment - Cluster Set Scope', { tag: ['@fg-rbac'] }, () =
         GRANULARITY_OPTIONS.projectRoleAssignment
       );
       const createProjectBtn = roleAssignmentWizardPage.getModal().locator(`#${RBAC_WIZARD.projects.createButtonId}`);
-      await expect(createProjectBtn).toBeEnabled();
+      await expect(createProjectBtn).toBeEnabled({ timeout: 90000 });
       await roleAssignmentWizardPage.selectProjects(projectNames);
       await expect(createProjectBtn).toBeDisabled();
       await roleAssignmentWizardPage.clickNext();

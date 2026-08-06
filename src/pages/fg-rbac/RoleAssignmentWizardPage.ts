@@ -1,6 +1,6 @@
-import { Page, Locator } from '@playwright/test';
+import { Page, Locator, expect } from '@playwright/test';
 import { BasePage } from '@pages/BasePage';
-import { PF_MODAL } from '@constants/selectors';
+import { PF_MODAL, PF_SPINNER, PF_SKELETON } from '@constants/selectors';
 import {
   SCOPE_TYPES,
   RBAC_WIZARD,
@@ -28,6 +28,11 @@ export class RoleAssignmentWizardPage extends BasePage {
     this.createButton = this.modal.getByRole('button', { name: 'Create' });
   }
 
+  override async waitForLoad(timeout = 30000): Promise<void> {
+    await expect(this.modal.locator(PF_SPINNER)).toHaveCount(0, { timeout });
+    await expect(this.modal.locator(PF_SKELETON)).toHaveCount(0, { timeout });
+  }
+
   getNextButton(): Locator { return this.nextButton; }
 
   async clickNext(): Promise<void> {
@@ -35,7 +40,7 @@ export class RoleAssignmentWizardPage extends BasePage {
     await this.waitForLoad();
   }
 
-  async clickCancel(): Promise<void> { await this.cancelButton.click(); }
+  async clickCancel(): Promise<void> { await this.cancelButton.last().click(); }
   async submitCreate(): Promise<void> { await this.createButton.click(); }
 
   getScopeTypeDropdown(): Locator { return this.modal.getByRole('combobox'); }
@@ -43,7 +48,7 @@ export class RoleAssignmentWizardPage extends BasePage {
   async selectScopeType(scopeType: ScopeType): Promise<void> {
     await this.getScopeTypeDropdown().click();
     await this.page.getByRole('option', { name: scopeType }).click();
-    await this.waitForLoad();
+    await this.waitForLoad(60000);
   }
 
   async selectScopeClusters(): Promise<void> { await this.selectScopeType(SCOPE_TYPES.clusters); }
@@ -56,9 +61,48 @@ export class RoleAssignmentWizardPage extends BasePage {
     return this.page.getByRole('option', { name: scopeType });
   }
 
+  /**
+   * Finds and checks rows by name in a paginated wizard table.
+   * Uses search input when available; falls back to pagination otherwise.
+   */
   private async checkTableRows(names: string[]): Promise<void> {
+    const dialog = this.page.getByRole('dialog').last();
+    await dialog
+      .getByRole('row')
+      .filter({ has: this.page.getByRole('checkbox') })
+      .first()
+      .waitFor({ state: 'visible', timeout: 60000 });
+
+    const searchInput = dialog.getByPlaceholder('Search');
+    const hasSearch = await searchInput.isVisible();
+
     for (const name of names) {
-      await this.modal.getByRole('row', { name }).getByRole('checkbox').check();
+      if (hasSearch) {
+        await searchInput.clear();
+        await searchInput.fill(name);
+        await this.waitForLoad();
+      }
+
+      let row = dialog.getByRole('row', { name });
+
+      // Paginate if the row isn't visible (e.g. "default" cluster set on page 2+)
+      if ((await row.count()) === 0) {
+        const nextBtn = dialog.getByRole('button', { name: 'Go to next page' });
+        while (await nextBtn.isEnabled().catch(() => false)) {
+          await nextBtn.click();
+          await this.waitForLoad();
+          row = dialog.getByRole('row', { name });
+          if ((await row.count()) > 0) break;
+        }
+      }
+
+      await row.first().waitFor({ state: 'visible', timeout: 15000 });
+      await row.first().getByRole('checkbox').check({ timeout: 30000 });
+
+      if (hasSearch) {
+        await searchInput.clear();
+        await this.waitForLoad();
+      }
     }
   }
 
@@ -85,6 +129,7 @@ export class RoleAssignmentWizardPage extends BasePage {
 
   async selectProjects(names: string[]): Promise<void> {
     await this.waitForLoad();
+    await this.getProjectTableRows().first().waitFor({ state: 'visible', timeout: 90000 });
     for (const name of names) {
       await this.modal.getByRole('row', { name }).getByRole('checkbox').check({ timeout: 60000 });
     }
@@ -94,8 +139,18 @@ export class RoleAssignmentWizardPage extends BasePage {
     return this.modal.getByRole('row').filter({ has: this.page.getByRole('checkbox') });
   }
 
+  getCreateCommonProjectButton(): Locator {
+    return this.modal.locator(`#${RBAC_WIZARD.projects.createButtonId}`);
+  }
+
+  getProjectNameInput(): Locator {
+    return this.modal.getByPlaceholder(RBAC_WIZARD.projects.enterProjectName);
+  }
+
   async selectRole(roleName: string): Promise<void> {
-    await this.modal.getByRole('radio', { name: `Select role ${roleName}` }).click();
+    const radio = this.modal.getByRole('radio', { name: `Select role ${roleName}` });
+    await radio.check();
+    await this.waitForLoad();
   }
 
   async searchRole(roleName: string): Promise<void> {
@@ -142,6 +197,30 @@ export class RoleAssignmentWizardPage extends BasePage {
   getWizardTitle(): Locator { return this.modal.getByRole('heading').first(); }
 
   getModal(): Locator { return this.modal; }
+
+  // ---------------------------------------------------------------------------
+  // Pre-authorized user support
+  // ---------------------------------------------------------------------------
+
+  getPreAuthButton(): Locator {
+    return this.modal.locator('#create-pre-authorized-user');
+  }
+
+  getPreAuthIdentifierInput(): Locator {
+    return this.modal.getByPlaceholder(RBAC_WIZARD.preAuthorizedUser.identifierPlaceholder);
+  }
+
+  getSavePreAuthButton(): Locator {
+    return this.modal.getByRole('button', { name: /save.*user|add.*user/i });
+  }
+
+  getCancelPreAuthLink(): Locator {
+    return this.modal.getByText(/cancel.*search.*instead/i);
+  }
+
+  getPreAuthCreatedNotification(): Locator {
+    return this.page.getByText(RBAC_WIZARD.preAuthorizedUser.createdNotification);
+  }
 
   // ---------------------------------------------------------------------------
   // Edit mode support

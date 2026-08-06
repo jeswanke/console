@@ -1,8 +1,9 @@
-import { Page, Locator } from '@playwright/test';
+import { Page, Locator, expect } from '@playwright/test';
 import { BasePage } from '@pages/BasePage';
 import { RoleAssignmentsTable } from '@components/fg-rbac/RoleAssignmentsTable';
 import { OcCliService } from '@services/OcCliService';
 import { RBAC_ROUTES, RBAC_USER_DETAIL } from '@constants/fg-rbac';
+import { PF_SPINNER, PF_SKELETON } from '@constants/selectors';
 import { openCreateRoleAssignment } from '@lib/fg-rbac/role-assignment-actions';
 
 /**
@@ -14,6 +15,13 @@ import { openCreateRoleAssignment } from '@lib/fg-rbac/role-assignment-actions';
  * Only waitForLoad() and openCreateRoleAssignment() use expect() as wait guards.
  */
 export class UserDetailsPage extends BasePage {
+  override async waitForLoad(timeout = 30000): Promise<void> {
+    const pageSpinner = this.page.locator(
+      `${PF_SPINNER}:not(td ${PF_SPINNER}):not([role="gridcell"] ${PF_SPINNER})`,
+    );
+    await expect(pageSpinner).toHaveCount(0, { timeout });
+    await expect(this.page.locator(PF_SKELETON)).toHaveCount(0, { timeout });
+  }
   readonly roleAssignmentsTable: RoleAssignmentsTable;
 
   private readonly roleAssignmentsTab: Locator;

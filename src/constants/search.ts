@@ -50,6 +50,7 @@ export const SEARCH_DETAILS_PAGE = {
     details: 'Details',
     yaml: 'YAML',
     relatedResources: 'Related resources',
+    snapshots: 'Snapshots',
     logs: 'Logs',
   },
   podDetailsSection: 'Pod details',

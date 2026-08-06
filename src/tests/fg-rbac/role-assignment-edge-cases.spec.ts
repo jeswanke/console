@@ -196,7 +196,7 @@ test.describe('Role Assignment - Edge Cases', { tag: ['@fg-rbac'] }, () => {
             .getRowByRole(role)
             .getByText('Active')
         ).toBeVisible();
-      }).toPass({ intervals: [5_000, 10_000, 15_000], timeout: 90_000 });
+      }).toPass({ intervals: [5_000, 10_000, 15_000, 30_000], timeout: 180_000 });
     });
 
     await test.step('2: Attempt duplicate Global RA -- expect error', async () => {

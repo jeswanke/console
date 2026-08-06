@@ -15,6 +15,10 @@ export class SearchDetailsPage extends BasePage {
     super(page);
   }
 
+  override async waitForLoad(timeout = 60000): Promise<void> {
+    await super.waitForLoad(timeout);
+  }
+
   /** Wait for the details page tabs and PF loading indicators to settle. */
   async waitForDetailsPageLoad(): Promise<void> {
     await this.getTab(SEARCH_DETAILS_PAGE.tabs.details).waitFor({ state: 'visible' });
@@ -94,5 +98,75 @@ export class SearchDetailsPage extends BasePage {
    */
   getLogsViewer(): Locator {
     return this.page.locator('.pf-v6-c-log-viewer').first();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Actions (VM resources via Search details)
+  // ---------------------------------------------------------------------------
+
+  getActionsDropdown(): Locator {
+    return this.page.getByRole('button', { name: 'Actions' });
+  }
+
+  getActionMenuItem(name: string): Locator {
+    return this.page.getByRole('menuitem', { name });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Snapshots tab (VM resources)
+  // ---------------------------------------------------------------------------
+
+  getNoSnapshotsAlert(): Locator {
+    return this.page.getByText('No VirtualMachineSnapshots found');
+  }
+
+  getSnapshotTable(): Locator {
+    return this.page.locator('table');
+  }
+
+  getSnapshotReference(vmName: string): Locator {
+    return this.page.getByText(new RegExp(vmName));
+  }
+
+  getSnapshotRow(snapshotName: string): Locator {
+    return this.page.locator('tr').filter({ hasText: snapshotName });
+  }
+
+  async openSnapshotKebab(snapshotName: string): Promise<void> {
+    await this.getSnapshotRow(snapshotName).getByRole('button').last().click();
+  }
+
+  getDeleteMenuItem(): Locator {
+    return this.page.getByRole('menuitem', { name: /delete/i });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Dialogs (confirmation dialogs triggered by VM actions)
+  // ---------------------------------------------------------------------------
+
+  getDialog(): Locator {
+    return this.page.getByRole('dialog');
+  }
+
+  getSnapshotDialogTitle(): Locator {
+    return this.page.getByText(/Snapshot VirtualMachine/i);
+  }
+
+  getSnapshotConfirmButton(): Locator {
+    return this.getDialog().getByRole('button', { name: 'Snapshot' });
+  }
+
+  getDeleteConfirmButton(): Locator {
+    return this.getDialog().getByRole('button', { name: /delete/i });
+  }
+
+  async dismissDialogIfOpen(): Promise<void> {
+    const dialog = this.getDialog();
+    if ((await dialog.count()) > 0 && (await dialog.isVisible())) {
+      const cancelBtn = dialog.getByRole('button', { name: 'Cancel' });
+      if ((await cancelBtn.count()) > 0) {
+        await cancelBtn.click();
+      }
+    }
   }
 }

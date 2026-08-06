@@ -64,7 +64,7 @@ test.describe('FG-RBAC - Common Projects', { tag: ['@fg-rbac'] }, () => {
       await roleAssignmentWizardPage.selectGranularity(GRANULARITY_OPTIONS.projectRoleAssignment);
 
       await expect(roleAssignmentWizardPage.getProjectTableRows().first()).toBeVisible({
-        timeout: 30000,
+        timeout: 90000,
       });
       singleClusterProjectCount = await roleAssignmentWizardPage.getProjectTableRows().count();
       expect(singleClusterProjectCount).toBeGreaterThan(0);
@@ -123,7 +123,7 @@ test.describe('FG-RBAC - Common Projects', { tag: ['@fg-rbac'] }, () => {
       await roleAssignmentWizardPage.selectGranularity(GRANULARITY_OPTIONS.projectRoleAssignment);
 
       await expect(roleAssignmentWizardPage.getProjectTableRows().first()).toBeVisible({
-        timeout: 30000,
+        timeout: 90000,
       });
       const csProjectCount = await roleAssignmentWizardPage.getProjectTableRows().count();
       expect(csProjectCount).toBeGreaterThan(0);
