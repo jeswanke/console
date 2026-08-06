@@ -863,7 +863,8 @@ EOF`);
     const output = await this.run(
       `${kcPrefix}oc get vm ${name} -n ${namespace}${ctx} -o jsonpath='{.status.printableStatus}' 2>/dev/null || echo "Unknown"`
     );
-    return output.trim().replace(/'/g, '');
+    const status = output.trim().replace(/'/g, '');
+    return status || 'Unknown';
   }
 
   async vmIsRunning(

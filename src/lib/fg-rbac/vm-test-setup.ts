@@ -98,16 +98,17 @@ export async function cleanupMultipleCclmResources(
 }
 
 export async function cleanupOrphanedVmims(namespace: string, spokeContext: string): Promise<void> {
+  const kcPrefix = `KUBECONFIG="${process.cwd()}/.auth/MC_MERGED_kubeconfig" `;
   // Clean VMIMs on spoke
   const spokeVmims = await oc.run(
-    `oc get virtualmachineinstancemigrations -n ${namespace} --context ${spokeContext} -o jsonpath='{.items[*].metadata.name}' 2>/dev/null || true`
+    `${kcPrefix}oc get virtualmachineinstancemigrations -n ${namespace} --context ${spokeContext} -o jsonpath='{.items[*].metadata.name}' 2>/dev/null || true`
   );
   for (const vmim of spokeVmims.trim().split(/\s+/).filter(Boolean)) {
     await oc.run(
-      `oc patch virtualmachineinstancemigration ${vmim} -n ${namespace} --context ${spokeContext} --type=merge -p '{"metadata":{"finalizers":null}}' 2>/dev/null || true`
+      `${kcPrefix}oc patch virtualmachineinstancemigration ${vmim} -n ${namespace} --context ${spokeContext} --type=merge -p '{"metadata":{"finalizers":null}}' 2>/dev/null || true`
     );
     await oc.run(
-      `oc delete virtualmachineinstancemigration ${vmim} -n ${namespace} --context ${spokeContext} --force --grace-period=0 2>/dev/null || true`
+      `${kcPrefix}oc delete virtualmachineinstancemigration ${vmim} -n ${namespace} --context ${spokeContext} --force --grace-period=0 2>/dev/null || true`
     );
   }
   // Clean VMIMs on hub (source-side VMIMs from previous CCLM runs)

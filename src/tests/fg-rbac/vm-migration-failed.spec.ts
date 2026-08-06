@@ -45,6 +45,7 @@ test.describe(
 
     let spokeCluster = '';
     let mtvAvailable = false;
+    let quotaApplied = false;
 
     test.beforeAll(async ({}, testInfo) => {
       testInfo.setTimeout(480000);
@@ -58,7 +59,9 @@ test.describe(
     });
 
     test.afterAll(async () => {
-      await deleteSpokeResourceQuota(VM_NAMESPACE, spokeCluster);
+      if (quotaApplied) {
+        await deleteSpokeResourceQuota(VM_NAMESPACE, spokeCluster);
+      }
       if (mtvAvailable) {
         await cleanupCclmResources(VM_NAME, VM_NAMESPACE, spokeCluster);
       }
@@ -86,6 +89,7 @@ test.describe(
 
       await test.step('2: Apply ResourceQuota on spoke to block VM scheduling', async () => {
         await applySpokeResourceQuota(VM_NAMESPACE, spokeCluster);
+        quotaApplied = true;
 
         const exists = await oc.resourceQuotaExists('mtv-migration-deny', VM_NAMESPACE, {
           context: spokeCluster,

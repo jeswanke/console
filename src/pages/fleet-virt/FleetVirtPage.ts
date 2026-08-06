@@ -139,6 +139,7 @@ export class FleetVirtPage extends BasePage {
       await expect(this.page.locator('h1')).toBeVisible({ timeout: 15000 });
       await expect(this.getVmGrid()).toBeVisible({ timeout: 30000 });
     }).toPass({ intervals: [15000, 20000], timeout: 120000 });
+    await this.dismissGuidedTour();
   }
 
   async clearAllFilters(): Promise<void> {

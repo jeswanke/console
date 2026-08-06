@@ -99,9 +99,10 @@ export class VmCreationPage extends BasePage {
   async clickNext(): Promise<void> {
     await this.waitForPrimaryButtonEnabled();
     const activeStepLocator = this.page.locator('.pf-v6-c-wizard__nav-link[aria-current="step"]');
-    const currentStepText = await activeStepLocator.textContent();
+    await expect(activeStepLocator).toHaveText(/.+/, { timeout: 10000 });
+    const currentStepText = (await activeStepLocator.textContent())!;
     await this.primaryBtn.click();
-    await expect(activeStepLocator).not.toHaveText(currentStepText || '', { timeout: 15000 });
+    await expect(activeStepLocator).not.toHaveText(currentStepText, { timeout: 15000 });
   }
 
   async clickCreateVm(): Promise<void> {
