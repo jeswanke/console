@@ -12,7 +12,6 @@
  * newer ACM build (the Cypress test may predate the current control-plane-type page).
  */
 import { test, expect } from '@fixtures/acm-test';
-import { INFRA_PROVIDER_IDS, CONTROL_PLANE_IDS } from '@constants/cluster-create';
 
 test.describe('Hosted Cluster - KubeVirt', { tag: ['@cluster', '@clc', '@hypershift', '@hosted'] }, () => {
   // TODO: PF6 selectable card (#hosted) click does not reliably navigate in headless Playwright.
@@ -22,14 +21,14 @@ test.describe('Hosted Cluster - KubeVirt', { tag: ['@cluster', '@clc', '@hypersh
   test(
     'RHACM4K-54881: KubeVirt hosted wizard namespace validation',
     { tag: ['@RHACM4K-54881'] },
-    async ({ page, clusterListPage }) => {
+    async ({ page, clusterListPage, createClusterWizardPage }) => {
       test.setTimeout(120_000);
 
       await test.step('Navigate to KubeVirt hosted wizard', async () => {
         await clusterListPage.goto();
         await clusterListPage.clickCreate();
-        await page.locator(INFRA_PROVIDER_IDS.kubevirt).click();
-        const hostedCard = page.locator(CONTROL_PLANE_IDS.hosted);
+        await createClusterWizardPage.getProviderCard('kubevirt').click();
+        const hostedCard = createClusterWizardPage.getHostedCard();
         await expect(hostedCard).toBeVisible({ timeout: 30_000 });
         await hostedCard.click();
       });

@@ -7,6 +7,7 @@ import { ManageColumnsDialog } from '@components/patternfly/ManageColumnsDialog'
 import { OcCliService } from '@services/OcCliService';
 import { SELECTORS } from '@constants/selectors';
 import { CLUSTER_MANAGE_COLUMNS } from '@constants/cluster';
+import { CLUSTER_ROW_ACTIONS } from '@constants/cluster-create';
 import { pageUrlPathnameEquals } from '@lib/navigation';
 
 export class ClusterListPage extends BasePage {
@@ -54,7 +55,8 @@ export class ClusterListPage extends BasePage {
 
   private async dismissWelcomeModal(): Promise<void> {
     const closeButton = this.page.getByRole('dialog').getByRole('button', { name: 'Close' });
-    if (await closeButton.isVisible({ timeout: 2_000 }).catch(() => false)) {
+    const visible = await closeButton.waitFor({ state: 'visible', timeout: 2_000 }).then(() => true).catch(() => false);
+    if (visible) {
       await closeButton.click();
     }
   }
@@ -104,6 +106,25 @@ export class ClusterListPage extends BasePage {
 
   getRowActionItem(menuItemId: string): Locator {
     return this.page.locator(menuItemId);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Edit labels modal
+  // ---------------------------------------------------------------------------
+
+  async openEditLabels(clusterName: string): Promise<void> {
+    await this.searchCluster(clusterName);
+    await this.openRowActions(clusterName);
+    const editLabels = this.getRowActionItem(CLUSTER_ROW_ACTIONS.editLabels);
+    await expect(editLabels).toBeEnabled({ timeout: 10_000 });
+    await editLabels.click();
+  }
+
+  async addLabel(label: string): Promise<void> {
+    const labelInput = this.page.locator('input[id="labels-input"]');
+    await labelInput.fill(label);
+    await labelInput.press('Enter');
+    await this.page.locator('button[type="submit"]').click();
   }
 
   // ---------------------------------------------------------------------------

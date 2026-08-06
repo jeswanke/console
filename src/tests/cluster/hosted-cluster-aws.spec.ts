@@ -6,7 +6,6 @@
  * Migrated from: clc-ui-e2e/cypress/tests/hostedClusters/aws/awsHostedCluster.spec.js
  */
 import { test, expect } from '@fixtures/acm-test';
-import { INFRA_PROVIDER_IDS, CONTROL_PLANE_IDS } from '@constants/cluster-create';
 
 test.describe('Hosted Cluster - AWS', { tag: ['@cluster', '@clc', '@hypershift', '@hosted'] }, () => {
   // TODO: PF6 selectable card (#hosted) click does not reliably navigate in headless Playwright.
@@ -17,11 +16,11 @@ test.describe('Hosted Cluster - AWS', { tag: ['@cluster', '@clc', '@hypershift',
   test(
     'RHACM4K-23962: AWS hosted cluster CLI instructions',
     { tag: ['@RHACM4K-23962'] },
-    async ({ page, clusterListPage }) => {
+    async ({ page, clusterListPage, createClusterWizardPage }) => {
       await test.step('Navigate to create wizard and select AWS', async () => {
         await clusterListPage.goto();
         await clusterListPage.clickCreate();
-        await page.locator(INFRA_PROVIDER_IDS.aws).click();
+        await createClusterWizardPage.getProviderCard('aws').click();
       });
 
       await test.step('Verify control plane type selection page', async () => {
@@ -34,7 +33,7 @@ test.describe('Hosted Cluster - AWS', { tag: ['@cluster', '@clc', '@hypershift',
       });
 
       await test.step('Verify hosted card content', async () => {
-        const hostedCard = page.locator(CONTROL_PLANE_IDS.hosted);
+        const hostedCard = createClusterWizardPage.getHostedCard();
         await expect(hostedCard).toBeVisible();
         await expect(hostedCard).not.toContainText(
           'Hosted control plane operator must be enabled in order to continue'
@@ -51,7 +50,7 @@ test.describe('Hosted Cluster - AWS', { tag: ['@cluster', '@clc', '@hypershift',
       });
 
       await test.step('Click hosted card to view instructions', async () => {
-        const hostedCard = page.locator(CONTROL_PLANE_IDS.hosted);
+        const hostedCard = createClusterWizardPage.getHostedCard();
         await hostedCard.scrollIntoViewIfNeeded();
         await hostedCard.click();
         await expect(

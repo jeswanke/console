@@ -5,7 +5,6 @@
  * Migrated from: clc-ui-e2e/cypress/tests/clusters/managedClusters/clusterAction.spec.js
  */
 import { test, expect } from '@fixtures/acm-test';
-import { CLUSTER_ROW_ACTIONS } from '@constants/cluster-create';
 
 const CLUSTER_NAME = 'local-cluster';
 const TEST_LABEL_KEY = 'clc-qe';
@@ -38,24 +37,14 @@ test.describe('Cluster Actions', { tag: ['@cluster', '@clc', '@actions'] }, () =
   test(
     'RHACM4K-1588: Edit labels via UI',
     { tag: ['@RHACM4K-1588'] },
-    async ({ page, oc, clusterListPage }) => {
+    async ({ oc, clusterListPage }) => {
       await test.step('Navigate to cluster list', async () => {
         await clusterListPage.goto();
       });
 
-      await test.step('Open edit labels dialog', async () => {
-        await clusterListPage.searchCluster(CLUSTER_NAME);
-        await clusterListPage.openRowActions(CLUSTER_NAME);
-        const editLabels = page.locator(CLUSTER_ROW_ACTIONS.editLabels);
-        await expect(editLabels).toBeEnabled({ timeout: 10_000 });
-        await editLabels.click();
-      });
-
-      await test.step('Add test label', async () => {
-        const labelInput = page.locator('input[id="labels-input"]');
-        await labelInput.fill(TEST_LABEL);
-        await labelInput.press('Enter');
-        await page.locator('button[type="submit"]').click();
+      await test.step('Add test label via edit labels dialog', async () => {
+        await clusterListPage.openEditLabels(CLUSTER_NAME);
+        await clusterListPage.addLabel(TEST_LABEL);
       });
 
       await test.step('Verify label via CLI', async () => {
