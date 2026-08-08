@@ -56,12 +56,14 @@ export class CreateClusterWizardPage extends BasePage {
     const providerKey = this.mapProviderToKey(provider);
     await this.getProviderCard(providerKey).click();
 
-    if (provider === 'aws') {
-      await this.getStandaloneCard().click();
-    } else if (provider === 'kubevirt') {
+    if (provider === 'kubevirt') {
       await expect(this.page).toHaveURL(/control-plane/, { timeout: 15_000 });
       await this.getHostedCard().click();
       await expect(this.page).not.toHaveURL(/control-plane/, { timeout: 30_000 });
+    } else {
+      const standaloneCard = this.getStandaloneCard();
+      await expect(standaloneCard).toBeVisible({ timeout: 15_000 });
+      await standaloneCard.click();
     }
 
     await this.waitForLoad();
