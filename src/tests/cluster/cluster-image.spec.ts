@@ -6,13 +6,12 @@
  * Migrated from: clc-ui-e2e/cypress/tests/clusters/managedClusters/clusterImage.spec.js
  */
 import { test, expect } from '@fixtures/acm-test';
-import { INFRA_PROVIDER_IDS, CONTROL_PLANE_IDS } from '@constants/cluster-create';
 
 test.describe('Cluster Image', { tag: ['@cluster', '@clc', '@image'] }, () => {
   test(
     'RHACM4K-2576: Supported release images in create wizard',
     { tag: ['@RHACM4K-2576'] },
-    async ({ page, oc, clusterListPage }) => {
+    async ({ page, oc, clusterListPage, createClusterWizardPage }) => {
       const supportedVersions = await test.step('Determine supported versions from hub', async () => {
         const latestVersion = await oc.getLatestClusterImageSetVersion();
         const [, minorStr] = latestVersion.split('.');
@@ -27,8 +26,8 @@ test.describe('Cluster Image', { tag: ['@cluster', '@clc', '@image'] }, () => {
       await test.step('Navigate to AWS create wizard', async () => {
         await clusterListPage.goto();
         await clusterListPage.clickCreate();
-        await page.locator(INFRA_PROVIDER_IDS.aws).click();
-        await page.locator(CONTROL_PLANE_IDS.standalone).click();
+        await createClusterWizardPage.getProviderCard('aws').click();
+        await createClusterWizardPage.getStandaloneCard().click();
         await page.waitForLoadState('domcontentloaded');
       });
 

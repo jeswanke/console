@@ -14,7 +14,7 @@
 import type { CreateClusterWizardPage } from '@pages/cluster/CreateClusterWizardPage';
 import type { ClusterListPage } from '@pages/cluster/ClusterListPage';
 import type { ClusterCreateParamsPayload } from '@config';
-import type { ClcOcpRelease } from '../../config/schema';
+import type { ClcOcpRelease } from '@config/schema';
 
 export interface CreateClusterOptions {
   cluster: ClusterCreateParamsPayload;

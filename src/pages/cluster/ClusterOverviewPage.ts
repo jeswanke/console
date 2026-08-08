@@ -34,14 +34,6 @@ export class ClusterOverviewPage extends BasePage {
     });
   }
 
-  getTab(tabName: string): Locator {
-    return this.page.getByRole('tab', { name: tabName });
-  }
-
-  getLabelTexts(): Locator {
-    return this.page.locator(`${LABEL_GROUP} .pf-v6-c-label__text`);
-  }
-
   getLabel(labelText: string): Locator {
     return this.page.locator(LABEL_GROUP).getByText(labelText);
   }

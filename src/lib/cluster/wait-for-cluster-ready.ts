@@ -172,11 +172,11 @@ export async function waitForClusterDestroyed(
   while (Date.now() < deadline) {
     const mcResult = await oc
       .run(`oc get managedcluster ${clusterName} --ignore-not-found -o name`)
-      .catch(() => '');
+      .catch((e) => { console.warn(`waitForClusterDestroyed: mc check failed: ${(e as Error).message}`); return ''; });
 
     const nsResult = await oc
       .run(`oc get namespace ${namespace} --ignore-not-found -o name`)
-      .catch(() => '');
+      .catch((e) => { console.warn(`waitForClusterDestroyed: ns check failed: ${(e as Error).message}`); return ''; });
 
     if (!mcResult.trim() && !nsResult.trim()) return;
 
@@ -199,7 +199,7 @@ export async function waitForClusterDetached(
   while (Date.now() < deadline) {
     const result = await oc
       .run(`oc get managedcluster ${clusterName} --ignore-not-found -o name`)
-      .catch(() => '');
+      .catch((e) => { console.warn(`waitForClusterDetached: mc check failed: ${(e as Error).message}`); return ''; });
 
     if (!result.trim()) return;
 

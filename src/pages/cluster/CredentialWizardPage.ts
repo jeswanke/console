@@ -2,7 +2,6 @@ import { Page, expect } from '@playwright/test';
 import { BasePage } from '@pages/BasePage';
 import { OcCliService } from '@services/OcCliService';
 import {
-  CREDENTIAL_ROUTES,
   CREDENTIAL_PROVIDER_IDS,
   CREDENTIAL_WIZARD_FIELDS,
   CREDENTIAL_WIZARD_BUTTONS,
@@ -16,12 +15,6 @@ export class CredentialWizardPage extends BasePage {
     private readonly oc: OcCliService
   ) {
     super(page);
-  }
-
-  async goto(): Promise<void> {
-    const consoleUrl = await this.oc.getConsoleUrl();
-    await this.page.goto(`${consoleUrl}${CREDENTIAL_ROUTES.create}`);
-    await this.waitForLoad();
   }
 
   // ---------------------------------------------------------------------------
@@ -191,20 +184,6 @@ export class CredentialWizardPage extends BasePage {
     await this.page
       .getByRole('button', { name: CREDENTIAL_WIZARD_BUTTONS.add, exact: true })
       .click();
-  }
-
-  async clickSave(): Promise<void> {
-    await this.page
-      .getByRole('button', { name: CREDENTIAL_WIZARD_BUTTONS.save, exact: true })
-      .click();
-  }
-
-  // ---------------------------------------------------------------------------
-  // Assertions
-  // ---------------------------------------------------------------------------
-
-  async expectOnCredentialsList(): Promise<void> {
-    await expect(this.page).toHaveURL(/\/credentials$/, { timeout: 30_000 });
   }
 
   // ---------------------------------------------------------------------------

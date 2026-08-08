@@ -40,14 +40,4 @@ export class ClusterAddonsPage extends BasePage {
     return this.page.locator('table tbody tr').count();
   }
 
-  async getAllAddonNames(): Promise<string[]> {
-    const rows = this.page.locator('table tbody tr');
-    const count = await rows.count();
-    const names: string[] = [];
-    for (let i = 0; i < count; i++) {
-      const name = await rows.nth(i).locator('td:first-child').innerText();
-      names.push(name.trim());
-    }
-    return names;
-  }
 }
