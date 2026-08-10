@@ -39,3 +39,5 @@ env/alc.local.env
 
 # Import cluster kubeconfigs (contain credentials - DO NOT COMMIT)
 fixtures/importClusters/*.kubeconfig
+.omo/
+.cursor/

@@ -20,12 +20,14 @@ type PlacementJson = {
 type PlacementDecisionJson = {
   status?: {
     numberOfClusters?: number;
-    decisions?: unknown[];
+    decisions?: Array<{ clusterName?: string }>;
   };
 };
 
 type SubscriptionJson = {
+  metadata?: { annotations?: Record<string, string> };
   spec?: {
+    channel?: string;
     placement?: {
       placementRef?: { kind?: string; name?: string };
     };
@@ -84,6 +86,90 @@ export class OcCliService {
 
   async deleteYaml(yamlPath: string): Promise<string> {
     return this.run(`oc delete -f ${yamlPath} --ignore-not-found`);
+  }
+
+  /** Marks a namespace for ALC test cleanup (`component=alc`), matching Cypress `labelTestResource`. */
+  async labelNamespaceForAlcTest(namespace: string): Promise<void> {
+    assertSafeOcSingleArg(namespace, 'namespace');
+    await execFilePromise('oc', ['label', 'ns', namespace, 'component=alc', '--overwrite'], {
+      encoding: 'utf8',
+      maxBuffer: 64 * 1024,
+    });
+  }
+
+  /** Names of `ansiblejobs` in the namespace (empty when CRD or resources are absent). */
+  async listAnsibleJobNames(namespace: string): Promise<string[]> {
+    assertSafeOcSingleArg(namespace, 'namespace');
+    try {
+      const { stdout } = await execFilePromise(
+        'oc',
+        [
+          'get',
+          'ansiblejob',
+          '-n',
+          namespace,
+          '-o',
+          'custom-columns=name:.metadata.name',
+          '--no-headers',
+        ],
+        { encoding: 'utf8', maxBuffer: 1024 * 1024 }
+      );
+      return stdout
+        .split('\n')
+        .map((line) => line.trim())
+        .filter(Boolean);
+    } catch {
+      return [];
+    }
+  }
+
+  /** Fakes a successful AnsibleJob run (Cypress large-scale scale tests patch status instead of waiting on AAP). */
+  async patchAnsibleJobStatusSuccessful(namespace: string, jobName: string): Promise<void> {
+    assertSafeOcSingleArg(namespace, 'namespace');
+    assertSafeOcSingleArg(jobName, 'jobName');
+    await execFilePromise(
+      'oc',
+      [
+        'patch',
+        'ansiblejobs',
+        jobName,
+        '--subresource=status',
+        '-n',
+        namespace,
+        '--type',
+        'merge',
+        '-p',
+        '{"status":{"ansibleJobResult":{"status":"successful"}}}',
+      ],
+      { encoding: 'utf8', maxBuffer: 1024 * 1024, timeout: 120_000 }
+    );
+  }
+
+  async ensureAnsibleCredentialSecret(
+    name: string,
+    namespace: string,
+    host: string,
+    token: string
+  ): Promise<void> {
+    assertSafeOcSingleArg(name, 'name');
+    assertSafeOcSingleArg(namespace, 'namespace');
+    const exists = await this.run(
+      `oc get secret ${name} -n ${namespace} --ignore-not-found -o name`
+    )
+      .then((out) => out.trim().length > 0)
+      .catch(() => false);
+    if (exists) return;
+    const hostB64 = Buffer.from(host).toString('base64');
+    const tokenB64 = Buffer.from(token).toString('base64');
+    await this.run(
+      `oc apply -f - <<'EOF'\n` +
+        `apiVersion: v1\nkind: Secret\nmetadata:\n` +
+        `  name: ${name}\n  namespace: ${namespace}\n` +
+        `  labels:\n    cluster.open-cluster-management.io/credentials: ""\n` +
+        `    cluster.open-cluster-management.io/type: ans\n` +
+        `type: Opaque\ndata:\n  host: ${hostB64}\n  token: ${tokenB64}\n` +
+        `EOF`
+    );
   }
 
   async getConsoleUrl(): Promise<string> {
@@ -154,6 +240,17 @@ export class OcCliService {
     }
   }
 
+  /** `oc delete applications.app.k8s.io` on the hub (subscription Application CR). */
+  async deleteApplicationsAppK8sIo(namespace: string, applicationName: string): Promise<void> {
+    assertSafeOcSingleArg(namespace, 'namespace');
+    assertSafeOcSingleArg(applicationName, 'applicationName');
+    await execFilePromise(
+      'oc',
+      ['delete', 'applications.app.k8s.io', applicationName, '-n', namespace, '--ignore-not-found'],
+      { encoding: 'utf8', maxBuffer: 1024 * 1024 }
+    );
+  }
+
   /** Whether an **ApplicationSet** exists in the Argo server namespace (push / pull model create). */
   async applicationSetExists(namespace: string, applicationSetName: string): Promise<boolean> {
     assertSafeOcSingleArg(namespace, 'namespace');
@@ -186,6 +283,51 @@ export class OcCliService {
     }
   }
 
+  /**
+   * Git `path` on the ApplicationSet template (`spec.source` or first entry in `spec.sources`).
+   * Undefined when the ApplicationSet is missing or the path field is unset (InvalidSpecError in Argo CD).
+   */
+  async getApplicationSetTemplateGitPath(
+    namespace: string,
+    applicationSetName: string
+  ): Promise<string | undefined> {
+    assertSafeOcSingleArg(namespace, 'namespace');
+    assertSafeOcSingleArg(applicationSetName, 'applicationSetName');
+    for (const jsonPath of [
+      '{.spec.template.spec.source.path}',
+      '{.spec.template.spec.sources[0].path}',
+    ] as const) {
+      const { stdout } = await execFilePromise(
+        'oc',
+        [
+          'get',
+          'applicationset.argoproj.io',
+          applicationSetName,
+          '-n',
+          namespace,
+          '--ignore-not-found',
+          '-o',
+          `jsonpath=${jsonPath}`,
+        ],
+        { encoding: 'utf8', maxBuffer: 1024 * 1024 }
+      );
+      const value = stdout.trim();
+      if (value) {
+        return value;
+      }
+    }
+    return undefined;
+  }
+
+  async applicationSetHasGitSourcePath(
+    namespace: string,
+    applicationSetName: string,
+    expectedPath: string
+  ): Promise<boolean> {
+    const actual = await this.getApplicationSetTemplateGitPath(namespace, applicationSetName);
+    return actual === expectedPath;
+  }
+
   async deleteApplicationSet(namespace: string, applicationSetName: string): Promise<void> {
     assertSafeOcSingleArg(namespace, 'namespace');
     assertSafeOcSingleArg(applicationSetName, 'applicationSetName');
@@ -201,6 +343,210 @@ export class OcCliService {
       ],
       { encoding: 'utf8', maxBuffer: 1024 * 1024 }
     );
+  }
+
+  async createNamespaceIfNotExists(namespace: string): Promise<void> {
+    assertSafeOcSingleArg(namespace, 'namespace');
+    try {
+      await execFilePromise('oc', ['create', 'ns', namespace], {
+        encoding: 'utf8',
+        maxBuffer: 1024 * 1024,
+      });
+    } catch {
+      // Namespace may already exist (Cypress `failOnNonZeroExit: false`).
+    }
+  }
+
+  /** Whether an Argo CD **Application** exists (`applications.argoproj.io`). */
+  async argoCdApplicationExists(namespace: string, applicationName: string): Promise<boolean> {
+    assertSafeOcSingleArg(namespace, 'namespace');
+    assertSafeOcSingleArg(applicationName, 'applicationName');
+    try {
+      const { stdout } = await execFilePromise(
+        'oc',
+        [
+          'get',
+          'applications.argoproj.io',
+          applicationName,
+          '-n',
+          namespace,
+          '--ignore-not-found',
+          '-o',
+          'name',
+        ],
+        { encoding: 'utf8', maxBuffer: 1024 * 1024 }
+      );
+      return stdout.trim().length > 0;
+    } catch (err: unknown) {
+      const stderr =
+        err && typeof err === 'object' && 'stderr' in err
+          ? String((err as { stderr?: unknown }).stderr)
+          : '';
+      if (/NotFound|not found/i.test(stderr)) {
+        return false;
+      }
+      throw err;
+    }
+  }
+
+  async getArgoCdApplicationSyncStatus(
+    namespace: string,
+    applicationName: string
+  ): Promise<string> {
+    assertSafeOcSingleArg(namespace, 'namespace');
+    assertSafeOcSingleArg(applicationName, 'applicationName');
+    const { stdout } = await execFilePromise(
+      'oc',
+      [
+        'get',
+        'applications.argoproj.io',
+        applicationName,
+        '-n',
+        namespace,
+        '-o',
+        'jsonpath={.status.sync.status}',
+      ],
+      { encoding: 'utf8', maxBuffer: 1024 * 1024 }
+    );
+    return stdout.trim();
+  }
+
+  /** MCASR cluster sync status for an ApplicationSet on a managed cluster. */
+  async getMulticlusterApplicationSetReportClusterSyncStatus(
+    applicationSetName: string,
+    namespace: string,
+    clusterName: string
+  ): Promise<string> {
+    return this.getMulticlusterApplicationSetReportClusterStatusField(
+      applicationSetName,
+      namespace,
+      clusterName,
+      'syncStatus'
+    );
+  }
+
+  /** MCASR cluster health status for an ApplicationSet on a managed cluster. */
+  async getMulticlusterApplicationSetReportClusterHealthStatus(
+    applicationSetName: string,
+    namespace: string,
+    clusterName: string
+  ): Promise<string> {
+    return this.getMulticlusterApplicationSetReportClusterStatusField(
+      applicationSetName,
+      namespace,
+      clusterName,
+      'healthStatus'
+    );
+  }
+
+  /**
+   * MCASR per-cluster status field. Returns empty string while the report is still being
+   * reconciled (Cypress `failOnNonZeroExit: false` parity for pull-model polls).
+   */
+  private async getMulticlusterApplicationSetReportClusterStatusField(
+    applicationSetName: string,
+    namespace: string,
+    clusterName: string,
+    field: 'syncStatus' | 'healthStatus'
+  ): Promise<string> {
+    assertSafeOcSingleArg(applicationSetName, 'applicationSetName');
+    assertSafeOcSingleArg(namespace, 'namespace');
+    assertSafeOcSingleArg(clusterName, 'clusterName');
+    try {
+      const { stdout } = await execFilePromise(
+        'oc',
+        [
+          'get',
+          'multiclusterapplicationsetreport',
+          applicationSetName,
+          '-n',
+          namespace,
+          '--ignore-not-found',
+          '-o',
+          `jsonpath={.statuses.clusterConditions[?(@.cluster=="${clusterName}")].${field}}`,
+        ],
+        { encoding: 'utf8', maxBuffer: 1024 * 1024 }
+      );
+      return stdout.trim();
+    } catch (err: unknown) {
+      const stderr =
+        err && typeof err === 'object' && 'stderr' in err
+          ? String((err as { stderr?: unknown }).stderr)
+          : '';
+      if (/NotFound|not found/i.test(stderr)) {
+        return '';
+      }
+      throw err;
+    }
+  }
+
+  /** Remove `argocd.argoproj.io/skip-reconcile` so hub local-cluster Argo apps can be deleted. */
+  async removeArgoCdApplicationSkipReconcileAnnotation(
+    namespace: string,
+    applicationName: string
+  ): Promise<void> {
+    assertSafeOcSingleArg(namespace, 'namespace');
+    assertSafeOcSingleArg(applicationName, 'applicationName');
+    await execFilePromise(
+      'oc',
+      [
+        'patch',
+        'applications.argoproj.io',
+        applicationName,
+        '-n',
+        namespace,
+        '--type=json',
+        '-p',
+        '[{"op": "remove", "path": "/metadata/annotations/argocd.argoproj.io~1skip-reconcile"}]',
+      ],
+      { encoding: 'utf8', maxBuffer: 1024 * 1024 }
+    ).catch(() => undefined);
+  }
+
+  /** Delete an Argo CD **Application** (`applications.argoproj.io`). */
+  async deleteArgoCdApplication(namespace: string, applicationName: string): Promise<void> {
+    assertSafeOcSingleArg(namespace, 'namespace');
+    assertSafeOcSingleArg(applicationName, 'applicationName');
+    await execFilePromise(
+      'oc',
+      [
+        'delete',
+        'applications.argoproj.io',
+        applicationName,
+        '-n',
+        namespace,
+        '--ignore-not-found',
+      ],
+      { encoding: 'utf8', maxBuffer: 1024 * 1024 }
+    );
+  }
+
+  /** True when `spec.template.spec.sources` contains `repoURL` (push-model ApplicationSet). */
+  async applicationSetHasSourceRepoUrl(
+    namespace: string,
+    applicationSetName: string,
+    repoUrl: string
+  ): Promise<boolean> {
+    assertSafeOcSingleArg(namespace, 'namespace');
+    assertSafeOcSingleArg(applicationSetName, 'applicationSetName');
+    const { stdout } = await execFilePromise(
+      'oc',
+      [
+        'get',
+        'applicationset.argoproj.io',
+        applicationSetName,
+        '-n',
+        namespace,
+        '-o',
+        'jsonpath={.spec.template.spec.sources[*].repoURL}',
+      ],
+      { encoding: 'utf8', maxBuffer: 1024 * 1024 }
+    );
+    return stdout
+      .split(/\s+/)
+      .map((part) => part.trim())
+      .filter(Boolean)
+      .includes(repoUrl);
   }
 
   /**
@@ -599,6 +945,81 @@ export class OcCliService {
     }
   }
 
+  /** `spec.channel` as `{ namespace, name }` (`channelNs/channelName`). */
+  async getSubscriptionChannelRef(
+    namespace: string,
+    subscriptionName: string
+  ): Promise<{ namespace: string; name: string } | undefined> {
+    assertSafeOcSingleArg(namespace, 'namespace');
+    assertSafeOcSingleArg(subscriptionName, 'subscriptionName');
+    try {
+      const { stdout } = await execFilePromise(
+        'oc',
+        ['get', 'subscription', subscriptionName, '-n', namespace, '-o', 'json'],
+        { encoding: 'utf8', maxBuffer: 1024 * 1024 }
+      );
+      const parsed = JSON.parse(stdout) as SubscriptionJson;
+      const channel = parsed.spec?.channel?.trim();
+      if (!channel) {
+        return undefined;
+      }
+      const [channelNs, channelName] = channel.split('/');
+      if (!channelNs || !channelName) {
+        return undefined;
+      }
+      return { namespace: channelNs, name: channelName };
+    } catch (err: unknown) {
+      const stderr =
+        err && typeof err === 'object' && 'stderr' in err
+          ? String((err as { stderr?: unknown }).stderr)
+          : '';
+      if (/NotFound|not found/i.test(stderr)) {
+        return undefined;
+      }
+      throw err;
+    }
+  }
+
+  /** Subscription manifest YAML (`oc get subscription -o yaml`). */
+  async getSubscriptionYaml(namespace: string, subscriptionName: string): Promise<string> {
+    assertSafeOcSingleArg(namespace, 'namespace');
+    assertSafeOcSingleArg(subscriptionName, 'subscriptionName');
+    const { stdout } = await execFilePromise(
+      'oc',
+      ['get', 'subscription', subscriptionName, '-n', namespace, '-o', 'yaml'],
+      { encoding: 'utf8', maxBuffer: 1024 * 1024 }
+    );
+    return stdout;
+  }
+
+  /** Read a Subscription metadata annotation (undefined when missing or not found). */
+  async getSubscriptionAnnotation(
+    namespace: string,
+    subscriptionName: string,
+    annotationKey: string
+  ): Promise<string | undefined> {
+    assertSafeOcSingleArg(namespace, 'namespace');
+    assertSafeOcSingleArg(subscriptionName, 'subscriptionName');
+    try {
+      const { stdout } = await execFilePromise(
+        'oc',
+        ['get', 'subscription', subscriptionName, '-n', namespace, '-o', 'json'],
+        { encoding: 'utf8', maxBuffer: 1024 * 1024 }
+      );
+      const parsed = JSON.parse(stdout) as SubscriptionJson;
+      return parsed.metadata?.annotations?.[annotationKey]?.trim() || undefined;
+    } catch (err: unknown) {
+      const stderr =
+        err && typeof err === 'object' && 'stderr' in err
+          ? String((err as { stderr?: unknown }).stderr)
+          : '';
+      if (/NotFound|not found/i.test(stderr)) {
+        return undefined;
+      }
+      throw err;
+    }
+  }
+
   /**
    * Matched cluster count from **PlacementDecision** status (`{placementName}-decision-1`).
    */
@@ -629,6 +1050,29 @@ export class OcCliService {
         return 0;
       }
       throw err;
+    }
+  }
+
+  /** Cluster names from PlacementDecision status.decisions. */
+  async getPlacementDecisionClusterNames(
+    namespace: string,
+    placementName: string
+  ): Promise<string[]> {
+    assertSafeOcSingleArg(namespace, 'namespace');
+    assertSafeOcSingleArg(placementName, 'placementName');
+    const decisionName = `${placementName}-decision-1`;
+    try {
+      const { stdout } = await execFilePromise(
+        'oc',
+        ['get', 'placementdecision', decisionName, '-n', namespace, '-o', 'json'],
+        { encoding: 'utf8', maxBuffer: 1024 * 1024 }
+      );
+      const parsed = JSON.parse(stdout) as PlacementDecisionJson;
+      return (parsed.status?.decisions ?? [])
+        .map((d) => d.clusterName)
+        .filter((n): n is string => typeof n === 'string');
+    } catch {
+      return [];
     }
   }
 
@@ -815,10 +1259,12 @@ export class OcCliService {
   async vmEnsureTestVM(
     name: string,
     namespace: string,
-    labels?: Record<string, string>
+    labels?: Record<string, string>,
+    options?: { context?: string }
   ): Promise<string> {
+    const ctx = options?.context ? ` --context=${options.context}` : '';
     const exists = await this.run(
-      `oc get vm ${name} -n ${namespace} --no-headers 2>/dev/null || true`
+      `oc get vm ${name} -n ${namespace}${ctx} --no-headers 2>/dev/null || true`
     );
     if (exists.includes(name)) {
       return name;
@@ -829,7 +1275,7 @@ export class OcCliService {
       .map(([k, v]) => `      ${k}: "${v}"`)
       .join('\n');
 
-    await this.run(`oc apply -f - <<'EOF'
+    await this.run(`oc apply${ctx} -f - <<'EOF'
 apiVersion: kubevirt.io/v1
 kind: VirtualMachine
 metadata:
@@ -916,6 +1362,10 @@ spec:
           name: fedora
           namespace: openshift-virtualization-os-images
         storage:
+          storageClassName: azurefile-csi-nfs
+          accessModes:
+            - ReadWriteMany
+          volumeMode: Filesystem
           resources:
             requests:
               storage: 30Gi
@@ -924,15 +1374,91 @@ EOF`);
     return name;
   }
 
-  async vmIsRunning(name: string, namespace: string): Promise<boolean> {
+  async vmIsRunning(
+    name: string,
+    namespace: string,
+    options?: { context?: string }
+  ): Promise<boolean> {
+    const ctx = options?.context ? ` --context=${options.context}` : '';
     const output = await this.run(
-      `oc get vm ${name} -n ${namespace} -o jsonpath='{.status.printableStatus}' 2>/dev/null || true`
+      `oc get vm ${name} -n ${namespace}${ctx} -o jsonpath='{.status.printableStatus}' 2>/dev/null || true`
     );
     return output.includes('Running');
   }
 
-  async vmDeleteTestVM(name: string, namespace: string): Promise<void> {
-    await this.run(`oc delete vm ${name} -n ${namespace} --ignore-not-found`);
+  async vmIsLiveMigratable(name: string, namespace: string): Promise<boolean> {
+    const output = await this.run(
+      `oc get vmi ${name} -n ${namespace} -o jsonpath='{.status.conditions[?(@.type=="LiveMigratable")].status}' 2>/dev/null || echo "False"`
+    );
+    return output.includes('True');
+  }
+
+  async vmDeleteTestVM(
+    name: string,
+    namespace: string,
+    options?: { context?: string }
+  ): Promise<void> {
+    const ctx = options?.context ? ` --context=${options.context}` : '';
+    await this.run(`oc delete vm ${name} -n ${namespace}${ctx} --ignore-not-found`);
+  }
+
+  async vmDeleteSnapshots(vmName: string, namespace: string): Promise<void> {
+    await this.run(
+      `oc delete virtualmachinesnapshot -n ${namespace} -l vm.kubevirt.io/name=${vmName} --ignore-not-found`
+    );
+  }
+
+  async vmCreateSnapshot(snapshotName: string, vmName: string, namespace: string): Promise<void> {
+    await this.run(`oc apply -f - <<'EOF'
+apiVersion: snapshot.kubevirt.io/v1beta1
+kind: VirtualMachineSnapshot
+metadata:
+  name: ${snapshotName}
+  namespace: ${namespace}
+spec:
+  source:
+    apiGroup: kubevirt.io
+    kind: VirtualMachine
+    name: ${vmName}
+EOF`);
+  }
+
+  async deleteUser(username: string): Promise<void> {
+    await this.run(`oc delete user ${username} --ignore-not-found`);
+    await this.run(`oc delete identity htpasswd:${username} --ignore-not-found`);
+  }
+
+  async mtvIsInstalled(): Promise<boolean> {
+    const output = await this.run(
+      'oc get csv -n openshift-mtv --no-headers 2>/dev/null | grep -iE "forklift|mtv-operator" || true'
+    );
+    return output.trim().length > 0;
+  }
+
+  async cnvIsAvailableOnCluster(clusterName: string): Promise<boolean> {
+    // Check via ACM addon first
+    const addonOutput = await this.run(
+      `oc get managedclusteraddon -n ${clusterName} --no-headers 2>/dev/null | grep -iE 'hci-controller|hyperconverged|kubevirt' || true`
+    );
+    if (addonOutput.trim().length > 0) return true;
+
+    // Fallback: directly query spoke via merged kubeconfig context
+    const kcPath = `${process.cwd()}/.auth/MC_MERGED_kubeconfig`;
+    const output = await this.run(
+      `KUBECONFIG="${kcPath}" oc get csv -n openshift-cnv --context=${clusterName} --no-headers 2>/dev/null | grep -i kubevirt || true`
+    );
+    return output.trim().length > 0;
+  }
+
+  async deleteDataVolume(name: string, namespace: string): Promise<void> {
+    await this.run(`oc delete datavolume ${name} -n ${namespace} --ignore-not-found`);
+  }
+
+  async cleanupForkliftResources(namespace: string): Promise<void> {
+    await this.run(`oc delete plans.forklift.konveyor.io --all -n ${namespace} --ignore-not-found`);
+    await this.run(
+      `oc delete migrations.forklift.konveyor.io --all -n ${namespace} --ignore-not-found`
+    );
   }
 
   // ---------------------------------------------------------------------------

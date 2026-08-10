@@ -1,6 +1,1 @@
-import path from 'path';
-
-/** Repository root (`console-e2e/`) for modules under `src/global-setup/`. */
-export function getRepoRoot(): string {
-  return path.join(__dirname, '..', '..');
-}
+export { CONSOLE_E2E_REPO_ROOT, getRepoRoot } from '@lib/repo-root';

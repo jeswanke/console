@@ -64,20 +64,43 @@ export async function expectApplicationDetailsMinSuccessResourceCount(
   options?: { timeout?: number }
 ): Promise<void> {
   const timeout = options?.timeout ?? 300_000;
+  const statusValue = await expectClusterResourceStatusVisible(detailsPage, timeout);
+
+  await expect
+    .poll(async () => largestNumericLabelInClusterResourceStatus(statusValue), {
+      timeout,
+      intervals: [5_000, 10_000, 15_000],
+      message: `Cluster resource status success count ≥ ${minCount}`,
+    })
+    .toBeGreaterThanOrEqual(minCount);
+}
+
+/** Details **Cluster resource status** green label count ≤ `maxCount` (RHACM4K-7513 broken commit). */
+export async function expectApplicationDetailsMaxSuccessResourceCount(
+  detailsPage: ApplicationDetailsPage,
+  maxCount: number,
+  options?: { timeout?: number }
+): Promise<void> {
+  const timeout = options?.timeout ?? 300_000;
+  const statusValue = await expectClusterResourceStatusVisible(detailsPage, timeout);
+
+  await expect
+    .poll(async () => largestNumericLabelInClusterResourceStatus(statusValue), {
+      timeout,
+      intervals: [5_000, 10_000, 15_000],
+      message: `Cluster resource status success count ≤ ${maxCount}`,
+    })
+    .toBeLessThanOrEqual(maxCount);
+}
+
+async function expectClusterResourceStatusVisible(
+  detailsPage: ApplicationDetailsPage,
+  timeout: number
+): Promise<Locator> {
   await detailsPage.expectDetailTabSelected('details', { timeout });
   const statusValue = detailsPage.getDescriptionValue('clusterResourceStatus');
   await expect(statusValue).toBeVisible({ timeout });
-
-  await expect
-    .poll(
-      async () => largestNumericLabelInClusterResourceStatus(statusValue),
-      {
-        timeout,
-        intervals: [5_000, 10_000, 15_000],
-        message: `Cluster resource status success count ≥ ${minCount}`,
-      }
-    )
-    .toBeGreaterThanOrEqual(minCount);
+  return statusValue;
 }
 
 async function largestNumericLabelInClusterResourceStatus(statusValue: Locator): Promise<number> {
@@ -118,10 +141,7 @@ export function subscriptionDetailsClustersValuePattern(
     case 'remoteOnly':
       return new RegExp(`^\\s*${summary.remoteCount}\\s+Remote\\s*$`, 'i');
     case 'localAndRemote':
-      return new RegExp(
-        `^\\s*${summary.remoteCount}\\s+Remote,\\s*1\\s+Local\\s*$`,
-        'i'
-      );
+      return new RegExp(`^\\s*${summary.remoteCount}\\s+Remote,\\s*1\\s+Local\\s*$`, 'i');
   }
 }
 
@@ -209,9 +229,12 @@ async function assertRepositoryValue(
     expectedRepositories.flatMap((r) => (r.kindLabel ? [r.kindLabel] : []))
   );
   for (const [kindLabel, count] of kindCounts) {
-    await expect(repositoryValue.getByRole('button', { name: kindLabel, exact: true })).toHaveCount(count, {
-      timeout,
-    });
+    await expect(repositoryValue.getByRole('button', { name: kindLabel, exact: true })).toHaveCount(
+      count,
+      {
+        timeout,
+      }
+    );
   }
 }
 
@@ -257,7 +280,8 @@ export async function verifySubscriptionAppDetailsTab(
   } = params;
   const clustersSummary = resolveDetailsClustersSummary(params);
   const expectedRepositoriesResolved =
-    expectedRepositories ?? (repositories ? buildExpectedDetailsRepositories(repositories) : undefined);
+    expectedRepositories ??
+    (repositories ? buildExpectedDetailsRepositories(repositories) : undefined);
 
   await expectOpenShiftShellTitle(page);
   await expectApplicationDetailsUrl(page, namespace, applicationName, {
@@ -278,10 +302,14 @@ export async function verifySubscriptionAppDetailsTab(
   await expect(detailsPage.getDescriptionTerm('clusters')).toBeVisible();
   const clustersValue = detailsPage.getDescriptionValue('clusters');
   if (clustersSummary) {
-    await waitForLocatorTextMatch(clustersValue, subscriptionDetailsClustersValuePattern(clustersSummary), {
-      timeout: detailsValuesTimeout,
-      label: 'Clusters',
-    });
+    await waitForLocatorTextMatch(
+      clustersValue,
+      subscriptionDetailsClustersValuePattern(clustersSummary),
+      {
+        timeout: detailsValuesTimeout,
+        label: 'Clusters',
+      }
+    );
   } else {
     await waitForLocatorTextMatch(clustersValue, NON_EMPTY_TEXT_RE, {
       timeout: detailsValuesTimeout,
@@ -307,7 +335,9 @@ export async function verifySubscriptionAppDetailsTab(
   const lastSyncRequestedValue = detailsPage.getDescriptionValue('lastSyncRequested');
   await expect(lastSyncRequestedValue).toBeVisible({ timeout: detailsValuesTimeout });
   await expect(lastSyncRequestedValue).toContainText('-', { timeout: detailsValuesTimeout });
-  const syncLink = lastSyncRequestedValue.locator(`a#${APP_APPLICATION_DETAILS.syncActionAnchorId}`);
+  const syncLink = lastSyncRequestedValue.locator(
+    `a#${APP_APPLICATION_DETAILS.syncActionAnchorId}`
+  );
   await expect(syncLink).toBeVisible({
     timeout: detailsValuesTimeout,
   });

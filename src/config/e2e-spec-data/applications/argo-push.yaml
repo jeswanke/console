@@ -44,6 +44,36 @@ fragments:
       - kind: Pod
         name: helloworld-app-deploy
 
+  argo_push_helloworld_argo_matching_label:
+    git:
+      url: https://github.com/stolostron/application-lifecycle-samples.git
+      branch: main
+      path: helloworld-argo
+    clusterSet: auto-gitops-cluster-set
+    placementLabelExpression:
+      labelName: test
+      labelValues:
+        - auto
+
+  # RHACM4K-4043 / RHACM4K-37185: addon-application-manager placement (helloworld-argo path).
+  argo_push_owned_app_addon_label:
+    git:
+      url: https://github.com/stolostron/application-lifecycle-samples.git
+      branch: main
+      path: helloworld-argo
+    clusterSet: auto-gitops-cluster-set
+    placementLabelExpression:
+      labelName: feature.open-cluster-management.io/addon-application-manager
+      labelValues:
+        - available
+
+  # RHACM4K-37185 multi-source: Helm repository on **Template** (second source).
+  argo_push_multisource_helm:
+    helm:
+      url: https://raw.githubusercontent.com/stolostron/application-lifecycle-samples/main
+      chartName: helloworld-helm
+      packageVersion: '0.2.0'
+
   # Push-model topology deployables for helloworld / helloworld-argo (Route omitted on AppSet graph).
   # RHACM4K-64219: shared git/cluster set for pull + push placement preview wizards.
   argo_appset_placement_preview:
@@ -63,6 +93,39 @@ fragments:
         name: helloworld-app-deploy
       - kind: Pod
         name: helloworld-app-deploy
+
+  # Pull-model mortgage git/helm paths (Cypress Pull_Model_* @UI suites).
+  argo_pull_git_mortgage:
+    git:
+      url: https://github.com/stolostron/application-lifecycle-samples.git
+      branch: main
+      path: mortgage
+    clusterSet: auto-gitops-cluster-set
+
+  argo_pull_git_mortgage_pm_argo:
+    git:
+      url: https://github.com/stolostron/application-lifecycle-samples.git
+      branch: main
+      path: mortgage-pm-argo
+    clusterSet: auto-gitops-cluster-set
+
+  argo_pull_helm_mortgage:
+    helm:
+      url: https://raw.githubusercontent.com/stolostron/application-lifecycle-samples/main
+      chartName: mortgage-helm
+      packageVersion: '0.1.0'
+    clusterSet: auto-gitops-cluster-set
+
+  argo_pull_mortgage_cluster_resources:
+    clusterResources:
+      - kind: Service
+        name: mortgage-app-svc
+      - kind: Deployment
+        name: mortgage-app-deploy
+      - kind: ReplicaSet
+        name: mortgage-app-deploy
+      - kind: Pod
+        name: mortgage-app-deploy
 
 profiles:
   argo_push_submit:
@@ -140,3 +203,212 @@ scenarios:
         destinationNamespace: argo-placement-preview-ns
         existingPlacementName: gitops-placement-preview-test
         setupYamlRelativePath: src/templates/app/gitops-placement-preview-setup.yaml
+
+  # RHACM4K-6902 / RHACM4K-6903: ApplicationSet + subscription type filter / Type column (Cypress Argo_App_Table_Test_Suite).
+  # Polarion ids are on Playwright spec tags; subscription payload is `auto_git_multi` (RHACM4K-6902/6903).
+  argo_app_table_helloworld_argo_auto:
+    enabled: true
+    blocks:
+      - use:
+          - argo_push_helloworld_argo_matching_label
+    extends:
+      - argo_push_submit
+    specDomains:
+      argoPush:
+        applicationName: helloworld-argo-app-auto
+        argoServerLabel: openshift-gitops
+        destinationNamespace: helloworld-argo-auto-ns
+
+  # RHACM4K-4043: owned ApplicationSet row expands to child app with green status labels.
+  argo_appset_owned_app_4043:
+    enabled: true
+    blocks:
+      - use:
+          - argo_push_owned_app_addon_label
+    extends:
+      - argo_push_submit
+    specDomains:
+      argoPush:
+        applicationName: helloworld-argo-app-mc-auto
+        argoServerLabel: openshift-gitops
+        destinationNamespace: helloworld-argo-auto-mc-ns
+        postCreateWaitMs: 180000
+
+  # RHACM4K-37185–37193: Git + Helm multi-source ApplicationSet wizard chain.
+  argo_multisource_git_helm_37185:
+    enabled: true
+    blocks:
+      - use:
+          - argo_push_owned_app_addon_label
+          - argo_push_multisource_helm
+    extends:
+      - argo_push_submit
+    specDomains:
+      argoPush:
+        applicationName: helloworld-argo-app-mc-auto
+        argoServerLabel: openshift-gitops
+        destinationNamespace: helloworld-argo-auto-mc-ns
+        multiSource: true
+
+  # RHACM4K-40996: GitOpsCluster without cluster set (`empty-placement-cluster`).
+  argo_empty_placement_40996:
+    enabled: true
+    blocks:
+      - use:
+          - argo_push_owned_app_addon_label
+    extends:
+      - argo_push_submit
+    specDomains:
+      argoPush:
+        applicationName: helloworld-argo-app-empty
+        argoServerLabel: empty-placement-cluster
+        applicationSetNamespace: openshift-gitops
+        destinationNamespace: helloworld-argo-app-empty-ns
+        setupYamlRelativePath: src/templates/app/gitops/empty-placement.yaml
+
+  # RHACM4K-6772 / RHACM4K-6774 / RHACM4K-7006 — row actions on helloworld-argo AppSet.
+  argo_row_action_helloworld_auto:
+    enabled: true
+    tests:
+      - RHACM4K-6772
+      - RHACM4K-6774
+      - RHACM4K-7006
+    blocks:
+      - use:
+          - argo_push_helloworld_argo_matching_label
+          - argo_push_helloworld_cluster_resources
+    extends:
+      - argo_push_submit
+    specDomains:
+      argoPush:
+        applicationName: helloworld-argo-app-auto
+        argoServerLabel: openshift-gitops
+        destinationNamespace: helloworld-argo-auto-ns
+
+  # RHACM4K-61942 — push model manual sync (automated sync disabled).
+  argo_push_manual_sync_61942:
+    enabled: true
+    tests:
+      - RHACM4K-61942
+    blocks:
+      - use:
+          - argo_push_helloworld_argo_matching_label
+          - argo_push_helloworld_cluster_resources
+    extends:
+      - argo_push_submit
+    specDomains:
+      argoPush:
+        applicationName: push-model-manual-sync
+        argoServerLabel: openshift-gitops
+        destinationNamespace: push-model-manual-sync-ns
+        disableAutomatedSync: true
+        placementLabelExpression:
+          labelName: name
+          labelValues:
+            - local-cluster
+        postCreateWaitMs: 180000
+
+  # RHACM4K-6735 / RHACM4K-6773 — wizard edit path on xj-argoset1 AppSet.
+  argo_wizard_edit_xj:
+    enabled: true
+    tests:
+      - RHACM4K-6735
+      - RHACM4K-6773
+    blocks:
+      - use:
+          - argo_push_helloworld_argo_matching_label
+          - argo_push_helloworld_cluster_resources
+    extends:
+      - argo_push_submit
+    specDomains:
+      argoPush:
+        applicationName: xj-argoset1
+        argoServerLabel: openshift-gitops
+        destinationNamespace: xj-argoset1-ns
+        placementLabelExpression:
+          labelName: name
+          labelValues:
+            - local-cluster
+
+  # RHACM4K-54897 / RHACM4K-54902 — Application Manager ManagedServiceAccount long-lived secret.
+  argo_long_lived_secret:
+    enabled: true
+    tests:
+      - RHACM4K-54897
+      - RHACM4K-54902
+    blocks:
+      - use:
+          - argo_push_git_helloworld
+          - argo_push_helloworld_cluster_resources
+    extends:
+      - argo_push_submit
+    specDomains:
+      argoPush:
+        applicationName: rhacm4k-long-lived-secret
+        argoServerLabel: openshift-gitops
+        destinationNamespace: rhacm4k-long-lived-secret-ns
+        git:
+          path: helloworld-argo
+        postCreateWaitMs: 180000
+
+  # RHACM4K-38202 — pull model topology + overview (CLI apply, hub local-cluster warning).
+  argo_pull_topology_38202:
+    enabled: true
+    tests:
+      - RHACM4K-38202
+    blocks:
+      - use:
+          - argo_pull_git_mortgage
+          - argo_pull_mortgage_cluster_resources
+    specDomains:
+      argoPush:
+        applicationName: auto-git-pm-topology
+        argoServerLabel: openshift-gitops
+        destinationNamespace: auto-git-pm-topology-ns
+        successNumber: 3
+
+  # RHACM4K-42703 — Git pull-model wizard create.
+  argo_pull_git_wizard_42703:
+    enabled: true
+    tests:
+      - RHACM4K-42703
+    blocks:
+      - use:
+          - argo_pull_git_mortgage_pm_argo
+          - argo_pull_mortgage_cluster_resources
+    extends:
+      - argo_push_submit
+    specDomains:
+      argoPush:
+        applicationName: auto-git-pm-wizard
+        argoServerLabel: openshift-gitops
+        destinationNamespace: auto-git-pm-wizard-ns
+
+  # RHACM4K-42705 — Helm pull-model wizard create.
+  argo_pull_helm_wizard_42705:
+    enabled: true
+    tests:
+      - RHACM4K-42705
+    blocks:
+      - use:
+          - argo_pull_helm_mortgage
+          - argo_pull_mortgage_cluster_resources
+    extends:
+      - argo_push_submit
+    specDomains:
+      argoPush:
+        applicationName: auto-helm-pm-wizard
+        argoServerLabel: openshift-gitops
+        destinationNamespace: auto-helm-pm-wizard-ns
+
+  # RHACM4K-60049 — pull-model ApplicationSet manual sync from console.
+  argo_pull_manual_sync_60049:
+    enabled: true
+    tests:
+      - RHACM4K-60049
+    specDomains:
+      argoPush:
+        applicationName: test-appset-pm-sync
+        argoServerLabel: openshift-gitops
+        destinationNamespace: test-appset-pm-sync-ns
+        clusterSet: auto-gitops-cluster-set

@@ -1,0 +1,29 @@
+apiVersion: v1                      
+kind: Namespace
+metadata:
+  name: placement1
+---
+apiVersion: v1                      
+kind: Namespace
+metadata:
+  name: placement2
+---
+apiVersion: v1                      
+kind: Namespace
+metadata:
+  name: placement3
+---
+apiVersion: v1                      
+kind: Namespace
+metadata:
+  name: placement4
+---
+apiVersion: v1                      
+kind: Namespace
+metadata:
+  name: placement5
+---
+apiVersion: v1                      
+kind: Namespace
+metadata:
+  name: placement6

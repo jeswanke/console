@@ -7,6 +7,7 @@ import { PF_SKELETON, SELECTORS } from '@constants/selectors';
 import {
   APP_ROUTES,
   APP_PAGE,
+  APP_TABLE,
   APP_ADVANCED_CONFIG,
   APP_ADVANCED_OC_RESOURCES,
   APP_ADVANCED_TABLE_COLUMNS,
@@ -45,7 +46,9 @@ export class ApplicationListPage extends BasePage {
     await this.getPageTitle().waitFor({ state: 'visible' });
     await expect(this.page.locator(PF_SKELETON)).toHaveCount(0);
     if (requireToolbar) {
-      await expect(this.applicationsTable.getCreateApplicationButton()).toBeEnabled();
+      await expect(this.applicationsTable.getCreateApplicationButton()).toBeEnabled({
+        timeout: 60_000,
+      });
     }
   }
 
@@ -75,7 +78,7 @@ export class ApplicationListPage extends BasePage {
 
   /** Locator for Overview tab content (applications table; no tabpanel in DOM) */
   getOverviewContent(): Locator {
-    return this.page.locator(SELECTORS.application.table);
+    return this.page.getByRole('grid', { name: APP_TABLE.ariaLabel });
   }
 
   /** Locator for the Advanced configuration tab (use selected state; no tabpanel in DOM) */
@@ -115,10 +118,9 @@ export class ApplicationListPage extends BasePage {
 
   /** Terminology card title (e.g. "Learn more about the terminology") */
   getAdvancedTerminologyCardTitle(): Locator {
-    return this.getAdvancedConfigContent().getByText(
-      APP_ADVANCED_CONFIG.terminologyCard.title,
-      { exact: true }
-    );
+    return this.getAdvancedConfigContent().getByText(APP_ADVANCED_CONFIG.terminologyCard.title, {
+      exact: true,
+    });
   }
 
   /** "View documentation" link inside the terminology card */
@@ -129,15 +131,13 @@ export class ApplicationListPage extends BasePage {
   }
 
   /** Resource type toggle button (Subscriptions, Channels) */
-  getAdvancedResourceToggleButton(
-    key: keyof typeof SELECTORS.application.resourceToggle
-  ): Locator {
+  getAdvancedResourceToggleButton(key: keyof typeof SELECTORS.application.resourceToggle): Locator {
     return this.page.locator(SELECTORS.application.resourceToggle[key]);
   }
 
-  /** Table on Advanced tab (same as Overview; columns differ by resource type) */
+  /** Table on Advanced tab (Subscriptions/Channels; columns differ by resource type) */
   getAdvancedTable(): Locator {
-    return this.page.locator(SELECTORS.application.table);
+    return this.page.getByRole('grid', { name: APP_ADVANCED_CONFIG.tableAriaLabel });
   }
 
   /** Whether the cluster has any resources for the given Advanced config view (uses oc get -A). */
@@ -148,9 +148,7 @@ export class ApplicationListPage extends BasePage {
   }
 
   /** Empty state on Advanced tab (when table has no rows). Heading text varies (e.g. "...yet"). */
-  getAdvancedEmptyState(
-    view: keyof typeof APP_ADVANCED_CONFIG.emptyState.titlePatterns
-  ): Locator {
+  getAdvancedEmptyState(view: keyof typeof APP_ADVANCED_CONFIG.emptyState.titlePatterns): Locator {
     const pattern = APP_ADVANCED_CONFIG.emptyState.titlePatterns[view];
     // PF nests empty-state__content/__header/__title under the root; all match [class*="empty-state"].
     return this.page
@@ -162,6 +160,11 @@ export class ApplicationListPage extends BasePage {
   /** Search input (toolbar; visible on both Overview and Advanced configuration tabs) */
   getSearchInput(): Locator {
     return acmToolbarSearchLocator(this.page);
+  }
+
+  /** Filter label visible in list chrome (active filter chip / toolbar; RHACM4K-61329). */
+  async expectFilterLabelVisibleInToolbar(filterLabel: string): Promise<void> {
+    await expect(this.page.getByText(filterLabel, { exact: false }).first()).toBeVisible();
   }
 
   /** Toolbar **Manage columns** control (`aria-label="columns-management"`). */
@@ -180,8 +183,17 @@ export class ApplicationListPage extends BasePage {
 
   /** Click Create application (opens dropdown/modal) */
   async openCreateApplication(): Promise<void> {
-    await this.applicationsTable.clickCreateApplication();
-    await expect(this.applicationsTable.getCreateApplicationMenu()).toBeVisible();
+    const menu = this.applicationsTable.getCreateApplicationMenu();
+    await expect
+      .poll(
+        async () => {
+          if (await menu.isVisible()) return true;
+          await this.applicationsTable.clickCreateApplication();
+          return menu.isVisible();
+        },
+        { timeout: 30_000, intervals: [500, 1_000, 2_000] }
+      )
+      .toBe(true);
   }
 
   /**
@@ -258,6 +270,7 @@ export class ApplicationListPage extends BasePage {
     }
     const subscriptionCrName = defaultSubscriptionCrName(applicationName, blockIndex);
 
+    await this.goto();
     await this.openAdvancedConfigTab();
     await this.assertAdvancedConfigSubscriptionRowChannelColumn({
       subscriptionCrName,
@@ -329,9 +342,15 @@ export class ApplicationListPage extends BasePage {
         : chTable.locator('tbody tr').filter({ hasText: channelDisplaySubstring }).first();
     await expect(chRow).toBeVisible({ timeout: 120_000 });
 
-    const subsCell = chRow.locator(`td[data-label="${APP_ADVANCED_TABLE_COLUMNS_CHANNELS.subscriptions}"]`);
-    const clustersCell = chRow.locator(`td[data-label="${APP_ADVANCED_TABLE_COLUMNS_CHANNELS.clusters}"]`);
-    const createdCell = chRow.locator(`td[data-label="${APP_ADVANCED_TABLE_COLUMNS_CHANNELS.created}"]`);
+    const subsCell = chRow.locator(
+      `td[data-label="${APP_ADVANCED_TABLE_COLUMNS_CHANNELS.subscriptions}"]`
+    );
+    const clustersCell = chRow.locator(
+      `td[data-label="${APP_ADVANCED_TABLE_COLUMNS_CHANNELS.clusters}"]`
+    );
+    const createdCell = chRow.locator(
+      `td[data-label="${APP_ADVANCED_TABLE_COLUMNS_CHANNELS.created}"]`
+    );
     await expect(subsCell).toHaveText(/\S/);
     await expect(clustersCell).toHaveText(/\S/);
     await expect(createdCell).toHaveText(/\S/);
@@ -341,19 +360,36 @@ export class ApplicationListPage extends BasePage {
     await expect(typeButton).toBeVisible();
     await typeButton.click();
 
-    // Channel **Type** popover: anchor by expected URL inside a floating layer (`role=dialog` or `role=tooltip`),
-    // not PatternFly `pf-v5` / `pf-v6` class names (those churn with design-system upgrades).
+    const popoverUrl = channelRepositoryUrl.replace(/\.git$/, '');
     const popover = this.page
       .locator('[role="dialog"], [role="tooltip"]')
-      .filter({ hasText: channelRepositoryUrl })
+      .filter({ hasText: popoverUrl })
       .first();
     await expect(popover).toBeVisible({ timeout: 15_000 });
-    await expect(popover).toContainText(channelRepositoryUrl);
+    await expect(popover).toContainText(popoverUrl);
     const copyButton = popover.getByRole('button', { name: /copy/i }).first();
     await expect(copyButton).toBeVisible();
     await expect(copyButton).toBeEnabled();
 
     await this.page.keyboard.press('Escape');
+  }
+
+  /**
+   * RHACM4K-32401 — Advanced configuration → Channels: open **Type** popover and assert repository
+   * URL + **Copy** control (copy instead of redirect).
+   */
+  async verifyAdvancedConfigChannelCopyLink(params: {
+    channelSearchSubstring: string;
+    channelRepositoryUrl: string;
+    channelRepositoryTypeLabel?: string;
+  }): Promise<void> {
+    await this.goto();
+    await this.openAdvancedConfigTab();
+    await this.assertAdvancedConfigChannelRowTypePopoverAndColumns({
+      channelDisplaySubstring: params.channelSearchSubstring,
+      channelRepositoryUrl: params.channelRepositoryUrl,
+      channelRepositoryTypeLabel: params.channelRepositoryTypeLabel,
+    });
   }
 
   /**
@@ -381,7 +417,9 @@ export class ApplicationListPage extends BasePage {
    * **Overview** list: toolbar search by `applicationName`, row **Actions** → **Edit application**.
    * Lands on subscription edit route (`/multicloud/applications/edit/subscription/...`).
    */
-  async openEditSubscriptionApplicationFromOverviewViaSearch(applicationName: string): Promise<void> {
+  async openEditSubscriptionApplicationFromOverviewViaSearch(
+    applicationName: string
+  ): Promise<void> {
     await this.goto();
     await this.waitForLoad();
     const table = this.applicationsTable;

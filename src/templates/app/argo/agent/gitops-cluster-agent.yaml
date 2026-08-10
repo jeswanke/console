@@ -1,0 +1,45 @@
+apiVersion: apps.open-cluster-management.io/v1beta1
+kind: GitOpsCluster
+metadata:
+  name: mc-gitops
+  namespace: openshift-gitops
+spec:
+  argoServer:
+    argoNamespace: openshift-gitops
+  placementRef:
+    name: mc-gitops-placement
+    kind: Placement
+    apiVersion: cluster.open-cluster-management.io/v1beta1
+  gitopsAddon:
+    argoCDAgent:
+      enabled: true
+      mode: managed
+      propagateHubCA: true
+      serverAddress: ""
+      serverPort: ""
+    enabled: true
+    overrideExistingConfigs: true
+---
+apiVersion: cluster.open-cluster-management.io/v1beta2
+kind: ManagedClusterSetBinding
+metadata:
+  name: global
+  namespace: openshift-gitops
+spec:
+  clusterSet: global
+---
+apiVersion: cluster.open-cluster-management.io/v1beta1
+kind: Placement
+metadata:
+  name: mc-gitops-placement
+  namespace: openshift-gitops
+spec:
+  predicates:
+    - requiredClusterSelector:
+        labelSelector:
+          matchExpressions:
+            - key: name
+              operator: In
+              values:
+                - local-cluster
+                - MANAGED_CLUSTER_NAME

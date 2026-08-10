@@ -130,6 +130,7 @@ export const FLEET_VIRT_VM_ACTIONS = {
 // =============================================================================
 
 export const FLEET_VIRT_DEFAULTS = {
+  hubCluster: 'local-cluster',
   vmNamespace: 'default',
   spokeCluster: process.env.VIRT_SPOKE_CLUSTER?.split(',')[0] || 'local-cluster',
 } as const;

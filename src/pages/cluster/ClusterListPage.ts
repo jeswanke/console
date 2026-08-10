@@ -23,7 +23,7 @@ export class ClusterListPage extends BasePage {
     private readonly oc: OcCliService,
   ) {
     super(page);
-    this.table = new AcmTable(page);
+    this.table = new AcmTable(page, 'Clusters table');
     this.clusterTable = new ClusterTable(page);
     this.manageColumns = new ManageColumnsDialog(page);
     this.createButton = page.locator(SELECTORS.cluster.createButton);

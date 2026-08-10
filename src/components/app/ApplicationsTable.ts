@@ -35,8 +35,8 @@ export class ApplicationsTable extends AcmTable {
   private readonly exportButton: Locator;
 
   constructor(page: Page) {
-    super(page);
-    this.table = page.locator(SELECTORS.application.table);
+    super(page, APP_TABLE.ariaLabel);
+    this.table = page.getByRole(APP_TABLE.role, { name: APP_TABLE.ariaLabel });
     this.createButton = page.locator(SELECTORS.application.createButton);
     this.filterButton = page.locator(SELECTORS.application.filterButton);
     this.labelFilterButton = page.locator(SELECTORS.application.labelFilterButton);
@@ -140,16 +140,73 @@ export class ApplicationsTable extends AcmTable {
   /** Select (check) a filter option by label. Opens filter if needed. */
   async selectFilterOption(optionLabel: string): Promise<void> {
     const listbox = this.getFilterListbox();
-    const isOpen = await listbox.getByRole('checkbox').first().isVisible().catch(() => false);
+    const isOpen = await listbox
+      .getByRole('checkbox')
+      .first()
+      .isVisible()
+      .catch(() => false);
     if (!isOpen) {
       await this.openFilter();
     }
-    await this.getFilterOption(optionLabel).check();
+    const checkbox = this.getFilterOption(optionLabel);
+    if (!(await checkbox.isChecked())) {
+      await checkbox.click({ force: true });
+    }
   }
 
   /** Deselect (uncheck) a filter option by label. Filter menu must be open. */
   async deselectFilterOption(optionLabel: string): Promise<void> {
-    await this.getFilterOption(optionLabel).uncheck();
+    const checkbox = this.getFilterOption(optionLabel);
+    if (await checkbox.isChecked()) {
+      await checkbox.click({ force: true });
+    }
+  }
+
+  /** Column header cell (`th[data-label="…"]`). */
+  getColumnHeaderByDataLabel(columnLabel: string): Locator {
+    return this.table.locator(`th[data-label="${columnLabel}"]`);
+  }
+
+  /** Current `aria-sort` on a sortable column header (null when unsorted). */
+  async getColumnHeaderAriaSort(columnLabel: string): Promise<string | null> {
+    return this.getColumnHeaderByDataLabel(columnLabel).getAttribute('aria-sort');
+  }
+
+  /** Click a sortable column header (button inside `th` when present, else the header cell). */
+  async clickSortableColumnHeader(columnLabel: string): Promise<void> {
+    const th = this.getColumnHeaderByDataLabel(columnLabel);
+    await expect(th).toBeVisible();
+    const sortButton = th.getByRole('button', {
+      name: new RegExp(escapeRegExp(columnLabel)),
+    });
+    if ((await sortButton.count()) > 0) {
+      await sortButton.click();
+    } else {
+      await th.click();
+    }
+  }
+
+  /**
+   * Clicks a column header `clickCount` times (Cypress: double-click **Pod Status** for descending).
+   * Returns final `aria-sort`.
+   */
+  async sortColumnByHeaderClicks(columnLabel: string, clickCount: number): Promise<string | null> {
+    for (let i = 0; i < clickCount; i++) {
+      await this.clickSortableColumnHeader(columnLabel);
+    }
+    return this.getColumnHeaderAriaSort(columnLabel);
+  }
+
+  /** First tbody row whose text contains `text` (e.g. toolbar search match). */
+  getRowContainingText(text: string): Locator {
+    return this.getDataRows().filter({ hasText: text }).first();
+  }
+
+  /** Opens application details via the Name link on the first row matching `text`. */
+  async openApplicationDetailsFromFirstRowContaining(text: string): Promise<void> {
+    const row = this.getRowContainingText(text);
+    await expect(row).toBeVisible({ timeout: 15_000 });
+    await this.getNameLink(row).click();
   }
 
   getLabelFilterButton(): Locator {
@@ -198,11 +255,15 @@ export class ApplicationsTable extends AcmTable {
 
   async selectLabelFilterOption(labelKeyValue: string): Promise<void> {
     const listbox = this.getLabelFilterListbox();
-    const isOpen = await listbox.getByRole('checkbox').first().isVisible().catch(() => false);
+    const isOpen = await listbox
+      .getByRole('checkbox')
+      .first()
+      .isVisible()
+      .catch(() => false);
     if (!isOpen) {
       await this.openLabelFilter();
     }
-    await this.getLabelFilterCheckbox(labelKeyValue).check();
+    await this.getLabelFilterCheckbox(labelKeyValue).setChecked(true);
   }
 
   /** Count of visible data rows on the current table page. */
@@ -375,13 +436,34 @@ export class ApplicationsTable extends AcmTable {
   }
 
   /**
-   * Assumes row actions menu is open. Opens subscription edit flow from list row actions.
-   * Current hub label is "Edit application".
+   * Assumes row actions menu is open. Opens edit flow from list row actions.
+   * Hub label is **Edit application** or **Edit** (ApplicationSet).
    */
   async clickEditApplicationMenuItem(): Promise<void> {
     const menu = this.page.getByRole('menu');
     await expect(menu).toBeVisible();
-    await menu.getByRole('menuitem', { name: /^Edit application$/i }).click();
+    await menu.getByRole('menuitem', { name: /^Edit( application)?$/i }).click();
+  }
+
+  /** Assumes row actions menu is open. Clicks **View** / **View application** (ApplicationSet / Argo apps). */
+  async clickViewApplicationMenuItem(): Promise<void> {
+    const menu = this.page.getByRole('menu');
+    await expect(menu).toBeVisible();
+    await menu.getByRole('menuitem', { name: /^View( application)?$/i }).click();
+  }
+
+  /** Assumes row actions menu is open. Clicks **Search** / **Search application** (opens global search). */
+  async clickSearchApplicationMenuItem(): Promise<void> {
+    const menu = this.page.getByRole('menu');
+    await expect(menu).toBeVisible();
+    await menu.getByRole('menuitem', { name: /^Search( application)?$/i }).click();
+  }
+
+  /** Assumes row actions menu is open. Clicks **Delete** / **Delete application** (ApplicationSet row). */
+  async clickDeleteMenuItem(): Promise<void> {
+    const menu = this.page.getByRole('menu');
+    await expect(menu).toBeVisible();
+    await menu.getByRole('menuitem', { name: /^Delete( application)?$/i }).click();
   }
 
   /**
@@ -395,8 +477,16 @@ export class ApplicationsTable extends AcmTable {
     const deleteInModal = () => modal.getByRole('button', { name: /^Delete$/i });
     await deleteInModal().waitFor({ state: 'visible', timeout: 60_000 });
     if (options.removeRelatedResources) {
-      const removeRelated = this.page.locator(APP_APPLICATION_DELETE.removeRelatedResourcesSelector);
-      if ((await removeRelated.count()) > 0 && (await removeRelated.first().isVisible().catch(() => false))) {
+      const removeRelated = this.page.locator(
+        APP_APPLICATION_DELETE.removeRelatedResourcesSelector
+      );
+      if (
+        (await removeRelated.count()) > 0 &&
+        (await removeRelated
+          .first()
+          .isVisible()
+          .catch(() => false))
+      ) {
         await removeRelated.first().click({ force: true });
       }
     }
@@ -406,7 +496,10 @@ export class ApplicationsTable extends AcmTable {
   }
 
   /** Search must already narrow to this row (or row is visible on the current page). */
-  async deleteApplicationByRow(row: Locator, options?: { removeRelatedResources?: boolean }): Promise<void> {
+  async deleteApplicationByRow(
+    row: Locator,
+    options?: { removeRelatedResources?: boolean }
+  ): Promise<void> {
     const removeRelatedResources = options?.removeRelatedResources !== false;
     await this.openRowActions(row);
     await this.clickDeleteApplicationMenuItem();

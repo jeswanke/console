@@ -1,10 +1,18 @@
-import { Page, Locator } from '@playwright/test';
+import { Page, Locator, expect } from '@playwright/test';
 import { BasePage } from '@pages/BasePage';
 import { OcCliService } from '@services/OcCliService';
 import { RBAC_ROUTES, RBAC_USER_DETAIL, RBAC_RA_TABLE, RBAC_WIZARD } from '@constants/fg-rbac';
+import { PF_SPINNER, PF_SKELETON } from '@constants/selectors';
 import { openCreateRoleAssignment } from '@lib/fg-rbac/role-assignment-actions';
 
 export class RoleDetailsPage extends BasePage {
+  override async waitForLoad(timeout = 30000): Promise<void> {
+    const pageSpinner = this.page.locator(
+      `${PF_SPINNER}:not(td ${PF_SPINNER}):not([role="gridcell"] ${PF_SPINNER})`,
+    );
+    await expect(pageSpinner).toHaveCount(0, { timeout });
+    await expect(this.page.locator(PF_SKELETON)).toHaveCount(0, { timeout });
+  }
   private readonly roleAssignmentsTab: Locator;
 
   constructor(

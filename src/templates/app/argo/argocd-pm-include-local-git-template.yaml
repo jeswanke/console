@@ -1,0 +1,47 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: {APP_SET_NAME}
+  namespace: {APP_SET_NAMESPACE}
+spec:
+  generators:
+    - clusterDecisionResource:
+        configMapRef: acm-placement
+        labelSelector:
+          matchLabels:
+            cluster.open-cluster-management.io/placement: {APP_SET_NAME}-placement
+        requeueAfterSeconds: 180
+  template:
+    metadata:
+      name: {APP_SET_NAME}-{{name}}
+      annotations:
+        apps.open-cluster-management.io/ocm-managed-cluster: "{{name}}"
+        apps.open-cluster-management.io/ocm-managed-cluster-app-namespace: {APP_SET_NAMESPACE}
+        argocd.argoproj.io/skip-reconcile: "true"
+      labels:
+        apps.open-cluster-management.io/pull-to-ocm-managed-cluster: "true"
+    spec:
+      project: default
+      source:
+        repoURL: {APP_SET_URL}
+        targetRevision: main
+        path: {APP_SET_PATH}
+      destination:
+        namespace: {APP_SET_DEPLOYED_NAMESPACE}
+        server: https://kubernetes.default.svc
+      syncPolicy:
+        automated:
+          selfHeal: {APP_SET_SELF_HEAL}
+          prune: {APP_SET_PRUNE}
+        syncOptions:
+          - CreateNamespace=true
+          - PruneLast=true
+---
+apiVersion: cluster.open-cluster-management.io/v1beta1
+kind: Placement
+metadata:
+  name: {APP_SET_NAME}-placement
+  namespace: {APP_SET_NAMESPACE}
+spec:
+  clusterSets:
+    - auto-gitops-cluster-set

@@ -137,11 +137,22 @@ export interface TimeWindowSpec {
 // Configure automation — prehook / posthook (per block)
 // ---------------------------------------------------------------------------
 
+export interface AddCredentialWizardSpec {
+  secretName: string;
+  secretNamespace: string;
+  /** Merged from `ANSIBLE_URL` at runtime via {@link applyAnsibleAapAuthToSubscriptionOptions}. */
+  ansibleHost?: string;
+  /** Merged from `ANSIBLE_TOKEN` at runtime. */
+  ansibleToken?: string;
+}
+
 export interface AutomationSpec {
   /** **Type to filter** — Ansible credential category combobox */
   credentialTypeFilter?: string;
   /** Existing secret placeholder field (after a template is chosen in the filter) */
   existingAnsibleSecret?: string;
+  /** Create a new Tower/AAP secret via the **Add credential** modal (RHACM4K-20541). */
+  addCredentialWizard?: AddCredentialWizardSpec;
 }
 
 // ---------------------------------------------------------------------------

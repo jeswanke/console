@@ -24,11 +24,15 @@ export class VmDetailsPage extends BasePage {
     return this.page.getByRole('link', { name: tabName, exact: true });
   }
 
-  /** Dismiss the kubevirt-plugin "Welcome to OpenShift Virtualization" modal if present */
   async dismissWelcomeModal(): Promise<void> {
-    const closeBtn = this.page.getByRole('dialog', { name: 'Welcome modal' }).getByRole('button', { name: 'Close' });
-    if (await closeBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+    const closeBtn = this.page
+      .getByRole('dialog', { name: 'Welcome modal' })
+      .getByRole('button', { name: 'Close' });
+    try {
+      await closeBtn.waitFor({ state: 'visible', timeout: 3000 });
       await closeBtn.click();
+    } catch {
+      // Modal not present — expected for most users
     }
   }
 
@@ -65,6 +69,10 @@ export class VmDetailsPage extends BasePage {
     return this.page.getByRole('menuitem', { name: actionName });
   }
 
+  getActionSubmenuButton(name: string): Locator {
+    return this.page.getByRole('menu').getByRole('button', { name });
+  }
+
   // ---------------------------------------------------------------------------
   // Console tab
   // ---------------------------------------------------------------------------
@@ -77,17 +85,14 @@ export class VmDetailsPage extends BasePage {
     return this.page.getByRole('heading', { name: 'Guest login credentials' });
   }
 
-  /** Shown when VNC WebSocket fails (user lacks vnc subresource permission) */
   getVncDisconnectedText(): Locator {
     return this.page.getByText('Click Connect to open the VNC console.');
   }
 
-  /** "Connect" button in VNC disconnected EmptyState */
   getVncConnectButton(): Locator {
     return this.page.getByRole('button', { name: 'Connect', exact: true });
   }
 
-  /** "Disconnect" button — always rendered, disabled when not connected */
   getVncDisconnectButton(): Locator {
     return this.page.getByRole('button', { name: 'Disconnect', exact: true });
   }
@@ -116,11 +121,79 @@ export class VmDetailsPage extends BasePage {
     return this.getSnapshotsHeading();
   }
 
+  getTakeSnapshotButton(): Locator {
+    return this.page.getByRole('button', { name: 'Take snapshot' });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Overview tab — resource links
+  // ---------------------------------------------------------------------------
+
+  getPodLink(): Locator {
+    return this.page.getByRole('link', { name: /virt-launcher/i });
+  }
+
+  getNodeLink(): Locator {
+    return this.page.getByRole('link', { name: /worker|master|node/i });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Overview tab — metrics
+  // ---------------------------------------------------------------------------
+
+  getMetricsChart(): Locator {
+    return this.page.locator('[class*="chart"]').or(this.page.getByText(/CPU|Memory/i));
+  }
+
+  // ---------------------------------------------------------------------------
+  // YAML tab
+  // ---------------------------------------------------------------------------
+
+  getYamlEditor(): Locator {
+    return this.page.getByRole('textbox', { name: /Editor content/i });
+  }
+
   // ---------------------------------------------------------------------------
   // Configuration tab (has sub-navigation)
   // ---------------------------------------------------------------------------
 
   getConfigurationTab(): Locator { return this.page.getByRole('link', { name: 'Configuration' }); }
+
+  getConfigSubTab(name: string): Locator {
+    return this.page.getByRole('tab', { name });
+  }
+
+  async clickConfigSubTab(name: string): Promise<void> {
+    await this.getConfigSubTab(name).click();
+    await this.waitForLoad();
+  }
+
+  getStorageContent(): Locator {
+    return this.page.getByText(/Disk/i).or(this.page.getByText(/No disks/i));
+  }
+
+  getAddDiskButton(): Locator {
+    return this.page.getByRole('button', { name: 'Add', exact: true });
+  }
+
+  getNetworkContent(): Locator {
+    return this.page.getByText(/Interface/i).or(this.page.getByText(/Network/i));
+  }
+
+  // ---------------------------------------------------------------------------
+  // Migration actions
+  // ---------------------------------------------------------------------------
+
+  async openMigrationMenu(): Promise<void> {
+    await this.openActions();
+    const migrationBtn = this.page.getByRole('button', { name: 'Migration' }).last();
+    await migrationBtn.waitFor({ state: 'visible', timeout: 10000 });
+    await migrationBtn.click();
+  }
+
+  getCrossClusterMigrationItem(): Locator {
+    return this.page.getByRole('menuitem', { name: 'Cross cluster migration' });
+  }
 
   // ---------------------------------------------------------------------------
   // VM action buttons
@@ -155,8 +228,11 @@ export class VmDetailsPage extends BasePage {
     };
     await this.page.locator(buttonMap[action]).click();
     const confirmBtn = this.page.locator(FLEET_VIRT_VM_ACTIONS.confirmAction);
-    if (await confirmBtn.isVisible()) {
+    try {
+      await confirmBtn.waitFor({ state: 'visible', timeout: 3000 });
       await confirmBtn.click();
+    } catch {
+      // No confirmation dialog — action executed directly
     }
   }
 
@@ -176,7 +252,7 @@ export class VmDetailsPage extends BasePage {
   async clickDeleteAction(): Promise<void> {
     await expect(async () => {
       await this.page.keyboard.press('Escape');
-      await expect(this.page.getByRole('menuitem', { name: /Delete/ })).toBeHidden({ timeout: 3000 });
+      await this.getActionsDropdown().waitFor({ state: 'visible', timeout: 5000 });
       await this.openActions();
       const deleteItem = this.page.getByRole('menuitem', { name: /Delete/ });
       await expect(deleteItem).toBeEnabled({ timeout: 5000 });

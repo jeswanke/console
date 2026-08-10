@@ -1,4 +1,6 @@
 import type { ApplicationExpectationsPayload } from './domains/application-expectations/applicationExpectationsSchema';
+import type { CreateFluxApplicationOptions } from '@lib/app/flux/types';
+import type { CreateOpenshiftApplicationOptions } from '@lib/app/openshift/types';
 import type { CreateSubscriptionOptions } from '@lib/app/subscription/types';
 import type { CreateArgoPushApplicationOptions } from '@lib/app/argo-push/types';
 
@@ -22,5 +24,21 @@ export type ResolvedArgoPushAppScenario = ResolvedAppScenarioBase & {
   readonly argoPush: CreateArgoPushApplicationOptions;
 };
 
-/** Fully resolved application e2e scenario (subscription or push-model ApplicationSet). */
-export type ResolvedAppScenario = ResolvedSubscriptionAppScenario | ResolvedArgoPushAppScenario;
+/** Flux CD application (oc apply + UI table/topology). */
+export type ResolvedFluxAppScenario = ResolvedAppScenarioBase & {
+  readonly domain: 'flux';
+  readonly flux: CreateFluxApplicationOptions;
+};
+
+/** Native OpenShift application (oc apply + ACM table/topology). */
+export type ResolvedOpenshiftAppScenario = ResolvedAppScenarioBase & {
+  readonly domain: 'openshift';
+  readonly openshift: CreateOpenshiftApplicationOptions;
+};
+
+/** Fully resolved application e2e scenario (subscription, push-model ApplicationSet, Flux, or OpenShift). */
+export type ResolvedAppScenario =
+  | ResolvedSubscriptionAppScenario
+  | ResolvedArgoPushAppScenario
+  | ResolvedFluxAppScenario
+  | ResolvedOpenshiftAppScenario;

@@ -16,7 +16,7 @@ export class ClusterSetsPage extends BasePage {
     private readonly oc: OcCliService
   ) {
     super(page);
-    this.table = new AcmTable(page);
+    this.table = new AcmTable(page, 'Cluster sets table');
     this.createButton = page.getByRole('button', { name: 'Create cluster set' });
   }
 

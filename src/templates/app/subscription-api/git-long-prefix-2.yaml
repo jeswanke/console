@@ -1,0 +1,16 @@
+apiVersion: apps.open-cluster-management.io/v1
+kind: Subscription
+metadata:
+  name: prometheus-stack-incluster-platform-engineering-eastus02
+  namespace: fo-monitoring-incluster
+  labels:
+    app: nginx-app-details
+spec:
+  channel: ns-ch/predev-ch
+  name: aerospike
+  packageFilter:
+    version: "0.3.5"
+  placement:
+    placementRef:
+      kind: PlacementRule
+      name: towhichcluster

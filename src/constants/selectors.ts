@@ -51,7 +51,10 @@ export const SELECTORS = {
   /** Application Lifecycle domain (Applications list, details, Advanced configuration tab) */
   application: {
     createButton: '#application-create',
-    table: '[aria-label="Simple Table"]',
+    /** Overview Applications list — AcmTable aria-label (ACM-5264). */
+    table: '[aria-label="Applications table"]',
+    /** Advanced configuration resource tables — AcmTable aria-label (ACM-5264). */
+    resourcesTable: '[aria-label="Application resources table"]',
     rowByOuiaId: (ouiaId: string) => `tr[data-ouia-component-id="${ouiaId}"]`,
     exportButton: '#export-search-result',
     filterButton: '#acm-table-filter-select-undefined',

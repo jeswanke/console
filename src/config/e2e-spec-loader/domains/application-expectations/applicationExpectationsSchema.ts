@@ -74,6 +74,14 @@ export const applicationExpectationsDomainSchema = z
   .object({
     clusterResources: z.array(z.array(applicationClusterResourceRowSchema)).min(1),
     clusterResourcesFlat: z.array(applicationClusterResourceRowSchema).min(1),
+    /** Cypress `successNumber` — minimum green **Cluster resource status** labels on Details. */
+    successMinResourceCount: z.number().int().positive().optional(),
+    /** Cypress `validateDeployables` resource types (`#nodeIcon_${type}`). */
+    topologyDeployableResourceTypes: z.array(z.string().min(1)).optional(),
+    /** When true, skip Placement advanced-table / `oc get placement` (local-cluster deploy). */
+    localClusterPlacement: z.boolean().optional(),
+    /** Substrings to match in topology `data-id`s for subscription hook nodes (e.g. `['prehook', 'posthook']`). */
+    topologySubscriptionHooks: z.array(z.string().min(1)).optional(),
     detailsClustersSummary: applicationExpectationsDetailsClustersSummarySchema.optional(),
     advancedConfiguration: applicationExpectationsAdvancedConfigurationSchema.optional(),
   })

@@ -1,0 +1,81 @@
+apiVersion: v1                    
+kind: Namespace
+metadata:
+  name: {APP_NAMESPACE}                             
+---
+apiVersion: app.k8s.io/v1beta1
+kind: Application
+metadata:
+  name: {APP_NAME}
+  namespace: {APP_NAMESPACE}
+spec:
+  componentKinds:
+  - group: apps.open-cluster-management.io
+    kind: Subscription
+  descriptor: {}
+  selector:
+    matchExpressions:
+      - key: app
+        operator: In
+        values: 
+          - {APP_NAME}
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ggithubcom-stolostron-application-lifecycle-samples-ns
+---
+apiVersion: apps.open-cluster-management.io/v1
+kind: Channel
+metadata:
+  annotations:
+    apps.open-cluster-management.io/reconcile-rate: medium
+  name: ggithubcom-stolostron-application-lifecycle-samples
+  namespace: ggithubcom-stolostron-application-lifecycle-samples-ns
+spec:
+  type: Git
+  pathname: 'https://github.com/stolostron/application-lifecycle-samples'
+---
+apiVersion: apps.open-cluster-management.io/v1
+kind: Subscription
+metadata:
+  annotations:
+    apps.open-cluster-management.io/git-branch: {APP_BRANCH}
+    apps.open-cluster-management.io/git-path: {APP_PATH}
+    apps.open-cluster-management.io/reconcile-option: merge
+  labels:
+    app: {APP_NAME}
+  name: {APP_NAME}-subscription-1
+  namespace: {APP_NAMESPACE}
+spec:
+  channel: ggithubcom-stolostron-application-lifecycle-samples-ns/ggithubcom-stolostron-application-lifecycle-samples
+  placement:
+    placementRef:
+      kind: Placement
+      name: {APP_NAME}-placement-1
+---
+apiVersion: cluster.open-cluster-management.io/v1beta1
+kind: Placement
+metadata:
+  labels:
+    app: {APP_NAME}
+  name: {APP_NAME}-placement-1
+  namespace: {APP_NAMESPACE}
+spec:
+  predicates:
+    - requiredClusterSelector:
+        labelSelector:
+          matchExpressions:
+            - key: 'name'
+              operator: In
+              values: ['{CLUSTER_NAME}']
+  clusterSets:
+    - global
+---
+apiVersion: cluster.open-cluster-management.io/v1beta2
+kind: ManagedClusterSetBinding
+metadata:
+  namespace: {APP_NAMESPACE}
+  name: global
+spec:
+  clusterSet: global

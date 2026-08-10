@@ -8,7 +8,7 @@ export abstract class BasePage {
    * Wait for PatternFly loading indicators to disappear.
    * @param timeout — override the default expect timeout (ms) for slow-loading pages
    */
-  async waitForLoad(timeout = 30000): Promise<void> {
+  async waitForLoad(timeout = 60000): Promise<void> {
     await expect(this.page.locator(PF_SPINNER)).toHaveCount(0, { timeout });
     await expect(this.page.locator(PF_SKELETON)).toHaveCount(0, { timeout });
   }

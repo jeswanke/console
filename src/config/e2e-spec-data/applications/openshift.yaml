@@ -1,0 +1,94 @@
+# Native OpenShift applications (Cypress: `Openshift_Application_Test_Suite.cy.js`).
+# Managed-cluster name is injected at runtime via `withOpenshiftClusterName`.
+
+version: 1
+
+profiles:
+  openshift_ocp_templates:
+    specDomains:
+      openshift:
+        helloworldTemplateRelativePath: src/templates/app/openshift/git-helloworld.yaml
+        mortgageTemplateRelativePath: src/templates/app/openshift/git-mortgage.yaml
+
+scenarios:
+  ocp_helloworld_local:
+    enabled: true
+    tests:
+      - RHACM4K-16793
+      - RHACM4K-16795
+      - RHACM4K-45793
+    extends:
+      - openshift_ocp_templates
+    specDomains:
+      openshift:
+        applicationName: helloworld-app-ocp
+        namespace: helloworld-app-ocp-ns
+        deployment: helloworld-app-ocp
+        service: helloworld-app-ocp-svc
+        route: helloworld-app-ocp-route
+        clusterName: local-cluster
+        successNumber: 6
+        topologyIcons:
+          - route
+          - service
+          - replicaset
+
+  ocp_mortgage_edit_local:
+    enabled: true
+    tests:
+      - RHACM4K-16794
+    extends:
+      - openshift_ocp_templates
+    specDomains:
+      openshift:
+        applicationName: helloworld-app-ocp
+        nameEdit: mortgage-app-ocp
+        namespace: helloworld-app-ocp-ns
+        deployment: mortgage-app-ocp
+        service: mortgage-app-ocp-svc
+        route: helloworld-app-ocp-route
+        clusterName: local-cluster
+        successNumber: 7
+        topologyIcons:
+          - route
+          - service
+          - replicaset
+
+  ocp_helloworld_managed:
+    enabled: true
+    tests:
+      - RHACM4K-16796
+    extends:
+      - openshift_ocp_templates
+    specDomains:
+      openshift:
+        applicationName: helloworld-app-ocp
+        namespace: helloworld-app-ocp-ns
+        deployment: helloworld-app-ocp
+        service: helloworld-app-ocp-svc
+        route: helloworld-app-ocp-route
+        successNumber: 6
+        topologyIcons:
+          - route
+          - service
+          - replicaset
+
+  ocp_mortgage_edit_managed:
+    enabled: true
+    tests:
+      - RHACM4K-16797
+    extends:
+      - openshift_ocp_templates
+    specDomains:
+      openshift:
+        applicationName: helloworld-app-ocp
+        nameEdit: mortgage-app-ocp
+        namespace: helloworld-app-ocp-ns
+        deployment: mortgage-app-ocp
+        service: mortgage-app-ocp-svc
+        route: helloworld-app-ocp-route
+        successNumber: 6
+        topologyIcons:
+          - route
+          - service
+          - replicaset

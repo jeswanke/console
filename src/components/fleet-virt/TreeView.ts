@@ -33,4 +33,8 @@ export class TreeView {
   getAllTreeItems(): Locator {
     return this.page.locator('[role="treeitem"]');
   }
+
+  getClusterNode(clusterName: string): Locator {
+    return this.page.locator(`li[id="${FLEET_VIRT_TREE_VIEW.clusterPrefix}/${clusterName}"]`);
+  }
 }

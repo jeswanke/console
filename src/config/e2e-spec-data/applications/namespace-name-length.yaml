@@ -1,0 +1,24 @@
+# Namespace / application name length scenarios (Cypress: `Namespace_Name_Length_Test_Suite.cy.js`).
+# Spec overrides `applicationName` / `namespace` per variant (6883 app names, 6904 namespace names).
+
+version: 1
+
+scenarios:
+  namespace_length_git_base:
+    enabled: true
+    tests:
+      - RHACM4K-6883
+      - RHACM4K-6904
+    blocks:
+      - use:
+          - git_example_k8s_main
+          - git_example_k8s_backend
+          - skip_automation_ansible
+          - placement_label_local
+          - timewindow_active_all_week
+    extends:
+      - subscription_submit
+    specDomains:
+      subscription:
+        applicationName: namespace-length-placeholder
+        namespace: namespace-length-placeholder-ns
