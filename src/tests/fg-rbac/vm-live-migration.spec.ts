@@ -66,7 +66,7 @@ test.describe('FG-RBAC - VM Live Migration', { tag: ['@fg-rbac', '@fleet-virt', 
 
   test('RHACM4K-59217: Single VM live migration from hub to spoke', async ({ page, oc }) => {
     test.skip(!mtvAvailable, 'CCLM prerequisites not met -- requires MTV on hub + CNV on spoke');
-    test.skip(!spokeCluster, 'VIRT_SPOKE_CLUSTER not set');
+    test.skip(!spokeCluster || spokeCluster === 'local-cluster', 'VIRT_SPOKE_CLUSTER not set');
 
     const fleetPage = new FleetVirtPage(page, oc);
     const vmDetails = new VmDetailsPage(page);
