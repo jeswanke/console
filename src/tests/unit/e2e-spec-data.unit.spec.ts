@@ -165,7 +165,9 @@ test.describe('e2e-spec-data YAML processing', () => {
     });
 
     const appExp = resolved.applicationExpectations;
-    expect(appExp.clusterResourcesFlat.every((r) => r.namespace === 'auto-git-multi-ns')).toBe(true);
+    expect(appExp.clusterResourcesFlat.every((r) => r.namespace === 'auto-git-multi-ns')).toBe(
+      true
+    );
     expect(appExp.clusterResourcesFlat).toHaveLength(9);
     expect(appExp.clusterResources).toHaveLength(2);
     expect(appExp.clusterResourcesPerRepo).toHaveLength(2);
@@ -280,7 +282,9 @@ test.describe('e2e-spec-data YAML processing', () => {
       secretName: 'ansible-tower-wizard',
       secretNamespace: 'default',
     });
-    expect(resolved.applicationExpectations?.detailsClustersSummary).toEqual({ variant: 'localOnly' });
+    expect(resolved.applicationExpectations?.detailsClustersSummary).toEqual({
+      variant: 'localOnly',
+    });
     expect(resolved.applicationExpectations?.successMinResourceCount).toBe(4);
     expect(resolved.applicationExpectations?.topologyDeployableResourceTypes).toEqual([
       'configmap',
@@ -321,7 +325,10 @@ test.describe('e2e-spec-data YAML processing', () => {
   });
 
   test('argo_app_table_helloworld_argo_auto: RHACM4K-6902 / 6903 argo push scenario', () => {
-    const resolved = resolveArgoPushScenarioById('argo_app_table_helloworld_argo_auto', E2E_SPEC_DATA_DIR);
+    const resolved = resolveArgoPushScenarioById(
+      'argo_app_table_helloworld_argo_auto',
+      E2E_SPEC_DATA_DIR
+    );
     expect(resolved.argoPush.applicationName).toBe('helloworld-argo-app-auto');
     expect(resolved.argoPush.argoServerLabel).toBe('openshift-gitops');
     expect(resolved.argoPush.destinationNamespace).toBe('helloworld-argo-auto-ns');
@@ -346,7 +353,10 @@ test.describe('e2e-spec-data YAML processing', () => {
   });
 
   test('argo_multisource_git_helm_37185: Git + Helm multi-source scenario', () => {
-    const resolved = resolveArgoPushScenarioById('argo_multisource_git_helm_37185', E2E_SPEC_DATA_DIR);
+    const resolved = resolveArgoPushScenarioById(
+      'argo_multisource_git_helm_37185',
+      E2E_SPEC_DATA_DIR
+    );
     expect(resolved.argoPush.multiSource).toBe(true);
     expect(resolved.argoPush.helm).toMatchObject({
       chartName: 'helloworld-helm',
@@ -358,7 +368,9 @@ test.describe('e2e-spec-data YAML processing', () => {
     const resolved = resolveArgoPushScenarioById('argo_empty_placement_40996', E2E_SPEC_DATA_DIR);
     expect(resolved.argoPush.argoServerLabel).toBe('empty-placement-cluster');
     expect(resolved.argoPush.applicationSetNamespace).toBe('openshift-gitops');
-    expect(resolved.argoPush.setupYamlRelativePath).toBe('src/templates/app/gitops/empty-placement.yaml');
+    expect(resolved.argoPush.setupYamlRelativePath).toBe(
+      'src/templates/app/gitops/empty-placement.yaml'
+    );
   });
 
   test('auto_git_multi: RHACM4K-6902 subscription side uses auto-git-multi', () => {
@@ -375,9 +387,14 @@ test.describe('e2e-spec-data YAML processing', () => {
 
   test('auto_git_placement_topology: helloworld + local placement (RHACM4K-39232)', () => {
     const spec = loadE2eSpecData(E2E_SPEC_DATA_DIR);
-    expect(spec.scenarios.auto_git_placement_topology?.blocks?.[0]?.use).toContain('placement_label_local');
+    expect(spec.scenarios.auto_git_placement_topology?.blocks?.[0]?.use).toContain(
+      'placement_label_local'
+    );
 
-    const resolved = resolveSubscriptionScenarioById('auto_git_placement_topology', E2E_SPEC_DATA_DIR);
+    const resolved = resolveSubscriptionScenarioById(
+      'auto_git_placement_topology',
+      E2E_SPEC_DATA_DIR
+    );
     const sub = resolved.subscription;
 
     expect(sub.applicationName).toBe('api-git-local');
@@ -393,9 +410,14 @@ test.describe('e2e-spec-data YAML processing', () => {
     const spec = loadE2eSpecData(E2E_SPEC_DATA_DIR);
     expect(spec.scenarios.auto_git_helloworld_local?.blocks).toHaveLength(1);
     expect(spec.scenarios.auto_git_helloworld_local?.blocks?.[0]?.use).toContain('git_helloworld');
-    expect(spec.scenarios.auto_git_helloworld_local?.blocks?.[0]?.use).toContain('placement_label_local');
+    expect(spec.scenarios.auto_git_helloworld_local?.blocks?.[0]?.use).toContain(
+      'placement_label_local'
+    );
 
-    const resolved = resolveSubscriptionScenarioById('auto_git_helloworld_local', E2E_SPEC_DATA_DIR);
+    const resolved = resolveSubscriptionScenarioById(
+      'auto_git_helloworld_local',
+      E2E_SPEC_DATA_DIR
+    );
     const sub = resolved.subscription;
 
     expect(sub.submit).toBe(true);
@@ -405,7 +427,9 @@ test.describe('e2e-spec-data YAML processing', () => {
     expect(sub.repositories?.[0]).toMatchObject({ path: 'helloworld', kind: 'git' });
 
     const appExp = resolved.applicationExpectations;
-    expect(appExp.clusterResourcesFlat.every((r) => r.namespace === 'auto-git-helloworld-ns')).toBe(true);
+    expect(appExp.clusterResourcesFlat.every((r) => r.namespace === 'auto-git-helloworld-ns')).toBe(
+      true
+    );
     expect(appExp.clusterResources).toHaveLength(1);
     expect(appExp.clusterResources[0]).toHaveLength(5);
     expect(appExp.topologyClusterResourceBlocks).toHaveLength(1);
@@ -439,10 +463,7 @@ test.describe('e2e-spec-data YAML processing', () => {
         ],
       },
       {
-        clusterResources: [
-          [{ kind: 'C', name: '3', namespace: 'ns' }],
-          [],
-        ],
+        clusterResources: [[{ kind: 'C', name: '3', namespace: 'ns' }], []],
       }
     );
     expect(merged.clusterResources).toEqual([
@@ -737,15 +758,20 @@ test.describe('e2e-spec-data YAML processing', () => {
   });
 
   test('namespace_length_git_base: RHACM4K-6883 git example-k8s-app scenario', () => {
-    const resolved = resolveSubscriptionScenarioById('namespace_length_git_base', E2E_SPEC_DATA_DIR);
+    const resolved = resolveSubscriptionScenarioById(
+      'namespace_length_git_base',
+      E2E_SPEC_DATA_DIR
+    );
     expect(resolved.subscription.repositories[0]).toMatchObject({
       kind: 'git',
       path: 'example-k8s-app',
       branch: 'main',
     });
-    expect(resolved.applicationExpectations.clusterResources[0]!.some((r) => r.namespace === 'lars-sandbox')).toBe(
-      true
-    );
+    expect(
+      resolved.applicationExpectations.clusterResources[0]!.some(
+        (r) => r.namespace === 'lars-sandbox'
+      )
+    ).toBe(true);
   });
 
   test('governance placement-preview.yaml: RHACM4K-64221 policy scenario', () => {

@@ -2,7 +2,7 @@
  * Ansible Automation Platform credentials on Fleet Management → Credentials.
  * Cypress parity: `createAnsibleCredential` / `validateAnsibleCredential` in common.js.
  */
-import { expect } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 import type { CredentialsListPage } from '@pages/app/CredentialsListPage';
 import type { AddCredentialWizardSpec } from '@lib/app/subscription/types';
 
@@ -11,24 +11,25 @@ export type AnsibleTowerCredentialSpec = AddCredentialWizardSpec;
 /** Create an Ansible Tower credential via Credentials → Add → Ansible (RHACM4K-3442). */
 export async function createAnsibleTowerCredentialViaCredentialsTab(
   credentialsPage: CredentialsListPage,
+  page: Page,
   spec: AnsibleTowerCredentialSpec
 ): Promise<void> {
   const { secretName, secretNamespace, ansibleHost, ansibleToken } = spec;
   if (!ansibleHost || !ansibleToken) {
-    throw new Error('createAnsibleTowerCredentialViaCredentialsTab: ansibleHost and ansibleToken are required.');
+    throw new Error(
+      'createAnsibleTowerCredentialViaCredentialsTab: ansibleHost and ansibleToken are required.'
+    );
   }
 
   await credentialsPage.goto();
   await credentialsPage.openAddAnsibleCredentialWizard();
-
-  const page = credentialsPage.getPage();
   await page.locator('#credentialsName').fill(secretName);
   const nsCombo = page.locator('#namespaceName');
   await nsCombo.click();
   await nsCombo.fill(secretNamespace);
   await page.waitForTimeout(500);
   const nsOption = page.getByRole('option', { name: secretNamespace, exact: true }).first();
-  if (await nsOption.isVisible().catch(() => false)) await nsOption.click();
+  if (await nsOption.isVisible()) await nsOption.click();
   await page.getByRole('button', { name: 'Next' }).click();
 
   await page.locator('#ansibleHost').fill(ansibleHost);

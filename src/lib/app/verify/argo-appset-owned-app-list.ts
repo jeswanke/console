@@ -30,7 +30,7 @@ async function readGreenLabelCount(
   const appsetRow = table.getRowByName(applicationSetName);
   const cell = table.getCellByLabel(appsetRow, columnKey);
   const greenLabel = cell.locator('[class*="c-label"][class*="pf-m-green"]');
-  const visible = await greenLabel.isVisible().catch(() => false);
+  const visible = await greenLabel.isVisible();
   if (!visible) return null;
   const text = (await greenLabel.textContent())?.trim() ?? '';
   const count = Number.parseInt(text, 10);
@@ -56,7 +56,11 @@ export async function verifyApplicationSetOwnedAppRowsOnList(
     .poll(
       async () => {
         for (const columnKey of STATUS_COLUMNS) {
-          const count = await readGreenLabelCount(applicationListPage, applicationSetName, columnKey);
+          const count = await readGreenLabelCount(
+            applicationListPage,
+            applicationSetName,
+            columnKey
+          );
           if (count === null || count < 1) return false;
         }
         return true;

@@ -11,9 +11,7 @@ function templatePath(relativePath: string): string {
 }
 
 /** Cypress `requireCreate()` — skip apply on `@post-restore` / `@post-upgrade` grep runs. */
-export function shouldCreateSubscriptionAdminResourcesForRestore(
-  tags: readonly string[]
-): boolean {
+export function shouldCreateSubscriptionAdminResourcesForRestore(tags: readonly string[]): boolean {
   const joined = tags.join(' ');
   return !joined.includes('@post-restore') && !joined.includes('@post-upgrade');
 }

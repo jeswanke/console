@@ -1,9 +1,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { expect } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 
-import { createArgoPushApplicationIfMissing, recreateArgoPushApplication } from '@lib/app/argo-push';
+import {
+  createArgoPushApplicationIfMissing,
+  recreateArgoPushApplication,
+} from '@lib/app/argo-push';
 import type { CreateArgoPushApplicationOptions } from '@lib/app/argo-push/types';
 import { verifyArgoPushAppTopologyTab } from '@lib/app/verify/argo-push-topology-tab';
 import { viewApplicationSetFromRowActions } from '@lib/app/verify/argo-appset-row-actions';
@@ -102,9 +105,7 @@ export async function deleteManagedServiceAccount(
   oc: OcCliService,
   clusterName: string
 ): Promise<void> {
-  await oc.run(
-    `oc delete managedserviceaccount ${MSA_NAME} -n ${clusterName} --ignore-not-found`
-  );
+  await oc.run(`oc delete managedserviceaccount ${MSA_NAME} -n ${clusterName} --ignore-not-found`);
 }
 
 function buildLongLivedSecretOptions(
@@ -129,10 +130,11 @@ async function verifyLongLivedSecretAppsetUi(params: {
   oc: OcCliService;
   applicationListPage: ApplicationListPage;
   applicationDetailsPage: ApplicationDetailsPage;
+  page: Page;
   argoPush: CreateArgoPushApplicationOptions;
   clusterName: string;
 }): Promise<void> {
-  const { applicationListPage, applicationDetailsPage, argoPush, clusterName } = params;
+  const { applicationListPage, applicationDetailsPage, page, argoPush, clusterName } = params;
   const argoServerNamespace = argoPush.applicationSetNamespace ?? argoPush.argoServerLabel;
 
   await viewApplicationSetFromRowActions(
@@ -143,7 +145,7 @@ async function verifyLongLivedSecretAppsetUi(params: {
   await applicationDetailsPage.openDetailTab('topology');
   if (argoPush.clusterResources?.length) {
     await verifyArgoPushAppTopologyTab({
-      page: applicationDetailsPage.getPage(),
+      page,
       detailsPage: applicationDetailsPage,
       applicationSetName: argoPush.applicationName,
       argoServerNamespace,
@@ -173,6 +175,7 @@ export async function runLongLivedSecret54897Scenario(params: {
   applicationListPage: ApplicationListPage;
   applicationDetailsPage: ApplicationDetailsPage;
   argoPushApplicationCreateWizardPage: ArgoPushApplicationCreateWizardPage;
+  page: Page;
   argoPush: CreateArgoPushApplicationOptions;
   clusterName: string;
 }): Promise<void> {
@@ -181,6 +184,7 @@ export async function runLongLivedSecret54897Scenario(params: {
     applicationListPage,
     applicationDetailsPage,
     argoPushApplicationCreateWizardPage: wizard,
+    page,
     argoPush: base,
     clusterName,
   } = params;
@@ -191,11 +195,12 @@ export async function runLongLivedSecret54897Scenario(params: {
   await oc.labelManagedCluster(clusterName, 'name', clusterName);
   await assertApplicationManagerTokensMatch(oc, clusterName);
 
-  await createArgoPushApplicationIfMissing(oc, applicationListPage, wizard, argoPush);
+  await createArgoPushApplicationIfMissing(oc, applicationListPage, wizard, page, argoPush);
   await verifyLongLivedSecretAppsetUi({
     oc,
     applicationListPage,
     applicationDetailsPage,
+    page,
     argoPush,
     clusterName,
   });
@@ -209,6 +214,7 @@ export async function runLongLivedSecret54902Scenario(params: {
   applicationListPage: ApplicationListPage;
   applicationDetailsPage: ApplicationDetailsPage;
   argoPushApplicationCreateWizardPage: ArgoPushApplicationCreateWizardPage;
+  page: Page;
   argoPush: CreateArgoPushApplicationOptions;
   clusterName: string;
   repoRoot: string;
@@ -218,6 +224,7 @@ export async function runLongLivedSecret54902Scenario(params: {
     applicationListPage,
     applicationDetailsPage,
     argoPushApplicationCreateWizardPage: wizard,
+    page,
     argoPush: base,
     clusterName,
     repoRoot,
@@ -228,11 +235,12 @@ export async function runLongLivedSecret54902Scenario(params: {
 
   await oc.labelManagedCluster(clusterName, 'name', clusterName);
 
-  await recreateArgoPushApplication(oc, applicationListPage, wizard, argoPush);
+  await recreateArgoPushApplication(oc, applicationListPage, wizard, page, argoPush);
   await verifyLongLivedSecretAppsetUi({
     oc,
     applicationListPage,
     applicationDetailsPage,
+    page,
     argoPush,
     clusterName,
   });
@@ -246,6 +254,7 @@ export async function runLongLivedSecret54902Scenario(params: {
     oc,
     applicationListPage,
     applicationDetailsPage,
+    page,
     argoPush,
     clusterName,
   });

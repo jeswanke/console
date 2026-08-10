@@ -21,9 +21,7 @@ function renderConsoleUiCopyYaml(kind: ConsoleUiCopyKind): string {
 
   if (kind === 'git') {
     const git = APP_CONSOLE_UI_CHANNEL_COPY.git;
-    yaml = yaml
-      .replaceAll('{APP_BRANCH}', git.branch)
-      .replaceAll('{APP_PATH}', git.path);
+    yaml = yaml.replaceAll('{APP_BRANCH}', git.branch).replaceAll('{APP_PATH}', git.path);
   } else {
     const helm = APP_CONSOLE_UI_CHANNEL_COPY.helm;
     yaml = yaml

@@ -140,7 +140,11 @@ export class ApplicationsTable extends AcmTable {
   /** Select (check) a filter option by label. Opens filter if needed. */
   async selectFilterOption(optionLabel: string): Promise<void> {
     const listbox = this.getFilterListbox();
-    const isOpen = await listbox.getByRole('checkbox').first().isVisible().catch(() => false);
+    const isOpen = await listbox
+      .getByRole('checkbox')
+      .first()
+      .isVisible()
+      .catch(() => false);
     if (!isOpen) {
       await this.openFilter();
     }
@@ -251,7 +255,11 @@ export class ApplicationsTable extends AcmTable {
 
   async selectLabelFilterOption(labelKeyValue: string): Promise<void> {
     const listbox = this.getLabelFilterListbox();
-    const isOpen = await listbox.getByRole('checkbox').first().isVisible().catch(() => false);
+    const isOpen = await listbox
+      .getByRole('checkbox')
+      .first()
+      .isVisible()
+      .catch(() => false);
     if (!isOpen) {
       await this.openLabelFilter();
     }
@@ -469,8 +477,16 @@ export class ApplicationsTable extends AcmTable {
     const deleteInModal = () => modal.getByRole('button', { name: /^Delete$/i });
     await deleteInModal().waitFor({ state: 'visible', timeout: 60_000 });
     if (options.removeRelatedResources) {
-      const removeRelated = this.page.locator(APP_APPLICATION_DELETE.removeRelatedResourcesSelector);
-      if ((await removeRelated.count()) > 0 && (await removeRelated.first().isVisible().catch(() => false))) {
+      const removeRelated = this.page.locator(
+        APP_APPLICATION_DELETE.removeRelatedResourcesSelector
+      );
+      if (
+        (await removeRelated.count()) > 0 &&
+        (await removeRelated
+          .first()
+          .isVisible()
+          .catch(() => false))
+      ) {
         await removeRelated.first().click({ force: true });
       }
     }
@@ -480,7 +496,10 @@ export class ApplicationsTable extends AcmTable {
   }
 
   /** Search must already narrow to this row (or row is visible on the current page). */
-  async deleteApplicationByRow(row: Locator, options?: { removeRelatedResources?: boolean }): Promise<void> {
+  async deleteApplicationByRow(
+    row: Locator,
+    options?: { removeRelatedResources?: boolean }
+  ): Promise<void> {
     const removeRelatedResources = options?.removeRelatedResources !== false;
     await this.openRowActions(row);
     await this.clickDeleteApplicationMenuItem();

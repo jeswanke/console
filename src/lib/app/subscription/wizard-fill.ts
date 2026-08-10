@@ -1,11 +1,8 @@
 /**
  * Internal wizard fill helpers for subscription create/edit flows.
  */
-import { expect, type Locator } from '@playwright/test';
-import {
-
-  type SubscriptionWizardRepositoryCardKind,
-} from '@constants/app';
+import { expect, type Locator, type Page } from '@playwright/test';
+import { type SubscriptionWizardRepositoryCardKind } from '@constants/app';
 import type { SubscriptionApplicationCreateWizardPage } from '@pages/app/SubscriptionApplicationCreateWizardPage';
 
 import type {
@@ -21,7 +18,6 @@ import type {
 import { addAnsibleCredentialViaWizard } from './ansible-credential-wizard';
 import { enableExistingPlacementConfigurationInRepositoryBlock } from './placement-wizard-verify';
 
-
 async function fillIfDefined(locator: Locator, value: string | undefined): Promise<void> {
   if (value === undefined) return;
   if (await locator.isDisabled().catch(() => false)) return;
@@ -33,7 +29,7 @@ async function setCheckboxIfDefined(locator: Locator, checked: boolean | undefin
   const box = locator.first();
   // Placement UI hides some checkboxes depending on mode (e.g. label selector vs local-only).
   // Unchecking false must not wait on a non-existent control — avoids Playwright timeout.
-  const visible = await box.isVisible().catch(() => false);
+  const visible = await box.isVisible();
   if (!visible) {
     if (checked === false) return;
     await box.waitFor({ state: 'visible', timeout: 30_000 });
@@ -57,10 +53,19 @@ async function fillGitRepositoryBlock(
   await fillIfDefined(wizard.getGitUsernameInputInRepositoryBlock(blockIndex), spec.username);
   await fillIfDefined(wizard.getGitPasswordOrTokenInputInRepositoryBlock(blockIndex), spec.token);
   await fillIfDefined(wizard.getGitPathInputInRepositoryBlock(blockIndex), spec.path);
-  await fillIfDefined(wizard.getGitDesiredCommitInputInRepositoryBlock(blockIndex), spec.desiredCommit);
+  await fillIfDefined(
+    wizard.getGitDesiredCommitInputInRepositoryBlock(blockIndex),
+    spec.desiredCommit
+  );
   await fillIfDefined(wizard.getGitTagInputInRepositoryBlock(blockIndex), spec.tag);
-  await fillIfDefined(wizard.getGitReconcileOptionInputInRepositoryBlock(blockIndex), spec.reconcileOption);
-  await fillIfDefined(wizard.getGitReconcileRateInputInRepositoryBlock(blockIndex), spec.reconcileRate);
+  await fillIfDefined(
+    wizard.getGitReconcileOptionInputInRepositoryBlock(blockIndex),
+    spec.reconcileOption
+  );
+  await fillIfDefined(
+    wizard.getGitReconcileRateInputInRepositoryBlock(blockIndex),
+    spec.reconcileRate
+  );
   await setCheckboxIfDefined(
     wizard.getGitDisableAutoReconcileCheckboxInRepositoryBlock(blockIndex),
     spec.disableAutoReconcile
@@ -83,9 +88,18 @@ async function fillHelmRepositoryBlock(
   await fillIfDefined(wizard.getHelmUsernameInputInRepositoryBlock(blockIndex), spec.username);
   await fillIfDefined(wizard.getHelmPasswordInputInRepositoryBlock(blockIndex), spec.password);
   await fillIfDefined(wizard.getHelmChartNameInputInRepositoryBlock(blockIndex), spec.chartName);
-  await fillIfDefined(wizard.getHelmPackageAliasInputInRepositoryBlock(blockIndex), spec.packageAlias);
-  await fillIfDefined(wizard.getHelmPackageVersionInputInRepositoryBlock(blockIndex), spec.packageVersion);
-  await fillIfDefined(wizard.getHelmReconcileRateInputInRepositoryBlock(blockIndex), spec.reconcileRate);
+  await fillIfDefined(
+    wizard.getHelmPackageAliasInputInRepositoryBlock(blockIndex),
+    spec.packageAlias
+  );
+  await fillIfDefined(
+    wizard.getHelmPackageVersionInputInRepositoryBlock(blockIndex),
+    spec.packageVersion
+  );
+  await fillIfDefined(
+    wizard.getHelmReconcileRateInputInRepositoryBlock(blockIndex),
+    spec.reconcileRate
+  );
   await setCheckboxIfDefined(
     wizard.getHelmInsecureSkipVerifyCheckboxInRepositoryBlock(blockIndex),
     spec.insecureSkipVerify
@@ -105,10 +119,19 @@ async function fillObjectStorageRepositoryBlock(
     wizard.getObjectStoreUrlInputInRepositoryBlock(blockIndex),
     spec.url
   );
-  await fillIfDefined(wizard.getObjectStoreAccessKeyInputInRepositoryBlock(blockIndex), spec.accessKey);
-  await fillIfDefined(wizard.getObjectStoreSecretKeyInputInRepositoryBlock(blockIndex), spec.secretKey);
+  await fillIfDefined(
+    wizard.getObjectStoreAccessKeyInputInRepositoryBlock(blockIndex),
+    spec.accessKey
+  );
+  await fillIfDefined(
+    wizard.getObjectStoreSecretKeyInputInRepositoryBlock(blockIndex),
+    spec.secretKey
+  );
   await fillIfDefined(wizard.getObjectStoreRegionInputInRepositoryBlock(blockIndex), spec.region);
-  await fillIfDefined(wizard.getObjectStoreSubfolderInputInRepositoryBlock(blockIndex), spec.subfolder);
+  await fillIfDefined(
+    wizard.getObjectStoreSubfolderInputInRepositoryBlock(blockIndex),
+    spec.subfolder
+  );
 }
 
 async function fillClusterDeployment(
@@ -160,7 +183,11 @@ async function fillClusterDeployment(
       }
       const row = rows[r]!;
       if (row.labelName !== undefined) {
-        await wizard.pickClusterPlacementLabelNameMenuForRepositoryBlockRow(blockIndex, r, row.labelName);
+        await wizard.pickClusterPlacementLabelNameMenuForRepositoryBlockRow(
+          blockIndex,
+          r,
+          row.labelName
+        );
       }
       await fillIfDefined(
         wizard.getClusterPlacementLabelOperatorComboboxForRowInRepositoryBlock(blockIndex, r),
@@ -243,6 +270,7 @@ async function fillTimeWindow(
 
 async function fillAutomation(
   wizard: SubscriptionApplicationCreateWizardPage,
+  page: Page,
   blockIndex: number,
   spec: AutomationSpec
 ): Promise<void> {
@@ -253,9 +281,8 @@ async function fillAutomation(
       .fill(spec.credentialTypeFilter);
   }
   if (spec.addCredentialWizard) {
-    await addAnsibleCredentialViaWizard(wizard, blockIndex, spec.addCredentialWizard);
+    await addAnsibleCredentialViaWizard(wizard, page, blockIndex, spec.addCredentialWizard);
   } else if (spec.existingAnsibleSecret !== undefined) {
-    const page = wizard.getPage();
     const credInput = page.locator('[data-testid="select-connection"]');
     await credInput.scrollIntoViewIfNeeded();
     await credInput.click();
@@ -270,6 +297,7 @@ async function fillAutomation(
 
 export async function applyPerBlockOptions(
   wizard: SubscriptionApplicationCreateWizardPage,
+  page: Page,
   blockIndex: number,
   extras: PerBlockSubscriptionSpec | undefined
 ): Promise<void> {
@@ -285,7 +313,7 @@ export async function applyPerBlockOptions(
     extras.automation?.existingAnsibleSecret !== undefined ||
     extras.automation?.credentialTypeFilter !== undefined
   ) {
-    await fillAutomation(wizard, blockIndex, extras.automation);
+    await fillAutomation(wizard, page, blockIndex, extras.automation);
   }
 }
 
@@ -295,7 +323,10 @@ export async function fillRepositoryBlockBySpec(
   spec: SubscriptionRepositorySpec
 ): Promise<void> {
   await wizard.expandRepositoryTypesSectionForRepositoryBlock(blockIndex);
-  await wizard.selectRepositoryTypeInBlock(blockIndex, spec.kind as SubscriptionWizardRepositoryCardKind);
+  await wizard.selectRepositoryTypeInBlock(
+    blockIndex,
+    spec.kind as SubscriptionWizardRepositoryCardKind
+  );
 
   if (spec.kind === 'git') {
     await fillGitRepositoryBlock(wizard, blockIndex, spec);

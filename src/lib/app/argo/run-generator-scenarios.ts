@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 import { assertGeneratorScenarioYaml } from '@lib/app/argo/generator-yaml-verify';
 import {
@@ -19,6 +19,7 @@ export const GENERATOR_SCENARIO_TIMEOUT_MS = 1_800_000;
 export async function runArgoGeneratorScenariosForTestId(
   testId: string,
   applicationListPage: ApplicationListPage,
+  page: Page,
   pullWizard: ArgoPullApplicationCreateWizardPage
 ): Promise<void> {
   const scenarios = GENERATOR_SCENARIOS_BY_TEST_ID[testId];
@@ -28,20 +29,19 @@ export async function runArgoGeneratorScenariosForTestId(
 
   for (const scenario of scenarios) {
     await test.step(scenario.name, async () => {
-      const page = applicationListPage.getPage();
       await applicationListPage.goto();
       await page.reload({ waitUntil: 'domcontentloaded' });
-      await openArgoPullWizardToGeneratorsStep(applicationListPage, pullWizard);
+      await openArgoPullWizardToGeneratorsStep(applicationListPage, page, pullWizard);
       await ensureFirstArgoGeneratorThenSelectAndFill(
-        pullWizard.getPage(),
+        page,
         scenario.generatorNames,
         scenario.config
       );
 
       if (scenario.hasClusterDecision) {
-        await assertPlacementTabPresent(pullWizard.getPage());
+        await assertPlacementTabPresent(page);
       } else {
-        await assertPlacementTabAbsent(pullWizard.getPage());
+        await assertPlacementTabAbsent(page);
       }
 
       const yamlString = await readArgoPullWizardYaml(pullWizard, {
@@ -49,7 +49,7 @@ export async function runArgoGeneratorScenariosForTestId(
       });
       assertGeneratorScenarioYaml(yamlString, scenario.assertion);
 
-      await exitArgoPullWizardToApplicationsPage(pullWizard);
+      await exitArgoPullWizardToApplicationsPage(pullWizard, page);
       await page.reload({ waitUntil: 'domcontentloaded' });
       await expect(applicationListPage.getPageTitle()).toContainText('Applications', {
         timeout: 30_000,

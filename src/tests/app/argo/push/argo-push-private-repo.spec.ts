@@ -41,11 +41,7 @@ test.describe(
         if (!auth) return;
 
         const { argoPush: options } = resolveArgoPushScenarioByTestId('RHACM4K-63608');
-        const {
-          applicationName,
-          argoServerLabel: argoServerNamespace,
-          git,
-        } = options;
+        const { applicationName, argoServerLabel: argoServerNamespace, git } = options;
 
         await applyPrivateGitRepoSecretToArgo(oc, auth, git!.url);
         await cleanupArgoPushApplication(oc, options);
@@ -67,7 +63,7 @@ test.describe(
         });
 
         await test.step('Create ApplicationSet from private Git repository', async () => {
-          await createArgoPushApplication(applicationListPage, wizard, options);
+          await createArgoPushApplication(applicationListPage, wizard, page, options);
         });
 
         await test.step('Verify post-submit topology URL', async () => {

@@ -43,8 +43,7 @@ test.describe(
       if (!entry) {
         return;
       }
-      managedClusterName =
-        process.env.E2E_MANAGED_CLUSTER_NAME?.trim() || entry.name;
+      managedClusterName = process.env.E2E_MANAGED_CLUSTER_NAME?.trim() || entry.name;
       await applyFluxReposOnCluster(oc, managedClusterName);
     });
 
@@ -55,7 +54,7 @@ test.describe(
     test(
       'RHACM4K-16783: ALC: Verify FluxCD Git Application on managed cluster appears in Applications table and topology',
       { tag: ['@RHACM4K-16783', '@e2e'] },
-      async ({ oc, applicationListPage, applicationDetailsPage }) => {
+      async ({ oc, page, applicationListPage, applicationDetailsPage }) => {
         if (!managedClusterName) return;
         test.setTimeout(600_000);
         const { flux } = resolveFluxScenarioByTestId('RHACM4K-16783');
@@ -70,6 +69,7 @@ test.describe(
         await verifyFluxApplicationInUi({
           applicationListPage,
           applicationDetailsPage,
+          page,
           spec,
         });
         await deleteFluxAppOnCluster(oc, spec, managedClusterName);
@@ -79,7 +79,7 @@ test.describe(
     test(
       'RHACM4K-16784: ALC: Verify FluxCD Helm Application on managed cluster appears in Applications table and topology',
       { tag: ['@RHACM4K-16784', '@e2e'] },
-      async ({ oc, applicationListPage, applicationDetailsPage }) => {
+      async ({ oc, page, applicationListPage, applicationDetailsPage }) => {
         if (!managedClusterName) return;
         test.setTimeout(600_000);
         const { flux } = resolveFluxScenarioByTestId('RHACM4K-16784');
@@ -94,6 +94,7 @@ test.describe(
         await verifyFluxApplicationInUi({
           applicationListPage,
           applicationDetailsPage,
+          page,
           spec,
         });
         await deleteFluxAppOnCluster(oc, spec, managedClusterName);
@@ -103,7 +104,7 @@ test.describe(
     test(
       'RHACM4K-16785: ALC: Verify FluxCD Git Application update after edit is reflected in table and topology',
       { tag: ['@RHACM4K-16785', '@e2e'] },
-      async ({ oc, applicationListPage, applicationDetailsPage }) => {
+      async ({ oc, page, applicationListPage, applicationDetailsPage }) => {
         if (!managedClusterName) return;
         test.setTimeout(900_000);
         const { base, delta } = resolveFluxScenarioPair({
@@ -123,6 +124,7 @@ test.describe(
         await verifyFluxApplicationInUi({
           applicationListPage,
           applicationDetailsPage,
+          page,
           spec: baseSpec,
         });
 
@@ -136,6 +138,7 @@ test.describe(
         await verifyFluxApplicationInUi({
           applicationListPage,
           applicationDetailsPage,
+          page,
           spec: deltaSpec,
         });
         await deleteFluxAppOnCluster(oc, deltaSpec, managedClusterName);
@@ -145,7 +148,7 @@ test.describe(
     test(
       'RHACM4K-16786: ALC: Verify FluxCD Helm Application update after edit is reflected in table and topology',
       { tag: ['@RHACM4K-16786', '@e2e'] },
-      async ({ oc, applicationListPage, applicationDetailsPage }) => {
+      async ({ oc, page, applicationListPage, applicationDetailsPage }) => {
         if (!managedClusterName) return;
         test.setTimeout(900_000);
         const { base, delta } = resolveFluxScenarioPair({
@@ -165,6 +168,7 @@ test.describe(
         await verifyFluxApplicationInUi({
           applicationListPage,
           applicationDetailsPage,
+          page,
           spec: baseSpec,
         });
 
@@ -178,6 +182,7 @@ test.describe(
         await verifyFluxApplicationInUi({
           applicationListPage,
           applicationDetailsPage,
+          page,
           spec: deltaSpec,
         });
         await deleteFluxAppOnCluster(oc, deltaSpec, managedClusterName);
@@ -187,7 +192,7 @@ test.describe(
     test(
       'RHACM4K-16787: ALC: Verify FluxCD Git Application deletion is reflected in Applications table',
       { tag: ['@RHACM4K-16787', '@e2e'] },
-      async ({ oc, applicationListPage, applicationDetailsPage }) => {
+      async ({ oc, page, applicationListPage, applicationDetailsPage }) => {
         if (!managedClusterName) return;
         test.setTimeout(600_000);
         const { flux } = resolveFluxScenarioByTestId('RHACM4K-16787');
@@ -202,6 +207,7 @@ test.describe(
         await verifyFluxApplicationInUi({
           applicationListPage,
           applicationDetailsPage,
+          page,
           spec,
         });
         await deleteFluxAppOnCluster(oc, spec, managedClusterName);
@@ -215,7 +221,7 @@ test.describe(
     test(
       'RHACM4K-16788: ALC: Verify FluxCD Helm Application deletion is reflected in Applications table',
       { tag: ['@RHACM4K-16788', '@e2e'] },
-      async ({ oc, applicationListPage, applicationDetailsPage }) => {
+      async ({ oc, page, applicationListPage, applicationDetailsPage }) => {
         if (!managedClusterName) return;
         test.setTimeout(600_000);
         const { flux } = resolveFluxScenarioByTestId('RHACM4K-16788');
@@ -230,6 +236,7 @@ test.describe(
         await verifyFluxApplicationOverviewTable({ applicationListPage, spec });
         await verifyFluxApplicationTopology({
           applicationDetailsPage,
+          page,
           spec,
         });
         await deleteFluxAppOnCluster(oc, spec, managedClusterName);

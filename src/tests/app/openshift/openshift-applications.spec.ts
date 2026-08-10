@@ -46,7 +46,7 @@ test.describe(
     test(
       'RHACM4K-16793: ALC: Verify OCP Application deployed on Local Cluster is shown in ACM',
       { tag: ['@RHACM4K-16793', '@e2e'] },
-      async ({ oc, applicationListPage, applicationDetailsPage }) => {
+      async ({ oc, page, applicationListPage, applicationDetailsPage }) => {
         test.setTimeout(600_000);
         const { openshift: spec } = resolveOpenshiftScenarioByTestId('RHACM4K-16793');
 
@@ -56,6 +56,7 @@ test.describe(
         await verifyOpenshiftApplicationInUi({
           applicationListPage,
           applicationDetailsPage,
+          page,
           spec,
         });
 
@@ -67,7 +68,7 @@ test.describe(
     test(
       'RHACM4K-16794: ALC: Verify OCP Application deployed on Local Cluster is updated in ACM after Edit',
       { tag: ['@RHACM4K-16794', '@e2e'] },
-      async ({ oc, applicationListPage, applicationDetailsPage }) => {
+      async ({ oc, page, applicationListPage, applicationDetailsPage }) => {
         test.setTimeout(900_000);
         const { base, edit } = resolveOpenshiftScenarioPair({
           baseTestId: 'RHACM4K-16793',
@@ -85,6 +86,7 @@ test.describe(
         await verifyOpenshiftApplicationInUi({
           applicationListPage,
           applicationDetailsPage,
+          page,
           spec: edit.openshift,
         });
 
@@ -114,7 +116,7 @@ test.describe(
     test(
       'RHACM4K-16796: ALC: Verify OCP Application deployed on a Managed Cluster is shown in ACM',
       { tag: ['@e2e', '@RHACM4K-16796'] },
-      async ({ oc, managedClusterContext, applicationListPage, applicationDetailsPage }) => {
+      async ({ oc, page, managedClusterContext, applicationListPage, applicationDetailsPage }) => {
         test.setTimeout(900_000);
         const managedCluster = skipUnlessPrimaryManagedCluster(
           test,
@@ -134,6 +136,7 @@ test.describe(
         await verifyOpenshiftApplicationInUi({
           applicationListPage,
           applicationDetailsPage,
+          page,
           spec,
           clusterName: managedClusterName,
         });
@@ -143,12 +146,7 @@ test.describe(
     test(
       'RHACM4K-16797: ALC: Verify OCP Application deployed on a Managed Cluster is updated in ACM after Edit',
       { tag: ['@RHACM4K-16797', '@e2e'] },
-      async ({
-        oc,
-        managedClusterContext,
-        applicationListPage,
-        applicationDetailsPage,
-      }) => {
+      async ({ oc, page, managedClusterContext, applicationListPage, applicationDetailsPage }) => {
         test.setTimeout(900_000);
         const managedCluster = skipUnlessPrimaryManagedCluster(
           test,
@@ -175,6 +173,7 @@ test.describe(
         await verifyOpenshiftApplicationInUi({
           applicationListPage,
           applicationDetailsPage,
+          page,
           spec: mortgageSpec,
           clusterName: managedClusterName,
         });
@@ -229,7 +228,7 @@ test.describe(
       {
         tag: ['@RHACM4K-45793', '@e2e', '@pre-restore', '@post-restore', '@create'],
       },
-      async ({ oc, applicationListPage, applicationDetailsPage }) => {
+      async ({ oc, page, applicationListPage, applicationDetailsPage }) => {
         test.setTimeout(600_000);
         const { openshift: spec } = resolveOpenshiftScenarioByTestId('RHACM4K-45793');
         const tags = test.info().tags;
@@ -243,6 +242,7 @@ test.describe(
         await verifyOpenshiftApplicationInUi({
           applicationListPage,
           applicationDetailsPage,
+          page,
           spec,
         });
 

@@ -58,13 +58,13 @@ async function pickCreatableComboboxOption(
 ): Promise<void> {
   await combobox.click();
   const option = page.getByRole('option', { name: value }).first();
-  if (await option.isVisible().catch(() => false)) {
+  if (await option.isVisible()) {
     await option.click();
     return;
   }
   await combobox.fill(value);
   const optionAfterType = page.getByRole('option', { name: value }).first();
-  if (await optionAfterType.isVisible().catch(() => false)) {
+  if (await optionAfterType.isVisible()) {
     await optionAfterType.click();
   } else {
     await combobox.press('Enter');
@@ -84,7 +84,7 @@ async function pickGitPathOption(page: Page, path: string): Promise<void> {
   });
   await pathCombo.click();
   const pathOption = page.getByRole('option', { name: path }).first();
-  if (await pathOption.isVisible().catch(() => false)) {
+  if (await pathOption.isVisible()) {
     await pathOption.click();
   } else {
     await pathCombo.fill(path);

@@ -1,7 +1,4 @@
-import {
-  ansibleScaleSuiteSchema,
-  type AnsibleScaleSuitePayload,
-} from './ansibleScaleSchema';
+import { ansibleScaleSuiteSchema, type AnsibleScaleSuitePayload } from './ansibleScaleSchema';
 import { loadE2eSpecData } from '../../io/loadSpec';
 
 const SUITE_PROFILE = 'ansible_scale_suite';
@@ -11,7 +8,9 @@ export function resolveAnsibleScaleSuiteConfig(configPath?: string): AnsibleScal
   const spec = loadE2eSpecData(configPath);
   const profile = spec.profiles[SUITE_PROFILE];
   if (!profile) {
-    throw new Error(`e2e-spec-data: missing profile "${SUITE_PROFILE}" for ansible scale suite prep`);
+    throw new Error(
+      `e2e-spec-data: missing profile "${SUITE_PROFILE}" for ansible scale suite prep`
+    );
   }
   const overlay = (profile.specDomains as Record<string, unknown> | undefined)?.ansibleScaleSuite;
   if (!overlay || typeof overlay !== 'object' || Object.keys(overlay).length === 0) {

@@ -55,12 +55,15 @@ export function buildPlacementDecisionNodeDataId(params: {
   return topologyPlacementDecisionDataId(params.namespace, placementName);
 }
 
-
 export function topologyClusterHubDataId(clusterName: string, subscriptionCrName: string): string {
   return `member--clusters--${clusterName}--${subscriptionCrName}`;
 }
 
-function deployedResourcePrefix(clusterName: string, subscriptionCrName: string, namespace: string): string {
+function deployedResourcePrefix(
+  clusterName: string,
+  subscriptionCrName: string,
+  namespace: string
+): string {
   return `member--deployed-resource--member--clusters--${clusterName}--${subscriptionCrName}--${namespace}--`;
 }
 
@@ -161,10 +164,18 @@ export function buildTopologyNodeDataIdsForSubscriptionBlock(params: {
       ids.push(topologyDeployedServiceDataId(cluster, subName, params.namespace, row.name));
     } else if (k === 'replicaset') {
       if (!deploymentName) {
-        throw new Error('topology-graph: ReplicaSet row requires a Deployment row in the same block');
+        throw new Error(
+          'topology-graph: ReplicaSet row requires a Deployment row in the same block'
+        );
       }
       ids.push(
-        topologyDeployedReplicaSetDataId(cluster, subName, params.namespace, deploymentName, row.name)
+        topologyDeployedReplicaSetDataId(
+          cluster,
+          subName,
+          params.namespace,
+          deploymentName,
+          row.name
+        )
       );
     } else if (k === 'pod') {
       if (!deploymentName || !replicaSetName) {
@@ -204,7 +215,10 @@ export function expectedTopologyDrawerContains(nodeDataId: string): string | Reg
   if (nodeDataId.includes('member--rules--')) {
     return 'Type: PlacementDecision';
   }
-  if (nodeDataId.includes('member--clusters--') && !nodeDataId.includes('member--deployed-resource--')) {
+  if (
+    nodeDataId.includes('member--clusters--') &&
+    !nodeDataId.includes('member--deployed-resource--')
+  ) {
     return /Clusters \(\d+\)/;
   }
   if (nodeDataId.includes('--pod--')) {
@@ -259,7 +273,11 @@ export function dedupeTopologyNodeDataIds(dataIds: string[]): string[] {
 export function buildMergedTopologyNodeDataIdsForSubscriptionBlocks(params: {
   applicationName: string;
   namespace: string;
-  blocks: { blockIndex: number; clusterName?: string; clusterResourceRows: TopologyClusterResourceRef[] }[];
+  blocks: {
+    blockIndex: number;
+    clusterName?: string;
+    clusterResourceRows: TopologyClusterResourceRef[];
+  }[];
 }): string[] {
   const merged: string[] = [];
   for (const b of params.blocks) {
@@ -279,7 +297,11 @@ export function buildMergedTopologyNodeDataIdsForSubscriptionBlocks(params: {
 export function buildMergedTopologyDrawerSpotChecksForSubscriptionBlocks(params: {
   applicationName: string;
   namespace: string;
-  blocks: { blockIndex: number; clusterName?: string; clusterResourceRows: TopologyClusterResourceRef[] }[];
+  blocks: {
+    blockIndex: number;
+    clusterName?: string;
+    clusterResourceRows: TopologyClusterResourceRef[];
+  }[];
 }): { nodeDataId: string; drawerContains: string | RegExp }[] {
   const seen = new Set<string>();
   const out: { nodeDataId: string; drawerContains: string | RegExp }[] = [];

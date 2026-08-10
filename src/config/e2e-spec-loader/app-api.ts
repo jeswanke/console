@@ -23,7 +23,9 @@ function requireSubscriptionScenario(
   context: string
 ): ResolvedSubscriptionAppScenario {
   if (resolved.domain !== 'subscription') {
-    throw new Error(`e2e-spec-data: expected subscription scenario for ${context}, got "${resolved.domain}"`);
+    throw new Error(
+      `e2e-spec-data: expected subscription scenario for ${context}, got "${resolved.domain}"`
+    );
   }
   return resolved;
 }
@@ -33,7 +35,9 @@ function requireArgoPushScenario(
   context: string
 ): ResolvedArgoPushAppScenario {
   if (resolved.domain !== 'argoPush') {
-    throw new Error(`e2e-spec-data: expected argoPush scenario for ${context}, got "${resolved.domain}"`);
+    throw new Error(
+      `e2e-spec-data: expected argoPush scenario for ${context}, got "${resolved.domain}"`
+    );
   }
   return resolved;
 }
@@ -43,7 +47,9 @@ function requireOpenshiftScenario(
   context: string
 ): ResolvedOpenshiftAppScenario {
   if (resolved.domain !== 'openshift') {
-    throw new Error(`e2e-spec-data: expected openshift scenario for ${context}, got "${resolved.domain}"`);
+    throw new Error(
+      `e2e-spec-data: expected openshift scenario for ${context}, got "${resolved.domain}"`
+    );
   }
   return resolved;
 }
@@ -53,15 +59,14 @@ function requireFluxScenario(
   context: string
 ): ResolvedFluxAppScenario {
   if (resolved.domain !== 'flux') {
-    throw new Error(`e2e-spec-data: expected flux scenario for ${context}, got "${resolved.domain}"`);
+    throw new Error(
+      `e2e-spec-data: expected flux scenario for ${context}, got "${resolved.domain}"`
+    );
   }
   return resolved;
 }
 
-function resolveScenarioByTestIdInternal(
-  testId: string,
-  configPath?: string
-): ResolvedAppScenario {
+function resolveScenarioByTestIdInternal(testId: string, configPath?: string): ResolvedAppScenario {
   const spec = loadE2eSpecData(configPath);
   const scenarioIds = findScenarioIdsByTestId(spec, testId);
   if (scenarioIds.length === 0) {
@@ -75,10 +80,7 @@ function resolveScenarioByTestIdInternal(
   return buildResolvedAppScenario(spec, scenarioIds[0]!);
 }
 
-function resolveScenarioByIdInternal(
-  scenarioId: string,
-  configPath?: string
-): ResolvedAppScenario {
+function resolveScenarioByIdInternal(scenarioId: string, configPath?: string): ResolvedAppScenario {
   const spec = loadE2eSpecData(configPath);
   if (!spec.scenarios[scenarioId]) {
     throw new Error(`e2e-spec-data: scenario not found: "${scenarioId}"`);
@@ -90,10 +92,7 @@ function resolveScenarioByIdInternal(
  * Resolves a Polarion / matrix **test id** to a single application scenario.
  * @throws if zero or more than one enabled scenario matches.
  */
-export function resolveScenarioByTestId(
-  testId: string,
-  configPath?: string
-): ResolvedAppScenario {
+export function resolveScenarioByTestId(testId: string, configPath?: string): ResolvedAppScenario {
   return resolveScenarioByTestIdInternal(testId, configPath);
 }
 
@@ -109,10 +108,7 @@ export function resolveSubscriptionScenarioByTestId(
 }
 
 /** Resolves a YAML **scenario id** (e.g. `auto_git_add_subscription_base`). */
-export function resolveScenarioById(
-  scenarioId: string,
-  configPath?: string
-): ResolvedAppScenario {
+export function resolveScenarioById(scenarioId: string, configPath?: string): ResolvedAppScenario {
   return resolveScenarioByIdInternal(scenarioId, configPath);
 }
 

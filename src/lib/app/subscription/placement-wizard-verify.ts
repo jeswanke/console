@@ -15,10 +15,7 @@ function escapeRegExpForMenuLabel(s: string): string {
 }
 
 function getOpenSelectMenu(page: Page): Locator {
-  return page
-    .locator('[role="listbox"]:visible')
-    .or(page.locator('.pf-v6-c-menu:visible'))
-    .first();
+  return page.locator('[role="listbox"]:visible').or(page.locator('.pf-v6-c-menu:visible')).first();
 }
 
 function getOpenSelectMenuOptionMatches(page: Page, optionText: string): Locator {

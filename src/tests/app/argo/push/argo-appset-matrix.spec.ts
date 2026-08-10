@@ -8,7 +8,6 @@ import { expect } from '@playwright/test';
 import { APP_ARGO_MATRIX_APPSET } from '@constants/app';
 import {
   applyArgoMatrixAppsetSetup,
-
   prepareMatrixManagedClusterNamespaces,
   verifyArgoMatrixAppsetInUi,
   waitForMatrixDeployedNamespaces,
@@ -51,11 +50,9 @@ test.describe(
         managedClusterName,
         APP_ARGO_MATRIX_APPSET.destinationNamespaces
       );
-      await waitForMatrixDeployedNamespaces(
-        oc,
-        managedClusterName,
-        [...APP_ARGO_MATRIX_APPSET.destinationNamespaces]
-      );
+      await waitForMatrixDeployedNamespaces(oc, managedClusterName, [
+        ...APP_ARGO_MATRIX_APPSET.destinationNamespaces,
+      ]);
     });
 
     // test.afterAll(async ({ oc }) => {
@@ -65,9 +62,10 @@ test.describe(
     test(
       'RHACM4K-58916: ALC: Create matrix ApplicationSet, verify applications and topology',
       { tag: ['@RHACM4K-58916', '@e2e', '@applicationset'] },
-      async ({ applicationListPage, applicationDetailsPage }) => {
+      async ({ page, applicationListPage, applicationDetailsPage }) => {
         test.setTimeout(600_000);
         await verifyArgoMatrixAppsetInUi({
+          page,
           applicationListPage,
           applicationDetailsPage,
           clusterName: managedClusterName,

@@ -1,7 +1,4 @@
-import type {
-  AnsibleScaleFixturePayload,
-  AnsibleScaleSuitePayload,
-} from '@config';
+import type { AnsibleScaleFixturePayload, AnsibleScaleSuitePayload } from '@config';
 import type { OcCliService } from '@services/OcCliService';
 import {
   applyYamlTemplate,

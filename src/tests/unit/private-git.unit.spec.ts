@@ -3,7 +3,12 @@
  */
 import path from 'path';
 import { expect, test } from '@playwright/test';
-import { clearE2eSpecDataCache, resolveArgoPushScenarioByTestId, resolveSubscriptionScenarioById, resolveSubscriptionScenarioByTestId } from '@config';
+import {
+  clearE2eSpecDataCache,
+  resolveArgoPushScenarioByTestId,
+  resolveSubscriptionScenarioById,
+  resolveSubscriptionScenarioByTestId,
+} from '@config';
 import {
   applyPrivateGitAuthToSubscriptionOptions,
   getPrivateGitAuthFromEnv,

@@ -1,4 +1,4 @@
-import { expect, type Locator } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 
 import { APP_FILTER } from '@constants/app';
 import type { CreateOpenshiftApplicationOptions } from '@lib/app/openshift/types';
@@ -47,11 +47,16 @@ export async function verifyOpenshiftApplicationOverviewTable(params: {
 /** OpenShift topology tab (`?apiVersion=ocp&cluster=…`). */
 export async function verifyOpenshiftApplicationTopology(params: {
   applicationDetailsPage: ApplicationDetailsPage;
+  page: Page;
   spec: CreateOpenshiftApplicationOptions;
   clusterName?: string;
 }): Promise<void> {
-  const { applicationDetailsPage, spec, clusterName = spec.clusterName ?? LOCAL_CLUSTER } = params;
-  const page = applicationDetailsPage.getPage();
+  const {
+    applicationDetailsPage,
+    page,
+    spec,
+    clusterName = spec.clusterName ?? LOCAL_CLUSTER,
+  } = params;
 
   await applicationDetailsPage.gotoOpenshiftTopology(
     spec.namespace,
@@ -62,18 +67,24 @@ export async function verifyOpenshiftApplicationTopology(params: {
   await expect(applicationDetailsPage.getApplicationHeading()).toHaveText(spec.applicationName);
 
   const surface = applicationDetailsPage.getTopologySurface();
-  await expect(surface.locator(`[data-id="${topologyApplicationDataId(spec.applicationName)}"]`)).toBeVisible({
+  await expect(
+    surface.locator(`[data-id="${topologyApplicationDataId(spec.applicationName)}"]`)
+  ).toBeVisible({
     timeout: 120_000,
   });
 
   for (const resourceType of spec.topologyIcons) {
-    await expect(surface.locator(`use[href="#nodeIcon_${resourceType}"]`).first()).toBeVisible({ timeout: 120_000 });
+    await expect(surface.locator(`use[href="#nodeIcon_${resourceType}"]`).first()).toBeVisible({
+      timeout: 120_000,
+    });
   }
 
   await applicationDetailsPage.openDetailTab('details');
   await expect(applicationDetailsPage.getApplicationHeading()).toHaveText(spec.applicationName);
 
-  const successLabels = page.locator('.pf-m-green [class*="c-label__content"], .pf-m-green[class*="c-label"]');
+  const successLabels = page.locator(
+    '.pf-m-green [class*="c-label__content"], .pf-m-green[class*="c-label"]'
+  );
   await expect
     .poll(async () => largestNumericLabelInSuccessLabels(successLabels), {
       timeout: 300_000,
@@ -92,6 +103,7 @@ async function largestNumericLabelInSuccessLabels(labels: Locator): Promise<numb
 export async function verifyOpenshiftApplicationInUi(params: {
   applicationListPage: ApplicationListPage;
   applicationDetailsPage: ApplicationDetailsPage;
+  page: Page;
   spec: CreateOpenshiftApplicationOptions;
   clusterName?: string;
 }): Promise<void> {

@@ -57,7 +57,7 @@ export class PlacementTolerationsActions extends BasePage {
 
   async expandTolerationFieldGroup(group: Locator): Promise<void> {
     const keyInput = group.getByLabel(PLACEMENT_TOLERATIONS_UI.labels.key);
-    if (await keyInput.isVisible().catch(() => false)) return;
+    if (await keyInput.isVisible()) return;
     const toggle = group.locator('.pf-v6-c-form__field-group-toggle button').first();
     await toggle.click({ force: true });
     await keyInput.waitFor({ state: 'visible', timeout: 15_000 });
@@ -99,10 +99,7 @@ export class PlacementTolerationsActions extends BasePage {
   }
 
   getTolerationSecondsInput(group: Locator): Locator {
-    return group
-      .getByRole('spinbutton')
-      .or(group.locator('input[type="number"]'))
-      .first();
+    return group.getByRole('spinbutton').or(group.locator('input[type="number"]')).first();
   }
 
   async fillTolerationSeconds(group: Locator, seconds: string): Promise<void> {
@@ -115,9 +112,7 @@ export class PlacementTolerationsActions extends BasePage {
   }
 
   async removeTolerationFieldGroup(group: Locator): Promise<void> {
-    await group
-      .getByLabel(PLACEMENT_TOLERATIONS_UI.removeItemAriaLabel)
-      .click({ force: true });
+    await group.getByLabel(PLACEMENT_TOLERATIONS_UI.removeItemAriaLabel).click({ force: true });
     await this.waitForLoad();
   }
 

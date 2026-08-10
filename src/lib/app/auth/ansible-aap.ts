@@ -92,8 +92,8 @@ export function getAnsibleAapAuthFromEnv(): AnsibleAapEnvResult {
   }
 
   const missing: AnsibleAapEnvMissing['missing'] = [];
-  if (!(process.env[ENV_ANSIBLE_URL]?.trim())) missing.push(ENV_ANSIBLE_URL);
-  if (!(process.env[ENV_ANSIBLE_TOKEN]?.trim())) missing.push(ENV_ANSIBLE_TOKEN);
+  if (!process.env[ENV_ANSIBLE_URL]?.trim()) missing.push(ENV_ANSIBLE_URL);
+  if (!process.env[ENV_ANSIBLE_TOKEN]?.trim()) missing.push(ENV_ANSIBLE_TOKEN);
 
   return {
     configured: false,

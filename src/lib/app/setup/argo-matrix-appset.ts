@@ -1,6 +1,6 @@
 import path from 'node:path';
 
-import { expect } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 
 import { APP_ARGO_MATRIX_APPSET } from '@constants/app';
 import { verifyArgoPushAppTopologyTab } from '@lib/app/verify/argo-push-topology-tab';
@@ -52,11 +52,14 @@ export async function waitForMatrixDeployedNamespaces(
     await oc.useContext(managedClusterName);
     for (const ns of namespaces) {
       await expect
-        .poll(async () => {
-          const svc = await oc.run(`oc get service -n ${ns} --no-headers 2>/dev/null || true`);
-          const dep = await oc.run(`oc get deployment -n ${ns} --no-headers 2>/dev/null || true`);
-          return svc.includes('helloworld-app-svc') && dep.includes('helloworld-app-deploy');
-        }, { timeout: 300_000, intervals: [5_000, 10_000] })
+        .poll(
+          async () => {
+            const svc = await oc.run(`oc get service -n ${ns} --no-headers 2>/dev/null || true`);
+            const dep = await oc.run(`oc get deployment -n ${ns} --no-headers 2>/dev/null || true`);
+            return svc.includes('helloworld-app-svc') && dep.includes('helloworld-app-deploy');
+          },
+          { timeout: 300_000, intervals: [5_000, 10_000] }
+        )
         .toBe(true);
     }
   } finally {
@@ -67,9 +70,15 @@ export async function waitForMatrixDeployedNamespaces(
 export async function verifyArgoMatrixAppsetInUi(params: {
   applicationListPage: ApplicationListPage;
   applicationDetailsPage: ApplicationDetailsPage;
+  page: Page;
   clusterName?: string;
 }): Promise<void> {
-  const { applicationListPage, applicationDetailsPage, clusterName = 'local-cluster' } = params;
+  const {
+    applicationListPage,
+    applicationDetailsPage,
+    page,
+    clusterName = 'local-cluster',
+  } = params;
   const { applicationSetName, argoServerNamespace, destinationNamespaces, clusterResources } =
     APP_ARGO_MATRIX_APPSET;
 
@@ -81,7 +90,7 @@ export async function verifyArgoMatrixAppsetInUi(params: {
   await applicationDetailsPage.openDetailTab('topology');
   for (const destinationNamespace of destinationNamespaces) {
     await verifyArgoPushAppTopologyTab({
-      page: applicationDetailsPage.getPage(),
+      page,
       detailsPage: applicationDetailsPage,
       applicationSetName,
       argoServerNamespace,

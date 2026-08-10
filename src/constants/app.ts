@@ -309,7 +309,11 @@ export const APP_TABLE_MANAGE_COLUMNS = {
   /** Hidden until enabled in the dialog. */
   defaultUnchecked: [APP_TABLE_COLUMNS.created] as const,
   /** Required columns — checkbox disabled in the dialog. */
-  required: [APP_TABLE_COLUMNS.name, APP_TABLE_COLUMNS.namespace, APP_TABLE_COLUMNS.clusters] as const,
+  required: [
+    APP_TABLE_COLUMNS.name,
+    APP_TABLE_COLUMNS.namespace,
+    APP_TABLE_COLUMNS.clusters,
+  ] as const,
   /** Optional columns — can be toggled off. */
   optional: [
     APP_TABLE_COLUMNS.type,
@@ -1075,7 +1079,8 @@ export const APP_SUBSCRIPTION_WIZARD_UNDEFINED_LABEL_HELP_TEXT = {
 export type AppSubscriptionCreateWizardHelpPopoverId =
   keyof typeof APP_SUBSCRIPTION_CREATE_WIZARD_HELP_POPOVER_TEXT;
 
-export type SubscriptionWizardRepositoryCardKind = keyof typeof APP_SUBSCRIPTION_WIZARD_UNDEFINED_LABEL_HELP_TEXT;
+export type SubscriptionWizardRepositoryCardKind =
+  keyof typeof APP_SUBSCRIPTION_WIZARD_UNDEFINED_LABEL_HELP_TEXT;
 
 /**
  * Returns expected English popover body for a **More info** button id, or `undefined` if not recorded.
@@ -1169,10 +1174,7 @@ export function subscriptionRepositoryBlockTestIdSuffix(blockIndex: number): str
  * Full `data-testid` for a **base** id from {@link APP_SUBSCRIPTION_CREATE_WIZARD.testIds} (git / helm / objectStorage / placement)
  * in the given repository block (`0` = first; unsuffixed).
  */
-export function subscriptionRepositoryDataTestId(
-  baseTestId: string,
-  blockIndex: number
-): string {
+export function subscriptionRepositoryDataTestId(baseTestId: string, blockIndex: number): string {
   const suffix = subscriptionRepositoryBlockTestIdSuffix(blockIndex);
   return suffix ? `${baseTestId}${suffix}` : baseTestId;
 }
@@ -1235,7 +1237,9 @@ export function subscriptionWizardClusterDeploymentSectionToggleId(blockIndex: n
 /**
  * **`#id`** for the **Repository types** accordion (`channel-repository-types` vs `channelgrp1-repository-types`, …).
  */
-export function subscriptionWizardChannelRepositoryTypesSectionToggleId(blockIndex: number): string {
+export function subscriptionWizardChannelRepositoryTypesSectionToggleId(
+  blockIndex: number
+): string {
   if (blockIndex <= 0) {
     return APP_SUBSCRIPTION_CREATE_WIZARD.sectionToggles.repositoryTypes;
   }
@@ -1278,7 +1282,9 @@ export function subscriptionWizardClusterSelectorLabelDomIds(
  * **`#ansibleSecretName{N}-label`** focus target used in ALC flows for **additional** subscription blocks (`blockIndex >= 1`).
  * May appear only after expanding automation for that block (depends on hub / flow).
  */
-export function subscriptionAutomationAnsibleSecretNameLabelId(blockIndex: number): string | undefined {
+export function subscriptionAutomationAnsibleSecretNameLabelId(
+  blockIndex: number
+): string | undefined {
   if (blockIndex <= 0) return undefined;
   return `ansibleSecretName${blockIndex}-label`;
 }

@@ -42,7 +42,7 @@ test.describe(
     test(
       'RHACM4K-38202: ALC: Topology and app table display correctly for pull model',
       { tag: ['@RHACM4K-38202'] },
-      async ({ oc, applicationListPage, applicationDetailsPage, managedClusterContext }) => {
+      async ({ page, oc, applicationListPage, applicationDetailsPage, managedClusterContext }) => {
         test.setTimeout(900_000);
         const managedCluster = skipUnlessPrimaryManagedCluster(
           test,
@@ -54,7 +54,11 @@ test.describe(
           process.env.E2E_MANAGED_CLUSTER_NAME?.trim() || managedCluster.name;
         const { argoPush: options } = resolveArgoPushScenarioByTestId('RHACM4K-38202');
 
-        await setupArgoPullDestinationNamespace(oc, managedClusterName, options.destinationNamespace);
+        await setupArgoPullDestinationNamespace(
+          oc,
+          managedClusterName,
+          options.destinationNamespace
+        );
         await applyPullModelIncludeLocalGitAppSet(oc, options);
         await waitForPullModelMcasrSyncedAndHealthy(oc, options, managedClusterName);
 
@@ -63,8 +67,12 @@ test.describe(
           options,
           managedClusterName,
         });
-        await openArgoPullApplicationFromOverviewTable(applicationListPage, options.applicationName);
+        await openArgoPullApplicationFromOverviewTable(
+          applicationListPage,
+          options.applicationName
+        );
         await verifyArgoPullApplicationTopology({
+          page,
           applicationDetailsPage,
           options,
           managedClusterName,
@@ -74,6 +82,7 @@ test.describe(
         if (hubTargeted) {
           await verifyArgoPullHubTopologyWarning(
             applicationDetailsPage,
+            page,
             options.applicationName,
             APP_ARGO_PULL_TOPOLOGY_WARNINGS.hubClusterNotSupported
           );
@@ -91,12 +100,14 @@ test.describe(
             options.applicationName
           );
           await verifyArgoPullApplicationTopology({
+            page,
             applicationDetailsPage,
             options,
             managedClusterName,
           });
           await verifyArgoPullHubTopologyWarning(
             applicationDetailsPage,
+            page,
             options.applicationName,
             APP_ARGO_PULL_TOPOLOGY_WARNINGS.localClusterNotSupported,
             { expectAbsent: true }
@@ -111,6 +122,7 @@ test.describe(
       'RHACM4K-42703: ALC: Git Pull model type application set can be created successfully on UI',
       { tag: ['@RHACM4K-42703'] },
       async ({
+        page,
         oc,
         applicationListPage,
         applicationDetailsPage,
@@ -129,8 +141,12 @@ test.describe(
         const { argoPush: options } = resolveArgoPushScenarioByTestId('RHACM4K-42703');
 
         await cleanupArgoPullApplication(oc, options);
-        await setupArgoPullDestinationNamespace(oc, managedClusterName, options.destinationNamespace);
-        await createArgoPullApplication(applicationListPage, pullWizard, options);
+        await setupArgoPullDestinationNamespace(
+          oc,
+          managedClusterName,
+          options.destinationNamespace
+        );
+        await createArgoPullApplication(applicationListPage, pullWizard, page, options);
         await waitForPullModelMcasrSyncedAndHealthy(oc, options, managedClusterName);
 
         await verifyArgoPullApplicationOverviewTable({
@@ -139,8 +155,12 @@ test.describe(
           managedClusterName,
           assertStatusGreenCounts: true,
         });
-        await openArgoPullApplicationFromOverviewTable(applicationListPage, options.applicationName);
+        await openArgoPullApplicationFromOverviewTable(
+          applicationListPage,
+          options.applicationName
+        );
         await verifyArgoPullApplicationTopology({
+          page,
           applicationDetailsPage,
           options,
           managedClusterName,
@@ -156,6 +176,7 @@ test.describe(
       'RHACM4K-42705: ALC: Helm Pull model type application set can be created successfully on UI',
       { tag: ['@RHACM4K-42705'] },
       async ({
+        page,
         oc,
         applicationListPage,
         applicationDetailsPage,
@@ -174,8 +195,12 @@ test.describe(
         const { argoPush: options } = resolveArgoPushScenarioByTestId('RHACM4K-42705');
 
         await cleanupArgoPullApplication(oc, options);
-        await setupArgoPullDestinationNamespace(oc, managedClusterName, options.destinationNamespace);
-        await createArgoPullApplication(applicationListPage, pullWizard, options);
+        await setupArgoPullDestinationNamespace(
+          oc,
+          managedClusterName,
+          options.destinationNamespace
+        );
+        await createArgoPullApplication(applicationListPage, pullWizard, page, options);
         await waitForPullModelMcasrSyncedAndHealthy(oc, options, managedClusterName, {
           timeout: 300_000,
         });
@@ -185,8 +210,12 @@ test.describe(
           options,
           managedClusterName,
         });
-        await openArgoPullApplicationFromOverviewTable(applicationListPage, options.applicationName);
+        await openArgoPullApplicationFromOverviewTable(
+          applicationListPage,
+          options.applicationName
+        );
         await verifyArgoPullApplicationTopology({
+          page,
           applicationDetailsPage,
           options,
           managedClusterName,
@@ -201,12 +230,7 @@ test.describe(
     test(
       'RHACM4K-60049: ALC: Sync Argo CD Pull Model ApplicationSet on Console',
       { tag: ['@RHACM4K-60049'] },
-      async ({
-        oc,
-        applicationListPage,
-        applicationDetailsPage,
-        managedClusterContext,
-      }) => {
+      async ({ oc, applicationListPage, applicationDetailsPage, managedClusterContext }) => {
         test.setTimeout(900_000);
         const managedCluster = skipUnlessPrimaryManagedCluster(
           test,

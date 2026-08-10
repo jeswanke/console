@@ -42,7 +42,11 @@ import {
   waitForPlacementDecisionClusterCount,
 } from '../topology/drawer-poll';
 
-type MergedTopologyBlock = { blockIndex: number; clusterName?: string; clusterResourceRows: TopologyClusterResourceRef[] };
+type MergedTopologyBlock = {
+  blockIndex: number;
+  clusterName?: string;
+  clusterResourceRows: TopologyClusterResourceRef[];
+};
 
 function resolveGraphBlocksFromMerge(
   merged: MergedTopologyBlock[],
@@ -84,7 +88,11 @@ export type VerifySubscriptionAppTopologyTabParams = {
   clusterName?: string;
   blockIndex?: number;
   clusterResourceRows?: TopologyClusterResourceRef[];
-  mergedSubscriptionBlocks?: { blockIndex: number; clusterName?: string; clusterResourceRows: TopologyClusterResourceRef[] }[];
+  mergedSubscriptionBlocks?: {
+    blockIndex: number;
+    clusterName?: string;
+    clusterResourceRows: TopologyClusterResourceRef[];
+  }[];
   /** 1-based block indices for multi-sub graph scope. */
   topologyMergeBlockIndices?: number[];
   subscriptionScope?: TopologySubscriptionScopeParam;
@@ -337,7 +345,8 @@ export async function verifyPlacementDecisionTopologyDrawer(
         { timeout: 15_000 }
       );
     } catch {
-      if (!oc) throw new Error('clusterSet UI assertion failed and no `oc` was provided for fallback');
+      if (!oc)
+        throw new Error('clusterSet UI assertion failed and no `oc` was provided for fallback');
       const sets = await oc.getPlacementClusterSets(namespace, placementCrName);
       expect(sets).toContain(expectation.clusterSet);
     }

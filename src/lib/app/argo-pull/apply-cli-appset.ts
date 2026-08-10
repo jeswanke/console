@@ -67,7 +67,11 @@ export async function applyPullModelPlacementExcludeLocalCluster(
 ): Promise<void> {
   const argoServerNamespace = options.applicationSetNamespace ?? options.argoServerLabel;
   const raw = fs.readFileSync(pullModelTemplatePath(PLACEMENT_EXCLUDE_TEMPLATE), 'utf8');
-  const yaml = substitutePlacementExcludeTemplate(raw, options.applicationName, argoServerNamespace);
+  const yaml = substitutePlacementExcludeTemplate(
+    raw,
+    options.applicationName,
+    argoServerNamespace
+  );
   await oc.run(`oc apply -f - <<'EOF'\n${yaml}\nEOF`);
 }
 

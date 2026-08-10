@@ -31,24 +31,37 @@ export async function expectHelmApplicationApiResourcesReady(
   namespace: string
 ): Promise<void> {
   await expect
-    .poll(async () => {
-      const apps = await oc.getNamespacedResourceList('applications.app', namespace).catch(() => '');
-      return apps.includes(applicationName);
-    }, { timeout: 180_000, intervals: [5_000, 10_000] })
+    .poll(
+      async () => {
+        const apps = await oc
+          .getNamespacedResourceList('applications.app', namespace)
+          .catch(() => '');
+        return apps.includes(applicationName);
+      },
+      { timeout: 180_000, intervals: [5_000, 10_000] }
+    )
     .toBe(true);
 
   await expect
-    .poll(async () => {
-      const subs = await oc.getNamespacedResourceList('subscription', namespace).catch(() => '');
-      return subs.includes(`${applicationName}-subscription-1`);
-    }, { timeout: 180_000, intervals: [5_000, 10_000] })
+    .poll(
+      async () => {
+        const subs = await oc.getNamespacedResourceList('subscription', namespace).catch(() => '');
+        return subs.includes(`${applicationName}-subscription-1`);
+      },
+      { timeout: 180_000, intervals: [5_000, 10_000] }
+    )
     .toBe(true);
 
   await expect
-    .poll(async () => {
-      const placements = await oc.getNamespacedResourceList('placement', namespace).catch(() => '');
-      return placements.includes(`${applicationName}-placement-1`);
-    }, { timeout: 180_000, intervals: [5_000, 10_000] })
+    .poll(
+      async () => {
+        const placements = await oc
+          .getNamespacedResourceList('placement', namespace)
+          .catch(() => '');
+        return placements.includes(`${applicationName}-placement-1`);
+      },
+      { timeout: 180_000, intervals: [5_000, 10_000] }
+    )
     .toBe(true);
 }
 
@@ -59,10 +72,15 @@ export async function expectNamespaceDeployableResources(
 ): Promise<void> {
   for (const kind of ['service', 'deployment', 'replicaset', 'pod'] as const) {
     await expect
-      .poll(async () => {
-        const out = await oc.run(`oc get ${kind} -n ${namespace} --no-headers 2>/dev/null || true`);
-        return out.includes(resourceStem);
-      }, { timeout: 300_000, intervals: [5_000, 10_000] })
+      .poll(
+        async () => {
+          const out = await oc.run(
+            `oc get ${kind} -n ${namespace} --no-headers 2>/dev/null || true`
+          );
+          return out.includes(resourceStem);
+        },
+        { timeout: 300_000, intervals: [5_000, 10_000] }
+      )
       .toBe(true);
   }
 }
@@ -75,10 +93,13 @@ export async function expectManagedClusterRouteReady(
 ): Promise<void> {
   await withManagedClusterContext(oc, managedClusterName, async () => {
     await expect
-      .poll(async () => {
-        const out = await oc.run(`oc get route -n ${namespace} --no-headers 2>/dev/null || true`);
-        return out.includes(routeName);
-      }, { timeout: 300_000, intervals: [5_000, 10_000] })
+      .poll(
+        async () => {
+          const out = await oc.run(`oc get route -n ${namespace} --no-headers 2>/dev/null || true`);
+          return out.includes(routeName);
+        },
+        { timeout: 300_000, intervals: [5_000, 10_000] }
+      )
       .toBe(true);
   });
 }

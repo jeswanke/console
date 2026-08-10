@@ -44,7 +44,10 @@ export async function applyObjectAddSubscriptionYaml(oc: OcCliService): Promise<
   await applyRenderedYaml(oc, yaml);
 }
 
-export async function applyObjectKustomizeAppYaml(oc: OcCliService, auth: ObjectStoreAuth): Promise<void> {
+export async function applyObjectKustomizeAppYaml(
+  oc: OcCliService,
+  auth: ObjectStoreAuth
+): Promise<void> {
   const pathname = auth.privateUrl.endsWith('/alc-kustomization-app')
     ? auth.privateUrl
     : `${auth.privateUrl.replace(/\/$/, '')}/alc-kustomization-app`;
@@ -80,24 +83,37 @@ export async function expectObjectApplicationApiResourcesReady(
   namespace: string
 ): Promise<void> {
   await expect
-    .poll(async () => {
-      const apps = await oc.getNamespacedResourceList('applications.app', namespace).catch(() => '');
-      return apps.includes(applicationName);
-    }, { timeout: 180_000, intervals: [5_000, 10_000] })
+    .poll(
+      async () => {
+        const apps = await oc
+          .getNamespacedResourceList('applications.app', namespace)
+          .catch(() => '');
+        return apps.includes(applicationName);
+      },
+      { timeout: 180_000, intervals: [5_000, 10_000] }
+    )
     .toBe(true);
 
   await expect
-    .poll(async () => {
-      const subs = await oc.getNamespacedResourceList('subscription', namespace).catch(() => '');
-      return subs.includes(`${applicationName}-subscription-1`);
-    }, { timeout: 180_000, intervals: [5_000, 10_000] })
+    .poll(
+      async () => {
+        const subs = await oc.getNamespacedResourceList('subscription', namespace).catch(() => '');
+        return subs.includes(`${applicationName}-subscription-1`);
+      },
+      { timeout: 180_000, intervals: [5_000, 10_000] }
+    )
     .toBe(true);
 
   await expect
-    .poll(async () => {
-      const placements = await oc.getNamespacedResourceList('placement', namespace).catch(() => '');
-      return placements.includes(`${applicationName}-placement-1`);
-    }, { timeout: 180_000, intervals: [5_000, 10_000] })
+    .poll(
+      async () => {
+        const placements = await oc
+          .getNamespacedResourceList('placement', namespace)
+          .catch(() => '');
+        return placements.includes(`${applicationName}-placement-1`);
+      },
+      { timeout: 180_000, intervals: [5_000, 10_000] }
+    )
     .toBe(true);
 }
 
@@ -109,12 +125,15 @@ export async function expectAppsubPhase(
   timeoutMs = 300_000
 ): Promise<void> {
   await expect
-    .poll(async () => {
-      const out = await oc.run(
-        `oc get appsub -n ${namespace} ${appsubName} -o jsonpath='{.status.phase}' 2>/dev/null || true`
-      );
-      return out.trim();
-    }, { timeout: timeoutMs, intervals: [5_000, 10_000] })
+    .poll(
+      async () => {
+        const out = await oc.run(
+          `oc get appsub -n ${namespace} ${appsubName} -o jsonpath='{.status.phase}' 2>/dev/null || true`
+        );
+        return out.trim();
+      },
+      { timeout: timeoutMs, intervals: [5_000, 10_000] }
+    )
     .toBe(phase);
 }
 
@@ -124,14 +143,19 @@ export async function expectHelloworldDeployablesInNamespace(
 ): Promise<void> {
   for (const kind of ['deployment', 'service', 'route'] as const) {
     await expect
-      .poll(async () => {
-        const out = await oc.run(`oc get ${kind} -n ${namespace} --no-headers 2>/dev/null || true`);
-        return (
-          out.includes('helloworld-app-deploy') ||
-          out.includes('helloworld-app-svc') ||
-          out.includes('helloworld-app-route')
-        );
-      }, { timeout: 180_000, intervals: [5_000, 10_000] })
+      .poll(
+        async () => {
+          const out = await oc.run(
+            `oc get ${kind} -n ${namespace} --no-headers 2>/dev/null || true`
+          );
+          return (
+            out.includes('helloworld-app-deploy') ||
+            out.includes('helloworld-app-svc') ||
+            out.includes('helloworld-app-route')
+          );
+        },
+        { timeout: 180_000, intervals: [5_000, 10_000] }
+      )
       .toBe(true);
   }
 }
@@ -160,14 +184,17 @@ export async function expectObjectTlsBadCertPropagationFailed(
 ): Promise<void> {
   await expectAppsubPhase(oc, namespace, appsubName, 'PropagationFailed');
   await expect
-    .poll(async () => {
-      const reason = await oc.run(
-        `oc get appsub -n ${namespace} ${appsubName} -o jsonpath='{.status.reason}' 2>/dev/null || true`
-      );
-      return reason.includes(
-        'tls: failed to verify certificate: x509: certificate signed by unknown authority'
-      );
-    }, { timeout: 180_000, intervals: [5_000, 10_000] })
+    .poll(
+      async () => {
+        const reason = await oc.run(
+          `oc get appsub -n ${namespace} ${appsubName} -o jsonpath='{.status.reason}' 2>/dev/null || true`
+        );
+        return reason.includes(
+          'tls: failed to verify certificate: x509: certificate signed by unknown authority'
+        );
+      },
+      { timeout: 180_000, intervals: [5_000, 10_000] }
+    )
     .toBe(true);
 }
 
@@ -185,10 +212,15 @@ export async function expectObjectKustomizeResourcesReady(
   expect(emptyNs).toContain('No resources found');
 
   await expect
-    .poll(async () => {
-      const out = await oc.run(`oc get pvc -n ${resourcesNamespace} --no-headers 2>/dev/null || true`);
-      return out.includes('example-data-claim');
-    }, { timeout: 300_000, intervals: [5_000, 10_000] })
+    .poll(
+      async () => {
+        const out = await oc.run(
+          `oc get pvc -n ${resourcesNamespace} --no-headers 2>/dev/null || true`
+        );
+        return out.includes('example-data-claim');
+      },
+      { timeout: 300_000, intervals: [5_000, 10_000] }
+    )
     .toBe(true);
 
   for (const [kind, name] of [
@@ -196,10 +228,15 @@ export async function expectObjectKustomizeResourcesReady(
     ['service', 'example'],
   ] as const) {
     await expect
-      .poll(async () => {
-        const out = await oc.run(`oc get ${kind} -n ${resourcesNamespace} --no-headers 2>/dev/null || true`);
-        return out.includes(name);
-      }, { timeout: 300_000, intervals: [5_000, 10_000] })
+      .poll(
+        async () => {
+          const out = await oc.run(
+            `oc get ${kind} -n ${resourcesNamespace} --no-headers 2>/dev/null || true`
+          );
+          return out.includes(name);
+        },
+        { timeout: 300_000, intervals: [5_000, 10_000] }
+      )
       .toBe(true);
   }
 }
@@ -244,10 +281,13 @@ export async function expectManagedClusterRouteReady(
 ): Promise<void> {
   await withManagedClusterContext(oc, managedClusterName, async () => {
     await expect
-      .poll(async () => {
-        const out = await oc.run(`oc get route -n ${namespace} --no-headers 2>/dev/null || true`);
-        return out.includes(routeName);
-      }, { timeout: 300_000, intervals: [5_000, 10_000] })
+      .poll(
+        async () => {
+          const out = await oc.run(`oc get route -n ${namespace} --no-headers 2>/dev/null || true`);
+          return out.includes(routeName);
+        },
+        { timeout: 300_000, intervals: [5_000, 10_000] }
+      )
       .toBe(true);
   });
 }
@@ -259,10 +299,15 @@ export async function expectNamespaceDeployableResources(
 ): Promise<void> {
   for (const kind of ['service', 'deployment', 'replicaset', 'pod'] as const) {
     await expect
-      .poll(async () => {
-        const out = await oc.run(`oc get ${kind} -n ${namespace} --no-headers 2>/dev/null || true`);
-        return out.includes(resourceStem);
-      }, { timeout: 300_000, intervals: [5_000, 10_000] })
+      .poll(
+        async () => {
+          const out = await oc.run(
+            `oc get ${kind} -n ${namespace} --no-headers 2>/dev/null || true`
+          );
+          return out.includes(resourceStem);
+        },
+        { timeout: 300_000, intervals: [5_000, 10_000] }
+      )
       .toBe(true);
   }
 }

@@ -1,6 +1,7 @@
 /**
  * Cypress `before` / `afterEach` for Argo_App_Table_Test_Suite (6902 / 6903 shared apps).
  */
+import type { Page } from '@playwright/test';
 import { resolveArgoPushScenarioById, resolveSubscriptionScenarioById } from '@config';
 import { createArgoPushApplicationIfMissing } from '@lib/app/argo-push';
 import type { CreateArgoPushApplicationOptions } from '@lib/app/argo-push/types';
@@ -46,6 +47,7 @@ export async function ensureArgoAppTableFixtures(params: {
   applicationListPage: ApplicationListPage;
   argoPushApplicationCreateWizardPage: ArgoPushApplicationCreateWizardPage;
   subscriptionApplicationCreateWizardPage: SubscriptionApplicationCreateWizardPage;
+  page: Page;
 }): Promise<{
   argoPush: CreateArgoPushApplicationOptions;
   subscription: CreateSubscriptionOptions;
@@ -55,6 +57,7 @@ export async function ensureArgoAppTableFixtures(params: {
     applicationListPage,
     argoPushApplicationCreateWizardPage,
     subscriptionApplicationCreateWizardPage,
+    page,
   } = params;
   const { argoPush } = resolveArgoPushScenarioById('argo_app_table_helloworld_argo_auto');
   const { subscription } = resolveSubscriptionScenarioById('auto_git_multi');
@@ -69,6 +72,7 @@ export async function ensureArgoAppTableFixtures(params: {
     oc,
     applicationListPage,
     argoPushApplicationCreateWizardPage,
+    page,
     argoPush
   );
 
@@ -81,6 +85,7 @@ export async function ensureArgoAppTableFixtures(params: {
     await createSubscription(
       applicationListPage,
       subscriptionApplicationCreateWizardPage,
+      page,
       subscription
     );
   }

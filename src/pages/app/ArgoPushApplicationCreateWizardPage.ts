@@ -9,7 +9,11 @@ import {
   type AppArgoPushCreateWizardStepId,
 } from '@constants/app';
 import type { ApplicationListPage } from '@pages/app/ApplicationListPage';
-import type { ArgoPushPlacementLabelExpression, ArgoPushGitRepositorySpec, ArgoPushHelmRepositorySpec } from '@lib/app/argo-push/types';
+import type {
+  ArgoPushPlacementLabelExpression,
+  ArgoPushGitRepositorySpec,
+  ArgoPushHelmRepositorySpec,
+} from '@lib/app/argo-push/types';
 import {
   fillArgoAppsetWizardBeforePlacement,
   type FillArgoAppsetBeforePlacementOptions,
@@ -40,7 +44,10 @@ function reviewFieldAccessibleNamePattern(fieldLabel: string | RegExp): RegExp {
  * **Entry:** Applications list → {@link APP_CREATE_MENU.optionIds.argoPushModel}.
  * Pull model: {@link ArgoPullApplicationCreateWizardPage} + {@link APP_ARGO_PULL_CREATE_WIZARD}.
  */
-export class ArgoPushApplicationCreateWizardPage extends BasePage implements PlacementTolerationsWizardHost {
+export class ArgoPushApplicationCreateWizardPage
+  extends BasePage
+  implements PlacementTolerationsWizardHost
+{
   readonly tolerations: PlacementTolerationsActions;
   readonly syncEditor: SyncEditorYamlActions;
   readonly placementPreview: ArgoPlacementPreviewActions;
@@ -205,7 +212,11 @@ export class ArgoPushApplicationCreateWizardPage extends BasePage implements Pla
 
   getDestinationNamespaceInput(): Locator {
     return this.byIdSuffix(APP_ARGO_PUSH_CREATE_WIZARD.template.destinationInputIdSuffix)
-      .or(this.page.getByPlaceholder(APP_ARGO_PUSH_CREATE_WIZARD.template.destinationNamespacePlaceholder))
+      .or(
+        this.page.getByPlaceholder(
+          APP_ARGO_PUSH_CREATE_WIZARD.template.destinationNamespacePlaceholder
+        )
+      )
       .or(this.page.getByRole('textbox', { name: /Remote namespace/i }));
   }
 
@@ -213,10 +224,7 @@ export class ArgoPushApplicationCreateWizardPage extends BasePage implements Pla
   getPrivateRepoCredentialsAlert(): Locator {
     const { title } = APP_ARGO_PUSH_CREATE_WIZARD.template.privateRepoCredentialsAlert;
     // PF6 info alerts expose copy via heading ("Info alert: …"), not role="alert" on the root.
-    return this.page
-      .locator('[class*="c-alert"]')
-      .filter({ hasText: title })
-      .first();
+    return this.page.locator('[class*="c-alert"]').filter({ hasText: title }).first();
   }
 
   getConfigureRepositoryCredentialsButton(): Locator {
@@ -228,7 +236,8 @@ export class ArgoPushApplicationCreateWizardPage extends BasePage implements Pla
   }
 
   async expectPrivateRepoCredentialsAlertVisible(): Promise<void> {
-    const { title, messageSnippet } = APP_ARGO_PUSH_CREATE_WIZARD.template.privateRepoCredentialsAlert;
+    const { title, messageSnippet } =
+      APP_ARGO_PUSH_CREATE_WIZARD.template.privateRepoCredentialsAlert;
     const alert = this.getPrivateRepoCredentialsAlert();
     await expect(alert).toBeVisible({ timeout: 60_000 });
     await expect(alert).toContainText(title);
@@ -295,7 +304,9 @@ export class ArgoPushApplicationCreateWizardPage extends BasePage implements Pla
   }
 
   getReviewSearchInput(): Locator {
-    return this.getReviewPane().getByPlaceholder(APP_ARGO_PUSH_CREATE_WIZARD.review.searchPlaceholder);
+    return this.getReviewPane().getByPlaceholder(
+      APP_ARGO_PUSH_CREATE_WIZARD.review.searchPlaceholder
+    );
   }
 
   getReviewCollapseAllButton(): Locator {
@@ -317,11 +328,15 @@ export class ArgoPushApplicationCreateWizardPage extends BasePage implements Pla
   }
 
   getSyncEditorMonacoTextarea(): Locator {
-    return this.page.locator(APP_ARGO_PUSH_CREATE_WIZARD.review.syncEditorMonacoTextareaSelector).first();
+    return this.page
+      .locator(APP_ARGO_PUSH_CREATE_WIZARD.review.syncEditorMonacoTextareaSelector)
+      .first();
   }
 
   getSyncEditorToolbarSearchButton(): Locator {
-    return this.page.locator(`#${APP_ARGO_PUSH_CREATE_WIZARD.review.syncEditorToolbarSearchButtonId}`);
+    return this.page.locator(
+      `#${APP_ARGO_PUSH_CREATE_WIZARD.review.syncEditorToolbarSearchButtonId}`
+    );
   }
 
   /**
@@ -396,10 +411,7 @@ export class ArgoPushApplicationCreateWizardPage extends BasePage implements Pla
   }
 
   /** Field row scoped to a review section (avoids cross-section label collisions). */
-  getReviewFieldRowInSection(
-    sectionLabel: string,
-    fieldLabel: string | RegExp
-  ): Locator {
+  getReviewFieldRowInSection(sectionLabel: string, fieldLabel: string | RegExp): Locator {
     return this.getReviewFieldRowInScope(this.getReviewSectionRegion(sectionLabel), fieldLabel);
   }
 
@@ -462,7 +474,7 @@ export class ArgoPushApplicationCreateWizardPage extends BasePage implements Pla
 
   async isYamlPanelExpanded(): Promise<boolean> {
     const yaml = this.getYamlSwitch();
-    if (!(await yaml.isVisible().catch(() => false))) return false;
+    if (!(await yaml.isVisible())) return false;
     return yaml.isChecked();
   }
 
@@ -515,7 +527,7 @@ export class ArgoPushApplicationCreateWizardPage extends BasePage implements Pla
       name: APP_ARGO_PUSH_CREATE_WIZARD.placement.operatorComboboxLabel,
     });
 
-    if (await operatorCombobox.isVisible().catch(() => false)) {
+    if (await operatorCombobox.isVisible()) {
       await this.pickComboboxOption(operatorCombobox, optionPattern);
       return;
     }
@@ -539,8 +551,7 @@ export class ArgoPushApplicationCreateWizardPage extends BasePage implements Pla
 
   async fillPlacementLabelExpression(expression: ArgoPushPlacementLabelExpression): Promise<void> {
     const { labelName, labelValues } = expression;
-    const operatorPattern =
-      APP_ARGO_PUSH_CREATE_WIZARD.placement.operatorInMenuLabel;
+    const operatorPattern = APP_ARGO_PUSH_CREATE_WIZARD.placement.operatorInMenuLabel;
 
     await this.getLabelExpressionsRegion().scrollIntoViewIfNeeded();
     await this.getAddLabelExpressionButton().waitFor({ state: 'visible', timeout: 60_000 });
@@ -562,16 +573,15 @@ export class ArgoPushApplicationCreateWizardPage extends BasePage implements Pla
   }
 
   async expectOnReviewStep(): Promise<void> {
-    await expect(this.getWizardStepButton(APP_ARGO_PUSH_CREATE_WIZARD.steps.review)).toHaveAttribute(
-      'aria-current',
-      'step'
-    );
+    await expect(
+      this.getWizardStepButton(APP_ARGO_PUSH_CREATE_WIZARD.steps.review)
+    ).toHaveAttribute('aria-current', 'step');
     await expect(this.getReviewPane()).toBeVisible({ timeout: 60_000 });
   }
 
   /** Restore Review + YAML for follow-on checks when a prior action left another step active. */
   async ensureOnReviewStepWithYamlExpanded(): Promise<void> {
-    if (!(await this.getReviewPane().isVisible().catch(() => false))) {
+    if (!(await this.getReviewPane().isVisible())) {
       await this.clickWizardStep(APP_ARGO_PUSH_CREATE_WIZARD.steps.review);
       await this.expectOnReviewStep();
     }
@@ -587,7 +597,9 @@ export class ArgoPushApplicationCreateWizardPage extends BasePage implements Pla
     await this.getWizardStepButton(stepId).click();
     await this.waitForLoad();
     if (stepId === APP_ARGO_PUSH_CREATE_WIZARD.steps.placement) {
-      await this.tolerations.getTolerationsSectionHeading().waitFor({ state: 'visible', timeout: 60_000 });
+      await this.tolerations
+        .getTolerationsSectionHeading()
+        .waitFor({ state: 'visible', timeout: 60_000 });
     }
   }
 
@@ -636,18 +648,21 @@ export class ArgoPushApplicationCreateWizardPage extends BasePage implements Pla
 
     const namedOption = this.page.getByRole('option', { name: value }).first();
     await expect
-      .poll(async () => {
-        if (await namedOption.isVisible().catch(() => false)) return 'named';
-        const options = this.page.getByRole('option');
-        const count = await options.count();
-        if (count === 0) return false;
-        const firstText = ((await options.first().innerText()) ?? '').toLowerCase();
-        if (firstText.includes('no results')) return false;
-        return 'first';
-      }, { timeout: 60_000 })
+      .poll(
+        async () => {
+          if (await namedOption.isVisible()) return 'named';
+          const options = this.page.getByRole('option');
+          const count = await options.count();
+          if (count === 0) return false;
+          const firstText = ((await options.first().innerText()) ?? '').toLowerCase();
+          if (firstText.includes('no results')) return false;
+          return 'first';
+        },
+        { timeout: 60_000 }
+      )
       .not.toBe(false);
 
-    if (await namedOption.isVisible().catch(() => false)) {
+    if (await namedOption.isVisible()) {
       await namedOption.click();
     } else {
       await this.page.getByRole('option').first().click();
@@ -661,7 +676,7 @@ export class ArgoPushApplicationCreateWizardPage extends BasePage implements Pla
   async pickCreatableComboboxValue(combobox: Locator, value: string): Promise<void> {
     await combobox.click();
     const option = this.page.getByRole('option', { name: value }).first();
-    if (await option.isVisible().catch(() => false)) {
+    if (await option.isVisible()) {
       await option.click();
     } else {
       await combobox.fill(value);
@@ -681,7 +696,7 @@ export class ArgoPushApplicationCreateWizardPage extends BasePage implements Pla
   async pickGitPathOptionInCombobox(pathCombo: Locator, path: string): Promise<void> {
     await pathCombo.click();
     const pathOption = this.page.getByRole('option', { name: path }).first();
-    if (await pathOption.isVisible().catch(() => false)) {
+    if (await pathOption.isVisible()) {
       await pathOption.click();
     } else {
       await pathCombo.fill(path);
@@ -716,10 +731,7 @@ export class ArgoPushApplicationCreateWizardPage extends BasePage implements Pla
     return this.page.getByRole('button').filter({ hasText: 'Add another repository' });
   }
 
-  private getRepositoryTypeControlInSection(
-    section: Locator,
-    type: 'git' | 'helm'
-  ): Locator {
+  private getRepositoryTypeControlInSection(section: Locator, type: 'git' | 'helm'): Locator {
     const tileSelector = type === 'git' ? '#tile-git' : '#tile-helm';
     const tile = section.locator(`#repositorytype-form-group ${tileSelector}`);
     const cardText =
@@ -738,7 +750,7 @@ export class ArgoPushApplicationCreateWizardPage extends BasePage implements Pla
   /** **Template** step — Git repository type (PF6 card, legacy tile; never the hidden radio input). */
   async selectGitRepositoryTypeOnTemplate(): Promise<void> {
     const card = this.getGitRepositoryTypeCard();
-    if (await card.isVisible().catch(() => false)) {
+    if (await card.isVisible()) {
       await card.scrollIntoViewIfNeeded();
       await card.click();
       await this.waitForLoad();
@@ -754,7 +766,7 @@ export class ArgoPushApplicationCreateWizardPage extends BasePage implements Pla
   /** **Template** step — Helm repository type (PF6 card, legacy tile). */
   async selectHelmRepositoryTypeOnTemplate(): Promise<void> {
     const card = this.getHelmRepositoryTypeCard();
-    if (await card.isVisible().catch(() => false)) {
+    if (await card.isVisible()) {
       await card.scrollIntoViewIfNeeded();
       await card.click();
       await this.waitForLoad();
@@ -769,7 +781,7 @@ export class ArgoPushApplicationCreateWizardPage extends BasePage implements Pla
 
   async selectGitRepositoryTypeInSection(section: Locator): Promise<void> {
     const card = this.getRepositoryTypeControlInSection(section, 'git');
-    if ((await card.count()) > 0 && (await card.first().isVisible().catch(() => false))) {
+    if ((await card.count()) > 0 && (await card.first().isVisible())) {
       await card.first().scrollIntoViewIfNeeded();
       await card.first().click();
     } else {
@@ -780,7 +792,7 @@ export class ArgoPushApplicationCreateWizardPage extends BasePage implements Pla
 
   async selectHelmRepositoryTypeInSection(section: Locator): Promise<void> {
     const card = this.getRepositoryTypeControlInSection(section, 'helm');
-    if ((await card.count()) > 0 && (await card.first().isVisible().catch(() => false))) {
+    if ((await card.count()) > 0 && (await card.first().isVisible())) {
       await card.first().scrollIntoViewIfNeeded();
       await card.first().click();
     } else {
@@ -804,7 +816,9 @@ export class ArgoPushApplicationCreateWizardPage extends BasePage implements Pla
 
   private getGitRevisionComboboxInSection(section: Locator): Locator {
     return section
-      .getByRole('combobox', { name: APP_ARGO_PUSH_CREATE_WIZARD.template.gitRevisionComboboxLabel })
+      .getByRole('combobox', {
+        name: APP_ARGO_PUSH_CREATE_WIZARD.template.gitRevisionComboboxLabel,
+      })
       .or(this.getGitRevisionCombobox())
       .first();
   }
@@ -834,8 +848,7 @@ export class ArgoPushApplicationCreateWizardPage extends BasePage implements Pla
     type: 'git' | 'helm'
   ): Promise<boolean> {
     if (type === 'git') {
-      const hasGitCombo =
-        (await section.getByRole('combobox', { name: /Git URL/i }).count()) > 0;
+      const hasGitCombo = (await section.getByRole('combobox', { name: /Git URL/i }).count()) > 0;
       const hasGitHeading = (await section.getByText(/Git repository/i).count()) > 0;
       const hasLegacyTile = (await section.locator('#tile-git').count()) > 0;
       return hasGitCombo || hasGitHeading || hasLegacyTile;
@@ -919,9 +932,7 @@ export class ArgoPushApplicationCreateWizardPage extends BasePage implements Pla
 
     const repoUrlCombo = this.page.getByRole('combobox', { name: /Git URL/i }).last();
     await this.pickPfComboboxByTyping(repoUrlCombo, git.url);
-    const revisionCombo = this.page
-      .getByRole('combobox', { name: /tracking revision/i })
-      .last();
+    const revisionCombo = this.page.getByRole('combobox', { name: /tracking revision/i }).last();
     if (git.branch) {
       await this.pickPfComboboxByTyping(revisionCombo, git.branch);
     } else {
@@ -994,7 +1005,9 @@ export class ArgoPushApplicationCreateWizardPage extends BasePage implements Pla
   }
 
   async expectOnCreateRoute(): Promise<void> {
-    await expect(this.page).toHaveURL(new RegExp(`${APP_ROUTES.createArgoPush.replace(/\//g, '\\/')}$`));
+    await expect(this.page).toHaveURL(
+      new RegExp(`${APP_ROUTES.createArgoPush.replace(/\//g, '\\/')}$`)
+    );
   }
 
   /** General → Sync policy, then **Placement** (RHACM4K-64219). */
@@ -1003,9 +1016,14 @@ export class ArgoPushApplicationCreateWizardPage extends BasePage implements Pla
     await this.waitForLoad();
   }
 
-  async gotoApplicationSetOverview(argoServerNamespace: string, applicationSetName: string): Promise<void> {
+  async gotoApplicationSetOverview(
+    argoServerNamespace: string,
+    applicationSetName: string
+  ): Promise<void> {
     const consoleUrl = await this.oc.getConsoleUrl();
-    await this.page.goto(`${consoleUrl}${APP_ROUTES.argoPushTopology(argoServerNamespace, applicationSetName)}`);
+    await this.page.goto(
+      `${consoleUrl}${APP_ROUTES.argoPushTopology(argoServerNamespace, applicationSetName)}`
+    );
     await this.waitForLoad();
   }
 

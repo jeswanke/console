@@ -30,6 +30,7 @@ test.describe(
       'RHACM4K-6772: ALC: View deployed Argo appsets via row action View',
       { tag: ['@RHACM4K-6772', '@e2e'] },
       async ({
+        page,
         oc,
         applicationListPage,
         applicationDetailsPage,
@@ -46,6 +47,7 @@ test.describe(
           oc,
           applicationListPage,
           argoPushApplicationCreateWizardPage,
+          page,
           argoPush
         );
         await viewApplicationSetFromRowActions(
@@ -59,11 +61,7 @@ test.describe(
     test(
       'RHACM4K-6774: ALC: Search from row action for Argo AppSet',
       { tag: ['@RHACM4K-6774', '@e2e'] },
-      async ({
-        oc,
-        applicationListPage,
-        argoPushApplicationCreateWizardPage,
-      }) => {
+      async ({ page, oc, applicationListPage, argoPushApplicationCreateWizardPage }) => {
         test.setTimeout(600_000);
         const { argoPush } = resolveArgoPushScenarioByTestId('RHACM4K-6774');
         await ensureLocalClusterMatchingLabelForArgoAppTable(
@@ -75,10 +73,12 @@ test.describe(
           oc,
           applicationListPage,
           argoPushApplicationCreateWizardPage,
+          page,
           argoPush
         );
         await searchApplicationSetFromRowActions(
           applicationListPage,
+          page,
           argoPush.applicationName,
           argoPush.applicationSetNamespace ?? argoPush.argoServerLabel
         );
@@ -89,6 +89,7 @@ test.describe(
       'RHACM4K-7006: ALC: View, Edit, and Search row actions for Argo AppSet',
       { tag: ['@RHACM4K-7006', '@e2e', '@post-release'] },
       async ({
+        page,
         oc,
         applicationListPage,
         applicationDetailsPage,
@@ -105,6 +106,7 @@ test.describe(
           oc,
           applicationListPage,
           argoPushApplicationCreateWizardPage,
+          page,
           argoPush
         );
         await viewApplicationSetFromRowActions(
@@ -112,9 +114,10 @@ test.describe(
           applicationDetailsPage,
           argoPush.applicationName
         );
-        await editApplicationSetFromRowActions(applicationListPage, argoPush.applicationName);
+        await editApplicationSetFromRowActions(applicationListPage, page, argoPush.applicationName);
         await searchApplicationSetFromRowActions(
           applicationListPage,
+          page,
           argoPush.applicationName,
           argoPush.applicationSetNamespace ?? argoPush.argoServerLabel
         );

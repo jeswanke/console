@@ -38,6 +38,7 @@ test.describe(
       'RHACM4K-6902: ALC: The user should be able to filter between application types on the Application table page',
       { tag: ['@RHACM4K-6902', '@e2e'] },
       async ({
+        page,
         oc,
         applicationListPage,
         argoPushApplicationCreateWizardPage,
@@ -46,6 +47,7 @@ test.describe(
         test.setTimeout(900_000);
 
         const { argoPush, subscription } = await ensureArgoAppTableFixtures({
+          page,
           oc,
           applicationListPage,
           argoPushApplicationCreateWizardPage,
@@ -64,6 +66,7 @@ test.describe(
       'RHACM4K-6903: ALC: Verify type column on application table page works correctly',
       { tag: ['@RHACM4K-6903', '@e2e'] },
       async ({
+        page,
         oc,
         applicationListPage,
         argoPushApplicationCreateWizardPage,
@@ -72,6 +75,7 @@ test.describe(
         test.setTimeout(900_000);
 
         const { argoPush, subscription } = await ensureArgoAppTableFixtures({
+          page,
           oc,
           applicationListPage,
           argoPushApplicationCreateWizardPage,

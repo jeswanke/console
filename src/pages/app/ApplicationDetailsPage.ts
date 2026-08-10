@@ -257,7 +257,10 @@ export class ApplicationDetailsPage extends BasePage {
         exact: true,
       })
       .click();
-    await expect(toggle).toHaveAttribute('aria-label', APP_APPLICATION_TOPOLOGY.subscriptionScopeMenuItemAll);
+    await expect(toggle).toHaveAttribute(
+      'aria-label',
+      APP_APPLICATION_TOPOLOGY.subscriptionScopeMenuItemAll
+    );
   }
 
   async chooseTopologySubscriptionScopeByCrName(subscriptionCrName: string): Promise<void> {
@@ -305,14 +308,17 @@ export class ApplicationDetailsPage extends BasePage {
     await this.getBreadcrumbApplicationsLink().click();
     await pageUrlPathnameEquals(this.page, APP_ROUTES.list);
     await expect(
-      this.page.getByRole('heading', { name: APP_APPLICATION_DETAILS.breadcrumb.applications, level: 1 })
+      this.page.getByRole('heading', {
+        name: APP_APPLICATION_DETAILS.breadcrumb.applications,
+        level: 1,
+      })
     ).toBeVisible({ timeout: 10_000 });
   }
 
   /** Topology graph surface visible (opens Topology tab when landing on another details tab). */
   async expectTopologyGraphVisible(): Promise<void> {
     const surface = this.getTopologySurface();
-    if (!(await surface.isVisible().catch(() => false))) {
+    if (!(await surface.isVisible())) {
       await this.openDetailTab('topology');
     }
     await expect(surface).toBeVisible({ timeout: 30_000 });

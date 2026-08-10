@@ -17,8 +17,7 @@ test.describe(
   () => {
     test.describe.configure({ mode: 'serial' });
 
-    const managedClusterName =
-      process.env.E2E_MANAGED_CLUSTER_NAME?.trim() || 'local-cluster';
+    const managedClusterName = process.env.E2E_MANAGED_CLUSTER_NAME?.trim() || 'local-cluster';
 
     test.beforeAll(() => {
       clearE2eSpecDataCache();
@@ -28,6 +27,7 @@ test.describe(
       'RHACM4K-54897: ALC: Verify Application Manager ManagedServiceAccount secret creation',
       { tag: ['@RHACM4K-54897', '@e2e'] },
       async ({
+        page,
         oc,
         applicationListPage,
         applicationDetailsPage,
@@ -36,6 +36,7 @@ test.describe(
         test.setTimeout(900_000);
         const { argoPush } = resolveArgoPushScenarioByTestId('RHACM4K-54897');
         await runLongLivedSecret54897Scenario({
+          page,
           oc,
           applicationListPage,
           applicationDetailsPage,
@@ -50,6 +51,7 @@ test.describe(
       'RHACM4K-54902: ALC: Verify ManagedServiceAccount secret after delete and recreate',
       { tag: ['@RHACM4K-54902', '@e2e'] },
       async ({
+        page,
         oc,
         applicationListPage,
         applicationDetailsPage,
@@ -58,6 +60,7 @@ test.describe(
         test.setTimeout(1_800_000);
         const { argoPush } = resolveArgoPushScenarioByTestId('RHACM4K-54902');
         await runLongLivedSecret54902Scenario({
+          page,
           oc,
           applicationListPage,
           applicationDetailsPage,

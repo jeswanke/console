@@ -3,9 +3,7 @@ import path from 'node:path';
 
 import { expect } from '@playwright/test';
 
-import {
-  FLUX_LOCAL_REPOS,
-} from '@constants/flux-local';
+import { FLUX_LOCAL_REPOS } from '@constants/flux-local';
 import type { CreateFluxApplicationOptions } from '@lib/app/flux/types';
 import type { OcCliService } from '@services/OcCliService';
 
@@ -58,25 +56,40 @@ export async function applyFluxLocalRepos(oc: OcCliService): Promise<void> {
   await oc.applyYaml(templatePath(FLUX_LOCAL_REPOS.helmRepoRelativePath));
 }
 
-export async function applyFluxGitApp(oc: OcCliService, spec: CreateFluxApplicationOptions): Promise<void> {
+export async function applyFluxGitApp(
+  oc: OcCliService,
+  spec: CreateFluxApplicationOptions
+): Promise<void> {
   await applyYamlString(oc, renderFluxGitYaml(spec));
   await oc.labelNamespaceForAlcTest(spec.namespace);
 }
 
-export async function deleteFluxGitApp(oc: OcCliService, spec: CreateFluxApplicationOptions): Promise<void> {
+export async function deleteFluxGitApp(
+  oc: OcCliService,
+  spec: CreateFluxApplicationOptions
+): Promise<void> {
   await deleteYamlString(oc, renderFluxGitYaml(spec));
 }
 
-export async function applyFluxHelmApp(oc: OcCliService, spec: CreateFluxApplicationOptions): Promise<void> {
+export async function applyFluxHelmApp(
+  oc: OcCliService,
+  spec: CreateFluxApplicationOptions
+): Promise<void> {
   await applyYamlString(oc, renderFluxHelmYaml(spec));
   await oc.labelNamespaceForAlcTest(spec.namespace);
 }
 
-export async function deleteFluxHelmApp(oc: OcCliService, spec: CreateFluxApplicationOptions): Promise<void> {
+export async function deleteFluxHelmApp(
+  oc: OcCliService,
+  spec: CreateFluxApplicationOptions
+): Promise<void> {
   await deleteYamlString(oc, renderFluxHelmYaml(spec));
 }
 
-export async function applyFluxApp(oc: OcCliService, spec: CreateFluxApplicationOptions): Promise<void> {
+export async function applyFluxApp(
+  oc: OcCliService,
+  spec: CreateFluxApplicationOptions
+): Promise<void> {
   if (spec.kind === 'git') {
     await applyFluxGitApp(oc, spec);
     return;
@@ -84,7 +97,10 @@ export async function applyFluxApp(oc: OcCliService, spec: CreateFluxApplication
   await applyFluxHelmApp(oc, spec);
 }
 
-export async function deleteFluxApp(oc: OcCliService, spec: CreateFluxApplicationOptions): Promise<void> {
+export async function deleteFluxApp(
+  oc: OcCliService,
+  spec: CreateFluxApplicationOptions
+): Promise<void> {
   if (spec.kind === 'git') {
     await deleteFluxGitApp(oc, spec);
     return;

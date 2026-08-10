@@ -26,21 +26,16 @@ test.describe('Applications list', { tag: ['@app', '@alc', '@sample'] }, () => {
   }) => {
     await applicationListPage.goto();
     await expect(applicationListPage.getPageTitle()).toBeVisible();
-    await expect(
-      applicationListPage.applicationsTable.getCreateApplicationButton()
-    ).toBeVisible();
+    await expect(applicationListPage.applicationsTable.getCreateApplicationButton()).toBeVisible();
   });
 
-  test('search filters the table or shows no results', async ({
-    applicationListPage,
-    page,
-  }) => {
+  test('search filters the table or shows no results', async ({ applicationListPage, page }) => {
     await applicationListPage.goto();
     await applicationListPage.waitForLoad();
     const noAppsHeading = page.getByRole('heading', {
       name: /don't have any applications/i,
     });
-    if (await noAppsHeading.isVisible().catch(() => false)) {
+    if (await noAppsHeading.isVisible()) {
       await expect(noAppsHeading).toBeVisible();
       return;
     }
@@ -49,25 +44,19 @@ test.describe('Applications list', { tag: ['@app', '@alc', '@sample'] }, () => {
     await expect(page.getByText('No results found')).toBeVisible();
   });
 
-  test('Filter dropdown shows Type and Cluster options', async ({
-    applicationListPage,
-  }) => {
+  test('Filter dropdown shows Type and Cluster options', async ({ applicationListPage }) => {
     await applicationListPage.goto();
     await applicationListPage.applicationsTable.openFilter();
     await expect(applicationListPage.applicationsTable.getFilterMenu()).toBeVisible();
     // Listbox is often portaled — anchor by panel content, not getFilterMenu() descendant.
     const filterList = applicationListPage.applicationsTable.getFilterListbox();
     await expect(filterList).toBeVisible();
-    await expect(
-      filterList.getByText(APP_FILTER.groupTitles.type, { exact: true })
-    ).toBeVisible();
+    await expect(filterList.getByText(APP_FILTER.groupTitles.type, { exact: true })).toBeVisible();
     await expect(
       filterList.getByText(APP_FILTER.groupTitles.cluster, { exact: true })
     ).toBeVisible();
     await expect(
-      applicationListPage.applicationsTable.getFilterOption(
-        APP_FILTER.typeOptions.system
-      )
+      applicationListPage.applicationsTable.getFilterOption(APP_FILTER.typeOptions.system)
     ).toBeVisible();
     // OpenShift type row only appears when there are OpenShift apps (count > 0).
     const openshiftFilter = applicationListPage.applicationsTable.getFilterOption(
@@ -86,26 +75,18 @@ test.describe('Applications list', { tag: ['@app', '@alc', '@sample'] }, () => {
     await applicationListPage.goto();
     await applicationListPage.openCreateApplication();
 
+    await expect(applicationListPage.applicationsTable.getCreateApplicationMenu()).toBeVisible();
+
     await expect(
-      applicationListPage.applicationsTable.getCreateApplicationMenu()
+      applicationListPage.applicationsTable.getCreateMenuItem(APP_CREATE_MENU.options.argoPullModel)
     ).toBeVisible();
 
     await expect(
-      applicationListPage.applicationsTable.getCreateMenuItem(
-        APP_CREATE_MENU.options.argoPullModel
-      )
+      applicationListPage.applicationsTable.getCreateMenuItem(APP_CREATE_MENU.options.argoPushModel)
     ).toBeVisible();
 
     await expect(
-      applicationListPage.applicationsTable.getCreateMenuItem(
-        APP_CREATE_MENU.options.argoPushModel
-      )
-    ).toBeVisible();
-
-    await expect(
-      applicationListPage.applicationsTable.getCreateMenuItem(
-        APP_CREATE_MENU.options.subscription
-      )
+      applicationListPage.applicationsTable.getCreateMenuItem(APP_CREATE_MENU.options.subscription)
     ).toBeVisible();
     await expect(
       applicationListPage.applicationsTable.getCreateMenuItemById(
@@ -129,9 +110,7 @@ test.describe('Applications list', { tag: ['@app', '@alc', '@sample'] }, () => {
     await expect(table.getPreviousPageButton().first()).toBeVisible();
   });
 
-  test('first row name link targets application details route', async ({
-    applicationListPage,
-  }) => {
+  test('first row name link targets application details route', async ({ applicationListPage }) => {
     await applicationListPage.goto();
     await applicationListPage.waitForLoad();
     const table = applicationListPage.applicationsTable;
@@ -143,10 +122,7 @@ test.describe('Applications list', { tag: ['@app', '@alc', '@sample'] }, () => {
     expect(href ?? '').toMatch(/\/multicloud\/applications\/details\//);
   });
 
-  test('row actions menu opens with application actions', async ({
-    applicationListPage,
-    page,
-  }) => {
+  test('row actions menu opens with application actions', async ({ applicationListPage, page }) => {
     await applicationListPage.goto();
     await applicationListPage.waitForLoad();
     const table = applicationListPage.applicationsTable;
@@ -156,12 +132,10 @@ test.describe('Applications list', { tag: ['@app', '@alc', '@sample'] }, () => {
     await expect(menu).toBeVisible();
     const hasView = await menu
       .getByRole('menuitem', { name: APP_TABLE_ROW_ACTIONS.menuItemLabels[0] })
-      .isVisible()
-      .catch(() => false);
+      .isVisible();
     const hasSearch = await menu
       .getByRole('menuitem', { name: APP_TABLE_ROW_ACTIONS.menuItemLabels[1] })
-      .isVisible()
-      .catch(() => false);
+      .isVisible();
     expect(hasView || hasSearch).toBeTruthy();
     await page.keyboard.press('Escape');
   });
@@ -174,9 +148,7 @@ test.describe('Applications list', { tag: ['@app', '@alc', '@sample'] }, () => {
 
     const popover = applicationListPage.applicationsTable.getCompareApplicationTypesPopover();
     await expect(popover).toBeVisible();
-    await expect(
-      popover.getByRole('heading', { name: APP_COMPARE_POPOVER.title })
-    ).toBeVisible();
+    await expect(popover.getByRole('heading', { name: APP_COMPARE_POPOVER.title })).toBeVisible();
 
     const body = applicationListPage.applicationsTable.getComparePopoverBody();
     await expect(body).toContainText(APP_COMPARE_POPOVER.typeDescriptions.argoPullModel);
@@ -245,9 +217,7 @@ test.describe('Applications list', { tag: ['@app', '@alc', '@sample'] }, () => {
     await applicationListPage.openAdvancedConfigTab();
 
     await expect(applicationListPage.getAdvancedConfigContent()).toBeVisible();
-    await expect(
-      applicationListPage.getAdvancedTerminologyCardTitle()
-    ).toBeVisible();
+    await expect(applicationListPage.getAdvancedTerminologyCardTitle()).toBeVisible();
     const advancedViewDocsLink = applicationListPage.getAdvancedViewDocumentationLink();
     await expect(advancedViewDocsLink).toBeVisible();
     await expect(advancedViewDocsLink).toHaveAttribute(
@@ -262,9 +232,7 @@ test.describe('Applications list', { tag: ['@app', '@alc', '@sample'] }, () => {
     await applicationListPage.goto();
     await applicationListPage.openAdvancedConfigTab();
 
-    const sub = applicationListPage.getAdvancedResourceToggleButton(
-      'subscriptions'
-    );
+    const sub = applicationListPage.getAdvancedResourceToggleButton('subscriptions');
     await expect(sub).toBeVisible();
     // Toggle / segmented control: prefer ARIA selected state (no design-system class checks).
     await expect
@@ -276,9 +244,7 @@ test.describe('Applications list', { tag: ['@app', '@alc', '@sample'] }, () => {
       })
       .toBeTruthy();
 
-    await expect(
-      applicationListPage.getAdvancedResourceToggleButton('channels')
-    ).toBeVisible();
+    await expect(applicationListPage.getAdvancedResourceToggleButton('channels')).toBeVisible();
   });
 
   test('Advanced configuration table has Subscriptions columns (Name, Namespace, Channel)', async ({
@@ -295,11 +261,8 @@ test.describe('Applications list', { tag: ['@app', '@alc', '@sample'] }, () => {
       await expect(emptyState).toBeVisible();
       // Subscriptions empty state includes body and Create application; other views may be minimal
       const hasBody =
-        (await emptyState.getByText(APP_ADVANCED_CONFIG.emptyState.body).isVisible().catch(() => false)) ||
-        (await emptyState
-          .getByText(APP_ADVANCED_CONFIG.emptyState.bodyAltPattern)
-          .isVisible()
-          .catch(() => false));
+        (await emptyState.getByText(APP_ADVANCED_CONFIG.emptyState.body).isVisible()) ||
+        (await emptyState.getByText(APP_ADVANCED_CONFIG.emptyState.bodyAltPattern).isVisible());
       if (hasBody) {
         await expect(emptyState).toContainText('Create application');
         await expect(
@@ -312,10 +275,7 @@ test.describe('Applications list', { tag: ['@app', '@alc', '@sample'] }, () => {
         name: APP_ADVANCED_CONFIG.terminologyCard.viewDocsLinkText,
       });
       await expect(viewDocsLink).toBeVisible();
-      await expect(viewDocsLink).toHaveAttribute(
-        'href',
-        APP_DOCS_MANAGING_APPLICATIONS_HREF_RE
-      );
+      await expect(viewDocsLink).toHaveAttribute('href', APP_DOCS_MANAGING_APPLICATIONS_HREF_RE);
       return;
     }
     const table = applicationListPage.getAdvancedTable();
@@ -352,11 +312,8 @@ test.describe('Applications list', { tag: ['@app', '@alc', '@sample'] }, () => {
       const emptyState = applicationListPage.getAdvancedEmptyState('channels');
       await expect(emptyState).toBeVisible();
       const hasBodyCh =
-        (await emptyState.getByText(APP_ADVANCED_CONFIG.emptyState.body).isVisible().catch(() => false)) ||
-        (await emptyState
-          .getByText(APP_ADVANCED_CONFIG.emptyState.bodyAltPattern)
-          .isVisible()
-          .catch(() => false));
+        (await emptyState.getByText(APP_ADVANCED_CONFIG.emptyState.body).isVisible()) ||
+        (await emptyState.getByText(APP_ADVANCED_CONFIG.emptyState.bodyAltPattern).isVisible());
       if (hasBodyCh) {
         await expect(emptyState).toContainText('Create application');
         await expect(
@@ -369,10 +326,7 @@ test.describe('Applications list', { tag: ['@app', '@alc', '@sample'] }, () => {
         name: APP_ADVANCED_CONFIG.terminologyCard.viewDocsLinkText,
       });
       await expect(viewDocsLink).toBeVisible();
-      await expect(viewDocsLink).toHaveAttribute(
-        'href',
-        APP_DOCS_MANAGING_APPLICATIONS_HREF_RE
-      );
+      await expect(viewDocsLink).toHaveAttribute('href', APP_DOCS_MANAGING_APPLICATIONS_HREF_RE);
       return;
     }
     const table = applicationListPage.getAdvancedTable();
@@ -400,5 +354,4 @@ test.describe('Applications list', { tag: ['@app', '@alc', '@sample'] }, () => {
       })
     ).toBeVisible();
   });
-
 });

@@ -12,10 +12,7 @@ export type {
 } from './domains/ansible-scale/ansibleScaleSchema';
 export type { ResolvedAnsibleScaleScenario } from './resolve/buildResolvedAnsibleScaleScenario';
 
-function resolveAnsibleScaleScenarioByTestIdInternal(
-  testId: string,
-  configPath?: string
-) {
+function resolveAnsibleScaleScenarioByTestIdInternal(testId: string, configPath?: string) {
   const spec = loadE2eSpecData(configPath);
   const scenarioIds = findScenarioIdsByTestId(spec, testId);
   if (scenarioIds.length === 0) {

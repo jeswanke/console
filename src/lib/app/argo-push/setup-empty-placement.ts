@@ -1,5 +1,6 @@
 import path from 'node:path';
 
+import type { Page } from '@playwright/test';
 import type { ApplicationListPage } from '@pages/app/ApplicationListPage';
 import type { ArgoPushApplicationCreateWizardPage } from '@pages/app/ArgoPushApplicationCreateWizardPage';
 import type { OcCliService } from '@services/OcCliService';
@@ -13,6 +14,7 @@ export async function setupEmptyPlacementApplicationSet(
   oc: OcCliService,
   applicationListPage: ApplicationListPage,
   wizard: ArgoPushApplicationCreateWizardPage,
+  page: Page,
   options: CreateArgoPushApplicationOptions,
   projectRoot: string
 ): Promise<void> {
@@ -21,7 +23,7 @@ export async function setupEmptyPlacementApplicationSet(
   }
 
   await applicationListPage.goto();
-  await createArgoPushApplicationIfMissing(oc, applicationListPage, wizard, options);
+  await createArgoPushApplicationIfMissing(oc, applicationListPage, wizard, page, options);
 
   await validateApplicationSetSourceRepoUrl(oc, {
     namespace: resolveApplicationSetNamespace(options),

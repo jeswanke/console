@@ -4,10 +4,7 @@
  * Cypress: `Object_Storage_Application_Test_Suite.cy.js`.
  * Scenario data: `object-applications.yaml` + `_shared.yaml` object storage fragments.
  */
-import {
-  clearE2eSpecDataCache,
-  resolveSubscriptionScenarioByTestId,
-} from '@config';
+import { clearE2eSpecDataCache, resolveSubscriptionScenarioByTestId } from '@config';
 import {
   applyObjectStoreAuthToSubscriptionOptions,
   skipUnlessObjectStoreAuthConfigured,
@@ -18,9 +15,7 @@ import {
   createSubscription,
   deleteSubscriptionFromExistingApplication,
 } from '@lib/app/subscription';
-import {
-  deleteObjectMultiApplicationViaOc,
-} from '@lib/app/setup/object-subscription-api';
+import { deleteObjectMultiApplicationViaOc } from '@lib/app/setup/object-subscription-api';
 import { skipUnlessPrimaryManagedCluster } from '@lib/cluster/managedClusterContext';
 import {
   subscriptionDetailsClusterResourceTotalPattern,
@@ -48,7 +43,8 @@ test.describe(
       'RHACM4K-7485: ALC: Create an Object Storage Application Deployed on All Online Clusters and Local Cluster',
       {
         tag: [
-          '@e2e-common', '@e2e',
+          '@e2e-common',
+          '@e2e',
           '@RHACM4K-7485',
           '@create',
           '@ocpInterop',
@@ -78,6 +74,7 @@ test.describe(
           await createSubscription(
             applicationListPage,
             subscriptionApplicationCreateWizardPage,
+            page,
             options
           );
           await oc.labelNamespaceForAlcTest(namespace);
@@ -153,15 +150,30 @@ test.describe(
         await createSubscription(
           applicationListPage,
           subscriptionApplicationCreateWizardPage,
+          page,
           options
         );
         await oc.labelNamespaceForAlcTest(namespace);
 
-        const block1Clusters = await oc.getPlacementDecisionClusterNames(namespace, `${applicationName}-placement-1`);
-        const block2Clusters = await oc.getPlacementDecisionClusterNames(namespace, `${applicationName}-placement-2`);
+        const block1Clusters = await oc.getPlacementDecisionClusterNames(
+          namespace,
+          `${applicationName}-placement-1`
+        );
+        const block2Clusters = await oc.getPlacementDecisionClusterNames(
+          namespace,
+          `${applicationName}-placement-2`
+        );
         const mergedSubscriptionBlocks = [
-          { blockIndex: 1, clusterName: [...block1Clusters].sort().join('--') || 'local-cluster', clusterResourceRows: expectations.topologyClusterResourceBlocks[0]! },
-          { blockIndex: 2, clusterName: [...block2Clusters].sort().join('--') || 'local-cluster', clusterResourceRows: expectations.topologyClusterResourceBlocks[1]! },
+          {
+            blockIndex: 1,
+            clusterName: [...block1Clusters].sort().join('--') || 'local-cluster',
+            clusterResourceRows: expectations.topologyClusterResourceBlocks[0]!,
+          },
+          {
+            blockIndex: 2,
+            clusterName: [...block2Clusters].sort().join('--') || 'local-cluster',
+            clusterResourceRows: expectations.topologyClusterResourceBlocks[1]!,
+          },
         ];
 
         await verifySubscriptionAppDetailsTab({
@@ -177,7 +189,11 @@ test.describe(
           detailsValuesTimeout: 300_000,
         });
 
-        await applicationDetailsPage.navigateToApplicationTab(namespace, applicationName, 'topology');
+        await applicationDetailsPage.navigateToApplicationTab(
+          namespace,
+          applicationName,
+          'topology'
+        );
         await verifySubscriptionAppTopologyTab({
           page,
           detailsPage: applicationDetailsPage,
@@ -263,7 +279,8 @@ test.describe(
         const auth = skipUnlessObjectStoreAuthConfigured(test, 'RHACM4K-7812');
         if (!auth) return;
 
-        const { subscription: addBaseOptions } = resolveSubscriptionScenarioByTestId('RHACM4K-7812');
+        const { subscription: addBaseOptions } =
+          resolveSubscriptionScenarioByTestId('RHACM4K-7812');
         const { subscription: multiBaseOptions, applicationExpectations: expectations } =
           resolveSubscriptionScenarioByTestId('RHACM4K-7814');
         const addOptions = applyObjectStoreAuthToSubscriptionOptions(addBaseOptions, auth);
@@ -273,6 +290,7 @@ test.describe(
         await addSubscriptionToExistingApplication(
           applicationListPage,
           subscriptionApplicationCreateWizardPage,
+          page,
           {
             ...addOptions,
             entry: 'details',
@@ -308,9 +326,17 @@ test.describe(
           'topology'
         );
         const { applicationName, namespace } = addOptions;
-        const subs = await oc.run(
-          `oc get subscription.apps.open-cluster-management.io -n ${namespace} --no-headers -o custom-columns=NAME:.metadata.name`
-        ).then((out) => out.trim().split('\n').filter((s) => s.includes(applicationName) && !s.includes('-local')).sort());
+        const subs = await oc
+          .run(
+            `oc get subscription.apps.open-cluster-management.io -n ${namespace} --no-headers -o custom-columns=NAME:.metadata.name`
+          )
+          .then((out) =>
+            out
+              .trim()
+              .split('\n')
+              .filter((s) => s.includes(applicationName) && !s.includes('-local'))
+              .sort()
+          );
         const sub1Idx = parseInt(subs[0]?.match(/-(\d+)$/)?.[1] ?? '1', 10);
         const sub2Idx = parseInt(subs[1]?.match(/-(\d+)$/)?.[1] ?? '2', 10);
         const placement1 = `${applicationName}-placement-${sub1Idx}`;
@@ -324,8 +350,16 @@ test.describe(
           namespace,
           subscriptionScope: 'all',
           mergedSubscriptionBlocks: [
-            { blockIndex: sub1Idx, clusterName: [...block1Clusters].sort().join('--') || 'local-cluster', clusterResourceRows: expectations.topologyClusterResourceBlocks[1]! },
-            { blockIndex: sub2Idx, clusterName: [...block2Clusters].sort().join('--') || 'local-cluster', clusterResourceRows: expectations.topologyClusterResourceBlocks[0]! },
+            {
+              blockIndex: sub1Idx,
+              clusterName: [...block1Clusters].sort().join('--') || 'local-cluster',
+              clusterResourceRows: expectations.topologyClusterResourceBlocks[1]!,
+            },
+            {
+              blockIndex: sub2Idx,
+              clusterName: [...block2Clusters].sort().join('--') || 'local-cluster',
+              clusterResourceRows: expectations.topologyClusterResourceBlocks[0]!,
+            },
           ],
         });
       }
@@ -337,11 +371,7 @@ test.describe(
       async ({ oc }) => {
         test.setTimeout(300_000);
         const { subscription: options } = resolveSubscriptionScenarioByTestId('RHACM4K-7813');
-        await deleteObjectMultiApplicationViaOc(
-          oc,
-          options.applicationName,
-          options.namespace
-        );
+        await deleteObjectMultiApplicationViaOc(oc, options.applicationName, options.namespace);
       }
     );
 
@@ -370,6 +400,7 @@ test.describe(
           await createSubscription(
             applicationListPage,
             subscriptionApplicationCreateWizardPage,
+            page,
             options
           );
           await oc.labelNamespaceForAlcTest(namespace);
@@ -386,6 +417,5 @@ test.describe(
         });
       }
     );
-
   }
 );

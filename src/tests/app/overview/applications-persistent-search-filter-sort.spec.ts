@@ -47,10 +47,9 @@ test.describe(
         }
         await page.keyboard.press('Escape');
 
-        const toolbarState = await test.step(
-          'Apply search, Type filter, and Pod Status sort',
-          async () => applyApplicationsListToolbarState({ applicationListPage })
-        );
+        const toolbarState =
+          await test.step('Apply search, Type filter, and Pod Status sort', async () =>
+            applyApplicationsListToolbarState({ applicationListPage }));
         expect(toolbarState.podStatusSort).toBeTruthy();
 
         await test.step('Open application details topology from filtered row', async () => {

@@ -1,4 +1,4 @@
-import { expect } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 
 import type { ApplicationDetailsPage } from '@pages/app/ApplicationDetailsPage';
 import type { ApplicationListPage } from '@pages/app/ApplicationListPage';
@@ -23,6 +23,7 @@ export async function viewApplicationSetFromRowActions(
 /** Row **Actions** → **Search**; assert global search URL and label chips. */
 export async function searchApplicationSetFromRowActions(
   applicationListPage: ApplicationListPage,
+  page: Page,
   applicationSetName: string,
   applicationSetNamespace: string
 ): Promise<void> {
@@ -32,14 +33,15 @@ export async function searchApplicationSetFromRowActions(
   const row = table.getRowByName(applicationSetName);
   await table.openRowActions(row);
   await table.clickSearchApplicationMenuItem();
-  const page = applicationListPage.getPage();
   await expect(page).toHaveURL(/\/multicloud\/search/);
   const labels = page.locator('[class*="label-group__list-item"]');
-  await expect(labels.filter({ hasText: `name:${applicationSetName}` })).toBeVisible({ timeout: 60_000 });
+  await expect(labels.filter({ hasText: `name:${applicationSetName}` })).toBeVisible({
+    timeout: 60_000,
+  });
   await expect(labels.filter({ hasText: `namespace:${applicationSetNamespace}` })).toBeVisible();
   await expect(labels.filter({ hasText: 'kind:applicationset' })).toBeVisible();
   const moreBtn = page.getByRole('button', { name: /more$/ });
-  if (await moreBtn.isVisible().catch(() => false)) {
+  if (await moreBtn.isVisible()) {
     await moreBtn.click();
   }
   await expect(labels.filter({ hasText: 'apigroup:argoproj.io' })).toBeVisible();
@@ -49,6 +51,7 @@ export async function searchApplicationSetFromRowActions(
 /** Row **Actions** → **Edit**; assert push-model edit wizard URL. */
 export async function editApplicationSetFromRowActions(
   applicationListPage: ApplicationListPage,
+  page: Page,
   applicationSetName: string
 ): Promise<void> {
   const table = applicationListPage.applicationsTable;
@@ -57,6 +60,5 @@ export async function editApplicationSetFromRowActions(
   const row = table.getRowByName(applicationSetName);
   await table.openRowActions(row);
   await table.clickEditApplicationMenuItem();
-  const page = applicationListPage.getPage();
   await expect(page).toHaveURL(new RegExp(`/edit.*${applicationSetName}`));
 }

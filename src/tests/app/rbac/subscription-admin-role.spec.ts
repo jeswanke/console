@@ -17,19 +17,17 @@ test.describe(
     test(
       'RHACM4K-41355: ALC: Verify placementrules and namespaces in the topology node details list are correctly displayed',
       {
-        tag: [
-          '@RHACM4K-41355',
-          '@create',
-          '@pre-restore',
-          '@post-restore',
-        ],
+        tag: ['@RHACM4K-41355', '@create', '@pre-restore', '@post-restore'],
       },
-      async ({ oc, applicationDetailsPage }) => {
+      async ({ oc, page, applicationDetailsPage }) => {
         test.setTimeout(600_000);
         const rbacPassword =
           process.env.RBAC_TEST_PASSWORD?.trim() || process.env.HUB_PASSWORD?.trim();
         if (!rbacPassword) {
-          test.skip(true, 'RBAC_TEST_PASSWORD or HUB_PASSWORD required for subscription-admin oc login');
+          test.skip(
+            true,
+            'RBAC_TEST_PASSWORD or HUB_PASSWORD required for subscription-admin oc login'
+          );
           return;
         }
 
@@ -42,7 +40,7 @@ test.describe(
           rbacPassword,
         });
 
-        await verifySubscriptionPlacementrulesTopologyDetails(applicationDetailsPage);
+        await verifySubscriptionPlacementrulesTopologyDetails(applicationDetailsPage, page);
       }
     );
   }

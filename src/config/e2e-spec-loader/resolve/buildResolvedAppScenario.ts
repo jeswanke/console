@@ -9,7 +9,10 @@ import type { ResolvedAppScenario } from '../types';
 import { collectScenarioTestIds } from './collectScenarioTestIds';
 
 /** Resolves domain payloads for one scenario id (throws if missing or invalid). */
-export function buildResolvedAppScenario(spec: E2eSpecData, scenarioId: string): ResolvedAppScenario {
+export function buildResolvedAppScenario(
+  spec: E2eSpecData,
+  scenarioId: string
+): ResolvedAppScenario {
   const scenarioBody = spec.scenarios[scenarioId];
   if (!scenarioBody) {
     throw new Error(`e2e-spec-data: unknown scenario "${scenarioId}"`);
@@ -27,7 +30,9 @@ export function buildResolvedAppScenario(spec: E2eSpecData, scenarioId: string):
   const flux = specDomains.flux as CreateFluxApplicationOptions | undefined;
   const openshift = specDomains.openshift as CreateOpenshiftApplicationOptions | undefined;
 
-  const domainCount = [subscription, argoPush, flux, openshift].filter((d) => d !== undefined).length;
+  const domainCount = [subscription, argoPush, flux, openshift].filter(
+    (d) => d !== undefined
+  ).length;
   if (domainCount > 1) {
     throw new Error(
       `e2e-spec-data: scenario "${scenarioId}" must define only one of subscription, argoPush, flux, or openshift`

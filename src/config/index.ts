@@ -54,8 +54,8 @@ export function getRbacUsers(domain?: string): RbacUser[] {
     .map((u) => ({
       role: u.role,
       username: u.username,
-      password: ('password' in u && u.password) ? u.password as string : defaultPassword,
-      idp: ('idp' in u && u.idp) ? u.idp as string : defaultIdp,
+      password: 'password' in u && u.password ? (u.password as string) : defaultPassword,
+      idp: 'idp' in u && u.idp ? (u.idp as string) : defaultIdp,
       domains: u.domains,
     }));
 }

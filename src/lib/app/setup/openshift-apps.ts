@@ -66,10 +66,7 @@ export async function deleteOpenshiftMortgageApp(
   await deleteYamlFile(oc, mortgageTemplate(spec));
 }
 
-export async function deleteOpenshiftNamespace(
-  oc: OcCliService,
-  namespace: string
-): Promise<void> {
+export async function deleteOpenshiftNamespace(oc: OcCliService, namespace: string): Promise<void> {
   await oc.deleteNamespace(namespace).catch(() => undefined);
 }
 
@@ -124,21 +121,27 @@ export async function waitForOpenshiftAppResourcesReady(
 
   await expect
     .poll(async () => {
-      const out = await oc.run(`oc get deployment -n ${spec.namespace} --no-headers 2>/dev/null || true`);
+      const out = await oc.run(
+        `oc get deployment -n ${spec.namespace} --no-headers 2>/dev/null || true`
+      );
       return out.includes(deploymentName);
     }, poll)
     .toBe(true);
 
   await expect
     .poll(async () => {
-      const out = await oc.run(`oc get replicaset -n ${spec.namespace} --no-headers 2>/dev/null || true`);
+      const out = await oc.run(
+        `oc get replicaset -n ${spec.namespace} --no-headers 2>/dev/null || true`
+      );
       return out.includes(deploymentName);
     }, poll)
     .toBe(true);
 
   await expect
     .poll(async () => {
-      const out = await oc.run(`oc get service -n ${spec.namespace} --no-headers 2>/dev/null || true`);
+      const out = await oc.run(
+        `oc get service -n ${spec.namespace} --no-headers 2>/dev/null || true`
+      );
       return out.includes(spec.service);
     }, poll)
     .toBe(true);
@@ -146,7 +149,9 @@ export async function waitForOpenshiftAppResourcesReady(
   if (spec.route) {
     await expect
       .poll(async () => {
-        const out = await oc.run(`oc get route -n ${spec.namespace} --no-headers 2>/dev/null || true`);
+        const out = await oc.run(
+          `oc get route -n ${spec.namespace} --no-headers 2>/dev/null || true`
+        );
         return out.includes(spec.route!);
       }, poll)
       .toBe(true);

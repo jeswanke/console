@@ -21,14 +21,14 @@ test.describe(
     test(
       'RHACM4K-63807: ALC: As an application admin, I can utilize the enhanced review step features during Application Set creation',
       { tag: ['@RHACM4K-63807', '@gitops'] },
-      async ({ applicationListPage, argoPushApplicationCreateWizardPage: wizard }) => {
+      async ({ page, applicationListPage, argoPushApplicationCreateWizardPage: wizard }) => {
         test.setTimeout(300_000);
 
         const { argoPush: options } = resolveArgoPushScenarioById('auto_git_push_review_63807');
         const { applicationName } = options;
 
         await test.step('Open wizard and reach Review with test data', async () => {
-          await fillArgoPushWizardToReview(applicationListPage, wizard, options);
+          await fillArgoPushWizardToReview(applicationListPage, wizard, page, options);
         });
 
         await test.step('Verify YAML panel is hidden when YAML switch is off', async () => {

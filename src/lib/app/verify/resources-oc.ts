@@ -79,19 +79,17 @@ export async function expectSubscriptionAppResourcesViaOc(
   const pollOpts = { timeout, intervals };
 
   if (includeApplication) {
-    await expectOcGetListContains(
-      oc,
-      {
-        resource: 'applications.app',
-        namespace,
-        expectedSubstring: applicationName,
-        ...pollOpts,
-      }
-    );
+    await expectOcGetListContains(oc, {
+      resource: 'applications.app',
+      namespace,
+      expectedSubstring: applicationName,
+      ...pollOpts,
+    });
   }
 
-  const blockIndices =
-    blockIndicesParam?.length ? blockIndicesParam : defaultBlockIndices(applicationExpectations);
+  const blockIndices = blockIndicesParam?.length
+    ? blockIndicesParam
+    : defaultBlockIndices(applicationExpectations);
 
   if (includeSubscriptionAndPlacement) {
     for (const blockIndex of blockIndices) {
@@ -100,24 +98,18 @@ export async function expectSubscriptionAppResourcesViaOc(
           `expectSubscriptionAppResourcesViaOc: blockIndex ${blockIndex} out of range (1..${applicationExpectations.clusterResources.length})`
         );
       }
-      await expectOcGetListContains(
-        oc,
-        {
-          resource: 'subscription',
-          namespace,
-          expectedSubstring: defaultSubscriptionCrName(applicationName, blockIndex),
-          ...pollOpts,
-        }
-      );
-      await expectOcGetListContains(
-        oc,
-        {
-          resource: 'placement',
-          namespace,
-          expectedSubstring: defaultPlacementCrName(applicationName, blockIndex),
-          ...pollOpts,
-        }
-      );
+      await expectOcGetListContains(oc, {
+        resource: 'subscription',
+        namespace,
+        expectedSubstring: defaultSubscriptionCrName(applicationName, blockIndex),
+        ...pollOpts,
+      });
+      await expectOcGetListContains(oc, {
+        resource: 'placement',
+        namespace,
+        expectedSubstring: defaultPlacementCrName(applicationName, blockIndex),
+        ...pollOpts,
+      });
     }
   }
 
@@ -129,15 +121,12 @@ export async function expectSubscriptionAppResourcesViaOc(
       }
       for (const row of rows) {
         const resource = clusterResourceKindToOcResource(row.kind);
-        await expectOcGetListContains(
-          oc,
-          {
-            resource,
-            namespace: row.namespace || namespace,
-            expectedSubstring: row.name,
-            ...pollOpts,
-          }
-        );
+        await expectOcGetListContains(oc, {
+          resource,
+          namespace: row.namespace || namespace,
+          expectedSubstring: row.name,
+          ...pollOpts,
+        });
       }
     }
   }

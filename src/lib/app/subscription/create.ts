@@ -1,14 +1,13 @@
 /**
  * Subscription **create** wizard orchestration.
  */
-import { expect } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 
 import type { ApplicationListPage } from '@pages/app/ApplicationListPage';
 import type { SubscriptionApplicationCreateWizardPage } from '@pages/app/SubscriptionApplicationCreateWizardPage';
 
 import type { CreateSubscriptionOptions } from './types';
 import { applyPerBlockOptions, fillRepositoryBlockBySpec } from './wizard-fill';
-
 
 /**
  * Fills and submits the subscription create wizard from e2e-spec options.
@@ -17,6 +16,7 @@ import { applyPerBlockOptions, fillRepositoryBlockBySpec } from './wizard-fill';
 export async function createSubscription(
   applicationListPage: ApplicationListPage,
   wizard: SubscriptionApplicationCreateWizardPage,
+  page: Page,
   options: CreateSubscriptionOptions
 ): Promise<void> {
   const {
@@ -65,13 +65,15 @@ export async function createSubscription(
     if (blockIndex > 0) {
       await wizard.getAddChannelsButton().click();
       await wizard.waitForLoad();
-      await wizard.getRepositoryBlockContainer(blockIndex).waitFor({ state: 'visible', timeout: 60_000 });
+      await wizard
+        .getRepositoryBlockContainer(blockIndex)
+        .waitFor({ state: 'visible', timeout: 60_000 });
     }
 
     const spec = repositories[blockIndex]!;
     await fillRepositoryBlockBySpec(wizard, blockIndex, spec);
 
-    await applyPerBlockOptions(wizard, blockIndex, perBlock?.[blockIndex]);
+    await applyPerBlockOptions(wizard, page, blockIndex, perBlock?.[blockIndex]);
   }
 
   if (submit) {

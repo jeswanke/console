@@ -22,7 +22,9 @@ export async function withHubOcLogin<T>(
     return await fn();
   } finally {
     if (priorContext) {
-      await oc.run(`oc config use-context '${priorContext.replace(/'/g, `'\\''`)}'`).catch(() => undefined);
+      await oc
+        .run(`oc config use-context '${priorContext.replace(/'/g, `'\\''`)}'`)
+        .catch(() => undefined);
     }
   }
 }

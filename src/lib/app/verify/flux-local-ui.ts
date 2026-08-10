@@ -1,4 +1,4 @@
-import { expect } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 
 import { FLUX_LOCAL_CLUSTER } from '@constants/flux-local';
 import type { CreateFluxApplicationOptions } from '@lib/app/flux/types';
@@ -41,33 +41,40 @@ export async function verifyFluxApplicationOverviewTable(params: {
 /** Flux topology tab — application node + deployable icon nodes (Cypress `validateDeployables`). */
 export async function verifyFluxApplicationTopology(params: {
   applicationDetailsPage: ApplicationDetailsPage;
+  page: Page;
   spec: CreateFluxApplicationOptions;
   clusterName?: string;
 }): Promise<void> {
-  const { applicationDetailsPage, spec, clusterName = spec.clusterName ?? FLUX_LOCAL_CLUSTER } = params;
-  const page = applicationDetailsPage.getPage();
+  const {
+    applicationDetailsPage,
+    page,
+    spec,
+    clusterName = spec.clusterName ?? FLUX_LOCAL_CLUSTER,
+  } = params;
 
-  await applicationDetailsPage.gotoFluxTopology(
-    spec.namespace,
-    spec.applicationName,
-    clusterName
-  );
+  await applicationDetailsPage.gotoFluxTopology(spec.namespace, spec.applicationName, clusterName);
   await applicationDetailsPage.expectTopologyGraphVisible();
   await expect(applicationDetailsPage.getApplicationHeading()).toHaveText(spec.applicationName);
 
   const surface = applicationDetailsPage.getTopologySurface();
-  await expect(surface.locator(`[data-id="${topologyApplicationDataId(spec.applicationName)}"]`)).toBeVisible({
+  await expect(
+    surface.locator(`[data-id="${topologyApplicationDataId(spec.applicationName)}"]`)
+  ).toBeVisible({
     timeout: 120_000,
   });
 
   for (const resourceType of spec.topologyIcons) {
-    await expect(surface.locator(`use[href="#nodeIcon_${resourceType}"]`).first()).toBeVisible({ timeout: 120_000 });
+    await expect(surface.locator(`use[href="#nodeIcon_${resourceType}"]`).first()).toBeVisible({
+      timeout: 120_000,
+    });
   }
 
   await applicationDetailsPage.openDetailTab('details');
   await expect(applicationDetailsPage.getApplicationHeading()).toHaveText(spec.applicationName);
 
-  const successLabels = page.locator('.pf-m-green [class*="c-label__content"], .pf-m-green[class*="c-label"]');
+  const successLabels = page.locator(
+    '.pf-m-green [class*="c-label__content"], .pf-m-green[class*="c-label"]'
+  );
   await expect
     .poll(async () => successLabels.count(), { timeout: 300_000, intervals: [5_000, 10_000] })
     .toBeGreaterThanOrEqual(1);
@@ -77,6 +84,7 @@ export async function verifyFluxApplicationTopology(params: {
 export async function verifyFluxApplicationInUi(params: {
   applicationListPage: ApplicationListPage;
   applicationDetailsPage: ApplicationDetailsPage;
+  page: Page;
   spec: CreateFluxApplicationOptions;
   clusterName?: string;
 }): Promise<void> {

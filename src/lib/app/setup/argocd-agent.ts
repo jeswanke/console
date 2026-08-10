@@ -167,9 +167,7 @@ export async function uninstallArgoCdAgentMode(
   managedClusterName: string,
   repoRoot: string
 ): Promise<void> {
-  await oc.run(
-    `oc delete apps test-argocd-agent-app -n ${managedClusterName} --ignore-not-found`
-  );
+  await oc.run(`oc delete apps test-argocd-agent-app -n ${managedClusterName} --ignore-not-found`);
 
   const prior = await oc.getCurrentContext();
   try {

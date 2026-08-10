@@ -278,7 +278,10 @@ export async function validateSubscriptionGitApplication(
   await expectSubscriptionDefaultTimeWindow(oc, applicationName, namespace);
 
   await applicationDetailsPage.expectTopologyGraphContainsNodeDataIds(
-    [topologyApplicationDataId(applicationName), topologySubscriptionDataId(namespace, subscriptionCrName)],
+    [
+      topologyApplicationDataId(applicationName),
+      topologySubscriptionDataId(namespace, subscriptionCrName),
+    ],
     { timeout: 60_000 }
   );
 }

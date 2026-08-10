@@ -85,10 +85,7 @@ export async function verifyArgoPushPrivateRepoTopologyDeployed(
 /** Details tab smoke for a push-model ApplicationSet created from a private Git repo. */
 export async function verifyArgoPushPrivateRepoDetailsTab(
   detailsPage: ApplicationDetailsPage,
-  options: Pick<
-    CreateArgoPushApplicationOptions,
-    'applicationName' | 'argoServerLabel' | 'git'
-  >
+  options: Pick<CreateArgoPushApplicationOptions, 'applicationName' | 'argoServerLabel' | 'git'>
 ): Promise<void> {
   const { applicationName, argoServerLabel, git } = options;
   if (!git) throw new Error('verifyArgoPushPrivateRepoDetailsTab: git repository spec is required');

@@ -1,7 +1,7 @@
 /**
  * Argo CD ApplicationSet **push model** create wizard orchestration.
  */
-import { expect } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 
 import type { ApplicationListPage } from '@pages/app/ApplicationListPage';
 import type { ArgoPushApplicationCreateWizardPage } from '@pages/app/ArgoPushApplicationCreateWizardPage';
@@ -23,10 +23,7 @@ async function fillGeneratorsStep(
   requeueTimeSeconds?: number
 ): Promise<void> {
   if (requeueTimeSeconds === undefined) return;
-  await wizard.pickComboboxOption(
-    wizard.getRequeueTimeCombobox(),
-    String(requeueTimeSeconds)
-  );
+  await wizard.pickComboboxOption(wizard.getRequeueTimeCombobox(), String(requeueTimeSeconds));
 }
 
 async function fillSingleGitTemplateStep(
@@ -135,10 +132,10 @@ async function fillPlacementStep(
 
 async function fillSyncPolicyStep(
   wizard: ArgoPushApplicationCreateWizardPage,
+  page: Page,
   options: Pick<CreateArgoPushApplicationOptions, 'disableAutomatedSync'>
 ): Promise<void> {
   if (!options.disableAutomatedSync) return;
-  const page = wizard.getPage();
   const automated = page.locator('[id$="syncPolicy.automated.enabled"]');
   await automated.scrollIntoViewIfNeeded();
   if (await automated.isChecked().catch(() => false)) {
@@ -152,6 +149,7 @@ async function fillSyncPolicyStep(
 export async function fillArgoPushWizardToReview(
   applicationListPage: ApplicationListPage,
   wizard: ArgoPushApplicationCreateWizardPage,
+  page: Page,
   options: CreateArgoPushApplicationOptions
 ): Promise<void> {
   const { collapseYamlPanel = true } = options;
@@ -170,7 +168,7 @@ export async function fillArgoPushWizardToReview(
   await fillGitTemplateStep(wizard, options);
   await wizard.clickNext();
 
-  await fillSyncPolicyStep(wizard, options);
+  await fillSyncPolicyStep(wizard, page, options);
   await wizard.clickNext();
 
   await fillPlacementStep(wizard, options);
@@ -186,6 +184,7 @@ export async function fillArgoPushWizardToReview(
 export async function createArgoPushApplication(
   applicationListPage: ApplicationListPage,
   wizard: ArgoPushApplicationCreateWizardPage,
+  page: Page,
   options: CreateArgoPushApplicationOptions
 ): Promise<{ argoServerNamespace: string }> {
   const {
@@ -222,7 +221,7 @@ export async function createArgoPushApplication(
   await fillGitTemplateStep(wizard, options);
   await wizard.clickNext();
 
-  await fillSyncPolicyStep(wizard, options);
+  await fillSyncPolicyStep(wizard, page, options);
   await wizard.clickNext();
 
   await fillPlacementStep(wizard, options);
@@ -230,7 +229,11 @@ export async function createArgoPushApplication(
 
   if (submit) {
     await wizard.clickSubmit();
-    await waitForArgoPushApplicationAfterCreate(wizard, argoServerNamespace, options.applicationName);
+    await waitForArgoPushApplicationAfterCreate(
+      wizard,
+      argoServerNamespace,
+      options.applicationName
+    );
     if (options.postCreateWaitMs && options.postCreateWaitMs > 0) {
       await new Promise((resolve) => setTimeout(resolve, options.postCreateWaitMs));
     }

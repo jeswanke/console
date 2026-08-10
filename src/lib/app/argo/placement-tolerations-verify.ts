@@ -3,10 +3,7 @@
  */
 import { expect, type Locator } from '@playwright/test';
 
-import {
-  APP_ARGO_PULL_CREATE_WIZARD,
-  APP_ARGO_PUSH_CREATE_WIZARD,
-} from '@constants/app';
+import { APP_ARGO_PULL_CREATE_WIZARD, APP_ARGO_PUSH_CREATE_WIZARD } from '@constants/app';
 import {
   PLACEMENT_DEFAULT_TOLERATIONS,
   PLACEMENT_TOLERATIONS_YAML_PATTERNS,
@@ -70,10 +67,9 @@ export async function verifyAddArgoServerModalPlacementTolerationsInYaml(
   wizard: ArgoPlacementTolerationsWizardHost,
   patterns: ArgoPlacementTolerationsYamlPatterns
 ): Promise<void> {
-  const yamlText = await wizard.getModalSyncEditor().waitForYamlMatching(
-    patterns.modalGitOpsPlacementTolerations,
-    60_000
-  );
+  const yamlText = await wizard
+    .getModalSyncEditor()
+    .waitForYamlMatching(patterns.modalGitOpsPlacementTolerations, 60_000);
 
   expect(syncYamlContainsKind(yamlText, 'GitOpsCluster')).toBe(true);
   expect(syncYamlContainsKind(yamlText, 'Placement')).toBe(true);

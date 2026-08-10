@@ -21,13 +21,8 @@ export async function syncArgoPushApplicationSetFromDetails(params: {
   projectRoot: string;
 }): Promise<void> {
   const { oc, applicationListPage, applicationDetailsPage, projectRoot } = params;
-  const {
-    appsetName,
-    appsetNamespace,
-    placementName,
-    targetNamespace,
-    setupYamlRelativePath,
-  } = APP_ARGO_SYNC_TEST_59973;
+  const { appsetName, appsetNamespace, placementName, targetNamespace, setupYamlRelativePath } =
+    APP_ARGO_SYNC_TEST_59973;
 
   await oc.createNamespaceIfNotExists(targetNamespace);
   await oc.applyYaml(path.join(projectRoot, setupYamlRelativePath));

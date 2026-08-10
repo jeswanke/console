@@ -3,7 +3,10 @@
  *
  * Cypress: `Argo_Appset_Tooltips_Test_Suite.cy.js`.
  */
-import { ARGO_WIZARD_TOOLTIPS, ARGO_WIZARD_MORE_INFO_BUTTON } from '@constants/argo-wizard-tooltips';
+import {
+  ARGO_WIZARD_TOOLTIPS,
+  ARGO_WIZARD_MORE_INFO_BUTTON,
+} from '@constants/argo-wizard-tooltips';
 import {
   openArgoPullWizardGeneralStep,
   selectPullWizardRepositoryGit,
@@ -23,9 +26,8 @@ test.describe(
     test(
       'RHACM4K-61725: ALC: Verify tooltips in the Argo ApplicationSet creation wizard',
       { tag: ['@RHACM4K-61725', '@e2e'] },
-      async ({ applicationListPage, argoPullApplicationCreateWizardPage: pullWizard }) => {
+      async ({ page, applicationListPage, argoPullApplicationCreateWizardPage: pullWizard }) => {
         test.setTimeout(600_000);
-        const page = pullWizard.getPage();
         await openArgoPullWizardGeneralStep(applicationListPage, pullWizard);
         await verifyArgoWizardTooltip(page, ARGO_WIZARD_TOOLTIPS.general.argoServer);
 
@@ -74,10 +76,14 @@ test.describe(
         await verifyArgoWizardTooltip(page, ARGO_WIZARD_TOOLTIPS.placement.clusterSets);
 
         await page.getByRole('button', { name: 'Existing placement' }).click({ force: true });
-        await expect(page.locator('#placement').locator(ARGO_WIZARD_MORE_INFO_BUTTON)).toHaveCount(0);
+        await expect(page.locator('#placement').locator(ARGO_WIZARD_MORE_INFO_BUTTON)).toHaveCount(
+          0
+        );
 
         await pullWizard.clickWizardStep('review-step');
-        await expect(page.locator('#review-step').locator(ARGO_WIZARD_MORE_INFO_BUTTON)).toHaveCount(0);
+        await expect(
+          page.locator('#review-step').locator(ARGO_WIZARD_MORE_INFO_BUTTON)
+        ).toHaveCount(0);
       }
     );
   }

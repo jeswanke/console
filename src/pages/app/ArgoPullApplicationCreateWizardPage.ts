@@ -1,11 +1,7 @@
 import { expect, type Locator, type Page } from '@playwright/test';
 
 import type { OcCliService } from '@services/OcCliService';
-import {
-  APP_ARGO_PULL_CREATE_WIZARD,
-  APP_CREATE_MENU,
-  APP_ROUTES,
-} from '@constants/app';
+import { APP_ARGO_PULL_CREATE_WIZARD, APP_CREATE_MENU, APP_ROUTES } from '@constants/app';
 import type { ApplicationListPage } from '@pages/app/ApplicationListPage';
 import { ArgoPushApplicationCreateWizardPage } from '@pages/app/ArgoPushApplicationCreateWizardPage';
 import type { FillArgoAppsetBeforePlacementOptions } from '@lib/app/argo/fill-wizard-before-placement';

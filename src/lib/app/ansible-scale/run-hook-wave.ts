@@ -21,7 +21,9 @@ export type RunAnsibleScaleHookWaveParams = {
  * Shared ansible hook flow after fixture apply: wait → optional spoke verify → sync → patch → sync → wait.
  * Order matches Cypress large-scale suite (42375 syncs before patch; 42376 syncs after patch).
  */
-export async function runAnsibleScaleHookWave(params: RunAnsibleScaleHookWaveParams): Promise<void> {
+export async function runAnsibleScaleHookWave(
+  params: RunAnsibleScaleHookWaveParams
+): Promise<void> {
   const { oc, applicationDetailsPage, scenario, managedClusterName } = params;
   const pollTimeout = scenario.pollTimeoutMs;
   const afterPatchTimeout = scenario.afterPatchPollTimeoutMs ?? pollTimeout;

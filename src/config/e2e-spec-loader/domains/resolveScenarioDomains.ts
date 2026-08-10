@@ -18,7 +18,11 @@ export function resolveScenarioDomains(
     specDomains.subscription = subscription;
   }
 
-  const applicationExpectations = resolveApplicationExpectationsDomain(spec, scenarioId, scenarioEntry);
+  const applicationExpectations = resolveApplicationExpectationsDomain(
+    spec,
+    scenarioId,
+    scenarioEntry
+  );
   if (applicationExpectations !== undefined) {
     specDomains.applicationExpectations = applicationExpectations;
   }

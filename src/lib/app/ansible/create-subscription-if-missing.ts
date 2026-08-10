@@ -41,6 +41,7 @@ export async function createAnsibleGitSubscriptionIfMissing(
   await createSubscription(
     params.applicationListPage,
     params.subscriptionApplicationCreateWizardPage,
+    params.page,
     params.options
   );
 

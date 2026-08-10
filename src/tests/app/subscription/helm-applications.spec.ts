@@ -4,19 +4,14 @@
  * Cypress: `Helm_Application_Test_Suite.cy.js`.
  * Scenario data: `helm-applications.yaml` + `_shared.yaml` helm fragments.
  */
-import {
-  clearE2eSpecDataCache,
-  resolveSubscriptionScenarioByTestId,
-} from '@config';
+import { clearE2eSpecDataCache, resolveSubscriptionScenarioByTestId } from '@config';
 import {
   addSubscriptionToExistingApplication,
   applyManagedClusterPlacementToBlocks,
   createSubscription,
   deleteSubscriptionFromExistingApplication,
 } from '@lib/app/subscription';
-import {
-  deleteHelmMultiApplicationViaOc,
-} from '@lib/app/setup/helm-subscription-api';
+import { deleteHelmMultiApplicationViaOc } from '@lib/app/setup/helm-subscription-api';
 import { skipUnlessPrimaryManagedCluster } from '@lib/cluster/managedClusterContext';
 import {
   subscriptionDetailsClusterResourceTotalPattern,
@@ -68,6 +63,7 @@ test.describe(
           await createSubscription(
             applicationListPage,
             subscriptionApplicationCreateWizardPage,
+            page,
             options
           );
           await oc.labelNamespaceForAlcTest(namespace);
@@ -88,13 +84,7 @@ test.describe(
     test(
       'RHACM4K-7486: ALC: Create a Helm Application Deployed on a Specific Cluster',
       {
-        tag: [
-          '@e2e-common', '@e2e',
-          '@RHACM4K-7486',
-          '@create',
-          '@ocpInterop',
-          '@post-release',
-        ],
+        tag: ['@e2e-common', '@e2e', '@RHACM4K-7486', '@create', '@ocpInterop', '@post-release'],
       },
       async ({
         page,
@@ -122,6 +112,7 @@ test.describe(
         await createSubscription(
           applicationListPage,
           subscriptionApplicationCreateWizardPage,
+          page,
           options
         );
         await oc.labelNamespaceForAlcTest(options.namespace);
@@ -178,6 +169,7 @@ test.describe(
         await createSubscription(
           applicationListPage,
           subscriptionApplicationCreateWizardPage,
+          page,
           options
         );
         await oc.labelNamespaceForAlcTest(options.namespace);
@@ -201,7 +193,11 @@ test.describe(
           detailsValuesTimeout: 300_000,
         });
 
-        await applicationDetailsPage.navigateToApplicationTab(namespace, applicationName, 'topology');
+        await applicationDetailsPage.navigateToApplicationTab(
+          namespace,
+          applicationName,
+          'topology'
+        );
         await verifySubscriptionAppTopologyTab({
           page,
           detailsPage: applicationDetailsPage,
@@ -287,6 +283,7 @@ test.describe(
         await addSubscriptionToExistingApplication(
           applicationListPage,
           subscriptionApplicationCreateWizardPage,
+          page,
           {
             ...addOptions,
             entry: 'details',
@@ -341,11 +338,7 @@ test.describe(
       async ({ oc }) => {
         test.setTimeout(300_000);
         const { subscription: options } = resolveSubscriptionScenarioByTestId('RHACM4K-7564');
-        await deleteHelmMultiApplicationViaOc(
-          oc,
-          options.applicationName,
-          options.namespace
-        );
+        await deleteHelmMultiApplicationViaOc(oc, options.applicationName, options.namespace);
       }
     );
 
@@ -381,12 +374,17 @@ test.describe(
           await createSubscription(
             applicationListPage,
             subscriptionApplicationCreateWizardPage,
+            page,
             options
           );
           await oc.labelNamespaceForAlcTest(namespace);
         }
 
-        await applicationDetailsPage.navigateToApplicationTab(namespace, applicationName, 'details');
+        await applicationDetailsPage.navigateToApplicationTab(
+          namespace,
+          applicationName,
+          'details'
+        );
         await verifySubscriptionAppDetailsTab({
           page,
           detailsPage: applicationDetailsPage,
@@ -397,7 +395,11 @@ test.describe(
           detailsValuesTimeout: 300_000,
         });
 
-        await applicationDetailsPage.navigateToApplicationTab(namespace, applicationName, 'topology');
+        await applicationDetailsPage.navigateToApplicationTab(
+          namespace,
+          applicationName,
+          'topology'
+        );
         await verifySubscriptionAppTopologyTab({
           page,
           detailsPage: applicationDetailsPage,

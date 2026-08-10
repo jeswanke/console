@@ -1,4 +1,4 @@
-import { expect } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 
 import { createArgoPushApplicationIfMissing } from '@lib/app/argo-push';
 import type { CreateArgoPushApplicationOptions } from '@lib/app/argo-push/types';
@@ -15,6 +15,7 @@ export async function runArgoPushManualSyncScenario(params: {
   applicationListPage: ApplicationListPage;
   applicationDetailsPage: ApplicationDetailsPage;
   argoPushApplicationCreateWizardPage: ArgoPushApplicationCreateWizardPage;
+  page: Page;
   argoPush: CreateArgoPushApplicationOptions;
   clusterName?: string;
 }): Promise<void> {
@@ -23,13 +24,14 @@ export async function runArgoPushManualSyncScenario(params: {
     applicationListPage,
     applicationDetailsPage,
     argoPushApplicationCreateWizardPage: wizard,
+    page,
     argoPush,
     clusterName = 'local-cluster',
   } = params;
   const argoServerNamespace = argoPush.applicationSetNamespace ?? argoPush.argoServerLabel;
   const argoAppName = `${argoPush.applicationName}-${clusterName}`;
 
-  await createArgoPushApplicationIfMissing(oc, applicationListPage, wizard, {
+  await createArgoPushApplicationIfMissing(oc, applicationListPage, wizard, page, {
     ...argoPush,
     disableAutomatedSync: true,
     postCreateWaitMs: argoPush.postCreateWaitMs ?? 180_000,
@@ -62,7 +64,7 @@ export async function runArgoPushManualSyncScenario(params: {
   if (argoPush.clusterResources?.length) {
     await applicationDetailsPage.openDetailTab('topology');
     await verifyArgoPushAppTopologyTab({
-      page: applicationDetailsPage.getPage(),
+      page,
       detailsPage: applicationDetailsPage,
       applicationSetName: argoPush.applicationName,
       argoServerNamespace,

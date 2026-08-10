@@ -21,8 +21,7 @@ export const PLACEMENT_TOLERATIONS_UI = {
   addButtonLabel: /^Add toleration$/i,
   addButtonAriaLabel: 'Action',
   removeItemAriaLabel: 'Remove item',
-  summaryChipPattern: (key: string) =>
-    new RegExp(`${escapePlacementRegExp(key)}\\s+exists`, 'i'),
+  summaryChipPattern: (key: string) => new RegExp(`${escapePlacementRegExp(key)}\\s+exists`, 'i'),
   labels: {
     key: 'Key',
     operator: 'Operator',

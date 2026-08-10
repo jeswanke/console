@@ -1,4 +1,4 @@
-import { expect } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 import type { OcCliService } from '@services/OcCliService';
 import type { ApplicationListPage } from '@pages/app/ApplicationListPage';
 import type { ArgoPushApplicationCreateWizardPage } from '@pages/app/ArgoPushApplicationCreateWizardPage';
@@ -24,6 +24,7 @@ export async function createArgoPushApplicationIfMissing(
   oc: OcCliService,
   applicationListPage: ApplicationListPage,
   wizard: ArgoPushApplicationCreateWizardPage,
+  page: Page,
   options: CreateArgoPushApplicationOptions
 ): Promise<void> {
   const argoServerNamespace = resolveApplicationSetNamespace(options);
@@ -48,7 +49,7 @@ export async function createArgoPushApplicationIfMissing(
   }
 
   await applicationListPage.goto();
-  await createArgoPushApplication(applicationListPage, wizard, options);
+  await createArgoPushApplication(applicationListPage, wizard, page, options);
 
   await expect
     .poll(() => oc.applicationSetExists(argoServerNamespace, applicationName), {
@@ -65,7 +66,10 @@ export async function createArgoPushApplicationIfMissing(
       expectedGitPath
     );
     if (!pathValid) {
-      const actual = await oc.getApplicationSetTemplateGitPath(argoServerNamespace, applicationName);
+      const actual = await oc.getApplicationSetTemplateGitPath(
+        argoServerNamespace,
+        applicationName
+      );
       throw new Error(
         `ApplicationSet ${argoServerNamespace}/${applicationName} git path is "${actual ?? ''}"; expected "${expectedGitPath}" (Argo CD InvalidSpecError: source.path required)`
       );
@@ -82,9 +86,10 @@ export async function recreateArgoPushApplication(
   oc: OcCliService,
   applicationListPage: ApplicationListPage,
   wizard: ArgoPushApplicationCreateWizardPage,
+  page: Page,
   options: CreateArgoPushApplicationOptions
 ): Promise<void> {
   await cleanupArgoPushApplication(oc, options);
   await applicationListPage.goto();
-  await createArgoPushApplication(applicationListPage, wizard, options);
+  await createArgoPushApplication(applicationListPage, wizard, page, options);
 }

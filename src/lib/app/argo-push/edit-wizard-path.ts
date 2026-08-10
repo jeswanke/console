@@ -1,4 +1,4 @@
-import { expect } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 
 import type { CreateArgoPushApplicationOptions } from '@lib/app/argo-push/types';
 import { createArgoPushApplicationIfMissing } from '@lib/app/argo-push';
@@ -14,6 +14,7 @@ export async function editArgoPushApplicationGitPathAndVerifyTopology(params: {
   applicationListPage: ApplicationListPage;
   applicationDetailsPage: ApplicationDetailsPage;
   wizard: ArgoPushApplicationCreateWizardPage;
+  page: Page;
   argoPush: CreateArgoPushApplicationOptions;
   newGitPath: string;
   clusterName?: string;
@@ -23,15 +24,15 @@ export async function editArgoPushApplicationGitPathAndVerifyTopology(params: {
     applicationListPage,
     applicationDetailsPage,
     wizard,
+    page,
     argoPush,
     newGitPath,
     clusterName = 'local-cluster',
   } = params;
   const argoServerNamespace = argoPush.applicationSetNamespace ?? argoPush.argoServerLabel;
   const argoAppName = `${argoPush.applicationName}-${clusterName}`;
-  const page = applicationDetailsPage.getPage();
 
-  await createArgoPushApplicationIfMissing(oc, applicationListPage, wizard, argoPush);
+  await createArgoPushApplicationIfMissing(oc, applicationListPage, wizard, page, argoPush);
 
   await wizard.openEditFromApplicationsList(applicationListPage, argoPush.applicationName);
   await wizard.clickTemplateWizardStep();
@@ -40,7 +41,11 @@ export async function editArgoPushApplicationGitPathAndVerifyTopology(params: {
 
   await new Promise((resolve) => setTimeout(resolve, 30_000));
 
-  await applicationDetailsPage.gotoApplicationSet(argoServerNamespace, argoPush.applicationName, 'details');
+  await applicationDetailsPage.gotoApplicationSet(
+    argoServerNamespace,
+    argoPush.applicationName,
+    'details'
+  );
   await applicationDetailsPage.syncArgoCdApplication({ timeout: 120_000 });
 
   await expect

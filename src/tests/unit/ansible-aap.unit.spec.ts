@@ -4,10 +4,7 @@ import path from 'path';
 
 import { test, expect } from '@playwright/test';
 
-import {
-  getAnsibleAapAuthFromEnv,
-  loadAnsibleAapContextFromFile,
-} from '@lib/app/auth/ansible-aap';
+import { getAnsibleAapAuthFromEnv, loadAnsibleAapContextFromFile } from '@lib/app/auth/ansible-aap';
 
 test.describe('ansible-aap auth', () => {
   test('loadAnsibleAapContextFromFile reads url and token from JSON', () => {

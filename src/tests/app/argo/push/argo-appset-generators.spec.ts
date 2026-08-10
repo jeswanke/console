@@ -18,11 +18,12 @@ test.describe(
     test(
       'RHACM4K-61948 - As an application admin, I want to create a matrix ApplicationSet with Cluster Decision Resource Generator',
       { tag: ['@RHACM4K-61948', '@generators'] },
-      async ({ applicationListPage, argoPullApplicationCreateWizardPage }) => {
+      async ({ page, applicationListPage, argoPullApplicationCreateWizardPage }) => {
         test.setTimeout(GENERATOR_SCENARIO_TIMEOUT_MS);
         await runArgoGeneratorScenariosForTestId(
           '61948',
           applicationListPage,
+          page,
           argoPullApplicationCreateWizardPage
         );
       }
@@ -31,11 +32,12 @@ test.describe(
     test(
       'RHACM4K-61951 - As an application admin, I want to create a matrix ApplicationSet with Clusters Generator',
       { tag: ['@RHACM4K-61951', '@generators'] },
-      async ({ applicationListPage, argoPullApplicationCreateWizardPage }) => {
+      async ({ page, applicationListPage, argoPullApplicationCreateWizardPage }) => {
         test.setTimeout(GENERATOR_SCENARIO_TIMEOUT_MS);
         await runArgoGeneratorScenariosForTestId(
           '61951',
           applicationListPage,
+          page,
           argoPullApplicationCreateWizardPage
         );
       }
@@ -44,11 +46,12 @@ test.describe(
     test(
       'RHACM4K-61952 - As an application admin, I want to create a matrix ApplicationSet with Git Generator',
       { tag: ['@RHACM4K-61952', '@generators'] },
-      async ({ applicationListPage, argoPullApplicationCreateWizardPage }) => {
+      async ({ page, applicationListPage, argoPullApplicationCreateWizardPage }) => {
         test.setTimeout(GENERATOR_SCENARIO_TIMEOUT_MS);
         await runArgoGeneratorScenariosForTestId(
           '61952',
           applicationListPage,
+          page,
           argoPullApplicationCreateWizardPage
         );
       }
@@ -57,11 +60,12 @@ test.describe(
     test(
       'RHACM4K-61953 - As an application admin, I want to create a matrix ApplicationSet with List Generator',
       { tag: ['@RHACM4K-61953', '@generators'] },
-      async ({ applicationListPage, argoPullApplicationCreateWizardPage }) => {
+      async ({ page, applicationListPage, argoPullApplicationCreateWizardPage }) => {
         test.setTimeout(GENERATOR_SCENARIO_TIMEOUT_MS);
         await runArgoGeneratorScenariosForTestId(
           '61953',
           applicationListPage,
+          page,
           argoPullApplicationCreateWizardPage
         );
       }
@@ -70,11 +74,12 @@ test.describe(
     test(
       'RHACM4K-61954 - As an application admin, I want to create a matrix ApplicationSet with Pull Request Generator',
       { tag: ['@RHACM4K-61954', '@generators'] },
-      async ({ applicationListPage, argoPullApplicationCreateWizardPage }) => {
+      async ({ page, applicationListPage, argoPullApplicationCreateWizardPage }) => {
         test.setTimeout(GENERATOR_SCENARIO_TIMEOUT_MS);
         await runArgoGeneratorScenariosForTestId(
           '61954',
           applicationListPage,
+          page,
           argoPullApplicationCreateWizardPage
         );
       }
@@ -83,11 +88,12 @@ test.describe(
     test(
       'RHACM4K-61956 - As an application admin, I want to create a matrix ApplicationSet with Plugin Generator',
       { tag: ['@RHACM4K-61956', '@generators'] },
-      async ({ applicationListPage, argoPullApplicationCreateWizardPage }) => {
+      async ({ page, applicationListPage, argoPullApplicationCreateWizardPage }) => {
         test.setTimeout(GENERATOR_SCENARIO_TIMEOUT_MS);
         await runArgoGeneratorScenariosForTestId(
           '61956',
           applicationListPage,
+          page,
           argoPullApplicationCreateWizardPage
         );
       }
@@ -96,11 +102,12 @@ test.describe(
     test(
       'RHACM4K-61957 - As an application admin, I want to create a matrix ApplicationSet with SCM Provider Generator',
       { tag: ['@RHACM4K-61957', '@generators'] },
-      async ({ applicationListPage, argoPullApplicationCreateWizardPage }) => {
+      async ({ page, applicationListPage, argoPullApplicationCreateWizardPage }) => {
         test.setTimeout(GENERATOR_SCENARIO_TIMEOUT_MS);
         await runArgoGeneratorScenariosForTestId(
           '61957',
           applicationListPage,
+          page,
           argoPullApplicationCreateWizardPage
         );
       }

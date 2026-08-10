@@ -30,7 +30,9 @@ export async function waitForGitLongPrefixWorkloads(oc: OcCliService): Promise<v
 
   await expect
     .poll(async () => {
-      const dep = await oc.run(`oc get deployment -n ${namespace} --no-headers 2>/dev/null || true`);
+      const dep = await oc.run(
+        `oc get deployment -n ${namespace} --no-headers 2>/dev/null || true`
+      );
       return dep.includes('nginx');
     }, pollOpts)
     .toBe(true);

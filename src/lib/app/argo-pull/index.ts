@@ -1,5 +1,6 @@
 import path from 'node:path';
 
+import type { Page } from '@playwright/test';
 import type { ApplicationListPage } from '@pages/app/ApplicationListPage';
 import type { ArgoPullApplicationCreateWizardPage } from '@pages/app/ArgoPullApplicationCreateWizardPage';
 
@@ -16,9 +17,10 @@ export type { CreateArgoPushApplicationOptions as CreateArgoPullApplicationOptio
 export async function createArgoPullApplication(
   applicationListPage: ApplicationListPage,
   wizard: ArgoPullApplicationCreateWizardPage,
+  page: Page,
   options: CreateArgoPushApplicationOptions
 ): Promise<{ argoServerNamespace: string }> {
-  return createArgoPushApplication(applicationListPage, wizard, options);
+  return createArgoPushApplication(applicationListPage, wizard, page, options);
 }
 
 export { waitForArgoPushApplicationAfterCreate as waitForArgoPullApplicationAfterCreate };

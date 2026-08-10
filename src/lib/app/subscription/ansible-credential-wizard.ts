@@ -1,7 +1,7 @@
 /**
  * **Add credential** wizard on subscription create/edit (Ansible Automation Platform secret).
  */
-import { expect } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 import { APP_SUBSCRIPTION_CREATE_WIZARD } from '@constants/app';
 import type { SubscriptionApplicationCreateWizardPage } from '@pages/app/SubscriptionApplicationCreateWizardPage';
 
@@ -10,6 +10,7 @@ import type { AddCredentialWizardSpec } from './types';
 /** Completes the **Add credential** modal steps (dialog must already be open). */
 export async function fillAddCredentialWizardDialog(
   wizard: SubscriptionApplicationCreateWizardPage,
+  page: Page,
   spec: AddCredentialWizardSpec
 ): Promise<void> {
   const { secretName, secretNamespace, ansibleHost, ansibleToken } = spec;
@@ -33,9 +34,9 @@ export async function fillAddCredentialWizardDialog(
   const addButton = wizard.getAddCredentialDialogAddButton();
   await expect(addButton).toBeEnabled({ timeout: 30_000 });
   await addButton.click();
-  if (await dialog.isVisible().catch(() => false)) {
-    await wizard.getPage().waitForTimeout(2_000);
-    if (await dialog.isVisible().catch(() => false)) {
+  if (await dialog.isVisible()) {
+    await page.waitForTimeout(2_000);
+    if (await dialog.isVisible()) {
       await addButton.click({ force: true });
     }
   }
@@ -46,10 +47,10 @@ export async function fillAddCredentialWizardDialog(
 /** Opens the modal from the existing-secret field and completes all wizard steps. */
 export async function addAnsibleCredentialViaWizard(
   wizard: SubscriptionApplicationCreateWizardPage,
+  page: Page,
   blockIndex: number,
   spec: AddCredentialWizardSpec
 ): Promise<void> {
-  const page = wizard.getPage();
   const credInput = page.locator('[data-testid="select-connection"]');
 
   const secretExists = await wizard.oc
@@ -64,7 +65,7 @@ export async function addAnsibleCredentialViaWizard(
     );
     await existingSecret.click();
     await wizard.getAddCredentialButton().click();
-    await fillAddCredentialWizardDialog(wizard, spec);
+    await fillAddCredentialWizardDialog(wizard, page, spec);
 
     if (!page.url().includes('/create/subscription')) {
       await page.goBack();
@@ -85,7 +86,7 @@ export async function addAnsibleCredentialViaWizard(
     'xpath=ancestor::div[contains(@class,"pf-v6-c-text-input-group")]'
   );
   const clearBtn = credInputGroup.locator('[aria-label="Clear input value"]');
-  if (await clearBtn.isVisible().catch(() => false)) {
+  if (await clearBtn.isVisible()) {
     await clearBtn.click();
     await page.waitForTimeout(500);
   }

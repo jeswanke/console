@@ -38,7 +38,10 @@ export const ARGO_GENERATOR_YAML_KEYS = [
 
 export type ArgoGeneratorYamlKey = (typeof ARGO_GENERATOR_YAML_KEYS)[number];
 
-export const ARGO_GENERATOR_DISPLAY_TO_YAML_KEY: Record<ArgoGeneratorDisplayName, ArgoGeneratorYamlKey> = {
+export const ARGO_GENERATOR_DISPLAY_TO_YAML_KEY: Record<
+  ArgoGeneratorDisplayName,
+  ArgoGeneratorYamlKey
+> = {
   'Cluster Decision Resource generator': 'clusterDecisionResource',
   'Clusters generator': 'clusters',
   'Git generator': 'git',
@@ -107,7 +110,9 @@ export const PLUGIN_DEFAULT_CONFIG = {
   requeueAfterSeconds: 180,
 } as const;
 
-export const CLUSTERS_SHAPE = { selector: { matchLabels: { staging: 'true', test: 'true' } } } as const;
+export const CLUSTERS_SHAPE = {
+  selector: { matchLabels: { staging: 'true', test: 'true' } },
+} as const;
 export const GIT_SHAPE = {
   requeueAfterSeconds: 180,
   repoURL: GIT_DEFAULT_CONFIG.repoURL,
@@ -202,7 +207,9 @@ export type GeneratorConfigByName = Partial<{
 
 export type YamlTemplateFields = Record<string, string>;
 
-export type ClusterDecisionResourceShape = typeof CLUSTER_DECISION_DEFAULT | typeof CLUSTER_DECISION_SECOND;
+export type ClusterDecisionResourceShape =
+  | typeof CLUSTER_DECISION_DEFAULT
+  | typeof CLUSTER_DECISION_SECOND;
 export type ClustersGeneratorShape = typeof CLUSTERS_SHAPE;
 export type GitGeneratorShape = typeof GIT_SHAPE;
 export type ListGeneratorShape = typeof LIST_SHAPE;

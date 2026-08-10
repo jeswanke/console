@@ -1,17 +1,18 @@
-import { expect } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 
 import { APP_COMPARE_POPOVER, APP_CREATE_MENU, APP_TOOLBAR } from '@constants/app';
 import type { ApplicationListPage } from '@pages/app/ApplicationListPage';
 
 /** RHACM4K-42704: Compare application types popover shows all application kinds. */
 export async function verifyCompareApplicationTypesPopover(
-  applicationListPage: ApplicationListPage
+  applicationListPage: ApplicationListPage,
+  page: Page
 ): Promise<void> {
   await applicationListPage.goto();
   const table = applicationListPage.applicationsTable;
   // Cypress `navigateApplication()` opens Create application, then clicks Compare.
   await applicationListPage.openCreateApplication();
-  await applicationListPage.getPage().getByRole('button', { name: APP_TOOLBAR.compareTypesLabel }).click();
+  await page.getByRole('button', { name: APP_TOOLBAR.compareTypesLabel }).click();
 
   const popover = table.getCompareApplicationTypesPopover();
   await expect(popover).toBeVisible();
@@ -22,5 +23,5 @@ export async function verifyCompareApplicationTypesPopover(
   await expect(body).toContainText(APP_CREATE_MENU.options.argoPushModel);
   await expect(body).toContainText(APP_CREATE_MENU.options.subscription);
 
-  await applicationListPage.getPage().getByRole('button', { name: APP_TOOLBAR.compareTypesLabel }).click();
+  await page.getByRole('button', { name: APP_TOOLBAR.compareTypesLabel }).click();
 }

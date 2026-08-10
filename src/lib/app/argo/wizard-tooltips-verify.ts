@@ -4,19 +4,17 @@ import {
   ARGO_WIZARD_MORE_INFO_BUTTON,
   type ArgoWizardTooltipDef,
 } from '@constants/argo-wizard-tooltips';
-import {
-  APP_ARGO_CREATE_WIZARD_SHARED,
-} from '@constants/app';
+import { APP_ARGO_CREATE_WIZARD_SHARED } from '@constants/app';
 import type { ArgoGeneratorDisplayName } from '@constants/argo-appset-generators';
-import {
-  addArgoGenerator,
-  removeArgoGeneratorAt,
-} from '@lib/app/argo/generator-wizard-actions';
+import { addArgoGenerator, removeArgoGeneratorAt } from '@lib/app/argo/generator-wizard-actions';
 import type { ArgoPullApplicationCreateWizardPage } from '@pages/app/ArgoPullApplicationCreateWizardPage';
 import type { ApplicationListPage } from '@pages/app/ApplicationListPage';
 
 /** Click **More info**, assert popover body text, close popover (RHACM4K-61725). */
-export async function verifyArgoWizardTooltip(page: Page, def: ArgoWizardTooltipDef): Promise<void> {
+export async function verifyArgoWizardTooltip(
+  page: Page,
+  def: ArgoWizardTooltipDef
+): Promise<void> {
   const texts = Array.isArray(def.expectedText) ? def.expectedText : [def.expectedText];
   let help: Locator;
   if (def.nearLabelText) {
@@ -37,7 +35,7 @@ export async function verifyArgoWizardTooltip(page: Page, def: ArgoWizardTooltip
     await expect(body).toContainText(text);
   }
   const close = popover.getByRole('button', { name: 'Close' });
-  if (await close.isVisible().catch(() => false)) {
+  if (await close.isVisible()) {
     await close.click();
   } else {
     await page.keyboard.press('Escape');
@@ -45,7 +43,10 @@ export async function verifyArgoWizardTooltip(page: Page, def: ArgoWizardTooltip
   await popover.waitFor({ state: 'hidden', timeout: 5_000 }).catch(() => {});
 }
 
-export async function assertGeneratorBlockHasNoMoreInfo(page: Page, headingPattern: RegExp): Promise<void> {
+export async function assertGeneratorBlockHasNoMoreInfo(
+  page: Page,
+  headingPattern: RegExp
+): Promise<void> {
   const block = page
     .locator('div#generators')
     .getByRole('heading', { level: 6, name: headingPattern })
@@ -77,7 +78,7 @@ export async function selectPullWizardRepositoryGit(page: Page): Promise<void> {
     .locator('[data-ouia-component-type="PF6/Card"]')
     .filter({ hasText: W.template.gitRepositoryTypeCardText })
     .first();
-  if (await gitTile.isVisible().catch(() => false)) {
+  if (await gitTile.isVisible()) {
     await gitTile.click();
     return;
   }
@@ -90,7 +91,7 @@ export async function selectPullWizardRepositoryHelm(page: Page): Promise<void> 
     .locator('[data-ouia-component-type="PF6/Card"]')
     .filter({ hasText: W.template.helmRepositoryTypeCardText })
     .first();
-  if (await helmTile.isVisible().catch(() => false)) {
+  if (await helmTile.isVisible()) {
     await helmTile.click();
     return;
   }

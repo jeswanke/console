@@ -296,7 +296,9 @@ export class SubscriptionApplicationCreateWizardPage extends BasePage {
 
   /** Wizard / page title (PF heading). */
   getTitleHeading(): Locator {
-    return this.page.getByRole('heading', { level: APP_SUBSCRIPTION_CREATE_WIZARD.title.roleLevel });
+    return this.page.getByRole('heading', {
+      level: APP_SUBSCRIPTION_CREATE_WIZARD.title.roleLevel,
+    });
   }
 
   /** Breadcrumb link back to Applications list */
@@ -576,7 +578,9 @@ export class SubscriptionApplicationCreateWizardPage extends BasePage {
 
   /** All repository/subscription block containers in the form (for count/introspection). */
   getRepositoryBlockContainers(): Locator {
-    return this.page.locator(APP_SUBSCRIPTION_CREATE_WIZARD.multiChannel.repositoryBlockContainerSelector);
+    return this.page.locator(
+      APP_SUBSCRIPTION_CREATE_WIZARD.multiChannel.repositoryBlockContainerSelector
+    );
   }
 
   /**
@@ -941,7 +945,9 @@ export class SubscriptionApplicationCreateWizardPage extends BasePage {
    * **Configure automation for prehook and posthook** for `blockIndex`. Idempotent expand.
    * **Prerequisite:** repository type selected for this block.
    */
-  async expandConfigurePrePostAutomationSectionForRepositoryBlock(blockIndex: number): Promise<void> {
+  async expandConfigurePrePostAutomationSectionForRepositoryBlock(
+    blockIndex: number
+  ): Promise<void> {
     await this.expandAccordionSectionIfCollapsed(
       this.getConfigurePrePostAutomationSectionForRepositoryBlock(blockIndex)
     );
@@ -1049,7 +1055,8 @@ export class SubscriptionApplicationCreateWizardPage extends BasePage {
     subscriptionBlockIndex: number
   ): Locator {
     return this.byId(
-      subscriptionWizardClusterSelectorLabelDomIds(labelRowIndex, subscriptionBlockIndex).labelNameId
+      subscriptionWizardClusterSelectorLabelDomIds(labelRowIndex, subscriptionBlockIndex)
+        .labelNameId
     );
   }
 
@@ -1059,7 +1066,8 @@ export class SubscriptionApplicationCreateWizardPage extends BasePage {
     subscriptionBlockIndex: number
   ): Locator {
     return this.byId(
-      subscriptionWizardClusterSelectorLabelDomIds(labelRowIndex, subscriptionBlockIndex).labelValueId
+      subscriptionWizardClusterSelectorLabelDomIds(labelRowIndex, subscriptionBlockIndex)
+        .labelValueId
     );
   }
 
@@ -1093,8 +1101,7 @@ export class SubscriptionApplicationCreateWizardPage extends BasePage {
    * **Cluster sets** combobox by accessible name (stable when PF toggle ids are dynamic).
    */
   getClusterSetsCombobox(): Locator {
-    const n =
-      APP_SUBSCRIPTION_CREATE_WIZARD.clusterDeployment.placementAccessibleNames.clusterSets;
+    const n = APP_SUBSCRIPTION_CREATE_WIZARD.clusterDeployment.placementAccessibleNames.clusterSets;
     return this.page.getByRole('combobox', { name: n });
   }
 
@@ -1153,7 +1160,9 @@ export class SubscriptionApplicationCreateWizardPage extends BasePage {
     rowIndex: number
   ): Locator {
     const n = APP_SUBSCRIPTION_CREATE_WIZARD.clusterDeployment.placementAccessibleNames.labelName;
-    return this.getRepositoryBlockContainer(blockIndex).getByRole('combobox', { name: n }).nth(rowIndex);
+    return this.getRepositoryBlockContainer(blockIndex)
+      .getByRole('combobox', { name: n })
+      .nth(rowIndex);
   }
 
   /** **Operator** combobox for label row `rowIndex` in repository block `blockIndex`. */
@@ -1161,8 +1170,11 @@ export class SubscriptionApplicationCreateWizardPage extends BasePage {
     blockIndex: number,
     rowIndex: number
   ): Locator {
-    const n = APP_SUBSCRIPTION_CREATE_WIZARD.clusterDeployment.placementAccessibleNames.labelOperator;
-    return this.getRepositoryBlockContainer(blockIndex).getByRole('combobox', { name: n }).nth(rowIndex);
+    const n =
+      APP_SUBSCRIPTION_CREATE_WIZARD.clusterDeployment.placementAccessibleNames.labelOperator;
+    return this.getRepositoryBlockContainer(blockIndex)
+      .getByRole('combobox', { name: n })
+      .nth(rowIndex);
   }
 
   /** **Value** combobox for label row `rowIndex` in repository block `blockIndex`. */
@@ -1171,7 +1183,9 @@ export class SubscriptionApplicationCreateWizardPage extends BasePage {
     rowIndex: number
   ): Locator {
     const n = APP_SUBSCRIPTION_CREATE_WIZARD.clusterDeployment.placementAccessibleNames.labelValue;
-    return this.getRepositoryBlockContainer(blockIndex).getByRole('combobox', { name: n }).nth(rowIndex);
+    return this.getRepositoryBlockContainer(blockIndex)
+      .getByRole('combobox', { name: n })
+      .nth(rowIndex);
   }
 
   /**
@@ -1218,7 +1232,10 @@ export class SubscriptionApplicationCreateWizardPage extends BasePage {
   /**
    * Opens **Cluster sets** for `blockIndex` and selects a menu entry (e.g. `global`) — matches console PF Select behavior.
    */
-  async pickClusterSetMenuOptionForRepositoryBlock(blockIndex: number, optionText: string): Promise<void> {
+  async pickClusterSetMenuOptionForRepositoryBlock(
+    blockIndex: number,
+    optionText: string
+  ): Promise<void> {
     const input = this.getClusterSetsInputForRepositoryBlock(blockIndex);
     if ((await input.count()) > 0) {
       await this.safeWizardClick(input);
@@ -1235,7 +1252,10 @@ export class SubscriptionApplicationCreateWizardPage extends BasePage {
     rowIndex: number,
     optionText: string
   ): Promise<void> {
-    const combo = this.getClusterPlacementLabelNameComboboxForRowInRepositoryBlock(blockIndex, rowIndex);
+    const combo = this.getClusterPlacementLabelNameComboboxForRowInRepositoryBlock(
+      blockIndex,
+      rowIndex
+    );
     await this.safeWizardClick(combo);
     await this.pickOpenMenuItemByExactLabel(optionText);
     await this.waitForLoad();
@@ -1247,7 +1267,10 @@ export class SubscriptionApplicationCreateWizardPage extends BasePage {
     rowIndex: number,
     optionText: string
   ): Promise<void> {
-    const combo = this.getClusterPlacementLabelValueComboboxForRowInRepositoryBlock(blockIndex, rowIndex);
+    const combo = this.getClusterPlacementLabelValueComboboxForRowInRepositoryBlock(
+      blockIndex,
+      rowIndex
+    );
     await this.safeWizardClick(combo);
     await this.pickOpenMenuItemByExactLabel(optionText);
     await this.waitForLoad();
@@ -1350,7 +1373,9 @@ export class SubscriptionApplicationCreateWizardPage extends BasePage {
   getTimeWindowTimezoneComboboxForRepositoryBlock(blockIndex: number): Locator {
     return this.getRepositoryBlockContainer(blockIndex)
       .locator(APP_SUBSCRIPTION_CREATE_WIZARD.timeWindow.timezoneSectionSelector)
-      .getByRole('combobox', { name: APP_SUBSCRIPTION_CREATE_WIZARD.timeWindow.timezoneComboboxNameRe });
+      .getByRole('combobox', {
+        name: APP_SUBSCRIPTION_CREATE_WIZARD.timeWindow.timezoneComboboxNameRe,
+      });
   }
 
   /** Opens the timezone typeahead, filters by `ianaTimezone`, and picks the matching menu row. */
@@ -1402,11 +1427,12 @@ export class SubscriptionApplicationCreateWizardPage extends BasePage {
    */
   getConfigurePrePostAutomationSectionForRepositoryBlock(blockIndex: number): Locator {
     const block = this.getRepositoryBlockContainer(blockIndex);
-    const byTitle = block
-      .locator('.creation-view-controls-title')
-      .filter({
-        hasText: new RegExp(APP_SUBSCRIPTION_CREATE_WIZARD.automation.configurePrePostToggleAccessibleText, 'i'),
-      });
+    const byTitle = block.locator('.creation-view-controls-title').filter({
+      hasText: new RegExp(
+        APP_SUBSCRIPTION_CREATE_WIZARD.automation.configurePrePostToggleAccessibleText,
+        'i'
+      ),
+    });
     return byTitle.or(this.byId(subscriptionAutomationPrePostSectionToggleId(blockIndex)));
   }
 

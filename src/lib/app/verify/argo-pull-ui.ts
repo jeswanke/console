@@ -1,4 +1,4 @@
-import { expect } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 
 import type { CreateArgoPushApplicationOptions } from '@lib/app/argo-push/types';
 import { expectApplicationDetailsMinSuccessResourceCount } from '@lib/app/verify/details-tab';
@@ -116,16 +116,17 @@ export async function openArgoPullApplicationFromOverviewTable(
 /** Topology tab graph nodes for pull-model AppSet on a managed cluster. */
 export async function verifyArgoPullApplicationTopology(params: {
   applicationDetailsPage: ApplicationDetailsPage;
+  page: Page;
   options: CreateArgoPushApplicationOptions;
   managedClusterName: string;
 }): Promise<void> {
-  const { applicationDetailsPage, options, managedClusterName } = params;
+  const { applicationDetailsPage, page, options, managedClusterName } = params;
   const argoServerNamespace = options.applicationSetNamespace ?? options.argoServerLabel;
   const clusterResources = options.clusterResources ?? [];
 
   await applicationDetailsPage.openDetailTab('topology');
   await verifyArgoPushAppTopologyTab({
-    page: applicationDetailsPage.getPage(),
+    page,
     detailsPage: applicationDetailsPage,
     applicationSetName: options.applicationName,
     argoServerNamespace,
@@ -146,6 +147,7 @@ export async function verifyArgoPullApplicationTopology(params: {
 /** RHACM4K-38202: hub-cluster ApplicationSet node shows pull-model placement warning. */
 export async function verifyArgoPullHubTopologyWarning(
   applicationDetailsPage: ApplicationDetailsPage,
+  page: Page,
   applicationSetName: string,
   expectedWarning: string | RegExp,
   options?: { expectAbsent?: boolean }
@@ -154,7 +156,7 @@ export async function verifyArgoPullHubTopologyWarning(
   await applicationDetailsPage.expectTopologyGraphVisible();
   await applicationDetailsPage.clickTopologyGraphNodeByDataId(`application--${applicationSetName}`);
 
-  const details = applicationDetailsPage.getPage().locator('.topologyDetails');
+  const details = page.locator('.topologyDetails');
   if (options?.expectAbsent) {
     await expect(details).not.toContainText(expectedWarning);
   } else {

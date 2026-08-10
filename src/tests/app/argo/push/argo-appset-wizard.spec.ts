@@ -23,6 +23,7 @@ test.describe(
       'RHACM4K-6735: ALC: Edit an existing Argo appset via wizard (mortgage path)',
       { tag: ['@RHACM4K-6735', '@e2e'] },
       async ({
+        page,
         oc,
         applicationListPage,
         applicationDetailsPage,
@@ -33,6 +34,7 @@ test.describe(
         await ensureLocalClusterMatchingLabelForArgoAppTable(oc, 'name', 'local-cluster');
         try {
           await editArgoPushApplicationGitPathAndVerifyTopology({
+            page,
             oc,
             applicationListPage,
             applicationDetailsPage,
@@ -50,6 +52,7 @@ test.describe(
       'RHACM4K-6773: ALC: Edit deployed Argo appset path back to helloworld-argo via wizard',
       { tag: ['@RHACM4K-6773', '@e2e'] },
       async ({
+        page,
         oc,
         applicationListPage,
         applicationDetailsPage,
@@ -60,6 +63,7 @@ test.describe(
         await ensureLocalClusterMatchingLabelForArgoAppTable(oc, 'name', 'local-cluster');
         try {
           await editArgoPushApplicationGitPathAndVerifyTopology({
+            page,
             oc,
             applicationListPage,
             applicationDetailsPage,

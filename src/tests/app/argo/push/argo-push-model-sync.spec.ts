@@ -17,6 +17,7 @@ test.describe(
       'RHACM4K-61942: ALC: Manually sync an ApplicationSet created with automated sync disabled',
       { tag: ['@RHACM4K-61942', '@applicationset'] },
       async ({
+        page,
         oc,
         applicationListPage,
         applicationDetailsPage,
@@ -28,6 +29,7 @@ test.describe(
         await ensureLocalClusterMatchingLabelForArgoAppTable(oc, 'name', 'local-cluster');
         try {
           await runArgoPushManualSyncScenario({
+            page,
             oc,
             applicationListPage,
             applicationDetailsPage,

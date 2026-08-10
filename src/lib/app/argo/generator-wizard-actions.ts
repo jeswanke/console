@@ -1,8 +1,6 @@
 import { expect, type Locator, type Page } from '@playwright/test';
 
-import {
-  APP_ARGO_CREATE_WIZARD_SHARED,
-} from '@constants/app';
+import { APP_ARGO_CREATE_WIZARD_SHARED } from '@constants/app';
 import {
   ARGO_APPSET_GENERATORS,
   type ArgoGeneratorDisplayName,
@@ -42,16 +40,12 @@ async function dismissOpenCombobox(page: Page): Promise<void> {
   await page.locator('body').click({ position: { x: 0, y: 0 }, force: true });
 }
 
-async function pickRequeueTimeCombobox(
-  page: Page,
-  block: Locator,
-  seconds: number
-): Promise<void> {
+async function pickRequeueTimeCombobox(page: Page, block: Locator, seconds: number): Promise<void> {
   const requeue = block.getByRole('combobox', { name: /Select the requeue time/i });
   await requeue.scrollIntoViewIfNeeded();
   await requeue.click();
   const option = page.getByRole('option', { name: String(seconds) }).first();
-  if (await option.isVisible().catch(() => false)) {
+  if (await option.isVisible()) {
     await option.click();
   } else {
     await requeue.fill(String(seconds));
@@ -60,11 +54,7 @@ async function pickRequeueTimeCombobox(
   await dismissOpenCombobox(page);
 }
 
-async function pickPfComboboxByTyping(
-  page: Page,
-  combobox: Locator,
-  value: string
-): Promise<void> {
+async function pickPfComboboxByTyping(page: Page, combobox: Locator, value: string): Promise<void> {
   const trimmed = value.trim();
   await combobox.scrollIntoViewIfNeeded();
   await combobox.click();
@@ -76,19 +66,22 @@ async function pickPfComboboxByTyping(
   const createBtn = page.getByRole('button', { name: /Create new option/i }).first();
 
   await expect
-    .poll(async () => {
-      if (await exactOption.isVisible().catch(() => false)) return 'exact';
-      if (await createOption.isVisible().catch(() => false)) return 'create';
-      if (await createBtn.isVisible().catch(() => false)) return 'createBtn';
-      return (await combobox.inputValue()).trim() === trimmed ? 'typed' : false;
-    }, { timeout: 60_000 })
+    .poll(
+      async () => {
+        if (await exactOption.isVisible()) return 'exact';
+        if (await createOption.isVisible()) return 'create';
+        if (await createBtn.isVisible()) return 'createBtn';
+        return (await combobox.inputValue()).trim() === trimmed ? 'typed' : false;
+      },
+      { timeout: 60_000 }
+    )
     .not.toBe(false);
 
-  if (await exactOption.isVisible().catch(() => false)) {
+  if (await exactOption.isVisible()) {
     await exactOption.click();
-  } else if (await createOption.isVisible().catch(() => false)) {
+  } else if (await createOption.isVisible()) {
     await createOption.click();
-  } else if (await createBtn.isVisible().catch(() => false)) {
+  } else if (await createBtn.isVisible()) {
     await createBtn.click();
   } else {
     await combobox.press('Enter');
@@ -113,19 +106,22 @@ async function pickCreatableComboboxValue(
   const createBtn = page.getByRole('button', { name: /Create new option/i }).first();
 
   await expect
-    .poll(async () => {
-      if (await exactOption.isVisible().catch(() => false)) return 'exact';
-      if (await createOption.isVisible().catch(() => false)) return 'create';
-      if (await createBtn.isVisible().catch(() => false)) return 'createBtn';
-      return (await combobox.inputValue()).trim() === trimmed ? 'typed' : false;
-    }, { timeout: 60_000, intervals: [200, 500, 1_000] })
+    .poll(
+      async () => {
+        if (await exactOption.isVisible()) return 'exact';
+        if (await createOption.isVisible()) return 'create';
+        if (await createBtn.isVisible()) return 'createBtn';
+        return (await combobox.inputValue()).trim() === trimmed ? 'typed' : false;
+      },
+      { timeout: 60_000, intervals: [200, 500, 1_000] }
+    )
     .not.toBe(false);
 
-  if (await exactOption.isVisible().catch(() => false)) {
+  if (await exactOption.isVisible()) {
     await exactOption.click();
-  } else if (await createOption.isVisible().catch(() => false)) {
+  } else if (await createOption.isVisible()) {
     await createOption.click();
-  } else if (await createBtn.isVisible().catch(() => false)) {
+  } else if (await createBtn.isVisible()) {
     await createBtn.click();
   } else {
     await combobox.press('Enter');
@@ -149,7 +145,9 @@ function generatorsPanel(page: Page): Locator {
 }
 
 function getGeneratorHeadings(page: Page): Locator {
-  return generatorsPanel(page).getByRole('heading', { level: 6 }).filter({ hasText: /generator/i });
+  return generatorsPanel(page)
+    .getByRole('heading', { level: 6 })
+    .filter({ hasText: /generator/i });
 }
 
 function getGeneratorBlockBySlot(page: Page, slotIndex: number): Locator {
@@ -185,11 +183,18 @@ export async function removeArgoGeneratorAt(page: Page, index: number): Promise<
   const removeBtn = getGeneratorRemoveButton(page, index - 1);
   await removeBtn.scrollIntoViewIfNeeded();
   await removeBtn.click({ force: true });
-  await expect(getGeneratorHeadings(page)).toHaveCount(Math.max(0, before - 1), { timeout: 15_000 });
+  await expect(getGeneratorHeadings(page)).toHaveCount(Math.max(0, before - 1), {
+    timeout: 15_000,
+  });
 }
 
-export async function addArgoGenerator(page: Page, menuItemText: ArgoGeneratorDisplayName): Promise<void> {
-  const addButton = page.getByRole('button', { name: ARGO_APPSET_GENERATORS.addGeneratorButtonLabel });
+export async function addArgoGenerator(
+  page: Page,
+  menuItemText: ArgoGeneratorDisplayName
+): Promise<void> {
+  const addButton = page.getByRole('button', {
+    name: ARGO_APPSET_GENERATORS.addGeneratorButtonLabel,
+  });
   await addButton.first().scrollIntoViewIfNeeded();
   await addButton.first().click({ force: true });
   const menu = page.getByRole('menu');
@@ -204,15 +209,15 @@ async function fillGitGeneratorData(
 ): Promise<void> {
   const block = getGeneratorBlockBySlot(page, generatorSlotIndex);
   if (data.repoURL) {
-    const input = block.getByRole('combobox', { name: /Enter or select a Git URL/i }).or(
-      block.locator('input[aria-label="Enter or select a Git URL"]')
-    );
+    const input = block
+      .getByRole('combobox', { name: /Enter or select a Git URL/i })
+      .or(block.locator('input[aria-label="Enter or select a Git URL"]'));
     await pickPfComboboxByTyping(page, input, data.repoURL);
   }
   if (data.revision) {
-    const input = block.getByRole('combobox', { name: /tracking revision/i }).or(
-      block.locator('input[aria-label="Enter or select a tracking revision"]')
-    );
+    const input = block
+      .getByRole('combobox', { name: /tracking revision/i })
+      .or(block.locator('input[aria-label="Enter or select a tracking revision"]'));
     await pickCreatableComboboxValue(page, input, data.revision);
   }
   if (data.directories?.length) {
@@ -281,7 +286,9 @@ async function fillPluginGeneratorData(
 ): Promise<void> {
   const block = getGeneratorBlockBySlot(page, generatorSlotIndex);
   if (data.configMapRefName != null) {
-    await block.locator('input[placeholder="Enter the ConfigMap name"]').fill(data.configMapRefName);
+    await block
+      .locator('input[placeholder="Enter the ConfigMap name"]')
+      .fill(data.configMapRefName);
   }
   const inputParams = data.inputParameters ?? {};
   const paramEntries = Object.entries(inputParams);
@@ -333,7 +340,9 @@ async function fillPullRequestGeneratorData(
     await block.locator('input[placeholder="Enter the GitHub API URL"]').fill(data.api);
   }
   if (data.tokenSecretName != null) {
-    await block.locator('input[placeholder="Enter the token secret name"]').fill(data.tokenSecretName);
+    await block
+      .locator('input[placeholder="Enter the token secret name"]')
+      .fill(data.tokenSecretName);
   }
   if (data.tokenKey != null) {
     await block.locator('input[placeholder="Enter the token key"]').fill(data.tokenKey);
@@ -346,11 +355,11 @@ async function fillPullRequestGeneratorData(
     const labelsInput = block.locator('input[aria-label="Enter labels"]');
     await labelsInput.fill(label);
     const createOption = page.getByRole('option', { name: /Create new option/i }).first();
-    if (await createOption.isVisible().catch(() => false)) {
+    if (await createOption.isVisible()) {
       await createOption.click();
     } else {
       const createBtn = page.getByRole('button', { name: /Create new option/i }).first();
-      if (await createBtn.isVisible().catch(() => false)) {
+      if (await createBtn.isVisible()) {
         await createBtn.click();
       } else {
         await labelsInput.press('Enter');
@@ -370,7 +379,9 @@ async function fillScmProviderGeneratorData(
 ): Promise<void> {
   const block = getGeneratorBlockBySlot(page, generatorSlotIndex);
   if (data.organization != null) {
-    await block.locator('input[placeholder="Enter the GitHub organization"]').fill(data.organization);
+    await block
+      .locator('input[placeholder="Enter the GitHub organization"]')
+      .fill(data.organization);
   }
   if (data.api != null) {
     await block.locator('input[placeholder="Enter the GitHub API URL"]').fill(data.api);
@@ -381,7 +392,9 @@ async function fillScmProviderGeneratorData(
     if (data.allBranches !== checked) await checkbox.click();
   }
   if (data.tokenSecretName != null) {
-    await block.locator('input[placeholder="Enter the token secret name"]').fill(data.tokenSecretName);
+    await block
+      .locator('input[placeholder="Enter the token secret name"]')
+      .fill(data.tokenSecretName);
   }
   if (data.tokenKey != null) {
     await block.locator('input[placeholder="Enter the token key"]').fill(data.tokenKey);
@@ -444,10 +457,18 @@ export async function fillArgoGeneratorConfig(
     await fillPluginGeneratorData(page, data as PluginGeneratorConfig, generatorSlotIndex);
   }
   if (generatorName === 'Pull Request generator' && data) {
-    await fillPullRequestGeneratorData(page, data as PullRequestGeneratorConfig, generatorSlotIndex);
+    await fillPullRequestGeneratorData(
+      page,
+      data as PullRequestGeneratorConfig,
+      generatorSlotIndex
+    );
   }
   if (generatorName === 'SCM Provider generator' && data) {
-    await fillScmProviderGeneratorData(page, data as ScmProviderGeneratorConfig, generatorSlotIndex);
+    await fillScmProviderGeneratorData(
+      page,
+      data as ScmProviderGeneratorConfig,
+      generatorSlotIndex
+    );
   }
 }
 
@@ -509,7 +530,7 @@ async function selectGitRepositoryTypeOnPullTemplate(page: Page): Promise<void> 
     .locator('[id^="wiz-tile-"]')
     .filter({ has: page.getByText(W.template.gitRepositoryTypeCardText, { exact: true }) })
     .first();
-  if (await gitTile.isVisible().catch(() => false)) {
+  if (await gitTile.isVisible()) {
     await gitTile.click({ force: true });
     return;
   }
@@ -545,9 +566,9 @@ async function fillArgoTemplateStep(page: Page): Promise<void> {
 /** From Applications list → pull wizard → Generators step (Cypress `openArgoWizardToGeneratorsStep`). */
 export async function openArgoPullWizardToGeneratorsStep(
   applicationListPage: ApplicationListPage,
+  page: Page,
   pullWizard: ArgoPullApplicationCreateWizardPage
 ): Promise<void> {
-  const page = applicationListPage.getPage();
   await applicationListPage.goto();
   await pullWizard.openFromApplicationsList(applicationListPage);
 
@@ -584,9 +605,9 @@ export async function assertPlacementTabAbsent(page: Page): Promise<void> {
 }
 
 export async function exitArgoPullWizardToApplicationsPage(
-  pullWizard: ArgoPullApplicationCreateWizardPage
+  pullWizard: ArgoPullApplicationCreateWizardPage,
+  page: Page
 ): Promise<void> {
-  const page = pullWizard.getPage();
   await page.getByRole('button', { name: W.footer.cancel, exact: true }).click({ force: true });
   await expect(page.locator('#general')).toBeHidden({ timeout: 30_000 });
 }
@@ -604,10 +625,13 @@ export async function readArgoPullWizardYaml(
   if (options?.expectMatrix) {
     let yaml = '';
     await expect
-      .poll(async () => {
-        yaml = await read();
-        return /^\s*-\s*matrix:/m.test(yaml) || /\n\s+matrix:\n/.test(yaml);
-      }, { timeout: 60_000, intervals: [500, 1_000, 2_000] })
+      .poll(
+        async () => {
+          yaml = await read();
+          return /^\s*-\s*matrix:/m.test(yaml) || /\n\s+matrix:\n/.test(yaml);
+        },
+        { timeout: 60_000, intervals: [500, 1_000, 2_000] }
+      )
       .toBe(true);
     expect(yaml).toContain('apiVersion');
     return yaml;

@@ -38,7 +38,9 @@ export function buildLocalClusterLabelDeployment(): ClusterDeploymentSpec {
 }
 
 /** Global cluster set + `name` label for local-cluster and a managed cluster. */
-export function buildGlobalClusterLabelDeployment(managedClusterName: string): ClusterDeploymentSpec {
+export function buildGlobalClusterLabelDeployment(
+  managedClusterName: string
+): ClusterDeploymentSpec {
   return buildClusterLabelDeployment({
     clusterSet: 'global',
     labelName: 'name',
@@ -47,7 +49,9 @@ export function buildGlobalClusterLabelDeployment(managedClusterName: string): C
 }
 
 /** Managed-cluster-only label placement (Cypress `matchingLabel: true`). */
-export function buildManagedClusterLabelDeployment(managedClusterName: string): ClusterDeploymentSpec {
+export function buildManagedClusterLabelDeployment(
+  managedClusterName: string
+): ClusterDeploymentSpec {
   return buildClusterLabelDeployment({
     clusterSet: 'global',
     labelName: 'name',

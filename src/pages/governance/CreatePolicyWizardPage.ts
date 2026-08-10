@@ -55,15 +55,22 @@ export class CreatePolicyWizardPage
   }
 
   getNextButton(): Locator {
-    return this.page.getByRole('button', { name: POLICY_CREATE_WIZARD.nextButtonLabel, exact: true });
+    return this.page.getByRole('button', {
+      name: POLICY_CREATE_WIZARD.nextButtonLabel,
+      exact: true,
+    });
   }
 
   getNewPlacementButton(): Locator {
-    return this.page.getByRole('button', { name: POLICY_CREATE_WIZARD.placement.newPlacementLabel });
+    return this.page.getByRole('button', {
+      name: POLICY_CREATE_WIZARD.placement.newPlacementLabel,
+    });
   }
 
   getExistingPlacementButton(): Locator {
-    return this.page.getByRole('button', { name: POLICY_CREATE_WIZARD.placement.existingPlacementLabel });
+    return this.page.getByRole('button', {
+      name: POLICY_CREATE_WIZARD.placement.existingPlacementLabel,
+    });
   }
 
   getClusterSetsCombobox(): Locator {
@@ -115,7 +122,7 @@ export class CreatePolicyWizardPage
     await listPage.gotoGovernanceOverview();
     await listPage.openPoliciesTab();
     const createBtn = listPage.getCreatePolicyButton();
-    if (!(await createBtn.isVisible().catch(() => false))) {
+    if (!(await createBtn.isVisible())) {
       await listPage.gotoPoliciesList();
     }
     await createBtn.click();
@@ -130,10 +137,7 @@ export class CreatePolicyWizardPage
     await this.waitForLoad();
   }
 
-  async fillDetailsAndAdvanceToPlacementStep(
-    name: string,
-    namespace?: string
-  ): Promise<void> {
+  async fillDetailsAndAdvanceToPlacementStep(name: string, namespace?: string): Promise<void> {
     await this.getDetailsNameInput().fill(name);
     if (namespace) {
       await this.selectNamespace(namespace);
@@ -240,7 +244,7 @@ export class CreatePolicyWizardPage
   async closePlacementPreviewModal(): Promise<void> {
     const modal = this.getPlacementPreviewModal();
     const close = modal.getByRole('button', { name: /^Close$/i });
-    if (await close.isVisible().catch(() => false)) {
+    if (await close.isVisible()) {
       await close.click();
     } else {
       await this.page.keyboard.press('Escape');

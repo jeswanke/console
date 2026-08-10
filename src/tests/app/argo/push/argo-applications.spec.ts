@@ -14,7 +14,10 @@ import {
   setupEmptyPlacementApplicationSet,
   validateApplicationSetSourceRepoUrl,
 } from '@lib/app/argo-push';
-import { verifyApplicationSetOwnedAppRowsOnList, expectApplicationSetSearchTableRowCount } from '@lib/app/verify/argo-appset-owned-app-list';
+import {
+  verifyApplicationSetOwnedAppRowsOnList,
+  expectApplicationSetSearchTableRowCount,
+} from '@lib/app/verify/argo-appset-owned-app-list';
 import { syncArgoPushApplicationSetFromDetails } from '@lib/app/verify/argo-appset-sync-ui';
 import { verifyCompareApplicationTypesPopover } from '@lib/app/verify/compare-application-types';
 import { getRepoRoot } from '@lib/repo-root';
@@ -33,7 +36,7 @@ test.describe(
     test(
       'RHACM4K-4043: ALC: Application owned by applicationSet shows up under the applicationSet name',
       { tag: ['@RHACM4K-4043', '@e2e', '@post-upgrade'] },
-      async ({ oc, applicationListPage, argoPushApplicationCreateWizardPage }) => {
+      async ({ page, oc, applicationListPage, argoPushApplicationCreateWizardPage }) => {
         test.setTimeout(600_000);
 
         const { argoPush } = resolveArgoPushScenarioById('argo_appset_owned_app_4043');
@@ -41,6 +44,7 @@ test.describe(
           oc,
           applicationListPage,
           argoPushApplicationCreateWizardPage,
+          page,
           argoPush
         );
         await verifyApplicationSetOwnedAppRowsOnList(applicationListPage, argoPush.applicationName);
@@ -50,7 +54,7 @@ test.describe(
     test(
       'RHACM4K-37185: ALC: Add multiple sources support for ApplicationSet in App UI',
       { tag: ['@RHACM4K-37185', '@e2e', '@applicationset'] },
-      async ({ oc, applicationListPage, argoPushApplicationCreateWizardPage }) => {
+      async ({ page, oc, applicationListPage, argoPushApplicationCreateWizardPage }) => {
         test.setTimeout(600_000);
 
         const { argoPush } = resolveArgoPushScenarioById('argo_multisource_git_helm_37185');
@@ -59,6 +63,7 @@ test.describe(
         await createArgoPushApplication(
           applicationListPage,
           argoPushApplicationCreateWizardPage,
+          page,
           argoPush
         );
 
@@ -180,7 +185,7 @@ test.describe(
     test(
       'RHACM4K-40996: ALC: UI should not throw ClusterSets failed to load error while deploying application set using a GitOpsCluster without cluster set',
       { tag: ['@RHACM4K-40996', '@e2e', '@applicationset', '@pre-restore', '@post-restore'] },
-      async ({ oc, applicationListPage, argoPushApplicationCreateWizardPage }) => {
+      async ({ page, oc, applicationListPage, argoPushApplicationCreateWizardPage }) => {
         test.setTimeout(600_000);
 
         const { argoPush } = resolveArgoPushScenarioById('argo_empty_placement_40996');
@@ -188,6 +193,7 @@ test.describe(
           oc,
           applicationListPage,
           argoPushApplicationCreateWizardPage,
+          page,
           argoPush,
           getRepoRoot()
         );
@@ -197,8 +203,8 @@ test.describe(
     test(
       'RHACM4K-42704: ALC: Compare application types popup always displays when users click on the link',
       { tag: ['@RHACM4K-42704', '@e2e', '@applicationset'] },
-      async ({ applicationListPage }) => {
-        await verifyCompareApplicationTypesPopover(applicationListPage);
+      async ({ page, applicationListPage }) => {
+        await verifyCompareApplicationTypesPopover(applicationListPage, page);
       }
     );
 

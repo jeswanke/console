@@ -1,4 +1,4 @@
-import { expect } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 
 import { APP_SUBSCRIPTION_ADMIN_PLACEMENTRULES } from '@constants/subscription-admin';
 import type { ApplicationDetailsPage } from '@pages/app/ApplicationDetailsPage';
@@ -8,10 +8,10 @@ import type { ApplicationDetailsPage } from '@pages/app/ApplicationDetailsPage';
  * Cypress clicks the SVG label "Placementrule" and asserts placement5/6 rows map to placement1.
  */
 export async function verifySubscriptionPlacementrulesTopologyDetails(
-  applicationDetailsPage: ApplicationDetailsPage
+  applicationDetailsPage: ApplicationDetailsPage,
+  page: Page
 ): Promise<void> {
   const { applicationName, namespace, placementRuleRows } = APP_SUBSCRIPTION_ADMIN_PLACEMENTRULES;
-  const page = applicationDetailsPage.getPage();
 
   await applicationDetailsPage.navigateToApplicationTab(namespace, applicationName, 'topology');
   await applicationDetailsPage.expectTopologyGraphVisible();

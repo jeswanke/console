@@ -7,11 +7,7 @@ import {
   type YamlTemplateFields,
 } from '@constants/argo-appset-generators';
 
-function expectObjectContains(
-  actual: unknown,
-  expected: unknown,
-  path = ''
-): void {
+function expectObjectContains(actual: unknown, expected: unknown, path = ''): void {
   if (expected == null || typeof expected !== 'object') {
     expect(actual, path || 'value').toBe(expected);
     return;
@@ -27,7 +23,9 @@ function expectObjectContains(
   for (const [key, expectedVal] of Object.entries(expected as Record<string, unknown>)) {
     const subPath = path ? `${path}.${key}` : key;
     expect(
-      actual != null && typeof actual === 'object' && Object.prototype.hasOwnProperty.call(actual, key),
+      actual != null &&
+        typeof actual === 'object' &&
+        Object.prototype.hasOwnProperty.call(actual, key),
       subPath
     ).toBe(true);
     expectObjectContains((actual as Record<string, unknown>)[key], expectedVal, subPath);
@@ -122,9 +120,7 @@ function expectInnerGeneratorsInOrder(
   innerGenerators: Record<string, unknown>[],
   expectedKeys: string[]
 ): void {
-  const actualKeys = innerGenerators.map(
-    (g) => Object.keys(g).find((k) => k !== 'template') ?? ''
-  );
+  const actualKeys = innerGenerators.map((g) => Object.keys(g).find((k) => k !== 'template') ?? '');
   expect(actualKeys).toEqual(expectedKeys);
 }
 
@@ -164,7 +160,10 @@ function assertPlacementAndTolerationsInGeneratorTest(
 
 function assertNoPlacementInYaml(yamlString: string): void {
   const placement = getArgoWizardYamlDocByKind(yamlString, 'Placement');
-  expect(placement, 'Placement doc should be absent when no Cluster Decision generator').toBeUndefined();
+  expect(
+    placement,
+    'Placement doc should be absent when no Cluster Decision generator'
+  ).toBeUndefined();
 }
 
 function assertSingleGeneratorScenario(

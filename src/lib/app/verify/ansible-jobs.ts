@@ -15,7 +15,9 @@ export type PollAnsibleJobNamesParams = {
 };
 
 /** Poll `oc get ansiblejob` until `until(names)` is true (Cypress `cy.waitUntil` equivalent). */
-export async function pollAnsibleJobNamesUntil(params: PollAnsibleJobNamesParams): Promise<string[]> {
+export async function pollAnsibleJobNamesUntil(
+  params: PollAnsibleJobNamesParams
+): Promise<string[]> {
   const timeout = params.timeout ?? DEFAULT_POLL_TIMEOUT;
   let lastNames: string[] = [];
   await expect
@@ -43,7 +45,9 @@ export type PollAnsibleJobsIncludeParams = {
 };
 
 /** Poll until at least one AnsibleJob name contains `substring`. */
-export async function pollAnsibleJobsInclude(params: PollAnsibleJobsIncludeParams): Promise<string[]> {
+export async function pollAnsibleJobsInclude(
+  params: PollAnsibleJobsIncludeParams
+): Promise<string[]> {
   return pollAnsibleJobNamesUntil({
     oc: params.oc,
     namespace: params.namespace,
@@ -62,7 +66,9 @@ export type PollAnsibleJobsAllIncludeParams = {
 };
 
 /** Poll until every `substring` appears in at least one AnsibleJob name. */
-export async function pollAnsibleJobsAllInclude(params: PollAnsibleJobsAllIncludeParams): Promise<string[]> {
+export async function pollAnsibleJobsAllInclude(
+  params: PollAnsibleJobsAllIncludeParams
+): Promise<string[]> {
   return pollAnsibleJobNamesUntil({
     oc: params.oc,
     namespace: params.namespace,

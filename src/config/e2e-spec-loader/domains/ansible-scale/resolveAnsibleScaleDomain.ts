@@ -1,8 +1,5 @@
 import type { E2eSpecData, ScenarioEntry } from '../../schema';
-import {
-  ansibleScaleScenarioSchema,
-  type AnsibleScaleScenarioPayload,
-} from './ansibleScaleSchema';
+import { ansibleScaleScenarioSchema, type AnsibleScaleScenarioPayload } from './ansibleScaleSchema';
 
 function extractDomainOverlay(
   record: Record<string, unknown>,

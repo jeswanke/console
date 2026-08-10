@@ -30,14 +30,14 @@ test.describe(
       { tag: ['@RHACM4K-6883'] },
       async ({
         oc,
+        page,
         applicationListPage,
         applicationDetailsPage,
         subscriptionApplicationCreateWizardPage,
       }) => {
         test.setTimeout(900_000);
-        const { subscription: baseOptions, applicationExpectations } = resolveSubscriptionScenarioById(
-          'namespace_length_git_base'
-        );
+        const { subscription: baseOptions, applicationExpectations } =
+          resolveSubscriptionScenarioById('namespace_length_git_base');
         const hubNamespace = 'application-lifecycle-ns';
 
         const shortNameOptions = withSubscriptionIdentity(
@@ -49,6 +49,7 @@ test.describe(
         await createSubscription(
           applicationListPage,
           subscriptionApplicationCreateWizardPage,
+          page,
           shortNameOptions
         );
         await oc.labelNamespaceForAlcTest(hubNamespace);
@@ -73,6 +74,7 @@ test.describe(
         await createSubscription(
           applicationListPage,
           subscriptionApplicationCreateWizardPage,
+          page,
           longNameOptions
         );
         await expectHubSubscriptionAndPlacementReady(
@@ -95,14 +97,14 @@ test.describe(
       { tag: ['@RHACM4K-6904'] },
       async ({
         oc,
+        page,
         applicationListPage,
-        
+
         subscriptionApplicationCreateWizardPage,
       }) => {
         test.setTimeout(900_000);
-        const { subscription: baseOptions, applicationExpectations } = resolveSubscriptionScenarioById(
-          'namespace_length_git_base'
-        );
+        const { subscription: baseOptions, applicationExpectations } =
+          resolveSubscriptionScenarioById('namespace_length_git_base');
         const applicationName = 'application-sample';
         const firstNamespace = 'application-lifecycle-application-ns';
         const secondNamespace = 'application-lifecycle-application-quota-check-ns';
@@ -112,6 +114,7 @@ test.describe(
         await createSubscription(
           applicationListPage,
           subscriptionApplicationCreateWizardPage,
+          page,
           firstOptions
         );
         await oc.labelNamespaceForAlcTest(firstNamespace);
@@ -123,16 +126,25 @@ test.describe(
           removeRelatedResources: true,
         });
 
-        const secondOptions = withSubscriptionIdentity(baseOptions, applicationName, secondNamespace);
+        const secondOptions = withSubscriptionIdentity(
+          baseOptions,
+          applicationName,
+          secondNamespace
+        );
         await applicationListPage.goto();
         await createSubscription(
           applicationListPage,
           subscriptionApplicationCreateWizardPage,
+          page,
           secondOptions
         );
         await oc.labelNamespaceForAlcTest(secondNamespace);
         await expectHubSubscriptionAndPlacementReady(oc, applicationName, secondNamespace);
-        await verifyExampleK8sAppBackendOnLocalCluster(oc, applicationExpectations, secondNamespace);
+        await verifyExampleK8sAppBackendOnLocalCluster(
+          oc,
+          applicationExpectations,
+          secondNamespace
+        );
         await applicationListPage.deleteApplicationFromOverviewViaSearch({
           applicationName,
           namespace: secondNamespace,
@@ -143,6 +155,5 @@ test.describe(
         await oc.deleteNamespace(firstNamespace);
       }
     );
-
   }
 );

@@ -26,12 +26,7 @@ test.describe(
     test(
       'RHACM4K-64417: ALC: As an application admin, I can view and navigate to the associated Placement from the ApplicationSet details page',
       { tag: ['@RHACM4K-64417'] },
-      async ({
-        oc,
-        applicationListPage,
-        applicationDetailsPage,
-        placementDetailsPage,
-      }) => {
+      async ({ oc, applicationListPage, applicationDetailsPage, placementDetailsPage }) => {
         test.setTimeout(300_000);
         const scenario = argoHelmAppsetScenario();
 
@@ -57,7 +52,9 @@ test.describe(
 
         await test.step('Follow Placement link to Overview tab', async () => {
           await navigateToPlacementFromApplicationSetDetails(applicationDetailsPage, scenario);
-          await expect(placementDetailsPage.getPlacementHeading()).toHaveText(scenario.placementName);
+          await expect(placementDetailsPage.getPlacementHeading()).toHaveText(
+            scenario.placementName
+          );
           await placementDetailsPage.expectOverviewTabSelected();
         });
 

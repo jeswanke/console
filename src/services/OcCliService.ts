@@ -91,11 +91,10 @@ export class OcCliService {
   /** Marks a namespace for ALC test cleanup (`component=alc`), matching Cypress `labelTestResource`. */
   async labelNamespaceForAlcTest(namespace: string): Promise<void> {
     assertSafeOcSingleArg(namespace, 'namespace');
-    await execFilePromise(
-      'oc',
-      ['label', 'ns', namespace, 'component=alc', '--overwrite'],
-      { encoding: 'utf8', maxBuffer: 64 * 1024 }
-    );
+    await execFilePromise('oc', ['label', 'ns', namespace, 'component=alc', '--overwrite'], {
+      encoding: 'utf8',
+      maxBuffer: 64 * 1024,
+    });
   }
 
   /** Names of `ansiblejobs` in the namespace (empty when CRD or resources are absent). */
@@ -156,18 +155,20 @@ export class OcCliService {
     assertSafeOcSingleArg(namespace, 'namespace');
     const exists = await this.run(
       `oc get secret ${name} -n ${namespace} --ignore-not-found -o name`
-    ).then((out) => out.trim().length > 0).catch(() => false);
+    )
+      .then((out) => out.trim().length > 0)
+      .catch(() => false);
     if (exists) return;
     const hostB64 = Buffer.from(host).toString('base64');
     const tokenB64 = Buffer.from(token).toString('base64');
     await this.run(
       `oc apply -f - <<'EOF'\n` +
-      `apiVersion: v1\nkind: Secret\nmetadata:\n` +
-      `  name: ${name}\n  namespace: ${namespace}\n` +
-      `  labels:\n    cluster.open-cluster-management.io/credentials: ""\n` +
-      `    cluster.open-cluster-management.io/type: ans\n` +
-      `type: Opaque\ndata:\n  host: ${hostB64}\n  token: ${tokenB64}\n` +
-      `EOF`
+        `apiVersion: v1\nkind: Secret\nmetadata:\n` +
+        `  name: ${name}\n  namespace: ${namespace}\n` +
+        `  labels:\n    cluster.open-cluster-management.io/credentials: ""\n` +
+        `    cluster.open-cluster-management.io/type: ans\n` +
+        `type: Opaque\ndata:\n  host: ${hostB64}\n  token: ${tokenB64}\n` +
+        `EOF`
     );
   }
 
@@ -245,14 +246,7 @@ export class OcCliService {
     assertSafeOcSingleArg(applicationName, 'applicationName');
     await execFilePromise(
       'oc',
-      [
-        'delete',
-        'applications.app.k8s.io',
-        applicationName,
-        '-n',
-        namespace,
-        '--ignore-not-found',
-      ],
+      ['delete', 'applications.app.k8s.io', applicationName, '-n', namespace, '--ignore-not-found'],
       { encoding: 'utf8', maxBuffer: 1024 * 1024 }
     );
   }
@@ -339,7 +333,14 @@ export class OcCliService {
     assertSafeOcSingleArg(applicationSetName, 'applicationSetName');
     await execFilePromise(
       'oc',
-      ['delete', 'applicationset.argoproj.io', applicationSetName, '-n', namespace, '--ignore-not-found'],
+      [
+        'delete',
+        'applicationset.argoproj.io',
+        applicationSetName,
+        '-n',
+        namespace,
+        '--ignore-not-found',
+      ],
       { encoding: 'utf8', maxBuffer: 1024 * 1024 }
     );
   }
@@ -347,11 +348,10 @@ export class OcCliService {
   async createNamespaceIfNotExists(namespace: string): Promise<void> {
     assertSafeOcSingleArg(namespace, 'namespace');
     try {
-      await execFilePromise(
-        'oc',
-        ['create', 'ns', namespace],
-        { encoding: 'utf8', maxBuffer: 1024 * 1024 }
-      );
+      await execFilePromise('oc', ['create', 'ns', namespace], {
+        encoding: 'utf8',
+        maxBuffer: 1024 * 1024,
+      });
     } catch {
       // Namespace may already exist (Cypress `failOnNonZeroExit: false`).
     }
@@ -379,7 +379,9 @@ export class OcCliService {
       return stdout.trim().length > 0;
     } catch (err: unknown) {
       const stderr =
-        err && typeof err === 'object' && 'stderr' in err ? String((err as { stderr?: unknown }).stderr) : '';
+        err && typeof err === 'object' && 'stderr' in err
+          ? String((err as { stderr?: unknown }).stderr)
+          : '';
       if (/NotFound|not found/i.test(stderr)) {
         return false;
       }
@@ -387,7 +389,10 @@ export class OcCliService {
     }
   }
 
-  async getArgoCdApplicationSyncStatus(namespace: string, applicationName: string): Promise<string> {
+  async getArgoCdApplicationSyncStatus(
+    namespace: string,
+    applicationName: string
+  ): Promise<string> {
     assertSafeOcSingleArg(namespace, 'namespace');
     assertSafeOcSingleArg(applicationName, 'applicationName');
     const { stdout } = await execFilePromise(
@@ -465,7 +470,9 @@ export class OcCliService {
       return stdout.trim();
     } catch (err: unknown) {
       const stderr =
-        err && typeof err === 'object' && 'stderr' in err ? String((err as { stderr?: unknown }).stderr) : '';
+        err && typeof err === 'object' && 'stderr' in err
+          ? String((err as { stderr?: unknown }).stderr)
+          : '';
       if (/NotFound|not found/i.test(stderr)) {
         return '';
       }
@@ -887,7 +894,9 @@ export class OcCliService {
       return { namespace: channelNs, name: channelName };
     } catch (err: unknown) {
       const stderr =
-        err && typeof err === 'object' && 'stderr' in err ? String((err as { stderr?: unknown }).stderr) : '';
+        err && typeof err === 'object' && 'stderr' in err
+          ? String((err as { stderr?: unknown }).stderr)
+          : '';
       if (/NotFound|not found/i.test(stderr)) {
         return undefined;
       }
@@ -925,7 +934,9 @@ export class OcCliService {
       return parsed.metadata?.annotations?.[annotationKey]?.trim() || undefined;
     } catch (err: unknown) {
       const stderr =
-        err && typeof err === 'object' && 'stderr' in err ? String((err as { stderr?: unknown }).stderr) : '';
+        err && typeof err === 'object' && 'stderr' in err
+          ? String((err as { stderr?: unknown }).stderr)
+          : '';
       if (/NotFound|not found/i.test(stderr)) {
         return undefined;
       }
@@ -1016,9 +1027,10 @@ export class OcCliService {
     targetNamespaces?: string[];
   }): Promise<void> {
     const ns = opts.targetNamespaces ?? [];
-    const nsLines = ns.length > 0
-      ? ['      targetNamespaces:', ...ns.map((n) => `        - ${n}`)]
-      : ['      targetNamespaces: []'];
+    const nsLines =
+      ns.length > 0
+        ? ['      targetNamespaces:', ...ns.map((n) => `        - ${n}`)]
+        : ['      targetNamespaces: []'];
 
     const manifest = [
       'apiVersion: rbac.open-cluster-management.io/v1beta1',
@@ -1066,7 +1078,16 @@ export class OcCliService {
     const patch = JSON.stringify([{ op: 'add', path: '/spec/roleAssignments/-', value }]);
     await execFilePromise(
       'oc',
-      ['patch', 'multiclusterroleassignment', mcraName, '-n', namespace, '--type=json', '-p', patch],
+      [
+        'patch',
+        'multiclusterroleassignment',
+        mcraName,
+        '-n',
+        namespace,
+        '--type=json',
+        '-p',
+        patch,
+      ],
       { encoding: 'utf8', maxBuffer: 1024 * 1024 }
     );
   }
@@ -1142,10 +1163,7 @@ export class OcCliService {
       for (const item of items) {
         const metadata = item.metadata as Record<string, unknown> | undefined;
         if (metadata?.name && metadata?.namespace) {
-          await this.mcraDeleteByName(
-            metadata.name as string,
-            metadata.namespace as string
-          );
+          await this.mcraDeleteByName(metadata.name as string, metadata.namespace as string);
         }
       }
     } catch (err) {
@@ -1166,7 +1184,7 @@ export class OcCliService {
     name: string,
     namespace: string,
     labels?: Record<string, string>,
-    options?: { context?: string },
+    options?: { context?: string }
   ): Promise<string> {
     const ctx = options?.context ? ` --context=${options.context}` : '';
     const exists = await this.run(
@@ -1283,7 +1301,7 @@ EOF`);
   async vmIsRunning(
     name: string,
     namespace: string,
-    options?: { context?: string },
+    options?: { context?: string }
   ): Promise<boolean> {
     const ctx = options?.context ? ` --context=${options.context}` : '';
     const output = await this.run(
@@ -1302,7 +1320,7 @@ EOF`);
   async vmDeleteTestVM(
     name: string,
     namespace: string,
-    options?: { context?: string },
+    options?: { context?: string }
   ): Promise<void> {
     const ctx = options?.context ? ` --context=${options.context}` : '';
     await this.run(`oc delete vm ${name} -n ${namespace}${ctx} --ignore-not-found`);
@@ -1314,11 +1332,7 @@ EOF`);
     );
   }
 
-  async vmCreateSnapshot(
-    snapshotName: string,
-    vmName: string,
-    namespace: string,
-  ): Promise<void> {
+  async vmCreateSnapshot(snapshotName: string, vmName: string, namespace: string): Promise<void> {
     await this.run(`oc apply -f - <<'EOF'
 apiVersion: snapshot.kubevirt.io/v1beta1
 kind: VirtualMachineSnapshot
@@ -1361,15 +1375,11 @@ EOF`);
   }
 
   async deleteDataVolume(name: string, namespace: string): Promise<void> {
-    await this.run(
-      `oc delete datavolume ${name} -n ${namespace} --ignore-not-found`
-    );
+    await this.run(`oc delete datavolume ${name} -n ${namespace} --ignore-not-found`);
   }
 
   async cleanupForkliftResources(namespace: string): Promise<void> {
-    await this.run(
-      `oc delete plans.forklift.konveyor.io --all -n ${namespace} --ignore-not-found`
-    );
+    await this.run(`oc delete plans.forklift.konveyor.io --all -n ${namespace} --ignore-not-found`);
     await this.run(
       `oc delete migrations.forklift.konveyor.io --all -n ${namespace} --ignore-not-found`
     );
@@ -1451,14 +1461,23 @@ EOF`);
     ]);
   }
 
-  async rbacAuthCanI(verb: string, resource: string, namespace: string, asUser: string): Promise<boolean> {
+  async rbacAuthCanI(
+    verb: string,
+    resource: string,
+    namespace: string,
+    asUser: string
+  ): Promise<boolean> {
     try {
       const result = await this.run(
-        `oc auth can-i ${verb} ${resource} -n ${namespace} --as=${asUser}`,
+        `oc auth can-i ${verb} ${resource} -n ${namespace} --as=${asUser}`
       );
       return result.trim() === 'yes';
     } catch (err: unknown) {
-      if (err instanceof Error && 'stdout' in err && String((err as Record<string, unknown>).stdout).trim() === 'no') {
+      if (
+        err instanceof Error &&
+        'stdout' in err &&
+        String((err as Record<string, unknown>).stdout).trim() === 'no'
+      ) {
         return false;
       }
       throw err;
