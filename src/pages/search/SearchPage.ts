@@ -149,6 +149,15 @@ export class SearchPage extends BasePage {
   }
 
   /**
+   * Navigate to Search pre-filtered for `kind:<kind>` via the URL query string.
+   * Does not require results to appear (callers may assert empty / hidden rows).
+   */
+  async filterByKind(kind: string): Promise<void> {
+    const filters = encodeURIComponent(JSON.stringify({ textsearch: `kind:${kind}` }));
+    await this.goto(`?filters=${filters}`);
+  }
+
+  /**
    * Navigate to the Search page pre-filtered for `kind:Pod name:<podName>`,
    * wait for the results table, then click the first resource-name link to
    * open the Search Details page.

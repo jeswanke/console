@@ -7,6 +7,7 @@ import { PF_SKELETON, SELECTORS } from '@constants/selectors';
 import {
   APP_ROUTES,
   APP_PAGE,
+  APP_TABLE,
   APP_ADVANCED_CONFIG,
   APP_ADVANCED_OC_RESOURCES,
   APP_ADVANCED_TABLE_COLUMNS,
@@ -75,7 +76,7 @@ export class ApplicationListPage extends BasePage {
 
   /** Locator for Overview tab content (applications table; no tabpanel in DOM) */
   getOverviewContent(): Locator {
-    return this.page.locator(SELECTORS.application.table);
+    return this.page.getByRole('grid', { name: APP_TABLE.ariaLabel });
   }
 
   /** Locator for the Advanced configuration tab (use selected state; no tabpanel in DOM) */
@@ -135,9 +136,9 @@ export class ApplicationListPage extends BasePage {
     return this.page.locator(SELECTORS.application.resourceToggle[key]);
   }
 
-  /** Table on Advanced tab (same as Overview; columns differ by resource type) */
+  /** Table on Advanced tab (Subscriptions/Channels; columns differ by resource type) */
   getAdvancedTable(): Locator {
-    return this.page.locator(SELECTORS.application.table);
+    return this.page.getByRole('grid', { name: APP_ADVANCED_CONFIG.tableAriaLabel });
   }
 
   /** Whether the cluster has any resources for the given Advanced config view (uses oc get -A). */
