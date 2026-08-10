@@ -280,6 +280,17 @@ export class VmDetailsPage extends BasePage {
     return this.page.getByText(textPattern);
   }
 
+  getDiagnosticsConditionLabel(conditionName: string): Locator {
+    return this.page.getByText(conditionName).first();
+  }
+
+  getDiagnosticsConditionValue(conditionName: string): Locator {
+    return this.page
+      .locator('tr', { has: this.page.getByText(conditionName) })
+      .getByText('True')
+      .first();
+  }
+
   // ---------------------------------------------------------------------------
   // Dashboard utilization (Fleet Virt Overview tab)
   // ---------------------------------------------------------------------------

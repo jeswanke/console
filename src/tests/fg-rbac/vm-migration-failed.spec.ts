@@ -98,8 +98,10 @@ test.describe(
       });
 
       await test.step('3: Trigger cross-cluster migration', async () => {
-        await fleetPage.gotoVmDetails(CLUSTER, VM_NAMESPACE, VM_NAME);
-        await expect(vmDetails.getPageHeading()).toBeVisible({ timeout: 15000 });
+        await expect(async () => {
+          await fleetPage.gotoVmDetails(CLUSTER, VM_NAMESPACE, VM_NAME);
+          await expect(vmDetails.getPageHeading()).toBeVisible({ timeout: 15000 });
+        }).toPass({ intervals: [10000, 15000], timeout: 60000 });
         await page.keyboard.press('Escape');
         await vmDetails.openMigrationMenu();
         await vmDetails.getCrossClusterMigrationItem().click();
@@ -131,8 +133,10 @@ test.describe(
         }).toPass({ intervals: [20000, 30000], timeout: 180000 });
 
         // Navigate to VM details on spoke and verify it is NOT Running (migration stuck/failed)
-        await fleetPage.gotoVmDetails(spokeCluster, VM_NAMESPACE, VM_NAME);
-        await expect(vmDetails.getPageHeading()).toBeVisible({ timeout: 30000 });
+        await expect(async () => {
+          await fleetPage.gotoVmDetails(spokeCluster, VM_NAMESPACE, VM_NAME);
+          await expect(vmDetails.getPageHeading()).toBeVisible({ timeout: 15000 });
+        }).toPass({ intervals: [10000, 15000], timeout: 60000 });
 
         // Get status from heading (Fleet Virt renders status inline, not in data-test-id)
         // With ResourceQuota blocking DV import, Forklift cannot complete the disk transfer,
