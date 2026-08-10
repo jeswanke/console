@@ -191,11 +191,10 @@ export class VmDetailsPage extends BasePage {
   // ---------------------------------------------------------------------------
 
   async openMigrationMenu(): Promise<void> {
-    await expect(async () => {
-      await this.openActions();
-      const migrationBtn = this.page.getByRole('button', { name: 'Migration' }).last();
-      await migrationBtn.click({ timeout: 5000 });
-    }).toPass({ intervals: [2000, 3000], timeout: 30000 });
+    await this.openActions();
+    const migrationBtn = this.page.getByRole('button', { name: 'Migration' }).last();
+    await migrationBtn.waitFor({ state: 'visible', timeout: 10000 });
+    await migrationBtn.click();
   }
 
   getCrossClusterMigrationItem(): Locator {
