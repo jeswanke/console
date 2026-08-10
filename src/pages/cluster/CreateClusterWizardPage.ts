@@ -50,8 +50,9 @@ export class CreateClusterWizardPage extends BasePage {
       await this.getHostedCard().click();
       await expect(this.page).not.toHaveURL(/control-plane/, { timeout: 30_000 });
     } else {
-      await expect(this.page).toHaveURL(/control-plane/, { timeout: 15_000 });
-      await this.getStandaloneCard().click();
+      const standaloneCard = this.getStandaloneCard();
+      await expect(standaloneCard).toBeVisible({ timeout: 15_000 });
+      await standaloneCard.click();
     }
 
     await this.waitForLoad();
