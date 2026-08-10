@@ -273,6 +273,12 @@ export const GOV_TABLE_COLUMNS = {
   created: 'Created',
 } as const;
 
+/** Accessible name from stolostron/console AcmTable (`t('Policies table')`, ACM-5264). */
+export const GOV_TABLE = {
+  ariaLabel: 'Policies table',
+  role: 'grid' as const,
+} as const;
+
 export const GOV_TABLE_MANAGE_COLUMNS = {
   defaultChecked: [
     GOV_TABLE_COLUMNS.name,

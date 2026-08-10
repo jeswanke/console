@@ -90,6 +90,32 @@ export class SearchPage extends BasePage {
     await this.waitForLoad();
   }
 
+  /** Type `kind:<kind>` filter and run the search. */
+  async filterByKind(kind: string): Promise<void> {
+    await this.getSearchInput().clear();
+    await this.getSearchInput().fill('kind');
+    await this.getSearchInput().press('Enter');
+    await this.getSearchInput().fill(kind);
+    await this.getSearchInput().press('Enter');
+    await this.getRunSearchButton().click();
+    await this.waitForLoad();
+  }
+
+  /** Type `kind:<kind> name:<name>` filters and run the search. */
+  async filterByKindAndName(kind: string, name: string): Promise<void> {
+    await this.getSearchInput().clear();
+    await this.getSearchInput().fill('kind');
+    await this.getSearchInput().press('Enter');
+    await this.getSearchInput().fill(kind);
+    await this.getSearchInput().press('Enter');
+    await this.getSearchInput().fill('name');
+    await this.getSearchInput().press('Enter');
+    await this.getSearchInput().fill(name);
+    await this.getSearchInput().press('Enter');
+    await this.getRunSearchButton().click();
+    await this.waitForLoad();
+  }
+
   /**
    * Verify that a result row whose name cell matches `resourceName` is visible
    * in the search results table.
@@ -123,6 +149,15 @@ export class SearchPage extends BasePage {
   }
 
   /**
+   * Navigate to Search pre-filtered for `kind:<kind>` via the URL query string.
+   * Does not require results to appear (callers may assert empty / hidden rows).
+   */
+  async filterByKind(kind: string): Promise<void> {
+    const filters = encodeURIComponent(JSON.stringify({ textsearch: `kind:${kind}` }));
+    await this.goto(`?filters=${filters}`);
+  }
+
+  /**
    * Navigate to the Search page pre-filtered for `kind:Pod name:<podName>`,
    * wait for the results table, then click the first resource-name link to
    * open the Search Details page.
@@ -130,6 +165,17 @@ export class SearchPage extends BasePage {
   async openFirstPodDetails(podName: string): Promise<void> {
     const filters = encodeURIComponent(JSON.stringify({ textsearch:`kind:Pod name:${podName}` }));
     await this.goto(`?filters=${filters}`);
+    await this.waitForResultsTable();
+    await this.page.locator('table').getByRole('link').first().click();
+    await this.page.waitForURL(new RegExp(`${SEARCH_ROUTES.resourceDetails}`));
+  }
+
+  /**
+   * Search for `kind:<kind> name:<name>`, wait for results, then click the
+   * first link to open the Search Details page. Works for any resource kind.
+   */
+  async openFirstResourceDetails(kind: string, name: string): Promise<void> {
+    await this.filterByKindAndName(kind, name);
     await this.waitForResultsTable();
     await this.page.locator('table').getByRole('link').first().click();
     await this.page.waitForURL(new RegExp(`${SEARCH_ROUTES.resourceDetails}`));

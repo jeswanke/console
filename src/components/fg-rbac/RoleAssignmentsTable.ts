@@ -37,17 +37,6 @@ export class RoleAssignmentsTable {
     return this.page.locator(`#${RBAC_RA_TABLE.rowActions.deleteId}`);
   }
 
-  async clickDeleteAction(roleName: string): Promise<void> {
-    await expect(async () => {
-      await this.page.keyboard.press('Escape');
-      await expect(this.getDeleteItem()).toBeHidden({ timeout: 3000 });
-      await this.openKebabMenu(roleName);
-      const deleteItem = this.getDeleteItem();
-      await expect(deleteItem).toBeEnabled({ timeout: 60000 });
-      await deleteItem.click();
-    }).toPass({ intervals: [5000], timeout: 120000 });
-  }
-
   async clickEditAction(roleName: string): Promise<void> {
     await expect(async () => {
       await this.page.keyboard.press('Escape');
@@ -56,6 +45,17 @@ export class RoleAssignmentsTable {
       const editItem = this.getEditItem();
       await expect(editItem).toBeEnabled({ timeout: 60000 });
       await editItem.click();
+    }).toPass({ intervals: [5000], timeout: 120000 });
+  }
+
+  async clickDeleteAction(roleName: string): Promise<void> {
+    await expect(async () => {
+      await this.page.keyboard.press('Escape');
+      await expect(this.getDeleteItem()).toBeHidden({ timeout: 3000 });
+      await this.openKebabMenu(roleName);
+      const deleteItem = this.getDeleteItem();
+      await expect(deleteItem).toBeEnabled({ timeout: 60000 });
+      await deleteItem.click();
     }).toPass({ intervals: [5000], timeout: 120000 });
   }
 

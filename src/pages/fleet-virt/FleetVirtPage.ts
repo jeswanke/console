@@ -15,6 +15,10 @@ import {
  * shouldLoad() is a wait guard (acceptable use of expect in page object).
  */
 export class FleetVirtPage extends BasePage {
+  override async waitForLoad(timeout = 60000): Promise<void> {
+    await super.waitForLoad(timeout);
+  }
+
   constructor(
     page: Page,
     private readonly oc: OcCliService
@@ -24,7 +28,9 @@ export class FleetVirtPage extends BasePage {
 
   async goto(): Promise<void> {
     const consoleUrl = await this.oc.getConsoleUrl();
-    await this.page.goto(`${consoleUrl}${FLEET_VIRT_ROUTES.vmList}`);
+    await this.page.goto(
+      `${consoleUrl}${FLEET_VIRT_ROUTES.vmList}?perspective=fleet-virtualization-perspective`,
+    );
     await this.shouldLoad();
   }
 
@@ -35,8 +41,7 @@ export class FleetVirtPage extends BasePage {
   async shouldLoad(): Promise<void> {
     await expect(async () => {
       const h1 = this.page.locator('h1');
-      const isVisible = await h1.isVisible().catch(() => false);
-      if (!isVisible) {
+      if (!(await h1.isVisible())) {
         await this.page.reload();
       }
       await expect(h1).toBeVisible({ timeout: 10000 });
@@ -44,6 +49,7 @@ export class FleetVirtPage extends BasePage {
   }
 
   async gotoVmTab(): Promise<void> {
+    await this.page.keyboard.press('Escape');
     const vmTab = this.page.getByRole('tab', { name: 'Virtual machines' });
     await vmTab.click();
     await expect(vmTab).toHaveAttribute('aria-selected', 'true', { timeout: 10000 });
@@ -51,9 +57,8 @@ export class FleetVirtPage extends BasePage {
 
   async openAdvancedSearch(): Promise<void> {
     const advSearchButton = this.page.locator(FLEET_VIRT_ADVANCED_SEARCH.openButton);
-    const isVisible = await advSearchButton.isVisible().catch(() => false);
 
-    if (isVisible) {
+    if (await advSearchButton.isVisible()) {
       await advSearchButton.click();
     } else {
       const searchInput = this.page.locator(FLEET_VIRT_SEARCH.searchInput).first();
@@ -64,6 +69,10 @@ export class FleetVirtPage extends BasePage {
     await expect(
       this.page.getByRole('heading', { name: 'Advanced search', level: 1 })
     ).toBeVisible({ timeout: 10000 });
+  }
+
+  getCreateVmButton(): Locator {
+    return this.page.getByRole('button', { name: 'Create VirtualMachine' });
   }
 
   getNoVMsEmptyState(): Locator {
@@ -81,7 +90,7 @@ export class FleetVirtPage extends BasePage {
    */
   async getFirstVmInfo(): Promise<{ name: string; namespace: string }> {
     const grid = this.page.getByRole('grid').last();
-    const firstRow = grid.getByRole('row').first();
+    const firstRow = grid.getByRole('row').filter({ has: this.page.getByRole('gridcell') }).first();
     await expect(firstRow).toBeVisible({ timeout: 30000 });
 
     const nameCell = firstRow.getByRole('gridcell').nth(1);
@@ -98,14 +107,14 @@ export class FleetVirtPage extends BasePage {
   async gotoVmDetails(cluster: string, namespace: string, vmName: string): Promise<void> {
     const consoleUrl = await this.oc.getConsoleUrl();
     await this.page.goto(
-      `${consoleUrl}/fleet-virtualization/kubevirt.io~v1~VirtualMachine/cluster/${cluster}/ns/${namespace}/${vmName}`
+      `${consoleUrl}/fleet-virtualization/kubevirt.io~v1~VirtualMachine/cluster/${cluster}/ns/${namespace}/${vmName}?perspective=fleet-virtualization-perspective`
     );
     await this.waitForLoad();
   }
 
   async clearAllFilters(): Promise<void> {
     const clearButton = this.page.getByRole('button', { name: 'Clear all filters' });
-    if (await clearButton.isVisible().catch(() => false)) {
+    if (await clearButton.isVisible()) {
       await clearButton.click();
       await this.waitForLoad();
     }
@@ -114,6 +123,13 @@ export class FleetVirtPage extends BasePage {
   async clickBackToVmList(): Promise<void> {
     await this.page.getByRole('button', { name: 'Back to VirtualMachines list' }).click();
     await this.shouldLoad();
+  }
+
+  getVmRow(vmName: string): Locator {
+    return this.page
+      .getByRole('grid')
+      .getByRole('row')
+      .filter({ hasText: vmName });
   }
 
   getVmTableRows(): Locator {

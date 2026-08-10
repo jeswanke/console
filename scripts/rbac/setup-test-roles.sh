@@ -202,6 +202,7 @@ create_ocp_groups() {
         # RHACM4K-60239: Spoke operator group
         oc adm groups new clc-e2e-group-60239 2>/dev/null || log_info "Group clc-e2e-group-60239 already exists"
         oc adm groups add-users clc-e2e-group-60239 clc-e2e-operator 2>/dev/null || log_info "User already in group"
+        oc adm groups add-users clc-e2e-group-60239 clc-e2e-operator-60239 2>/dev/null || log_info "User already in group"
     fi
     log_success "OCP groups created."
 }
@@ -782,20 +783,22 @@ apply_all_mcras() {
 
     # 21-search-proxy: Search cluster-proxy RBAC test
     # Used in: RHACM4K-61846, User: clc-e2e-search-61846
-    # Roles: acm-vm-fleet:view (hub) + kubevirt.io:admin (spoke) + acm-vm-extended:view (spoke, for Step 8 pod visibility)
+    # Roles: acm-vm-fleet:view (hub) + kubevirt.io:admin (hub+spoke) + acm-vm-extended:view (hub+spoke for pod visibility)
     apply_mcra_multi "clc-e2e-search-proxy-assignment" "User" "clc-e2e-search-61846" \
         "fleet-view-access|acm-vm-fleet:view|rbac-hub-placement|none" \
-        "spoke-kubevirt-admin|kubevirt.io:admin|rbac-spoke-placement|none" \
-        "spoke-extended-view|acm-vm-extended:view|rbac-spoke-placement|none"
+        "hub-spoke-kubevirt-admin|kubevirt.io:admin|rbac-hub-spoke-placement|none" \
+        "hub-spoke-extended-view|acm-vm-extended:view|rbac-hub-spoke-placement|none"
     track_result $?
 
-    # 22-mtv-webhook: MTV provider webhook test
-    # Used in: RHACM4K-59195, User: clc-e2e-view-cluster-59195
-    # Roles: acm-vm-fleet:view (hub) + kubevirt.io:admin (spoke) + acm-vm-fleet:admin (hub, mtv-integrations)
+    # 22-mtv-webhook: MTV provider webhook + extended:view test
+    # Used in: RHACM4K-59195, RHACM4K-60467, User: clc-e2e-view-cluster-59195
+    # Roles: acm-vm-fleet:view (hub+spoke) + kubevirt.io:admin (spoke) + acm-vm-fleet:admin (hub, mtv) + acm-vm-extended:view (hub+spoke) + kubevirt.io:view (hub+spoke)
     apply_mcra_multi "clc-e2e-mtv-webhook-assignment" "User" "clc-e2e-view-cluster-59195" \
-        "fleet-view-access|acm-vm-fleet:view|rbac-hub-placement|none" \
+        "fleet-view-access|acm-vm-fleet:view|rbac-hub-spoke-placement|none" \
         "spoke-kubevirt-admin|kubevirt.io:admin|rbac-spoke-placement|${TARGET_NAMESPACE},${CCLM_NAMESPACE}" \
-        "fleet-admin-mtv|acm-vm-fleet:admin|rbac-hub-placement|mtv-integrations"
+        "fleet-admin-mtv|acm-vm-fleet:admin|rbac-hub-placement|mtv-integrations" \
+        "hub-spoke-extended-view|acm-vm-extended:view|rbac-hub-spoke-placement|none" \
+        "hub-spoke-kubevirt-view|kubevirt.io:view|rbac-hub-spoke-placement|none"
     track_result $?
 
     fi  # end VM tier MCRAs continued

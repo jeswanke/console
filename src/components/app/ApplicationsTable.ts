@@ -35,8 +35,8 @@ export class ApplicationsTable extends AcmTable {
   private readonly exportButton: Locator;
 
   constructor(page: Page) {
-    super(page);
-    this.table = page.locator(SELECTORS.application.table);
+    super(page, APP_TABLE.ariaLabel);
+    this.table = page.getByRole(APP_TABLE.role, { name: APP_TABLE.ariaLabel });
     this.createButton = page.locator(SELECTORS.application.createButton);
     this.filterButton = page.locator(SELECTORS.application.filterButton);
     this.labelFilterButton = page.locator(SELECTORS.application.labelFilterButton);

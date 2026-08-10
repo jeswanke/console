@@ -32,18 +32,17 @@ test.describe('FG-RBAC - Managed Admin Full Access', { tag: ['@fg-rbac', '@fleet
     if (!spokeCluster) return;
     await ocSvc.vmEnsureTestVM(VM_NAME, VM_NAMESPACE, {
       'test-case': 'rhacm4k-60468',
-      cluster: 'hub',
-    });
+    }, { context: spokeCluster });
 
     await expect(async () => {
-      const running = await ocSvc.vmIsRunning(VM_NAME, VM_NAMESPACE);
+      const running = await ocSvc.vmIsRunning(VM_NAME, VM_NAMESPACE, { context: spokeCluster });
       expect(running).toBeTruthy();
     }).toPass({ intervals: [5000, 10000, 15000], timeout: 120000 });
   });
 
   test.afterAll(async () => {
     if (!spokeCluster) return;
-    await ocSvc.vmDeleteTestVM(VM_NAME, VM_NAMESPACE);
+    await ocSvc.vmDeleteTestVM(VM_NAME, VM_NAMESPACE, { context: spokeCluster });
   });
 
   test('RHACM4K-60468: Validate acm-vm-extended:admin with kubevirt.io:view', async ({
@@ -142,18 +141,22 @@ test.describe('FG-RBAC - Managed Admin Full Access', { tag: ['@fg-rbac', '@fleet
     const fleetVirtPage = new FleetVirtPage(rbacSession.page, oc);
     const vmDetailsPage = new VmDetailsPage(rbacSession.page);
 
+    let vmName = '';
     await test.step('3a: Navigate to Fleet Virt and verify VM list', async () => {
-      await fleetVirtPage.goto();
-      await fleetVirtPage.gotoVmTab();
-      await expect(fleetVirtPage.getNoVMsEmptyState()).toBeHidden({ timeout: 30000 });
+      await expect(async () => {
+        await fleetVirtPage.goto();
+        await fleetVirtPage.gotoVmTab();
+        await expect(fleetVirtPage.getNoVMsEmptyState()).toBeHidden({ timeout: 15000 });
+        const info = await fleetVirtPage.getFirstVmInfo();
+        vmName = info.name;
+      }).toPass({ intervals: [10000, 15000, 30000], timeout: 120000 });
     });
 
     await test.step('3b: Navigate to VM details page', async () => {
-      const { name, namespace } = await fleetVirtPage.getFirstVmInfo();
-      await fleetVirtPage.gotoVmDetails(spoke, namespace, name);
-      await expect(vmDetailsPage.getPageHeading()).toContainText(name, {
-        timeout: 30000,
-      });
+      await expect(async () => {
+        await fleetVirtPage.gotoVmDetails(spoke, VM_NAMESPACE, vmName);
+        await expect(vmDetailsPage.getPageHeading()).toContainText(vmName, { timeout: 15000 });
+      }).toPass({ intervals: [10000, 15000], timeout: 60000 });
     });
 
     await test.step('3c: Verify VM actions are restricted', async () => {

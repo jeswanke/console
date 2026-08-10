@@ -1,0 +1,19 @@
+apiVersion: rbac.open-cluster-management.io/v1beta1
+kind: MulticlusterRoleAssignment
+metadata:
+  name: manual-test-mcra-61823
+  namespace: open-cluster-management-global-set
+spec:
+  subject:
+    apiGroup: rbac.authorization.k8s.io
+    kind: User
+    name: clc-e2e-edit-61823
+  roleAssignments:
+    - name: manual-ra-entry
+      clusterRole: 'kubevirt.io:admin'
+      clusterSelection:
+        type: placements
+        placements:
+          - name: global
+            namespace: open-cluster-management-global-set
+      targetNamespaces: []
