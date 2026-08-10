@@ -45,11 +45,6 @@ export class CredentialsListPage extends BasePage {
     await search.fill(name);
   }
 
-  async clearSearch(): Promise<void> {
-    const search = this.page.getByPlaceholder('Search');
-    await search.clear();
-  }
-
   // ---------------------------------------------------------------------------
   // Row locators
   // ---------------------------------------------------------------------------

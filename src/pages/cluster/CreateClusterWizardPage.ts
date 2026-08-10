@@ -2,7 +2,6 @@ import { Page, Locator, expect } from '@playwright/test';
 import { BasePage } from '@pages/BasePage';
 import { OcCliService } from '@services/OcCliService';
 import {
-  CLUSTER_CREATE_ROUTES,
   INFRA_PROVIDER_IDS,
   CONTROL_PLANE_IDS,
   CLUSTER_WIZARD_FIELDS,
@@ -24,16 +23,6 @@ export class CreateClusterWizardPage extends BasePage {
     private readonly oc: OcCliService
   ) {
     super(page);
-  }
-
-  // ---------------------------------------------------------------------------
-  // Navigation / entry
-  // ---------------------------------------------------------------------------
-
-  async goto(): Promise<void> {
-    const consoleUrl = await this.oc.getConsoleUrl();
-    await this.page.goto(`${consoleUrl}${CLUSTER_CREATE_ROUTES.create}`);
-    await this.waitForLoad();
   }
 
   // ---------------------------------------------------------------------------

@@ -34,9 +34,7 @@ test.describe('Hosted Cluster - KubeVirt', { tag: ['@cluster', '@clc', '@hypersh
       });
 
       await test.step('Enter cluster name', async () => {
-        const clusterNameInput = page.getByRole('textbox', { name: /Cluster name/i });
-        await expect(clusterNameInput).toBeVisible({ timeout: 60_000 });
-        await clusterNameInput.fill('hcp-test');
+        await createClusterWizardPage.fillKubevirtClusterName('hcp-test');
       });
 
       await test.step('Validate namespace cannot equal cluster name', async () => {
