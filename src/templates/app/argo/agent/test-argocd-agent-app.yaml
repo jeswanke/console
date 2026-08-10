@@ -1,0 +1,22 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: test-argocd-agent-app
+  namespace: MANAGED_CLUSTER_NAME
+spec:
+  destination:
+    namespace: test-argocd-agent-app-ns
+    server: SERVER_ADDRESS:SERVER_PORT?agentName=MANAGED_CLUSTER_NAME
+  project: default
+  source:
+    path: mortgage
+    repoURL: https://github.com/stolostron/application-lifecycle-samples
+    targetRevision: HEAD
+  syncPolicy:
+    automated:
+      selfHeal: true
+    retry:
+      limit: -1
+    syncOptions:
+      - CreateNamespace=true
+

@@ -2,7 +2,8 @@
 # Copyright (c) 2025 Red Hat, Inc.
 # Copyright Contributors to the Open Cluster Management project
 #
-# ALC (Application Lifecycle) — Playwright tests under src/tests/app.
+# ALC (Application Lifecycle) — Playwright tests under src/tests/app/.
+# Layout: subscription/, argo/{push,pull,platform}/, flux/, openshift/, overview/, rbac/
 # Invoked by the repo root ./start.sh alc [playwright args...]
 #
 # Defaults (when not overridden by env or CLI): --grep @alc, --project alc
@@ -25,6 +26,16 @@ cd "${CONSOLE_E2E_ROOT}"
 # This sources env/alc.local.env for ALC-only vars (GITHUB_USER/TOKEN, OBJECTSTORE_*).
 console_e2e_export_alc_env
 
+# Subscription-admin / ALC RBAC tests need htpasswd users and rbac-setup auth.
+_alc_grep_blob="${PLAYWRIGHT_GREP:-}${GREP:-} $*"
+if echo "${_alc_grep_blob}" | grep -qE '@subadmin|@alc-rbac|@e2e-rbac|RHACM4K-41355'; then
+  export RBAC_DOMAIN=alc-rbac
+  export RBAC_IDP=app-e2e-htpasswd
+  export RBAC_TEST_PASSWORD="${RBAC_TEST_PASSWORD:-${HUB_PASSWORD:-}}"
+  echo "ALC: subscription-admin RBAC detected — running gen-alc-rbac.sh (RBAC_DOMAIN=alc-rbac)"
+  bash "${CONSOLE_E2E_ROOT}/scripts/alc/gen-alc-rbac.sh"
+fi
+
 # Enable GitOps / addon prep in globalSetup only for ALC runs (see src/global-setup/gitOpsPrep.ts).
 export E2E_GITOPS_PREP="${E2E_GITOPS_PREP:-1}"
 
@@ -42,7 +53,11 @@ console_e2e_build_pw_grep_args "$@"
 
 PW_PROJECT_ARGS=()
 if [[ "$*" != *--project* ]]; then
-  _proj="${PLAYWRIGHT_PROJECT:-alc}"
+  if echo "${_alc_grep_blob:-}" | grep -qE '@subadmin|@alc-rbac|@e2e-rbac|RHACM4K-41355'; then
+    _proj="${PLAYWRIGHT_PROJECT:-alc-rbac}"
+  else
+    _proj="${PLAYWRIGHT_PROJECT:-alc}"
+  fi
   echo "ALC: defaulting --project ${_proj} (pass --project or set PLAYWRIGHT_PROJECT to override)"
   PW_PROJECT_ARGS=(--project "${_proj}")
 fi

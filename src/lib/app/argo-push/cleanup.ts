@@ -2,10 +2,23 @@ import type { OcCliService } from '@services/OcCliService';
 
 import type { CreateArgoPushApplicationOptions } from './types';
 
+async function deleteArgoPushChildApplications(
+  oc: OcCliService,
+  argoServerNs: string,
+  applicationName: string,
+  clusterNames: string[]
+): Promise<void> {
+  const targets = new Set(clusterNames);
+  targets.add('local-cluster');
+  for (const clusterName of targets) {
+    await oc.deleteArgoCdApplication(argoServerNs, `${applicationName}-${clusterName}`);
+  }
+}
+
 /**
  * Idempotent pre-test cleanup on the hub Argo server namespace (e.g. `openshift-gitops`):
- * ApplicationSet, then Placement / PlacementDecision CRs for this app. Remote workload namespaces
- * on managed clusters are cleaned separately via {@link OcCliService.deleteNamespaceOnManagedClusters}.
+ * child Argo CD Applications, ApplicationSet, Placement / PlacementDecision CRs, and remote
+ * workload namespaces on managed clusters.
  */
 export async function cleanupArgoPushApplication(
   oc: OcCliService,
@@ -13,14 +26,17 @@ export async function cleanupArgoPushApplication(
 ): Promise<void> {
   const {
     applicationName,
-    argoServerLabel: argoServerNamespace,
+    argoServerLabel,
+    applicationSetNamespace,
     destinationNamespace,
     clusterSet,
   } = options;
-
-  await oc.deleteApplicationSet(argoServerNamespace, applicationName);
-  await oc.deleteApplicationPlacementsInNamespace(argoServerNamespace, applicationName);
+  const argoServerNs = applicationSetNamespace ?? argoServerLabel;
 
   const managedClusters = await oc.listManagedClusterNamesInClusterSet(clusterSet);
+  await deleteArgoPushChildApplications(oc, argoServerNs, applicationName, managedClusters);
+
+  await oc.deleteApplicationSet(argoServerNs, applicationName);
+  await oc.deleteApplicationPlacementsInNamespace(argoServerNs, applicationName);
   await oc.deleteNamespaceOnManagedClusters(destinationNamespace, managedClusters);
 }

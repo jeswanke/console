@@ -54,7 +54,7 @@ fragments:
               name: helloworld-app-deploy
         # Advanced configuration → Subscriptions **Channel** / Channels **Name** (console Git-URL slug, not CR name).
         advancedConfiguration:
-          channelDisplaySubstring: stolostron-application-lifecycle-samples
+          channelDisplaySubstring: ggithubcom-stolostron-application-lifecycle-samples
           channelRepositoryUrl: *stolostron-app-lifecycle-samples-git
 
   # RHACM4K-10668: `crd/` path deploys Secret + CustomResourceDefinition (console topology: secret + other icons).
@@ -74,7 +74,7 @@ fragments:
               name: foos.stable.example.com
         # No detailsClustersSummary: vendor/OpenShift fleet size varies; RHACM4K-10668 asserts topology status.
         advancedConfiguration:
-          channelDisplaySubstring: stolostron-application-lifecycle-samples
+          channelDisplaySubstring: ggithubcom-stolostron-application-lifecycle-samples
           channelRepositoryUrl: *stolostron-app-lifecycle-samples-git
 
   # Same naming pattern as `git_helloworld`: `kind` + `path` for this stream’s repo + expectations.
@@ -99,8 +99,63 @@ fragments:
             - kind: Pod
               name: mortgage-app-deploy
         advancedConfiguration:
-          channelDisplaySubstring: stolostron-application-lifecycle-samples
+          channelDisplaySubstring: ggithubcom-stolostron-application-lifecycle-samples
           channelRepositoryUrl: *stolostron-app-lifecycle-samples-git
+
+  # RHACM4K-7513: `test7513` branch / `example-k8s-app` with pinned initial commit hash.
+  git_example_k8s_test7513:
+    repositories:
+      - kind: git
+        url: *stolostron-app-lifecycle-samples-git
+        branch: test7513
+        path: example-k8s-app
+        desiredCommit: 741bd4220fc932186122890f85cb5d0aaf8415f5
+        reconcileOption: merge
+        reconcileRate: medium
+    specDomains:
+      applicationExpectations:
+        clusterResources:
+          - - kind: Deployment
+              name: example
+            - kind: ReplicaSet
+              name: example
+        advancedConfiguration:
+          channelDisplaySubstring: ggithubcom-stolostron-application-lifecycle-samples
+          channelRepositoryUrl: *stolostron-app-lifecycle-samples-git
+
+  # RHACM4K-6883 / RHACM4K-6904 — `example-k8s-app` on main (deploys to `lars-sandbox` on local-cluster).
+  git_example_k8s_main:
+    repositories:
+      - kind: git
+        url: https://github.com/stolostron/application-lifecycle-samples
+        branch: main
+        path: example-k8s-app
+        reconcileOption: merge
+        reconcileRate: medium
+    specDomains:
+      applicationExpectations:
+        successMinResourceCount: 1
+        localClusterPlacement: true
+        detailsClustersSummary:
+          variant: localOnly
+        advancedConfiguration:
+          channelDisplaySubstring: ggithubcom-stolostron-application-lifecycle-samples
+          channelRepositoryUrl: https://github.com/stolostron/application-lifecycle-samples
+
+  git_example_k8s_backend:
+    specDomains:
+      applicationExpectations:
+        clusterResources:
+          - - kind: Deployment
+              name: example
+            - kind: Service
+              name: example
+            - kind: ReplicaSet
+              name: example
+            - kind: Pod
+              name: example
+            - kind: PersistentVolumeClaim
+              name: example-data-claim
 
   # Private Git repo (RHACM4K-1071): URL in YAML; username/token from env/alc.local.env at test runtime.
   git_private_mortgage:
@@ -122,7 +177,7 @@ fragments:
             - kind: Pod
               name: mortgage-app-deploy
         advancedConfiguration:
-          channelDisplaySubstring: stolostron-application-lifecycle-samples-private
+          channelDisplaySubstring: ggithubcom-stolostron-application-lifecycle-samples-private
           channelRepositoryUrl: *stolostron-app-lifecycle-samples-private-git
 
   # Three wizard modes: `default` (no schedule), `active` (deploy in windows), `blocked` (suppress in windows).
@@ -130,6 +185,23 @@ fragments:
     perBlock:
       - timeWindow:
           mode: default
+
+  timewindow_active_all_week:
+    perBlock:
+      - timeWindow:
+          mode: active
+          timezone: America/Toronto
+          weekdays:
+            Monday: true
+            Tuesday: true
+            Wednesday: true
+            Thursday: true
+            Friday: true
+            Saturday: true
+            Sunday: true
+          ranges:
+            - start: '12:00 AM'
+              end: '11:59 PM'
 
   timewindow_workweek_toronto:
     perBlock:
@@ -163,6 +235,51 @@ fragments:
 
   # Leave **Configure automation** empty (do not type Ansible credential / filter). Marker only — no `perBlock` payload.
   skip_automation_ansible: {}
+
+    # RHACM4K-20541: `application-lifecycle-samples` / `ansible` path (local-cluster ansible hooks).
+  # Topology: prehook/posthook AnsibleJobs attach to the subscription node (hook edges);
+  # ansible-regular-test + guestbook-cfgmap deploy under local-cluster.
+  git_ansible_samples:
+    repositories:
+      - kind: git
+        url: *stolostron-app-lifecycle-samples-git
+        branch: main
+        path: ansible
+        reconcileOption: merge
+    specDomains:
+      applicationExpectations:
+        successMinResourceCount: 4
+        topologyDeployableResourceTypes:
+          - configmap
+          - ansiblejob
+        localClusterPlacement: true
+        topologySubscriptionHooks:
+          - prehook
+          - posthook
+        clusterResources:
+          - - kind: ConfigMap
+              name: guestbook-cfgmap
+            - kind: AnsibleJob
+              name: ansible-regular-test
+        detailsClustersSummary:
+          variant: localOnly
+        advancedConfiguration:
+          channelDisplaySubstring: ggithubcom-stolostron-application-lifecycle-samples
+          channelRepositoryUrl: *stolostron-app-lifecycle-samples-git
+
+  # Opens **Add credential** wizard instead of picking an existing hub secret (host/token from env at runtime).
+  ansible_cred_wizard_add_credential:
+    perBlock:
+      - automation:
+          addCredentialWizard:
+            secretName: ansible-tower-wizard
+            secretNamespace: default
+
+  # RHACM4K-1560: CLI-created credential selected from existing secrets dropdown.
+  ansible_existing_pre_post_secret:
+    perBlock:
+      - automation:
+          existingAnsibleSecret: ansible-pre-post-1560
 
   # RHACM4K-39666: Git URL contains underscore (`app_samples`); helloworld manifests (Route/Service/ReplicaSet).
   git_underscore:
@@ -217,3 +334,212 @@ fragments:
         # Details tab **Clusters** line for label placement to `local-cluster` (console-e2e Details verifier).
         detailsClustersSummary:
           variant: localOnly
+
+  # Helm subscription wizard fragments (managed placement injected at runtime).
+  helm_helloworld_30:
+    repositories:
+      - kind: helm
+        url: &helm_repo_samples_main https://raw.githubusercontent.com/stolostron/application-lifecycle-samples/main
+        chartName: helloworld-helm
+        packageAlias: helloworld-helm
+        packageVersion: '3.0.0-stable'
+    specDomains:
+      applicationExpectations:
+        successMinResourceCount: 4
+        topologyDeployableResourceTypes:
+          - service
+          - deployment
+          - configmap
+          - replicaset
+        clusterResources:
+          - - kind: Deployment
+              name: helloworld-app-deploy
+            - kind: Service
+              name: helloworld-app-svc
+            - kind: ReplicaSet
+              name: helloworld-app-deploy
+            - kind: ConfigMap
+              name: helloworld-app-config
+        detailsClustersSummary:
+          variant: remoteOnly
+          remoteCount: 1
+        advancedConfiguration:
+          channelDisplaySubstring: ggithubcom-stolostron-application-lifecycle-samples
+          channelRepositoryUrl: *helm_repo_samples_main
+
+  helm_helloworld_02:
+    repositories:
+      - kind: helm
+        url: *helm_repo_samples_main
+        chartName: helloworld-helm
+        packageAlias: helloworld-helm
+        packageVersion: '0.2.0'
+        reconcileRate: medium
+    specDomains:
+      applicationExpectations:
+        successMinResourceCount: 4
+        topologyDeployableResourceTypes:
+          - service
+          - deployment
+          - configmap
+          - replicaset
+        clusterResources:
+          - - kind: Deployment
+              name: helloworld-app-deploy
+            - kind: Service
+              name: helloworld-app-svc
+            - kind: ReplicaSet
+              name: helloworld-app-deploy
+            - kind: ConfigMap
+              name: helloworld-app-config
+        advancedConfiguration:
+          channelDisplaySubstring: ggithubcom-stolostron-application-lifecycle-samples
+          channelRepositoryUrl: *helm_repo_samples_main
+
+  helm_mortgage_01:
+    repositories:
+      - kind: helm
+        url: *helm_repo_samples_main
+        chartName: mortgage-helm
+        packageVersion: '0.1.0'
+    specDomains:
+      applicationExpectations:
+        successMinResourceCount: 2
+        topologyDeployableResourceTypes:
+          - service
+          - deployment
+        clusterResources:
+          - - kind: Deployment
+              name: mortgage-app-deploy
+            - kind: Service
+              name: mortgage-app-svc
+            - kind: ReplicaSet
+              name: mortgage-app-deploy
+        detailsClustersSummary:
+          variant: localOnly
+        advancedConfiguration:
+          channelDisplaySubstring: ggithubcom-stolostron-application-lifecycle-samples
+          channelRepositoryUrl: *helm_repo_samples_main
+
+  helm_nginx_bitnami:
+    repositories:
+      - kind: helm
+        url: https://charts.bitnami.com/bitnami
+        chartName: nginx
+        packageAlias: alias-nginx
+    specDomains:
+      applicationExpectations:
+        successMinResourceCount: 4
+        topologyDeployableResourceTypes:
+          - service
+          - deployment
+          - configmap
+          - replicaset
+        clusterResources:
+          - - kind: Deployment
+              name: alias-nginx
+            - kind: Service
+              name: alias-nginx
+        detailsClustersSummary:
+          variant: remoteOnly
+          remoteCount: 1
+        advancedConfiguration:
+          channelDisplaySubstring: bitnami
+          channelRepositoryUrl: https://charts.bitnami.com/bitnami
+
+  timewindow_blocked_monday_0810:
+    perBlock:
+      - timeWindow:
+          mode: blocked
+          weekdays:
+            Monday: true
+          ranges:
+            - start: '08:10 AM'
+              end: '08:11 AM'
+
+  placement_use_existing_rule:
+    perBlock:
+      - clusterDeployment:
+          useExistingPlacementRule: true
+
+  # Object storage wizard fragments (credentials / URL from env at runtime via `@lib/app/auth/object-store-auth`).
+  obj_minio_mortgage:
+    repositories:
+      - kind: objectStorage
+        url: https://s3.console.aws.amazon.com/s3/buckets/placeholder
+        accessKey: placeholder
+        secretKey: placeholder
+        subfolder: mortgage
+    specDomains:
+      applicationExpectations:
+        successMinResourceCount: 2
+        topologyDeployableResourceTypes:
+          - service
+          - deployment
+        clusterResources:
+          - - kind: Deployment
+              name: mortgage-app-deploy
+            - kind: Service
+              name: mortgage-app-svc
+            - kind: ReplicaSet
+              name: mortgage-app-deploy
+
+  obj_minio_helloworld:
+    repositories:
+      - kind: objectStorage
+        url: https://s3.console.aws.amazon.com/s3/buckets/placeholder
+        accessKey: placeholder
+        secretKey: placeholder
+        subfolder: helloworld
+    specDomains:
+      applicationExpectations:
+        successMinResourceCount: 4
+        topologyDeployableResourceTypes:
+          - service
+          - deployment
+          - replicaset
+        clusterResources:
+          - - kind: Deployment
+              name: helloworld-app-deploy
+            - kind: Service
+              name: helloworld-app-svc
+            - kind: ReplicaSet
+              name: helloworld-app-deploy
+
+  timewindow_blocked_weekend_sat_sun:
+    perBlock:
+      - timeWindow:
+          mode: blocked
+          timezone: America/New_York
+          weekdays:
+            Sunday: true
+            Saturday: true
+          ranges:
+            - start: '09:00 AM'
+              end: '05:00 PM'
+
+  timewindow_active_thu_fri_narrow:
+    perBlock:
+      - timeWindow:
+          mode: active
+          timezone: America/New_York
+          weekdays:
+            Thursday: true
+            Friday: true
+          ranges:
+            - start: '09:10 AM'
+              end: '09:11 AM'
+            - start: '03:10 PM'
+              end: '03:11 PM'
+
+  timewindow_blocked_thu_fri_evening:
+    perBlock:
+      - timeWindow:
+          mode: blocked
+          timezone: America/New_York
+          weekdays:
+            Thursday: true
+            Friday: true
+          ranges:
+            - start: '09:00 AM'
+              end: '09:05 PM'

@@ -1,0 +1,58 @@
+apiVersion: app.k8s.io/v1beta1
+kind: Application
+metadata:
+  name: api-obj-multi
+  namespace: api-obj-multi-ns
+  annotations:
+    apps.open-cluster-management.io/deployables: ''
+    apps.open-cluster-management.io/subscriptions: api-obj-multi-ns/api-obj-multi-subscription-2,api-obj-multi-ns/api-obj-multi-subscription-2-local
+    open-cluster-management.io/user-group: c3lzdGVtOnNlcnZpY2VhY2NvdW50cyxzeXN0ZW06c2VydmljZWFjY291bnRzOm9jbSxzeXN0ZW06YXV0aGVudGljYXRlZA==
+    open-cluster-management.io/user-identity: c3lzdGVtOnNlcnZpY2VhY2NvdW50Om9jbTptdWx0aWNsdXN0ZXItYXBwbGljYXRpb25z
+spec:
+  componentKinds:
+    - group: apps.open-cluster-management.io
+      kind: Subscription
+  descriptor: {}
+  selector:
+    matchExpressions:
+      - key: app
+        operator: In
+        values:
+          - api-obj-multi
+---
+apiVersion: apps.open-cluster-management.io/v1
+kind: Subscription
+metadata:
+  name: api-obj-multi-subscription-2
+  namespace: api-obj-multi-ns
+  annotations:
+    apps.open-cluster-management.io/bucket-path: ''
+    open-cluster-management.io/user-group: c3lzdGVtOmNsdXN0ZXItYWRtaW5zLHN5c3RlbTphdXRoZW50aWNhdGVk
+    open-cluster-management.io/user-identity: a3ViZTphZG1pbg==
+  labels:
+    app: api-obj-multi
+    app.kubernetes.io/part-of: api-obj-multi
+spec:
+  channel: o-minioappshivemind-bawsred-chesterfieldcom-alc-qe-bucket-ns/o-minioappshivemind-bawsred-chesterfieldcom-alc-qe-bucket
+  placement:
+    placementRef:
+      name: api-obj-multi-placement-2
+      kind: Placement
+posthooks: {}
+prehooks: {}
+---
+apiVersion: apps.open-cluster-management.io/v1
+kind: Subscription
+metadata:
+  name: api-obj-multi-subscription-3
+  namespace: api-obj-multi-ns
+  annotations:
+    apps.open-cluster-management.io/bucket-path: helloworld
+  labels:
+    app: api-obj-multi
+spec:
+  channel: oinioappshivemind-bawsred-chesterfieldcom-alc-qe-bucket-2-ns/oinioappshivemind-bawsred-chesterfieldcom-alc-qe-bucket-2
+  placement:
+    placementRef:
+      name: api-obj-multi-placement-1
+      kind: Placement

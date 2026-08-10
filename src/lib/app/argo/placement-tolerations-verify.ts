@@ -3,6 +3,7 @@
  */
 import { expect, type Locator } from '@playwright/test';
 
+import { APP_ARGO_PULL_CREATE_WIZARD, APP_ARGO_PUSH_CREATE_WIZARD } from '@constants/app';
 import {
   PLACEMENT_DEFAULT_TOLERATIONS,
   PLACEMENT_TOLERATIONS_YAML_PATTERNS,
@@ -13,6 +14,17 @@ import {
   syncYamlContainsKind,
 } from '@lib/placement/placement-yaml';
 import type { PlacementTolerationsWizardHost } from '@lib/placement/tolerations-verify';
+import {
+  addCustomTolerationInForm,
+  deleteUnavailableTolerationInForm,
+  editUnreachableTolerationInForm,
+  verifyCustomTolerationInYaml,
+  verifyDefaultTolerationFieldsWhenExpanded,
+  verifyDefaultTolerationSummaryChipsVisible,
+  verifyUnavailableTolerationRemovedFromUi,
+  verifyUnavailableTolerationRemovedFromYaml,
+  verifyUnreachableTolerationUpdatedInUi,
+} from '@lib/placement/tolerations-verify';
 import type { SyncEditorYamlActions } from '@lib/placement/sync-editor-actions';
 
 export {
@@ -55,10 +67,9 @@ export async function verifyAddArgoServerModalPlacementTolerationsInYaml(
   wizard: ArgoPlacementTolerationsWizardHost,
   patterns: ArgoPlacementTolerationsYamlPatterns
 ): Promise<void> {
-  const yamlText = await wizard.getModalSyncEditor().waitForYamlMatching(
-    patterns.modalGitOpsPlacementTolerations,
-    60_000
-  );
+  const yamlText = await wizard
+    .getModalSyncEditor()
+    .waitForYamlMatching(patterns.modalGitOpsPlacementTolerations, 60_000);
 
   expect(syncYamlContainsKind(yamlText, 'GitOpsCluster')).toBe(true);
   expect(syncYamlContainsKind(yamlText, 'Placement')).toBe(true);
@@ -132,3 +143,46 @@ export async function verifyUnreachableTolerationUpdatedInArgoYaml(
   expect(yamlText).toContain(PLACEMENT_DEFAULT_TOLERATIONS.unavailableKey);
   expect(syncYamlContainsKind(yamlText, 'ApplicationSet')).toBe(true);
 }
+
+/** RHACM4K-61724: full tolerations flow on pull or push create wizard (Add server modal → Placement step). */
+export async function runArgoPlacementTolerationsFlow(
+  wizard: ArgoPlacementTolerationsWizardHost,
+  yamlPatterns: ArgoPlacementTolerationsYamlPatterns
+): Promise<void> {
+  await wizard.openAddArgoServerModal();
+  await verifyAddArgoServerModalHasNoTolerationsForm(wizard);
+  await verifyAddArgoServerModalPlacementTolerationsInYaml(wizard, yamlPatterns);
+  await wizard.closeAddArgoServerModal();
+
+  await wizard.clickWizardStep('placement');
+  await wizard.tolerations.scrollToTolerationsSection();
+
+  await verifyDefaultTolerationSummaryChipsVisible(wizard);
+  await verifyDefaultTolerationFieldsWhenExpanded(
+    wizard,
+    PLACEMENT_DEFAULT_TOLERATIONS.unreachableKey
+  );
+  await verifyDefaultTolerationFieldsWhenExpanded(
+    wizard,
+    PLACEMENT_DEFAULT_TOLERATIONS.unavailableKey
+  );
+
+  await wizard.syncEditor.enableYamlEditor();
+  await verifyDefaultArgoPlacementTolerationsInYaml(wizard, yamlPatterns);
+
+  await editUnreachableTolerationInForm(wizard);
+  await verifyUnreachableTolerationUpdatedInUi(wizard);
+  await verifyUnreachableTolerationUpdatedInArgoYaml(wizard);
+
+  await deleteUnavailableTolerationInForm(wizard);
+  await verifyUnavailableTolerationRemovedFromUi(wizard);
+  await verifyUnavailableTolerationRemovedFromYaml(wizard);
+
+  await addCustomTolerationInForm(wizard);
+  await verifyCustomTolerationInYaml(wizard);
+}
+
+export const ARGO_PLACEMENT_TOLERATIONS_WIZARD_YAML = {
+  pull: APP_ARGO_PULL_CREATE_WIZARD.yamlPatterns,
+  push: APP_ARGO_PUSH_CREATE_WIZARD.yamlPatterns,
+} as const;

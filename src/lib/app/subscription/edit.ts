@@ -1,7 +1,7 @@
 /**
  * Subscription **edit** / add / delete flows on existing applications.
  */
-import { expect } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 
 import type { ApplicationListPage } from '@pages/app/ApplicationListPage';
 import type { SubscriptionApplicationCreateWizardPage } from '@pages/app/SubscriptionApplicationCreateWizardPage';
@@ -13,7 +13,6 @@ import type {
 } from './types';
 import { applyPerBlockOptions, fillRepositoryBlockBySpec } from './wizard-fill';
 
-
 /**
  * Opens an existing subscription application in **Edit** mode, appends one or more repository blocks
  * (subscriptions), fills the new blocks, and optionally clicks **Update**.
@@ -23,6 +22,7 @@ import { applyPerBlockOptions, fillRepositoryBlockBySpec } from './wizard-fill';
 export async function addSubscriptionToExistingApplication(
   applicationListPage: ApplicationListPage,
   wizard: SubscriptionApplicationCreateWizardPage,
+  page: Page,
   options: AddSubscriptionToExistingApplicationOptions
 ): Promise<void> {
   const {
@@ -76,11 +76,13 @@ export async function addSubscriptionToExistingApplication(
     const blockIndex = existingBlockCount + addIndex;
     await wizard.getAddChannelsButton().click();
     await wizard.waitForLoad();
-    await wizard.getRepositoryBlockContainer(blockIndex).waitFor({ state: 'visible', timeout: 60_000 });
+    await wizard
+      .getRepositoryBlockContainer(blockIndex)
+      .waitFor({ state: 'visible', timeout: 60_000 });
 
     const spec = repositories[addIndex]!;
     await fillRepositoryBlockBySpec(wizard, blockIndex, spec);
-    await applyPerBlockOptions(wizard, blockIndex, perBlock?.[addIndex]);
+    await applyPerBlockOptions(wizard, page, blockIndex, perBlock?.[addIndex]);
   }
 
   if (submit) {
@@ -104,6 +106,7 @@ export async function addSubscriptionToExistingApplication(
 export async function editSubscriptionInExistingApplication(
   applicationListPage: ApplicationListPage,
   wizard: SubscriptionApplicationCreateWizardPage,
+  page: Page,
   options: EditSubscriptionInExistingApplicationOptions
 ): Promise<void> {
   const {
@@ -159,10 +162,12 @@ export async function editSubscriptionInExistingApplication(
   }
 
   for (let blockIndex = 0; blockIndex < repositories.length; blockIndex++) {
-    await wizard.getRepositoryBlockContainer(blockIndex).waitFor({ state: 'visible', timeout: 60_000 });
+    await wizard
+      .getRepositoryBlockContainer(blockIndex)
+      .waitFor({ state: 'visible', timeout: 60_000 });
     const spec = repositories[blockIndex]!;
     await fillRepositoryBlockBySpec(wizard, blockIndex, spec);
-    await applyPerBlockOptions(wizard, blockIndex, perBlock?.[blockIndex]);
+    await applyPerBlockOptions(wizard, page, blockIndex, perBlock?.[blockIndex]);
   }
 
   if (submit) {
@@ -280,7 +285,7 @@ export async function deleteSubscriptionFromExistingApplication(
     })
     .toBe(beforeRepoCount - 1);
 
-  if (targetRepoSectionCountBefore > 0) {
+  if (targetRepoSectionCountBefore > 0 && beforeRepoCount - 1 === 0) {
     await expect(targetRepoSectionToggle).toHaveCount(0, { timeout: 30_000 });
   }
 

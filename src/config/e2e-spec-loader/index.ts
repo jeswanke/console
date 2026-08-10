@@ -10,6 +10,11 @@ export {
 export {
   resolveArgoPushScenarioById,
   resolveArgoPushScenarioByTestId,
+  resolveFluxScenarioById,
+  resolveFluxScenarioByTestId,
+  resolveFluxScenarioPair,
+  resolveOpenshiftScenarioByTestId,
+  resolveOpenshiftScenarioPair,
   resolveScenarioById,
   resolveScenarioByTestId,
   resolveScenarioPair,
@@ -18,6 +23,8 @@ export {
   resolveSubscriptionScenarioPair,
   type ResolvedAppScenario,
   type ResolvedArgoPushAppScenario,
+  type ResolvedFluxAppScenario,
+  type ResolvedOpenshiftAppScenario,
   type ResolvedSubscriptionAppScenario,
 } from './app-api';
 
@@ -48,5 +55,17 @@ export {
   type ResolvedPlacementScenario,
 } from './cluster-api';
 
+export {
+  resolveAnsibleScaleScenarioById,
+  resolveAnsibleScaleScenarioByTestId,
+  resolveAnsibleScaleSuiteConfig,
+  type AnsibleScaleFixturePayload,
+  type AnsibleScaleScenarioPayload,
+  type AnsibleScaleSuitePayload,
+  type AnsibleScaleSyncTiming,
+  type ResolvedAnsibleScaleScenario,
+} from './ansible-scale-api';
+
 export { buildResolvedGovernanceScenario } from './resolve/buildResolvedGovernanceScenario';
 export { buildResolvedClusterScenario } from './resolve/buildResolvedClusterScenario';
+export { buildResolvedAnsibleScaleScenario } from './resolve/buildResolvedAnsibleScaleScenario';

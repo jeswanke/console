@@ -22,7 +22,7 @@ export type FillArgoAppsetBeforePlacementOptions = {
   applicationName: string;
   argoServerLabel: string;
   destinationNamespace: string;
-  git: {
+  git?: {
     url: string;
     branch?: string;
     path?: string;
@@ -51,6 +51,26 @@ async function pickComboboxOption(
   await option.click();
 }
 
+async function pickCreatableComboboxOption(
+  page: Page,
+  combobox: Locator,
+  value: string
+): Promise<void> {
+  await combobox.click();
+  const option = page.getByRole('option', { name: value }).first();
+  if (await option.isVisible()) {
+    await option.click();
+    return;
+  }
+  await combobox.fill(value);
+  const optionAfterType = page.getByRole('option', { name: value }).first();
+  if (await optionAfterType.isVisible()) {
+    await optionAfterType.click();
+  } else {
+    await combobox.press('Enter');
+  }
+}
+
 async function pickFirstComboboxOption(page: Page, combobox: Locator): Promise<void> {
   await combobox.click();
   const option = page.getByRole('option').first();
@@ -64,7 +84,7 @@ async function pickGitPathOption(page: Page, path: string): Promise<void> {
   });
   await pathCombo.click();
   const pathOption = page.getByRole('option', { name: path }).first();
-  if (await pathOption.isVisible().catch(() => false)) {
+  if (await pathOption.isVisible()) {
     await pathOption.click();
   } else {
     await pathCombo.fill(path);
@@ -120,18 +140,19 @@ export async function fillArgoAppsetWizardBeforePlacement(
   }
   await clickNext(page);
 
+  if (!git) throw new Error('fillArgoAppsetWizardBeforePlacement: git repository spec is required');
   await page
     .locator('[data-ouia-component-type="PF6/Card"]')
     .filter({ hasText: W.template.gitRepositoryTypeCardText })
     .first()
     .click();
-  await pickComboboxOption(
+  await pickCreatableComboboxOption(
     page,
     page.getByRole('combobox', { name: W.template.gitUrlComboboxLabel }),
     git.url
   );
   if (git.branch) {
-    await pickComboboxOption(
+    await pickCreatableComboboxOption(
       page,
       page.getByRole('combobox', { name: W.template.gitRevisionComboboxLabel }),
       git.branch

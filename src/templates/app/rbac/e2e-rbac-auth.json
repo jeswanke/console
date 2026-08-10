@@ -1,0 +1,16 @@
+[
+  {
+    "op": "add",
+    "path": "/spec/identityProviders/-",
+    "value": {
+      "name": "app-e2e-htpasswd",
+      "mappingMethod": "claim",
+      "type": "HTPasswd",
+      "htpasswd": {
+        "fileData": {
+          "name": "app-e2e-users"
+        }
+      }
+    }
+  }
+]

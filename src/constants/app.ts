@@ -8,6 +8,8 @@ import { PLACEMENT_TOLERATIONS_YAML_PATTERNS } from '@constants/placement-tolera
 
 export const APP_ROUTES = {
   list: '/multicloud/applications',
+  /** Fleet Management → Credentials */
+  credentials: '/multicloud/credentials',
   /** Advanced configuration tab (secondary nav) */
   advanced: '/multicloud/applications/advanced',
   /** Create application → Argo CD ApplicationSet - Push model */
@@ -22,6 +24,15 @@ export const APP_ROUTES = {
   /** Post–create push-model ApplicationSet details (hub default: Topology tab). */
   argoPushTopology: (argoServerNamespace: string, applicationSetName: string) =>
     `${APP_ROUTES.detailsTab(argoServerNamespace, applicationSetName, APP_APPLICATION_DETAILS.tabs.topology.slug)}?apiVersion=applicationset.argoproj.io`,
+} as const;
+
+export const CREDENTIALS_LIST = {
+  addButtonId: 'add',
+  ansibleCredentialTypeTitleId: 'ansible-title',
+  searchInputAccessibleName: 'Search input',
+  tableAccessibleName: 'Simple Table',
+  deleteCredentialMenuItemAccessibleName: 'Delete credential',
+  deleteConfirmButtonAccessibleName: 'Delete',
 } as const;
 
 /** URL path segment for {@link APP_ROUTES.detailsTab} (lowercase, matches console router). */
@@ -79,6 +90,15 @@ export const APP_APPLICATION_SYNC = {
   confirmButtonLabel: 'Synchronize',
 } as const;
 
+/** Argo CD ApplicationSet child app **Sync** from Details (`a#sync-argo-app`). */
+export const APP_ARGO_APPLICATION_SYNC = {
+  syncLinkId: 'sync-argo-app',
+  modalSelector: '#sync-argocd-modal',
+  modalTitlePattern: /sync/i,
+  confirmButtonLabel: 'Synchronize',
+  successAlertText: 'ArgoCD app sync initiated',
+} as const;
+
 /**
  * Application **Topology** tab: graph chrome (zoom / fit / reset), legend help, secondary tabs wrapper.
  * Captured from live hub (`…/details/{namespace}/{name}/topology`, en).
@@ -128,6 +148,8 @@ export const APP_APPLICATION_TOPOLOGY = {
     clusterSet: 'ClusterSet',
     labelSelector: 'LabelSelector',
   },
+  /** PF topology node modifier when deploy status is healthy (`pf-m-success`). */
+  topologyNodeSuccessModifier: 'pf-m-success',
 } as const;
 
 // =============================================================================
@@ -140,23 +162,23 @@ export const APP_DOCS = {
     'https://docs.redhat.com/en/documentation/red_hat_advanced_cluster_management_for_kubernetes/2.16/html-single/applications/index#managing-applications',
 } as const;
 
-/** Use in assertions: href must be managing-applications docs with any 2.x product version. */
+/** Use in assertions: href must be managing-applications docs with any product version. */
 export const APP_DOCS_MANAGING_APPLICATIONS_HREF_RE =
-  /^https:\/\/docs\.redhat\.com\/en\/documentation\/red_hat_advanced_cluster_management_for_kubernetes\/2\.\d+\/html-single\/applications\/index#managing-applications$/;
+  /^https:\/\/docs\.redhat\.com\/en\/documentation\/red_hat_advanced_cluster_management_for_kubernetes\/\d+\.\d+\/html-single\/applications\/index#managing-applications$/;
 
 /**
  * "Learn more" on the Advanced configuration **page deprecation** banner (RHACM4K-63573).
  * Matches live hub: release notes → deprecations-removals-acm (not managing-applications).
  */
 export const APP_DOCS_ADVANCED_DEPRECATION_HREF_RE =
-  /^https:\/\/docs\.redhat\.com\/en\/documentation\/red_hat_advanced_cluster_management_for_kubernetes\/2\.\d+\/html-single\/release_notes\/release-notes#deprecations-removals-acm$/;
+  /^https:\/\/docs\.redhat\.com\/en\/documentation\/red_hat_advanced_cluster_management_for_kubernetes\/\d+\.\d+\/html-single\/release_notes\/release-notes#deprecations-removals-acm$/;
 
 /**
  * **Placement rule deprecation** inline alert in the subscription wizard (cluster placement section).
  * Matches `ViewDocumentationLink` / `DOC_LINKS.DEPRECATIONS_ACM` from the console.
  */
 export const APP_DOCS_ACM_DEPRECATIONS_RELEASE_NOTES_HREF_RE =
-  /^https:\/\/docs\.redhat\.com\/en\/documentation\/red_hat_advanced_cluster_management_for_kubernetes\/2\.\d+\/html-single\/release_notes\/release-notes#deprecations-removals-acm$/;
+  /^https:\/\/docs\.redhat\.com\/en\/documentation\/red_hat_advanced_cluster_management_for_kubernetes\/\d+\.\d+\/html-single\/release_notes\/release-notes#deprecations-removals-acm$/;
 
 // =============================================================================
 // Page structure
@@ -276,12 +298,22 @@ export const APP_TABLE_COLUMNS = {
   created: 'Created',
 } as const;
 
+/** **Type** column display strings on the Applications Overview table (RHACM4K-6903). */
+export const APP_TABLE_TYPE_VALUES = {
+  applicationSet: 'Application set',
+  subscription: 'Subscription',
+} as const;
+
 /** Overview table **Manage columns** dialog defaults (RHACM4K-63768). */
 export const APP_TABLE_MANAGE_COLUMNS = {
   /** Hidden until enabled in the dialog. */
   defaultUnchecked: [APP_TABLE_COLUMNS.created] as const,
   /** Required columns — checkbox disabled in the dialog. */
-  required: [APP_TABLE_COLUMNS.name, APP_TABLE_COLUMNS.namespace, APP_TABLE_COLUMNS.clusters] as const,
+  required: [
+    APP_TABLE_COLUMNS.name,
+    APP_TABLE_COLUMNS.namespace,
+    APP_TABLE_COLUMNS.clusters,
+  ] as const,
   /** Optional columns — can be toggled off. */
   optional: [
     APP_TABLE_COLUMNS.type,
@@ -290,6 +322,20 @@ export const APP_TABLE_MANAGE_COLUMNS = {
     APP_TABLE_COLUMNS.syncStatus,
     APP_TABLE_COLUMNS.podStatus,
   ] as const,
+} as const;
+
+/** RHACM4K-7513 — commit-hash edits on `test7513` / `example-k8s-app` (initial hash lives in e2e-spec). */
+export const GIT_COMMIT_HASH_TEST7513 = {
+  broken: '50282bd38921cadc90d5cde01dd5bfd67c585d97',
+  fixed: '1a537cd90c1a8d619a7b922fd147ce3394b29132',
+} as const;
+
+/** RHACM4K-49630 — appsub with PlacementRule ref missing `name` (CLI apply + edit existing rule). */
+export const GIT_PLACEMENTRULE_NO_NAME_TEST = {
+  namespace: 'git-placementrule',
+  applicationName: 'git-placementrule',
+  placementRuleName: 'git-placementrule-placement-1',
+  setupYamlRelativePath: 'src/templates/app/subscription/git-no-placementrule-name.yaml',
 } as const;
 
 /** RHACM4K-64215 — pre-seeded Placement + legacy PlacementRule for subscription wizard. */
@@ -359,7 +405,21 @@ export const APP_FILTER = {
     openshift: 'OpenShift',
     /** Subscription / ALC Git apps. */
     subscription: 'Subscription',
+    /** Argo CD ApplicationSet apps on the hub. */
+    applicationSet: 'Application set',
   },
+} as const;
+
+/**
+ * RHACM4K-61329 — Applications list toolbar state exercised for persistence across navigation.
+ * Search matches apps with `aap` in the name (e.g. ansible/AAP-related apps on integration hubs).
+ */
+export const APP_PERSISTENT_LIST_TOOLBAR = {
+  searchQuery: 'aap',
+  typeFilter: APP_FILTER.typeOptions.openshift,
+  sortColumn: APP_TABLE_COLUMNS.podStatus,
+  /** Cypress double-clicks **Pod Status** to reach descending sort. */
+  sortHeaderClicks: 2,
 } as const;
 
 /** Labels column on Applications Overview (extension column; PF overflow label + popover). */
@@ -373,7 +433,7 @@ export const APP_TABLE_LABELS_CELL = {
 export const APP_LABEL_FILTER = {
   toggleId: 'acm-table-filter-select-Label',
   groupTitle: 'Label',
-  searchAriaLabel: 'Search',
+  searchAriaLabel: /Filter|Search/,
   /** MenuToggle shows "Label" with a badge when filters are active (e.g. "Label 1"). */
   toggleNamePattern: /^Label(\s+\d+)?$/i,
   operatorEquals: '=',
@@ -490,6 +550,33 @@ export const APP_ADVANCED_TABLE_COLUMNS_CHANNELS = {
   created: 'Created',
 } as const;
 
+/** RHACM4K-32401 — git/helm subscription apps for Advanced configuration channel copy links. */
+export const APP_CONSOLE_UI_CHANNEL_COPY = {
+  git: {
+    applicationName: 'auto-git-copy',
+    namespace: 'auto-git-copy-ns',
+    channelSearch: 'github',
+    channelRepositoryUrl: 'https://github.com/stolostron/application-lifecycle-samples',
+    channelRepositoryTypeLabel: 'Git',
+    templateRelativePath: 'src/templates/app/console/git-app-copy.yaml',
+    branch: 'main',
+    path: 'helloworld',
+    clusterName: 'local-cluster',
+  },
+  helm: {
+    applicationName: 'auto-helm-copy',
+    namespace: 'auto-helm-copy-ns',
+    channelSearch: 'hcontent',
+    channelRepositoryUrl:
+      'https://raw.githubusercontent.com/stolostron/application-lifecycle-samples/main',
+    channelRepositoryTypeLabel: 'Helm',
+    templateRelativePath: 'src/templates/app/console/helm-app-copy.yaml',
+    chartName: 'helloworld-helm',
+    packageVersion: '0.2.0',
+    clusterName: 'local-cluster',
+  },
+} as const;
+
 // =============================================================================
 // Argo CD ApplicationSet create wizards (pull + push)
 // =============================================================================
@@ -603,7 +690,7 @@ export const APP_ARGO_CREATE_WIZARD_SHARED = {
 /** Shared RHACM4K-61724 YAML patterns (pull + push); modal uses GitOpsCluster from CreateArgoResources. */
 const APP_ARGO_PLACEMENT_TOLERATIONS_YAML_PATTERNS = {
   modalGitOpsPlacementTolerations:
-    /kind:\s*GitOpsCluster[\s\S]*kind:\s*Placement[\s\S]*tolerations:[\s\S]*cluster\.open-cluster-management\.io\/unreachable[\s\S]*operator:\s*Exists[\s\S]*cluster\.open-cluster-management\.io\/unavailable[\s\S]*operator:\s*Exists[\s\S]*clusterSets:\s*\n\s*-\s*default/,
+    /kind:\s*GitOpsCluster[\s\S]*kind:\s*Placement[\s\S]*(?=[\s\S]*tolerations:[\s\S]*cluster\.open-cluster-management\.io\/unreachable[\s\S]*operator:\s*Exists[\s\S]*cluster\.open-cluster-management\.io\/unavailable[\s\S]*operator:\s*Exists)(?=[\s\S]*clusterSets:\s*\n\s*-\s*default)/,
   wizardApplicationSetPlacementTolerations:
     /kind:\s*ApplicationSet[\s\S]*kind:\s*Placement[\s\S]*tolerations:[\s\S]*cluster\.open-cluster-management\.io\/unreachable[\s\S]*operator:\s*Exists[\s\S]*cluster\.open-cluster-management\.io\/unavailable[\s\S]*operator:\s*Exists/,
   ...PLACEMENT_TOLERATIONS_YAML_PATTERNS,
@@ -802,6 +889,8 @@ export const APP_SUBSCRIPTION_CREATE_WIZARD = {
     ansibleTokenInputId: 'ansibleToken',
     /** Namespace combobox on the first step (before **Next** reveals host/token fields). */
     namespacePlaceholder: 'Select a namespace for the credential',
+    /** PF6 **Namespace** combobox accessible name (preferred over placeholder on current console). */
+    namespaceComboboxAccessibleName: 'Namespace',
     nextButtonAccessibleName: 'Next',
     addButtonAccessibleName: 'Add',
   },
@@ -990,7 +1079,8 @@ export const APP_SUBSCRIPTION_WIZARD_UNDEFINED_LABEL_HELP_TEXT = {
 export type AppSubscriptionCreateWizardHelpPopoverId =
   keyof typeof APP_SUBSCRIPTION_CREATE_WIZARD_HELP_POPOVER_TEXT;
 
-export type SubscriptionWizardRepositoryCardKind = keyof typeof APP_SUBSCRIPTION_WIZARD_UNDEFINED_LABEL_HELP_TEXT;
+export type SubscriptionWizardRepositoryCardKind =
+  keyof typeof APP_SUBSCRIPTION_WIZARD_UNDEFINED_LABEL_HELP_TEXT;
 
 /**
  * Returns expected English popover body for a **More info** button id, or `undefined` if not recorded.
@@ -1084,10 +1174,7 @@ export function subscriptionRepositoryBlockTestIdSuffix(blockIndex: number): str
  * Full `data-testid` for a **base** id from {@link APP_SUBSCRIPTION_CREATE_WIZARD.testIds} (git / helm / objectStorage / placement)
  * in the given repository block (`0` = first; unsuffixed).
  */
-export function subscriptionRepositoryDataTestId(
-  baseTestId: string,
-  blockIndex: number
-): string {
+export function subscriptionRepositoryDataTestId(baseTestId: string, blockIndex: number): string {
   const suffix = subscriptionRepositoryBlockTestIdSuffix(blockIndex);
   return suffix ? `${baseTestId}${suffix}` : baseTestId;
 }
@@ -1150,7 +1237,9 @@ export function subscriptionWizardClusterDeploymentSectionToggleId(blockIndex: n
 /**
  * **`#id`** for the **Repository types** accordion (`channel-repository-types` vs `channelgrp1-repository-types`, …).
  */
-export function subscriptionWizardChannelRepositoryTypesSectionToggleId(blockIndex: number): string {
+export function subscriptionWizardChannelRepositoryTypesSectionToggleId(
+  blockIndex: number
+): string {
   if (blockIndex <= 0) {
     return APP_SUBSCRIPTION_CREATE_WIZARD.sectionToggles.repositoryTypes;
   }
@@ -1193,7 +1282,9 @@ export function subscriptionWizardClusterSelectorLabelDomIds(
  * **`#ansibleSecretName{N}-label`** focus target used in ALC flows for **additional** subscription blocks (`blockIndex >= 1`).
  * May appear only after expanding automation for that block (depends on hub / flow).
  */
-export function subscriptionAutomationAnsibleSecretNameLabelId(blockIndex: number): string | undefined {
+export function subscriptionAutomationAnsibleSecretNameLabelId(
+  blockIndex: number
+): string | undefined {
   if (blockIndex <= 0) return undefined;
   return `ansibleSecretName${blockIndex}-label`;
 }
@@ -1207,4 +1298,17 @@ export const APP_ARGO_HELM_APPSET = {
   clusterSet: 'auto-gitops-cluster-set',
   targetCluster: 'local-cluster',
   setupYamlRelativePath: 'src/templates/app/argo-helm-appset-setup.yaml',
+} as const;
+
+/** RHACM4K-58916 — matrix ApplicationSet (Git + Cluster Decision) applied via YAML. */
+export const APP_ARGO_MATRIX_APPSET = {
+  applicationSetName: 'argo-appset-matrix',
+  argoServerNamespace: 'openshift-gitops',
+  destinationNamespaces: ['argo-workflows', 'prometheus-operator'] as const,
+  setupYamlRelativePath: 'src/templates/app/argo/applicationset-matrix.yaml',
+  clusterResources: [
+    { kind: 'Service', name: 'helloworld-app-svc' },
+    { kind: 'Deployment', name: 'helloworld-app-deploy' },
+    { kind: 'ReplicaSet', name: 'helloworld-app-deploy' },
+  ],
 } as const;

@@ -1,0 +1,45 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: fo-monitoring-incluster
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ns-ch
+---
+apiVersion: apps.open-cluster-management.io/v1
+kind: PlacementRule
+metadata:
+  name: towhichcluster
+  namespace: fo-monitoring-incluster
+spec:
+  clusterSelector: {}
+---
+apiVersion: apps.open-cluster-management.io/v1
+kind: Channel
+metadata:
+  name: predev-ch
+  namespace: ns-ch
+  labels:
+    app: nginx-app-details
+spec:
+  type: HelmRepo
+  pathname: https://charts.helm.sh/stable/
+---
+apiVersion: apps.open-cluster-management.io/v1
+kind: Subscription
+metadata:
+  name: prometheus-stack-incluster-platform-engineering-westeurope01-1234567890-1234567890-1234567890
+  namespace: fo-monitoring-incluster
+  labels:
+    app: nginx-app-details
+spec:
+  channel: ns-ch/predev-ch
+  name: nginx-ingress
+  packageFilter:
+    version: "1.36.x"
+  placement:
+    placementRef:
+      kind: PlacementRule
+      name: towhichcluster

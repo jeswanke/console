@@ -1,0 +1,50 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mortgage-app-ocp
+  namespace: helloworld-app-ocp-ns
+  labels:
+    app: mortgage-app-ocp
+    app.kubernetes.io/part-of: helloworld-app-ocp
+spec:
+  selector:
+    matchLabels:
+      app: mortgage-app-ocp
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: mortgage-app-ocp
+        app.kubernetes.io/part-of: helloworld-app-ocp
+    spec:
+      containers:
+      - name: mortgage-app-ocp
+        image: "quay.io/fxiang1/mortgage:0.5.0"
+        imagePullPolicy: IfNotPresent
+        ports:
+          - containerPort: 9080
+        resources:
+          limits:
+            cpu: 200m
+            memory: 256Mi
+          requests:
+            cpu: 200m
+            memory: 256Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mortgage-app-ocp-svc
+  namespace: helloworld-app-ocp-ns
+  labels:
+    app: mortgage-app-ocp
+    app.kubernetes.io/part-of: helloworld-app-ocp
+spec:
+  type: NodePort
+  ports:
+    - port: 9080
+      targetPort: 9080
+      protocol: TCP
+  selector:
+    app: mortgage-app-ocp

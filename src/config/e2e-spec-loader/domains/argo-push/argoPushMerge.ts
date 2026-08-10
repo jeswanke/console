@@ -14,6 +14,10 @@ export function mergeArgoPushLayers(
         next.git = { ...(next.git as Record<string, unknown>), ...value };
         continue;
       }
+      if (key === 'helm' && isPlainObject(value) && isPlainObject(next.helm)) {
+        next.helm = { ...(next.helm as Record<string, unknown>), ...value };
+        continue;
+      }
       next[key] = value;
     }
     acc = next;

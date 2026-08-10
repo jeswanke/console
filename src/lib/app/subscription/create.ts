@@ -1,14 +1,13 @@
 /**
  * Subscription **create** wizard orchestration.
  */
-import { expect } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 
 import type { ApplicationListPage } from '@pages/app/ApplicationListPage';
 import type { SubscriptionApplicationCreateWizardPage } from '@pages/app/SubscriptionApplicationCreateWizardPage';
 
 import type { CreateSubscriptionOptions } from './types';
 import { applyPerBlockOptions, fillRepositoryBlockBySpec } from './wizard-fill';
-
 
 /**
  * Fills and submits the subscription create wizard from e2e-spec options.
@@ -17,6 +16,7 @@ import { applyPerBlockOptions, fillRepositoryBlockBySpec } from './wizard-fill';
 export async function createSubscription(
   applicationListPage: ApplicationListPage,
   wizard: SubscriptionApplicationCreateWizardPage,
+  page: Page,
   options: CreateSubscriptionOptions
 ): Promise<void> {
   const {
@@ -65,21 +65,26 @@ export async function createSubscription(
     if (blockIndex > 0) {
       await wizard.getAddChannelsButton().click();
       await wizard.waitForLoad();
-      await wizard.getRepositoryBlockContainer(blockIndex).waitFor({ state: 'visible', timeout: 60_000 });
+      await wizard
+        .getRepositoryBlockContainer(blockIndex)
+        .waitFor({ state: 'visible', timeout: 60_000 });
     }
 
     const spec = repositories[blockIndex]!;
     await fillRepositoryBlockBySpec(wizard, blockIndex, spec);
 
-    await applyPerBlockOptions(wizard, blockIndex, perBlock?.[blockIndex]);
+    await applyPerBlockOptions(wizard, page, blockIndex, perBlock?.[blockIndex]);
   }
 
   if (submit) {
     const submitButton = wizard.getPrimarySubmitButton();
     await submitButton.waitFor({ state: 'visible', timeout: 30_000 });
     await expect(submitButton).toBeEnabled({ timeout: 30_000 });
-    await submitButton.click();
-    await wizard.waitForLoad();
+    await submitButton.scrollIntoViewIfNeeded();
+    await submitButton.click({ force: true });
+    // Poll the Application CR immediately — do not wait on page-wide skeletons first.
+    // After Create the console may keep PF skeletons mounted while navigating; that used to
+    // stall `waitForLoad` long enough for the app to be deleted before the existence poll ran.
     await waitForSubscriptionApplicationAfterCreate(wizard, namespace, applicationName);
   }
 }
@@ -98,7 +103,7 @@ export async function waitForSubscriptionApplicationAfterCreate(
   await expect
     .poll(() => wizard.oc.applicationsAppK8sIoExists(namespace, applicationName), {
       timeout,
-      intervals: [2_000, 3_000, 5_000, 10_000],
+      intervals: [1_000, 2_000, 3_000, 5_000],
       message: `Expected Application "${applicationName}" in namespace "${namespace}" after Create`,
     })
     .toBe(true);
@@ -110,5 +115,7 @@ export async function waitForSubscriptionApplicationAfterCreate(
   } catch {
     // Hub may stay on the create route or return to the list; callers navigate via ApplicationDetailsPage.
   }
-  await wizard.waitForLoad();
+
+  // Soft settle only — details/topology can keep PF skeletons mounted; do not block the test on them.
+  await wizard.waitForLoad(15_000).catch(() => undefined);
 }

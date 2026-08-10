@@ -149,21 +149,12 @@ export class SearchPage extends BasePage {
   }
 
   /**
-   * Navigate to Search pre-filtered for `kind:<kind>` via the URL query string.
-   * Does not require results to appear (callers may assert empty / hidden rows).
-   */
-  async filterByKind(kind: string): Promise<void> {
-    const filters = encodeURIComponent(JSON.stringify({ textsearch: `kind:${kind}` }));
-    await this.goto(`?filters=${filters}`);
-  }
-
-  /**
    * Navigate to the Search page pre-filtered for `kind:Pod name:<podName>`,
    * wait for the results table, then click the first resource-name link to
    * open the Search Details page.
    */
   async openFirstPodDetails(podName: string): Promise<void> {
-    const filters = encodeURIComponent(JSON.stringify({ textsearch:`kind:Pod name:${podName}` }));
+    const filters = encodeURIComponent(JSON.stringify({ textsearch: `kind:Pod name:${podName}` }));
     await this.goto(`?filters=${filters}`);
     await this.waitForResultsTable();
     await this.page.locator('table').getByRole('link').first().click();
@@ -215,9 +206,9 @@ export class SearchPage extends BasePage {
     await expect(saveButton).toBeEnabled();
     await saveButton.click();
 
-    await expect(
-      this.page.getByRole('heading', { name: 'Save search' })
-    ).toBeHidden({ timeout: 5000 });
+    await expect(this.page.getByRole('heading', { name: 'Save search' })).toBeHidden({
+      timeout: 5000,
+    });
   }
 
   /**
@@ -293,7 +284,9 @@ export class SearchPage extends BasePage {
   async confirmDeleteSearch(): Promise<void> {
     const dialog = this.page.getByRole('dialog');
     await expect(this.page.getByRole('heading', { name: 'Delete saved search?' })).toBeVisible();
-    const confirmButton = dialog.getByRole('button', { name: SAVED_SEARCH.deleteModal.confirmButton });
+    const confirmButton = dialog.getByRole('button', {
+      name: SAVED_SEARCH.deleteModal.confirmButton,
+    });
     await expect(confirmButton).toBeVisible();
     await expect(confirmButton).toBeEnabled();
     await confirmButton.dispatchEvent('click');

@@ -3,7 +3,12 @@
  */
 import path from 'path';
 import { expect, test } from '@playwright/test';
-import { clearE2eSpecDataCache, resolveArgoPushScenarioByTestId, resolveSubscriptionScenarioById, resolveSubscriptionScenarioByTestId } from '@config';
+import {
+  clearE2eSpecDataCache,
+  resolveArgoPushScenarioByTestId,
+  resolveSubscriptionScenarioById,
+  resolveSubscriptionScenarioByTestId,
+} from '@config';
 import {
   applyPrivateGitAuthToSubscriptionOptions,
   getPrivateGitAuthFromEnv,
@@ -108,7 +113,7 @@ test.describe('private-git', () => {
       disableAutoReconcile: true,
     });
     expect(appExp.advancedConfiguration?.channelDisplaySubstring).toBe(
-      'stolostron-application-lifecycle-samples-private'
+      'ggithubcom-stolostron-application-lifecycle-samples-private'
     );
     expect(appExp.detailsClustersSummary).toEqual({ variant: 'localOnly' });
   });

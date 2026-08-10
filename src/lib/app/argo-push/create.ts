@@ -1,12 +1,13 @@
 /**
  * Argo CD ApplicationSet **push model** create wizard orchestration.
  */
-import { expect } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 
 import type { ApplicationListPage } from '@pages/app/ApplicationListPage';
 import type { ArgoPushApplicationCreateWizardPage } from '@pages/app/ArgoPushApplicationCreateWizardPage';
 
 import type { CreateArgoPushApplicationOptions } from './types';
+import { resolveApplicationSetNamespace } from './namespace';
 
 async function fillGeneralStep(
   wizard: ArgoPushApplicationCreateWizardPage,
@@ -22,23 +23,20 @@ async function fillGeneratorsStep(
   requeueTimeSeconds?: number
 ): Promise<void> {
   if (requeueTimeSeconds === undefined) return;
-  await wizard.pickComboboxOption(
-    wizard.getRequeueTimeCombobox(),
-    String(requeueTimeSeconds)
-  );
+  await wizard.pickComboboxOption(wizard.getRequeueTimeCombobox(), String(requeueTimeSeconds));
 }
 
-async function fillGitTemplateStep(
+async function fillSingleGitTemplateStep(
   wizard: ArgoPushApplicationCreateWizardPage,
-  options: CreateArgoPushApplicationOptions
+  options: Pick<CreateArgoPushApplicationOptions, 'git' | 'destinationNamespace'>
 ): Promise<void> {
   const { git, destinationNamespace } = options;
-  await wizard.getGitRepositoryTypeCard().click();
+  if (!git) throw new Error('fillSingleGitTemplateStep: git repository spec is required');
+  await wizard.selectGitRepositoryTypeOnTemplate();
   await wizard.waitForLoad();
-
-  await wizard.pickComboboxOption(wizard.getGitUrlCombobox(), git.url);
+  await wizard.pickGitUrlOption(git.url);
   if (git.branch) {
-    await wizard.pickComboboxOption(wizard.getGitRevisionCombobox(), git.branch);
+    await wizard.pickGitRevisionOption(git.branch);
   } else {
     await wizard.pickFirstComboboxOption(wizard.getGitRevisionCombobox());
   }
@@ -47,7 +45,78 @@ async function fillGitTemplateStep(
   } else {
     await wizard.pickFirstComboboxOption(wizard.getGitPathCombobox());
   }
+  if (destinationNamespace) {
+    await wizard.getDestinationNamespaceInput().clear();
+    await wizard.getDestinationNamespaceInput().fill(destinationNamespace);
+  }
+}
+
+async function fillMultiSourceTemplateStep(
+  wizard: ArgoPushApplicationCreateWizardPage,
+  options: Pick<CreateArgoPushApplicationOptions, 'git' | 'helm' | 'destinationNamespace'>
+): Promise<void> {
+  const { git, helm, destinationNamespace } = options;
+  if (!helm) {
+    throw new Error('fillMultiSourceTemplateStep: helm repository spec is required');
+  }
+
+  await fillSingleGitTemplateStep(wizard, { git, destinationNamespace: '' });
+  await wizard.addTemplateSource();
+  await wizard.fillHelmOnLastTemplateSection(helm);
+  await wizard.getDestinationNamespaceInput().clear();
   await wizard.getDestinationNamespaceInput().fill(destinationNamespace);
+}
+
+async function fillTemplateStep(
+  wizard: ArgoPushApplicationCreateWizardPage,
+  options: CreateArgoPushApplicationOptions
+): Promise<void> {
+  const { git, helm, multiSource, destinationNamespace } = options;
+
+  if (!multiSource) {
+    await fillSingleGitTemplateStep(wizard, { git, destinationNamespace });
+    return;
+  }
+
+  await fillMultiSourceTemplateStep(wizard, { git, helm, destinationNamespace });
+}
+
+async function fillHelmOnlyTemplateStep(
+  wizard: ArgoPushApplicationCreateWizardPage,
+  options: Pick<CreateArgoPushApplicationOptions, 'helm' | 'destinationNamespace'>
+): Promise<void> {
+  const { helm, destinationNamespace } = options;
+  if (!helm) {
+    throw new Error('fillHelmOnlyTemplateStep: helm repository spec is required');
+  }
+  await wizard.selectHelmRepositoryTypeOnTemplate();
+  await wizard.waitForLoad();
+  await wizard.fillHelmOnLastTemplateSection(helm);
+  if (destinationNamespace) {
+    await wizard.getDestinationNamespaceInput().clear();
+    await wizard.getDestinationNamespaceInput().fill(destinationNamespace);
+  }
+}
+
+async function fillTemplateStepForWizard(
+  wizard: ArgoPushApplicationCreateWizardPage,
+  options: CreateArgoPushApplicationOptions
+): Promise<void> {
+  const { git, helm, multiSource, destinationNamespace } = options;
+
+  if (helm && !git?.path && !multiSource) {
+    await fillHelmOnlyTemplateStep(wizard, { helm, destinationNamespace });
+    return;
+  }
+
+  await fillTemplateStep(wizard, options);
+}
+
+async function fillGitTemplateStep(
+  wizard: ArgoPushApplicationCreateWizardPage,
+  options: CreateArgoPushApplicationOptions
+): Promise<void> {
+  await fillTemplateStepForWizard(wizard, options);
 }
 
 async function fillPlacementStep(
@@ -61,12 +130,26 @@ async function fillPlacementStep(
   }
 }
 
+async function fillSyncPolicyStep(
+  wizard: ArgoPushApplicationCreateWizardPage,
+  page: Page,
+  options: Pick<CreateArgoPushApplicationOptions, 'disableAutomatedSync'>
+): Promise<void> {
+  if (!options.disableAutomatedSync) return;
+  const automated = page.locator('[id$="syncPolicy.automated.enabled"]');
+  await automated.scrollIntoViewIfNeeded();
+  if (await automated.isChecked().catch(() => false)) {
+    await automated.click({ force: true });
+  }
+}
+
 /**
  * Fills the push-model wizard through **Placement** and lands on **Review** without submitting.
  */
 export async function fillArgoPushWizardToReview(
   applicationListPage: ApplicationListPage,
   wizard: ArgoPushApplicationCreateWizardPage,
+  page: Page,
   options: CreateArgoPushApplicationOptions
 ): Promise<void> {
   const { collapseYamlPanel = true } = options;
@@ -85,6 +168,7 @@ export async function fillArgoPushWizardToReview(
   await fillGitTemplateStep(wizard, options);
   await wizard.clickNext();
 
+  await fillSyncPolicyStep(wizard, page, options);
   await wizard.clickNext();
 
   await fillPlacementStep(wizard, options);
@@ -100,6 +184,7 @@ export async function fillArgoPushWizardToReview(
 export async function createArgoPushApplication(
   applicationListPage: ApplicationListPage,
   wizard: ArgoPushApplicationCreateWizardPage,
+  page: Page,
   options: CreateArgoPushApplicationOptions
 ): Promise<{ argoServerNamespace: string }> {
   const {
@@ -109,7 +194,7 @@ export async function createArgoPushApplication(
     requeueTimeSeconds,
   } = options;
 
-  const argoServerNamespace = options.argoServerLabel;
+  const argoServerNamespace = resolveApplicationSetNamespace(options);
   const exists = await wizard.oc.applicationSetExists(argoServerNamespace, options.applicationName);
   if (exists) {
     if (applicationSetExistsError) {
@@ -136,6 +221,7 @@ export async function createArgoPushApplication(
   await fillGitTemplateStep(wizard, options);
   await wizard.clickNext();
 
+  await fillSyncPolicyStep(wizard, page, options);
   await wizard.clickNext();
 
   await fillPlacementStep(wizard, options);
@@ -143,7 +229,14 @@ export async function createArgoPushApplication(
 
   if (submit) {
     await wizard.clickSubmit();
-    await waitForArgoPushApplicationAfterCreate(wizard, argoServerNamespace, options.applicationName);
+    await waitForArgoPushApplicationAfterCreate(
+      wizard,
+      argoServerNamespace,
+      options.applicationName
+    );
+    if (options.postCreateWaitMs && options.postCreateWaitMs > 0) {
+      await new Promise((resolve) => setTimeout(resolve, options.postCreateWaitMs));
+    }
   }
 
   return { argoServerNamespace };

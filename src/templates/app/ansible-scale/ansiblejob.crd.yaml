@@ -1,0 +1,86 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  labels:
+    operators.coreos.com/ansible-automation-platform-operator.aap: ""
+  name: ansiblejobs.tower.ansible.com
+spec:
+  conversion:
+    strategy: None
+  group: tower.ansible.com
+  names:
+    kind: AnsibleJob
+    listKind: AnsibleJobList
+    plural: ansiblejobs
+    singular: ansiblejob
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: AnsibleJob is the Schema for the ansiblejobs API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: Spec defines the desired state of AnsibleJob
+            properties:
+              connection_secret:
+                description: |
+                  A k8s secret that contains an access token for AWX. To create an access token see these docs: https://docs.ansible.com/automation-controller/4.1.0/html/userguide/applications_auth.html#add-tokens.
+                type: string
+              extra_vars:
+                type: object
+                x-kubernetes-preserve-unknown-fields: true
+              inventory:
+                type: string
+              job_tags:
+                description: A comma-separated list of tags to specify which sets
+                  of ansible tasks in a job should be run
+                type: string
+              job_template_name:
+                type: string
+              job_ttl:
+                description: Time to live for k8s job object after the playbook run
+                  has finished
+                type: integer
+              runner_image:
+                description: Runner image used when running jobs
+                type: string
+              runner_pull_policy:
+                description: Runner image pull policy used when running jobs
+                type: string
+              runner_version:
+                description: Runner image version used when running jobs
+                type: string
+              skip_tags:
+                description: A comma-separated list of tags to specify which sets
+                  of ansible tasks in a job should not be run
+                type: string
+              tower_auth_secret:
+                description: |
+                  (DEPRECATED) A k8s secret that contains an access token for AWX. To create an access token see these docs: https://docs.ansible.com/automation-controller/4.1.0/html/userguide/applications_auth.html#add-tokens.
+                type: string
+              workflow_template_name:
+                type: string
+            type: object
+            x-kubernetes-preserve-unknown-fields: true
+          status:
+            description: Status defines the observed state of AnsibleJob
+            type: object
+            x-kubernetes-preserve-unknown-fields: true
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
