@@ -271,4 +271,173 @@ export class CreatePolicyWizardPage
       this.getWizardStepsNav().getByRole('button', { name: 'Review', exact: true })
     ).toHaveAttribute('aria-current', 'step', { timeout: 60_000 });
   }
+
+  // ---------------------------------------------------------------------------
+  // Step-by-step wizard navigation
+  // ---------------------------------------------------------------------------
+
+  async fillName(name: string): Promise<void> {
+    await this.getDetailsNameInput().fill(name);
+  }
+
+  async advanceToNextStep(): Promise<void> {
+    await this.getNextButton().click();
+    await this.waitForLoad();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Templates step
+  // ---------------------------------------------------------------------------
+
+  async addPolicyTemplate(templateName: string): Promise<void> {
+    await this.page
+      .locator('#templates button')
+      .filter({ hasText: 'Add policy template' })
+      .first()
+      .click();
+    await this.page
+      .locator('.pf-v6-c-menu li')
+      .filter({ hasText: templateName })
+      .click({ force: true });
+    await this.waitForLoad();
+  }
+
+  async fillConfigurationPolicyName(value: string): Promise<void> {
+    const nameInputs = this.page.getByRole('textbox', { name: 'Name' });
+    const input = nameInputs.first();
+    await input.scrollIntoViewIfNeeded();
+    await input.clear();
+    await input.fill(value);
+  }
+
+  async fillObjectDefinitionName(value: string): Promise<void> {
+    const nameInputs = this.page.getByRole('textbox', { name: 'Name' });
+    const objectNameInput = nameInputs.last();
+    await objectNameInput.scrollIntoViewIfNeeded();
+    await objectNameInput.clear();
+    await objectNameInput.fill(value);
+  }
+
+  async setIncludeNamespace(value: string): Promise<void> {
+    const section = this.page
+      .locator('div')
+      .filter({ hasText: /Include namespaces/ })
+      .filter({ has: this.page.getByRole('textbox') })
+      .last();
+
+    const input = section.getByRole('textbox').first();
+    await input.waitFor({ state: 'visible', timeout: 30_000 });
+    await input.scrollIntoViewIfNeeded();
+    await input.clear();
+    await input.fill(value);
+  }
+
+  async addNamespaceLabelExpression(key: string, value: string): Promise<void> {
+    const addExprBtn = this.page.getByRole('button').filter({ hasText: /Add expression/ });
+    await addExprBtn.scrollIntoViewIfNeeded();
+    await addExprBtn.click();
+    await this.waitForLoad();
+
+    const labelInput = this.page.getByRole('textbox', { name: 'Label' });
+    await labelInput.waitFor({ state: 'visible', timeout: 10_000 });
+    await labelInput.scrollIntoViewIfNeeded();
+    await labelInput.clear();
+    await labelInput.fill(key);
+
+    const addValBtn = this.page
+      .locator('div')
+      .filter({ hasText: /^Values/ })
+      .filter({ has: this.page.getByRole('button') })
+      .last()
+      .getByRole('button')
+      .filter({ hasText: /Add/ })
+      .first();
+    await addValBtn.waitFor({ state: 'visible', timeout: 10_000 });
+    await addValBtn.click();
+    await this.waitForLoad();
+
+    const section = this.page
+      .locator('div')
+      .filter({ hasText: /^Values/ })
+      .filter({ has: this.page.getByRole('textbox') })
+      .last();
+    const valInput = section.getByRole('textbox').first();
+    await valInput.waitFor({ state: 'visible', timeout: 10_000 });
+    await valInput.scrollIntoViewIfNeeded();
+    await valInput.clear();
+    await valInput.fill(value);
+  }
+
+  async setRemediation(mode: 'Inform' | 'Enforce'): Promise<void> {
+    const radio = this.page.getByRole('radio', { name: mode, exact: true }).first();
+    await radio.scrollIntoViewIfNeeded();
+    await radio.click();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Placement step — label predicates
+  // ---------------------------------------------------------------------------
+
+  async addClusterBindingLabel(key: string, value: string): Promise<void> {
+    const section = this.page.getByRole('region', { name: 'Label expressions' });
+    await section.locator('button').filter({ hasText: 'Add label expression' }).click();
+    await this.waitForLoad();
+
+    const keyInput = section.locator('input[aria-label="Select the label"]').last();
+    await keyInput.click();
+    await keyInput.pressSequentially(key, { delay: 30 });
+    const keyOption = this.page
+      .locator('.pf-v6-c-menu li')
+      .filter({ hasText: new RegExp(`^${key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`) });
+    await keyOption.waitFor({ state: 'visible', timeout: 30_000 });
+    await keyOption.click();
+
+    const valInput = section.locator('input[aria-label="Select the values"]').last();
+    await valInput.click();
+    await valInput.pressSequentially(value, { delay: 30 });
+    const valOption = this.page
+      .locator('.pf-v6-c-menu li')
+      .filter({ hasText: new RegExp(`^${value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`) });
+    await valOption.waitFor({ state: 'visible', timeout: 30_000 });
+    await valOption.click();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Annotations step
+  // ---------------------------------------------------------------------------
+
+  async setAnnotation(sectionName: string, values: string[]): Promise<void> {
+    const sectionMap: Record<string, { label: string; placeholder: string }> = {
+      '#standards': { label: 'Standards', placeholder: 'Enter the standard' },
+      '#categories': { label: 'Categories', placeholder: 'Enter the category' },
+      '#controls': { label: 'Controls', placeholder: 'Enter the control' },
+    };
+    const info = sectionMap[sectionName] ?? { label: sectionName, placeholder: sectionName };
+    const section = this.page
+      .locator('.pf-v6-c-form__group')
+      .filter({ has: this.page.locator('.pf-v6-c-form__group-label', { hasText: info.label }) });
+    const textboxes = section.getByPlaceholder(info.placeholder);
+
+    await textboxes.first().click();
+    await textboxes.first().clear();
+    await textboxes.first().fill(values[0]);
+
+    for (let i = 1; i < values.length; i++) {
+      const addBtn = section.getByRole('button', { name: 'Add' }).last();
+      await addBtn.click();
+      const newInput = textboxes.nth(i);
+      await newInput.click();
+      await newInput.clear();
+      await newInput.fill(values[i]);
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Submit
+  // ---------------------------------------------------------------------------
+
+  async submitPolicy(): Promise<void> {
+    await this.page.getByRole('button', { name: /^Submit$/ }).click();
+    await this.waitForLoad(120_000);
+  }
 }
