@@ -36,5 +36,8 @@ npm-debug.log*
 .env.*.local
 env/alc.local.env
 *.local.env
+
+# Import cluster kubeconfigs (contain credentials - DO NOT COMMIT)
+fixtures/importClusters/*.kubeconfig
 .omo/
 .cursor/

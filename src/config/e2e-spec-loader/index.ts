@@ -56,6 +56,15 @@ export {
 } from './cluster-api';
 
 export {
+  resolveClusterCreateScenarioById,
+  resolveClusterCreateScenarioByTestId,
+  resolveEnabledClusterCreateScenarios,
+  type ClusterCreateCredentialPayload,
+  type ClusterCreateParamsPayload,
+  type ResolvedClusterCreateScenario,
+} from './cluster-create-api';
+
+export {
   resolveAnsibleScaleScenarioById,
   resolveAnsibleScaleScenarioByTestId,
   resolveAnsibleScaleSuiteConfig,

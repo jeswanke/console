@@ -1,0 +1,206 @@
+# Cluster creation scenarios — one per provider / Polarion test.
+# Secrets (keys, tokens) come from env/clc.local.env; only non-secret params live here.
+
+version: 1
+
+profiles:
+  aws_default:
+    specDomains:
+      credential:
+        name: e2e-aws-cred
+        namespace: e2e-aws-cred
+        provider: aws
+      cluster:
+        provider: aws
+        region: us-east-2
+        controlPlaneType: standalone
+        masterInstanceType: m6i.xlarge
+        workerInstanceType: m6i.xlarge
+        workerCount: 3
+        clusterNetworkCIDR: '10.128.0.0/14'
+        serviceNetworkCIDR: '172.30.0.0/16'
+        architecture: amd64
+        networkType: OVNKubernetes
+
+  gcp_default:
+    specDomains:
+      credential:
+        name: e2e-gcp-cred
+        namespace: e2e-gcp-cred
+        provider: gcp
+      cluster:
+        provider: gcp
+        region: us-east1
+        controlPlaneType: standalone
+        masterInstanceType: n1-standard-4
+        workerInstanceType: n1-standard-4
+        workerCount: 3
+        clusterNetworkCIDR: '10.128.0.0/14'
+        serviceNetworkCIDR: '172.30.0.0/16'
+        architecture: amd64
+        networkType: OVNKubernetes
+
+  azure_default:
+    specDomains:
+      credential:
+        name: e2e-azure-cred
+        namespace: e2e-azure-cred
+        provider: azure
+      cluster:
+        provider: azure
+        region: eastus
+        controlPlaneType: standalone
+        masterInstanceType: Standard_D4s_v3
+        workerInstanceType: Standard_D4s_v3
+        workerCount: 3
+        clusterNetworkCIDR: '10.128.0.0/14'
+        serviceNetworkCIDR: '172.30.0.0/16'
+        architecture: amd64
+        networkType: OVNKubernetes
+
+  azgov_default:
+    specDomains:
+      credential:
+        name: e2e-azgov-cred
+        namespace: e2e-azgov-cred
+        provider: azgov
+      cluster:
+        provider: azgov
+        region: usgovvirginia
+        controlPlaneType: standalone
+        masterInstanceType: Standard_D4s_v3
+        workerInstanceType: Standard_D4s_v3
+        workerCount: 3
+        clusterNetworkCIDR: '10.128.0.0/14'
+        serviceNetworkCIDR: '172.30.0.0/16'
+        architecture: amd64
+        networkType: OVNKubernetes
+
+  vmware_default:
+    specDomains:
+      credential:
+        name: e2e-vmware-cred
+        namespace: e2e-vmware-cred
+        provider: vmware
+      cluster:
+        provider: vmware
+        controlPlaneType: standalone
+        networkType: OVNKubernetes
+        fixedClusterName: qe4-vmware-ibm
+        network: 'Public Network'
+        apiVIP: '150.240.97.139'
+        ingressVIP: '150.240.97.140'
+        machineCIDR: '150.240.97.128/25'
+
+  openstack_default:
+    specDomains:
+      credential:
+        name: e2e-openstack-cred
+        namespace: e2e-openstack-cred
+        provider: openstack
+      cluster:
+        provider: openstack
+        controlPlaneType: standalone
+        networkType: OVNKubernetes
+        fixedClusterName: clc-auto-psi
+        externalNetwork: 'provider_net_shared_3'
+        apiFIP: '10.0.109.99'
+        ingressFIP: '10.0.110.159'
+        clusterNetworkCIDR: '10.128.0.0/14'
+        serviceNetworkCIDR: '172.30.0.0/16'
+        machineCIDR: '192.168.7.0/24'
+
+  kubevirt_default:
+    specDomains:
+      credential:
+        name: e2e-kubevirt-cred
+        namespace: e2e-kubevirt-cred
+        provider: kubevirt
+      cluster:
+        provider: kubevirt
+        controlPlaneType: hosted
+
+scenarios:
+  create_aws_7473:
+    enabled: true
+    tests: [RHACM4K-7473]
+    extends: [aws_default]
+    specDomains:
+      cluster:
+        namePrefix: e2e-aws
+        clusterSet: auto-gitops-cluster-set
+        additionalLabels:
+          owner: acmqe-e2e-auto
+          clc-e2e: 'true'
+
+  create_gcp_7474:
+    enabled: true
+    tests: [RHACM4K-7474]
+    extends: [gcp_default]
+    specDomains:
+      cluster:
+        namePrefix: e2e-gcp
+        clusterSet: auto-gitops-cluster-set
+        additionalLabels:
+          owner: acmqe-e2e-auto
+          clc-e2e: 'true'
+
+  create_azure_7475:
+    enabled: true
+    tests: [RHACM4K-7475]
+    extends: [azure_default]
+    specDomains:
+      cluster:
+        namePrefix: e2e-azure
+        clusterSet: auto-gitops-cluster-set
+        additionalLabels:
+          owner: acmqe-e2e-auto
+          clc-e2e: 'true'
+
+  create_azgov_8108:
+    enabled: true
+    tests: [RHACM4K-8108]
+    extends: [azgov_default]
+    specDomains:
+      cluster:
+        namePrefix: e2e-azgov
+        clusterSet: auto-gitops-cluster-set
+        additionalLabels:
+          owner: acmqe-e2e-auto
+          clc-e2e: 'true'
+
+  create_vmware_7820:
+    enabled: true
+    tests: [RHACM4K-7820]
+    extends: [vmware_default]
+    specDomains:
+      cluster:
+        namePrefix: e2e-vmware
+        clusterSet: auto-gitops-cluster-set
+        additionalLabels:
+          owner: acmqe-e2e-auto
+          clc-e2e: 'true'
+
+  create_openstack_3305:
+    enabled: true
+    tests: [RHACM4K-3305]
+    extends: [openstack_default]
+    specDomains:
+      cluster:
+        namePrefix: e2e-openstack
+        clusterSet: auto-gitops-cluster-set
+        additionalLabels:
+          owner: acmqe-e2e-auto
+          clc-e2e: 'true'
+
+  create_kubevirt_43772:
+    enabled: true
+    tests: [RHACM4K-43772]
+    extends: [kubevirt_default]
+    specDomains:
+      cluster:
+        namePrefix: e2e-kubevirt
+        clusterSet: auto-gitops-cluster-set
+        additionalLabels:
+          owner: acmqe-e2e-auto
+          clc-e2e: 'true'
