@@ -31,6 +31,7 @@ export class FleetVirtPage extends BasePage {
     await this.page.goto(
       `${consoleUrl}${FLEET_VIRT_ROUTES.vmList}?perspective=fleet-virtualization-perspective`,
     );
+    await this.dismissGuidedTour();
     await this.shouldLoad();
   }
 
@@ -109,7 +110,36 @@ export class FleetVirtPage extends BasePage {
     await this.page.goto(
       `${consoleUrl}/fleet-virtualization/kubevirt.io~v1~VirtualMachine/cluster/${cluster}/ns/${namespace}/${vmName}?perspective=fleet-virtualization-perspective`
     );
+    await this.dismissGuidedTour();
     await this.waitForLoad();
+  }
+
+  private async dismissGuidedTour(): Promise<void> {
+    const skipBtn = this.page.getByRole('button', { name: 'Skip tour' });
+    const closeBtn = this.page.getByRole('dialog').getByRole('button', { name: 'Close' });
+    try {
+      const target = skipBtn.or(closeBtn);
+      await target.first().waitFor({ state: 'visible', timeout: 3000 });
+      await target.first().click();
+    } catch {
+      // Tour not present — expected for most sessions
+    }
+  }
+
+  /**
+   * Navigate directly to the VM list for a specific cluster/namespace.
+   * Retries with reload to handle ACM plugin 404 on first navigation.
+   */
+  async gotoClusterVmList(cluster: string, namespace: string): Promise<void> {
+    await expect(async () => {
+      const consoleUrl = await this.oc.getConsoleUrl();
+      await this.page.goto(
+        `${consoleUrl}/fleet-virtualization/kubevirt.io~v1~VirtualMachine/cluster/${cluster}/ns/${namespace}?perspective=fleet-virtualization-perspective&tab=vms`
+      );
+      await expect(this.page.locator('h1')).toBeVisible({ timeout: 15000 });
+      await expect(this.getVmGrid()).toBeVisible({ timeout: 30000 });
+    }).toPass({ intervals: [15000, 20000], timeout: 120000 });
+    await this.dismissGuidedTour();
   }
 
   async clearAllFilters(): Promise<void> {
@@ -140,5 +170,95 @@ export class FleetVirtPage extends BasePage {
     const grid = this.page.getByRole('grid', { name: 'VirtualMachines table' });
     const firstLink = grid.getByRole('link').first();
     await firstLink.click();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Tree view and grid locators
+  // ---------------------------------------------------------------------------
+
+  getTreeViewContainer(): Locator {
+    return this.page.locator('[class*="tree-view"]').first();
+  }
+
+  getVmGrid(): Locator {
+    return this.page.getByRole('grid');
+  }
+
+  // ---------------------------------------------------------------------------
+  // Bulk VM selection and actions
+  // ---------------------------------------------------------------------------
+
+  async selectVmByCheckbox(vmName: string): Promise<void> {
+    const row = this.getVmRow(vmName).first();
+    const checkbox = row.getByRole('checkbox');
+    await expect(checkbox).toBeVisible({ timeout: 15000 });
+    await expect(async () => {
+      if (!(await checkbox.isChecked())) {
+        await checkbox.check({ force: true });
+      }
+      await expect(checkbox).toBeChecked();
+    }).toPass({ intervals: [1000, 2000], timeout: 30000 });
+  }
+
+  async selectMultipleVms(vmNames: string[]): Promise<void> {
+    for (const vmName of vmNames) {
+      await this.selectVmByCheckbox(vmName);
+    }
+    await expect(this.page.getByText(new RegExp(`${vmNames.length} selected`))).toBeVisible({
+      timeout: 15000,
+    });
+  }
+
+  async openBulkActions(): Promise<void> {
+    await expect(this.page.getByText(/\d+ selected/)).toBeVisible({ timeout: 10000 });
+    const tabPanel = this.page.getByRole('tabpanel', { name: 'Virtual machines' });
+    const actionsBtn = tabPanel.getByRole('button', { name: 'Actions', exact: true }).first();
+    await expect(actionsBtn).toBeEnabled({ timeout: 10000 });
+    await actionsBtn.click();
+  }
+
+  /**
+   * Trigger bulk cross-cluster migration via flyout menu.
+   * PF6 flyout menus require hover on parent to reveal the submenu.
+   */
+  async triggerBulkCrossClusterMigration(): Promise<void> {
+    const crossClusterItem = this.page.getByRole('menuitem', { name: /Cross.?cluster/i });
+
+    await expect(async () => {
+      await this.openBulkActions();
+      const menu = this.page.getByRole('menu');
+      const migrationBtn = menu.getByRole('button', { name: 'Migration', exact: true });
+      await migrationBtn.hover();
+      await expect(crossClusterItem).toBeVisible({ timeout: 5000 });
+    }).toPass({ intervals: [3000, 5000], timeout: 30000 });
+
+    await crossClusterItem.click();
+  }
+
+  /**
+   * Trigger a bulk control action (start/stop/pause/unpause/restart).
+   * PF6 flyout menus require hover on parent to reveal the submenu.
+   */
+  async triggerBulkControlAction(
+    action: 'start' | 'stop' | 'pause' | 'unpause' | 'restart'
+  ): Promise<void> {
+    const labelMap: Record<string, string> = {
+      start: 'Start',
+      stop: 'Stop',
+      pause: 'Pause',
+      unpause: 'Unpause',
+      restart: 'Restart',
+    };
+    const actionItem = this.page.getByRole('menuitem', { name: labelMap[action], exact: true });
+
+    await expect(async () => {
+      await this.openBulkActions();
+      const menu = this.page.getByRole('menu');
+      const controlBtn = menu.getByRole('button', { name: 'Control', exact: true });
+      await controlBtn.hover();
+      await expect(actionItem).toBeVisible({ timeout: 5000 });
+    }).toPass({ intervals: [3000, 5000], timeout: 30000 });
+
+    await actionItem.click();
   }
 }

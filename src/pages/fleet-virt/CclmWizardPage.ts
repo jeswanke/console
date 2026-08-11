@@ -81,7 +81,8 @@ export class CclmWizardPage extends BasePage {
   }
 
   async clickMigrate(): Promise<void> {
-    await expect(this.getMigrateButton()).toBeVisible({ timeout: 10000 });
+    await expect(this.getReadyHeading()).toBeVisible({ timeout: 60000 });
+    await expect(this.getMigrateButton()).toBeEnabled({ timeout: 10000 });
     await this.getMigrateButton().click();
   }
 

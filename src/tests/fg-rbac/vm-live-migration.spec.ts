@@ -66,7 +66,7 @@ test.describe('FG-RBAC - VM Live Migration', { tag: ['@fg-rbac', '@fleet-virt', 
 
   test('RHACM4K-59217: Single VM live migration from hub to spoke', async ({ page, oc }) => {
     test.skip(!mtvAvailable, 'CCLM prerequisites not met -- requires MTV on hub + CNV on spoke');
-    test.skip(!spokeCluster, 'VIRT_SPOKE_CLUSTER not set');
+    test.skip(!spokeCluster || spokeCluster === 'local-cluster', 'VIRT_SPOKE_CLUSTER not set');
 
     const fleetPage = new FleetVirtPage(page, oc);
     const vmDetails = new VmDetailsPage(page);
@@ -98,9 +98,11 @@ test.describe('FG-RBAC - VM Live Migration', { tag: ['@fg-rbac', '@fleet-virt', 
         await expect(vmDetails.getPageHeading()).toBeVisible({ timeout: 15000 });
       }).toPass({ intervals: [10000, 15000], timeout: 60000 });
 
-      // Overview: metrics/pod/node info
-      await vmDetails.clickTab('Overview');
-      await expect(vmDetails.getMetricsChart().first()).toBeVisible({ timeout: 15000 });
+      // Overview: metrics/pod/node info (CI spinners can persist >30s due to Prometheus latency)
+      await expect(async () => {
+        await vmDetails.clickTab('Overview');
+        await expect(vmDetails.getMetricsChart().first()).toBeVisible({ timeout: 15000 });
+      }).toPass({ intervals: [5000, 10000], timeout: 60000 });
 
       // Console: VNC connects
       await expect(async () => {
@@ -116,13 +118,13 @@ test.describe('FG-RBAC - VM Live Migration', { tag: ['@fg-rbac', '@fleet-virt', 
       await vmDetails.clickTab('YAML');
       await expect(vmDetails.getYamlEditor()).toBeVisible({ timeout: 15000 });
 
-      // Diagnostics: LiveMigratable=Healthy (Polarion prerequisite for CCLM)
+      // Diagnostics: LiveMigratable=True (Polarion prerequisite for CCLM)
       await vmDetails.getTabLink('Diagnostics').click();
       await expect(
         page.getByText('LiveMigratable').first(),
       ).toBeVisible({ timeout: 30000 });
       await expect(
-        page.locator('tr', { has: page.getByText('LiveMigratable') }).getByText('Healthy').first(),
+        page.locator('tr', { has: page.getByText('LiveMigratable') }).getByText('True').first(),
       ).toBeVisible({ timeout: 15000 });
     });
 

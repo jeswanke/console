@@ -86,12 +86,19 @@ echo "[INFO] Infrastructure platform: ${INFRA_PLATFORM}"
 
 if [[ -n "${CUSTOMER_TAGS}" ]]; then
     VIRT_TIER="custom"
+elif [[ "${FG_RBAC_ONLY:-}" == "true" ]]; then
+    VIRT_TIER="rbac-ui"
 elif [[ "${INFRA_PLATFORM}" == "Azure" ]]; then
     VIRT_TIER="full"
 elif [[ "${INFRA_PLATFORM}" == "BareMetal" ]]; then
     VIRT_TIER="vm"
 else
     VIRT_TIER="rbac-ui"
+fi
+
+if [[ "${VIRT_TIER}" == "full" ]] && [[ ${VALIDATED_COUNT} -eq 0 ]]; then
+    echo "[WARN] Tier 'full' requires a spoke for CCLM tests, but none available. Downgrading to 'vm' (no @cclm)."
+    VIRT_TIER="vm"
 fi
 
 echo "[OK] VIRT_TIER=${VIRT_TIER}"
