@@ -6,8 +6,8 @@ import { acmToolbarSearchLocator } from '@components/patternfly/AcmSearchInput';
  * PatternFly-oriented table primitive for ACM list pages (search, rows by OUIA id).
  * Domain-specific tables extend this (e.g. ApplicationsTable).
  *
- * Pass `ariaLabel` when the page’s AcmTable has a meaningful accessible name
- * (required in stolostron/console since ACM-5264; previously all were "Simple Table").
+ * Pass `ariaLabel` to scope locators to a specific grid. Console AcmTable still
+ * defaults to `aria-label="Simple Table"` unless a page overrides it.
  */
 export class AcmTable {
   private readonly searchInput: Locator;
@@ -60,14 +60,19 @@ export class AcmTable {
     await this.getRow(ouiaId).click();
   }
 
+  /**
+   * Prefer `th[data-label]` over `getByRole('columnheader', { name, exact: true })`.
+   * Sorted / help-icon headers (PF Th + info) expose a compound accessible name
+   * (e.g. "Name" + helper aria-label), so exact role-name matching fails.
+   */
   async verifyColumnHeaderVisible(columnName: string): Promise<void> {
     const scope = this.ariaLabel ? this.getGrid() : this.page;
-    await expect(scope.getByRole('columnheader', { name: columnName, exact: true })).toBeVisible();
+    await expect(scope.locator(`th[data-label="${columnName}"]`)).toBeVisible();
   }
 
   async verifyColumnHeaderNotVisible(columnName: string): Promise<void> {
     const scope = this.ariaLabel ? this.getGrid() : this.page;
-    await expect(scope.getByRole('columnheader', { name: columnName, exact: true })).toBeHidden();
+    await expect(scope.locator(`th[data-label="${columnName}"]`)).toBeHidden();
   }
 
   async verifyColumnOrder(expectedOrder: string[]): Promise<void> {

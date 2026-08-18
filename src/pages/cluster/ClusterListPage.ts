@@ -1,14 +1,17 @@
-import { Page, Locator, expect } from '@playwright/test';
-import { BasePage } from '@pages/BasePage';
-import { PF_SKELETON } from '@constants/selectors';
-import { AcmTable } from '@components/patternfly/AcmTable';
 import { ClusterTable } from '@components/cluster/ClusterTable';
+import { AcmTable } from '@components/patternfly/AcmTable';
 import { ManageColumnsDialog } from '@components/patternfly/ManageColumnsDialog';
-import { OcCliService } from '@services/OcCliService';
-import { SELECTORS } from '@constants/selectors';
-import { CLUSTER_MANAGE_COLUMNS } from '@constants/cluster';
+import {
+  CLUSTER_MANAGE_COLUMNS,
+  CLUSTER_ONBOARDING_LOCAL_STORAGE_KEY,
+  CLUSTER_SELECTORS,
+} from '@constants/cluster';
 import { CLUSTER_ROW_ACTIONS } from '@constants/cluster-create';
+import { SELECTORS } from '@constants/selectors';
 import { pageUrlPathnameEquals } from '@lib/navigation';
+import { BasePage } from '@pages/BasePage';
+import { Locator, Page, expect } from '@playwright/test';
+import { OcCliService } from '@services/OcCliService';
 
 export class ClusterListPage extends BasePage {
   readonly table: AcmTable;
@@ -17,10 +20,11 @@ export class ClusterListPage extends BasePage {
   private readonly createButton: Locator;
   private readonly importButton: Locator;
   private readonly manageColumnsButton: Locator;
+  private onboardingGuardsInstalled = false;
 
   constructor(
     page: Page,
-    private readonly oc: OcCliService,
+    private readonly oc: OcCliService
   ) {
     super(page);
     this.table = new AcmTable(page, 'Clusters table');
@@ -29,36 +33,54 @@ export class ClusterListPage extends BasePage {
     this.createButton = page.locator(SELECTORS.cluster.createButton);
     this.importButton = page.locator(SELECTORS.cluster.importButton);
     this.manageColumnsButton = page.locator(
-      `button[aria-label="${CLUSTER_MANAGE_COLUMNS.buttonAriaLabel}"]`,
+      `button[aria-label="${CLUSTER_MANAGE_COLUMNS.buttonAriaLabel}"]`
     );
-  }
-
-  // Cluster list has persistent status spinners (e.g. Creating/Destroying indicators)
-  // that never reach count=0 — skip the global spinner check, rely on skeleton only.
-  override async waitForLoad(timeout = 30000): Promise<void> {
-    await expect(this.page.locator(PF_SKELETON)).toHaveCount(0, { timeout });
   }
 
   private static readonly managedClustersPath = '/multicloud/infrastructure/clusters/managed';
 
+  /**
+   * Prevent ManagedClusters OnboardingModal from blocking actions:
+   * 1. Seed localStorage so the product never opens it on subsequent loads
+   * 2. Register a locator handler as a zero-cost fallback if it still appears
+   *    (runs only when Playwright hits the overlay during an action/assertion)
+   */
+  private async installOnboardingGuards(): Promise<void> {
+    if (this.onboardingGuardsInstalled) return;
+
+    const key = CLUSTER_ONBOARDING_LOCAL_STORAGE_KEY;
+    await this.page.addInitScript((storageKey) => {
+      try {
+        localStorage.setItem(storageKey, 'hide');
+      } catch {
+        // ignore (private mode / opaque origins)
+      }
+    }, key);
+
+    await this.page.addLocatorHandler(
+      this.page.locator(CLUSTER_SELECTORS.onboardingModal),
+      async () => {
+        const close = this.page
+          .locator(CLUSTER_SELECTORS.onboardingModal)
+          .getByRole('button', { name: 'Close' });
+        if (await close.isVisible()) await close.click();
+        else await this.page.keyboard.press('Escape');
+      }
+    );
+
+    this.onboardingGuardsInstalled = true;
+  }
+
   async goto(): Promise<void> {
+    await this.installOnboardingGuards();
+
     if (pageUrlPathnameEquals(this.page, ClusterListPage.managedClustersPath)) {
       await this.waitForLoad();
-      await this.dismissWelcomeModal();
       return;
     }
     const consoleUrl = await this.oc.getConsoleUrl();
     await this.page.goto(`${consoleUrl}${ClusterListPage.managedClustersPath}`);
     await this.waitForLoad();
-    await this.dismissWelcomeModal();
-  }
-
-  private async dismissWelcomeModal(): Promise<void> {
-    const closeButton = this.page.getByRole('dialog').getByRole('button', { name: 'Close' });
-    const visible = await closeButton.waitFor({ state: 'visible', timeout: 2_000 }).then(() => true).catch(() => false);
-    if (visible) {
-      await closeButton.click();
-    }
   }
 
   async clickCreate(): Promise<void> {
@@ -142,9 +164,7 @@ export class ClusterListPage extends BasePage {
   }
 
   getColumnCheckbox(columnId: string): Locator {
-    return this.getManageColumnsModal().locator(
-      `#${CLUSTER_MANAGE_COLUMNS.checkboxId(columnId)}`,
-    );
+    return this.getManageColumnsModal().locator(`#${CLUSTER_MANAGE_COLUMNS.checkboxId(columnId)}`);
   }
 
   async saveManageColumns(): Promise<void> {

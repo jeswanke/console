@@ -18,6 +18,8 @@ const PF = 'pf-v6-c'; // Single version per ACM release
 export const PF_MASTHEAD = `.${PF}-masthead, .co-masthead`;
 export const PF_SPINNER = `.${PF}-spinner`;
 export const PF_SKELETON = `.${PF}-skeleton`;
+/** PatternFly EmptyState root — used by ACM `LoadingPage` / `AcmLoadingPage`. */
+export const PF_EMPTY_STATE = `.${PF}-empty-state`;
 export const PF_MODAL = `.${PF}-modal-box`;
 export const PF_ALERT = `.${PF}-alert`;
 export const PF_SELECT = `.${PF}-select`;

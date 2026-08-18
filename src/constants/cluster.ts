@@ -29,7 +29,12 @@ export const CLUSTER_ROUTES = {
 
 export const CLUSTER_SELECTORS = {
   popoverBody: '.pf-v6-c-popover__body',
+  /** ManagedClusters OnboardingModal (`id` / ouiaId). */
+  onboardingModal: '#clustersOnboardingModal',
 } as const;
+
+/** localStorage key ManagedClusters uses to suppress the onboarding modal. */
+export const CLUSTER_ONBOARDING_LOCAL_STORAGE_KEY = 'clusteronboardingmodal';
 
 // =============================================================================
 // Table columns
