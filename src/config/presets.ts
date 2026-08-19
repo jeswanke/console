@@ -146,9 +146,9 @@ export const rbacPresets = {
     },
     {
       role: 'fg-rbac-ldap-view-60229',
-      username: 'clc-e2e-ldap-view-60229',
+      username: 'qe-view-user',
       idp: 'qe-ldap',
-      password: 'clc-e2e-ldap-view-60229',
+      password: 'qe-view-user',
       domains: ['fg-rbac', 'fleet-virt'],
     },
     {

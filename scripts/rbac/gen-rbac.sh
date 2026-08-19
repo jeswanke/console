@@ -111,15 +111,12 @@ VIRT_USERS_CCLM=(
     "clc-e2e-cclm-admin-60989"     # CCLM full admin, RHACM4K-60989
 )
 
-# Build the final user list based on VIRT_TIER
+# Build the final user list -- always create all users regardless of VIRT_TIER.
+# Test filtering is handled by Playwright --grep/--grep-invert flags, not by user existence.
 VIRT_RBAC_TEST_USERS=()
 VIRT_RBAC_TEST_USERS+=("${VIRT_USERS_RBAC_UI[@]}")
-if [[ "${VIRT_TIER:-rbac-ui}" == "vm" || "${VIRT_TIER:-rbac-ui}" == "full" || "${VIRT_TIER:-rbac-ui}" == "custom" ]]; then
-    VIRT_RBAC_TEST_USERS+=("${VIRT_USERS_VM[@]}")
-fi
-if [[ "${VIRT_TIER:-rbac-ui}" == "full" || "${VIRT_TIER:-rbac-ui}" == "custom" ]]; then
-    VIRT_RBAC_TEST_USERS+=("${VIRT_USERS_CCLM[@]}")
-fi
+VIRT_RBAC_TEST_USERS+=("${VIRT_USERS_VM[@]}")
+VIRT_RBAC_TEST_USERS+=("${VIRT_USERS_CCLM[@]}")
 
 echo "[INFO] Creating ${#VIRT_RBAC_TEST_USERS[@]} RBAC test users (VIRT_TIER=${VIRT_TIER:-rbac-ui})..."
 for user in "${VIRT_RBAC_TEST_USERS[@]}"; do

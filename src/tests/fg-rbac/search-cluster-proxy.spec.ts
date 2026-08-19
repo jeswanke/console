@@ -41,7 +41,7 @@ const VM_NAME = `e2e-search-proxy-${Date.now()}`;
 const VM_NAMESPACE = FLEET_VIRT_DEFAULTS.vmNamespace;
 const RBAC_USER = 'fg-rbac-search-61846';
 
-test.describe('FG-RBAC - Search Cluster-Proxy', { tag: ['@fg-rbac', '@search'] }, () => {
+test.describe('FG-RBAC - Search Cluster-Proxy', { tag: ['@fg-rbac', '@fleet-virt', '@search'] }, () => {
   test.setTimeout(900000);
 
   test.beforeAll(async ({}, testInfo) => {

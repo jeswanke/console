@@ -190,7 +190,6 @@ ${dataEntries}
 
 /**
  * Creates a provider credential Secret on the hub cluster via `oc apply`.
- * Idempotent — safe to call if credential already exists.
  */
 export async function setupCredential(
   oc: OcCliService,

@@ -185,12 +185,18 @@ echo
 for mc in $MC_NAMES; do
   echo "Try logging into managed cluster: $mc"
 
-  oc config use-context "$mc"
-  oc cluster-info
-  if [ $? -ne 0 ]; then
-    echo "Failed to reach managed cluster: $mc"
-    exit 1
+  if ! oc config use-context "$mc" 2>/dev/null; then
+    echo "[WARN] No kubeconfig context for '$mc' (secret was missing or unextractable). Skipping."
+    echo "=============================================================="
+    continue
   fi
+
+  if ! oc cluster-info 2>/dev/null; then
+    echo "[WARN] Could not reach managed cluster '$mc' (credentials may be expired). Skipping."
+    echo "=============================================================="
+    continue
+  fi
+
   echo "=============================================================="
 done
 

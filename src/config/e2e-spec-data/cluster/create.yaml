@@ -204,3 +204,21 @@ scenarios:
         additionalLabels:
           owner: acmqe-e2e-auto
           clc-e2e: 'true'
+
+  cclm_azure_spoke:
+    enabled: true
+    tests: [CCLM-AZURE-SPOKE]
+    extends: [azure_default]
+    specDomains:
+      credential:
+        name: e2e-cclm-azure-cred
+        namespace: e2e-cclm-azure-cred
+        provider: azure
+      cluster:
+        namePrefix: cclm-spoke
+        masterInstanceType: Standard_D8s_v3
+        workerInstanceType: Standard_D8s_v3
+        workerCount: 3
+        additionalLabels:
+          owner: acmqe-e2e-auto
+          cclm: 'true'
