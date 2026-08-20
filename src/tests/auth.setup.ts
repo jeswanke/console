@@ -1,4 +1,5 @@
-import { expect, test } from '@playwright/test';
+import { expect } from '@playwright/test';
+import { test } from '@fixtures/cdp-base';
 import path from 'path';
 import { getHubAuth } from '@config';
 import { OcCliService } from '@services/OcCliService';

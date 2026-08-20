@@ -1,7 +1,8 @@
 import { OverviewPage } from '@pages/overview/OverviewPage';
 import { SearchDetailsPage } from '@pages/search/SearchDetailsPage';
 import { SearchPage } from '@pages/search/SearchPage';
-import { test as base, expect } from '@playwright/test';
+import { expect } from '@playwright/test';
+import { test as base } from '@fixtures/cdp-base';
 import { OcCliService } from '@services/OcCliService';
 import { generateSafeName } from '@utils/kube-helper';
 

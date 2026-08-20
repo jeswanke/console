@@ -1,4 +1,4 @@
-import { test } from '@playwright/test';
+import { test } from '@fixtures/cdp-base';
 import path from 'path';
 import { getRbacUsers } from '@config';
 import { OcCliService } from '@services/OcCliService';

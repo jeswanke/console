@@ -177,7 +177,17 @@ export class OcCliService {
     );
   }
 
+  /**
+   * Console URL used by every page object's `.goto()`. Honors `BASE_URL`
+   * (e.g. `https://localhost:3000` for a local dev server / the "Launch
+   * Chrome E2E" debug window) when set, so local runs don't get redirected
+   * to the real cluster route. Falls back to `oc get route console`
+   * otherwise — the normal CI / against-a-real-cluster behavior.
+   */
   async getConsoleUrl(): Promise<string> {
+    const baseUrl = process.env.BASE_URL?.trim();
+    if (baseUrl) return baseUrl.replace(/\/+$/, '');
+
     const host = await this.run(
       'oc get route console -n openshift-console -o jsonpath="{.spec.host}"'
     );

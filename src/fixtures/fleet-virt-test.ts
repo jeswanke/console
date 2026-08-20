@@ -1,4 +1,5 @@
-import { test as base, expect } from '@playwright/test';
+import { expect } from '@playwright/test';
+import { test as base } from '@fixtures/cdp-base';
 import { OcCliService } from '@services/OcCliService';
 import { FleetVirtPage } from '@pages/fleet-virt/FleetVirtPage';
 import { VmDetailsPage } from '@pages/fleet-virt/VmDetailsPage';

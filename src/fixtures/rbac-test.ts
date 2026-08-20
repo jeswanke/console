@@ -1,4 +1,5 @@
-import { test as base, expect, BrowserContext, Page } from '@playwright/test';
+import { expect, BrowserContext, Page } from '@playwright/test';
+import { test as base } from '@fixtures/cdp-base';
 import { OcCliService } from '@services/OcCliService';
 
 export interface UserSession {
