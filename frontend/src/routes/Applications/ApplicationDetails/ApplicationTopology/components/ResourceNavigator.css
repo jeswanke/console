@@ -1,34 +1,16 @@
 /* Copyright Contributors to the Open Cluster Management project */
 
+.resource-navigator__container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
 .resource-navigator__scroll {
   flex: 1;
   min-height: 0;
   overflow: auto;
-}
-
-.resource-navigator.pf-v6-c-nav > .pf-v6-c-nav__list,
-.resource-navigator.pf-v6-c-nav .pf-v6-c-nav__list {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-}
-
-.resource-navigator .pf-v6-c-nav__subnav {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  margin-block-start: 0;
-}
-
-.resource-navigator .pf-v6-c-nav__item,
-.resource-navigator .pf-v6-c-nav__link {
-  cursor: pointer;
-}
-
-.resource-navigator__item-row {
-  display: flex;
-  align-items: center;
-  gap: 5px;
 }
 
 .resource-navigator__status-icon {
@@ -37,33 +19,23 @@
   flex-shrink: 0;
 }
 
-/* Higher specificity than PF .pf-v6-c-nav so selected bg is not reset by theme CSS load order.
-   NavItem with element children clones pf-m-current onto the child (our item-row span). */
-.resource-navigator.pf-v6-c-nav {
-  --pf-v6-c-nav__link--m-current--BackgroundColor: #cce3f5;
+/* Spacing for ResourceKindDecorator's icon when shown in the topology details header */
+.topologyDetails .detailsHeader .innerDetailsHeader .resource-kind-decorator__icon-container {
+  margin: 20px 16px 20px 20px;
 }
 
-:root:where(.pf-v5-theme-dark, .pf-v6-theme-dark) .resource-navigator.pf-v6-c-nav {
-  --pf-v6-c-nav__link--m-current--BackgroundColor: #1f4b7a;
-}
-
-.resource-navigator.pf-v6-c-nav .pf-v6-c-nav__link.pf-m-current,
-.resource-navigator.pf-v6-c-nav .pf-v6-c-nav__link.pf-m-current:hover,
-.resource-navigator.pf-v6-c-nav .resource-navigator__item-row.pf-m-current,
-.resource-navigator.pf-v6-c-nav .resource-navigator__item--selected > .pf-v6-c-nav__link {
-  color: var(--pf-t--global--text--color--regular);
+/* Selected item highlight for tree view nodes */
+.resource-navigator.pf-v6-c-tree-view
+  .pf-v6-c-tree-view__node.pf-m-current
+  .pf-v6-c-tree-view__node-container {
   background-color: #cce3f5;
+  color: var(--pf-t--global--text--color--regular);
 }
 
-:root:where(.pf-v5-theme-dark, .pf-v6-theme-dark) .resource-navigator.pf-v6-c-nav .pf-v6-c-nav__link.pf-m-current,
-:root:where(.pf-v5-theme-dark, .pf-v6-theme-dark) .resource-navigator.pf-v6-c-nav .pf-v6-c-nav__link.pf-m-current:hover,
 :root:where(.pf-v5-theme-dark, .pf-v6-theme-dark)
-  .resource-navigator.pf-v6-c-nav
-  .resource-navigator__item-row.pf-m-current,
-:root:where(.pf-v5-theme-dark, .pf-v6-theme-dark)
-  .resource-navigator.pf-v6-c-nav
-  .resource-navigator__item--selected
-  > .pf-v6-c-nav__link {
+  .resource-navigator.pf-v6-c-tree-view
+  .pf-v6-c-tree-view__node.pf-m-current
+  .pf-v6-c-tree-view__node-container {
   background-color: #1f4b7a;
 }
 
@@ -96,6 +68,11 @@
   align-items: center;
   justify-content: center;
   background-color: color-mix(in srgb, var(--pf-t--global--background--color--primary--default) 75%, transparent);
+}
+
+/* Center-align the resource-type icon with the title text in the Edit YAML modal header */
+#edit-yaml-modal .pf-v6-c-modal-box__title.pf-m-icon {
+  align-items: center;
 }
 
 .resource-navigator-panel-body {

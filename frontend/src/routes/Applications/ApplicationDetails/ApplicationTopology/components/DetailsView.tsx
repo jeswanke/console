@@ -1,6 +1,6 @@
 /* Copyright Contributors to the Open Cluster Management project */
 
-import React, { Component, Fragment, KeyboardEvent, type JSX } from 'react'
+import { Component, Fragment, KeyboardEvent, type JSX } from 'react'
 import classNames from 'classnames'
 import { Button, Spinner, Toolbar, ToolbarContent, ToolbarGroup, ToolbarItem, Tooltip } from '@patternfly/react-core'
 import { OutlinedListAltIcon, PencilAltIcon } from '@patternfly/react-icons'
@@ -8,10 +8,10 @@ import { createResourceSearchLink, getFilteredNode } from '../helpers/diagram-he
 import ClusterDetailsContainer from './ClusterDetailsContainer'
 import ArgoAppDetailsContainer from './ArgoAppDetailsContainer'
 import DetailsTable from './DetailsTable'
+import { ResourceKindDecorator } from './ResourceNavigator'
 import {
   DetailsViewProps,
   DetailsViewState,
-  DetailsViewDecoratorProps,
   DetailItemExtended,
   LinkValue,
   TopologyNodeWithStatus,
@@ -19,21 +19,6 @@ import {
 } from '../types'
 import { typeToShapeMap } from '../model/NodeDetailsProvider'
 import type { TFunction } from 'i18next'
-
-/**
- * Decorator component that renders an icon for the details view header
- * Displays a circular background with a resource type icon
- */
-const DetailsViewDecorator: React.FC<DetailsViewDecoratorProps> = ({ shape, className }) => {
-  return (
-    <div className="detailsIconContainer">
-      <svg width="58px" height="58px" viewBox="0 0 58 58">
-        <circle cx="29" cy="29" r="25" className={'pf-topology__node__background'} stroke="#a7a7a7" strokeWidth="1" />
-        <use href={`#nodeIcon_${shape}`} className={`${className} detailsIcon`} />
-      </svg>
-    </div>
-  )
-}
 
 /**
  * DetailsView component displays detailed information about a selected topology node
@@ -161,7 +146,7 @@ class DetailsView extends Component<DetailsViewProps, DetailsViewState> {
 
           {/* Header with icon, title, and search link */}
           <div className="innerDetailsHeader">
-            <DetailsViewDecorator shape={shape} className={className} />
+            <ResourceKindDecorator shape={shape} className={className} />
             <div>
               <div className="sectionContent">
                 <span className="label">{legend}</span>

@@ -17,6 +17,7 @@ import { fleetResourceRequest } from '~/resources/utils/fleet-resource-request'
 import { onReload, onSave } from '~/routes/Search/components/YamlEditor/utils'
 import { useSharedValue, useSharedAtoms } from '~/shared-atoms'
 import { AcmAlert, AcmModal } from '~/ui-components'
+import { ResourceKindDecorator } from '../components/ResourceNavigator'
 import { TopologyModalNavigatorLayout } from '../components/TopologyModalNavigatorLayout'
 import '../components/ResourceNavigator.css'
 import {
@@ -27,6 +28,7 @@ import {
   topologyNodeToApplicationEditNode,
   type ResourceNavigatorItem,
 } from '../helpers/resourceNavigatorHelpers'
+import { typeToShapeMap } from '../model/NodeDetailsProvider'
 
 const typesWithoutDefaultName = new Set(['replicaset', 'pod', 'replicationcontroller', 'controllerrevision'])
 
@@ -61,7 +63,7 @@ function EditYamlModalContent({
     [topologyNode, navigatorMode]
   )
   const navigatorItems = useMemo(() => flattenNavigatorGroups(navigatorGroups), [navigatorGroups])
-  const showNavigator = navigatorItemCount(topologyNode, navigatorMode === 'application' ? 'application' : 'edit') > 1
+  const showNavigator = navigatorItemCount(topologyNode, navigatorMode === 'application' ? 'application' : 'edit') > 0
   const initialSelection = useMemo(() => findInitialNavigatorSelection(navigatorItems), [navigatorItems])
   const [selectedItemId, setSelectedItemId] = useState<string | undefined>(initialSelection?.id)
 
@@ -306,11 +308,22 @@ function EditYamlModalContent({
 
   const isLoadingResource = !resource && resourceError.message === ''
 
+  const { shape: editorIconShape = 'other', className: editorIconClassName = 'default' } =
+    typeToShapeMap[String(type) as keyof typeof typeToShapeMap] || {}
+  const EditorTitleIcon = useMemo(
+    () =>
+      function EditYamlModalTitleIcon() {
+        return <ResourceKindDecorator shape={editorIconShape} className={editorIconClassName} size={39} />
+      },
+    [editorIconShape, editorIconClassName]
+  )
+
   return (
     <AcmModal
       id="edit-yaml-modal"
       isOpen={true}
       title={t('Edit YAML')}
+      titleIconVariant={EditorTitleIcon}
       aria-label={t('Edit YAML')}
       showClose={true}
       onClose={close}

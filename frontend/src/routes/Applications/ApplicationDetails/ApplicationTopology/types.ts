@@ -1011,12 +1011,14 @@ export interface DetailsViewOptions {
   ) => DetailItem[]
 }
 
-// Props for DetailsViewDecorator component
-export interface DetailsViewDecoratorProps {
+// Props for ResourceKindDecorator component
+export interface ResourceKindDecoratorProps {
   /** CSS class name for styling the decorator icon */
   className?: string
   /** Shape identifier for the node icon */
   shape?: string
+  /** Pixel size (width and height) of the decorator icon. Defaults to 58. */
+  size?: number
 }
 
 // Detail item with specific types for rendering different content
