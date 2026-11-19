@@ -99,6 +99,9 @@ export const analyzeTopologyAppSet = async (
   // Analyzing Repository
   /////////////////////////////////////////////
   const repositories = nodes.filter((node) => node.type === 'git')
+  repositories.forEach((repository) => {
+    repository.specs.pulse = 'spinner'
+  })
   const repositoryResults = await Promise.all(
     repositories.map(async (repository) => ({
       repository,

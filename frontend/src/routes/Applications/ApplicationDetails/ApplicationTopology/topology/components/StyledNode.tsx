@@ -276,7 +276,12 @@ const renderDecorators = ({
   // The sync icon is treated like the other hover-revealed action buttons rather than an
   // always-visible status icon.
   const showSyncRefresh = (showViewRepo || statusIcon?.icon === 'sync') && Boolean(refreshResources)
-  const repositoryStatusIcon = specs?.pulse === 'red' ? statusToIconMap.error : statusToIconMap.success
+  let repositoryStatusIcon = statusToIconMap.success
+  if (specs?.pulse === 'spinner') {
+    repositoryStatusIcon = statusToIconMap.spinner
+  } else if (specs?.pulse === 'red') {
+    repositoryStatusIcon = statusToIconMap.error
+  }
 
   return (
     <>

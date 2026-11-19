@@ -193,10 +193,25 @@ export function ApplicationTopologyPageContent() {
       hasDisplayedNodesRef.current = diagramElements.nodes.length > 0
     }
 
-    // On refresh, keep the current diagram until analysis finishes so error pulses are not
-    // dropped by an intermediate pre-analysis paint. First load still publishes immediately.
+    // On refresh, retain the diagram's statuses except for repositories being analyzed.
     if (!alertsPromise || !hasDisplayedNodesRef.current) {
       publishElements()
+    } else {
+      const pendingRepositoryIds = new Set(
+        diagramElements.nodes
+          .filter((node) => node.type === 'git' && node.specs.pulse === 'spinner')
+          .map((node) => node.uid ?? node.id)
+      )
+      if (pendingRepositoryIds.size > 0) {
+        setElements((previous) => ({
+          ...previous,
+          nodes: previous.nodes.map((node) =>
+            node.type === 'git' && pendingRepositoryIds.has(node.uid ?? node.id)
+              ? { ...node, specs: { ...node.specs, pulse: 'spinner' } }
+              : node
+          ),
+        }))
+      }
     }
 
     if (alertsPromise) {

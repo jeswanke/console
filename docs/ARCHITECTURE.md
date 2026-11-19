@@ -29,7 +29,7 @@ The frontend has two builds. One for the stand alone version and one for the dyn
 
 ### ApplicationSet repository analysis
 
-Git repository nodes start green and are analyzed asynchronously before GitOps and deployment analysis. The navigator and analysis share the loader in [repositoryUtils.ts](../frontend/src/resources/repositoryUtils.ts). GitHub sources are supported; Helm chart nodes retain their existing behavior.
+Git repository nodes start green and are analyzed asynchronously before GitOps and deployment analysis. Their status decorator shows a spinner while analysis is pending, including during refresh; other node statuses remain visible until analysis finishes. The navigator and analysis share the loader in [repositoryUtils.ts](../frontend/src/resources/repositoryUtils.ts). GitHub sources are supported; Helm chart nodes retain their existing behavior.
 
 Analysis reads YAML files root-first, up to three directory levels and ten files per repository node. The limits are defined by `REPOSITORY_YAML_MAX_DEPTH` and `REPOSITORY_YAML_MAX_FILES`. Template expressions are masked without changing source positions, and checks requiring unresolved values are skipped. Syntax errors stop further checks for that file. All scalar fields whose names contain `port` must be integers from 0 through 32767. AnsibleJob checks use the referenced namespace's hub credential and the existing Ansible backend API to verify connectivity and job template names.
 
