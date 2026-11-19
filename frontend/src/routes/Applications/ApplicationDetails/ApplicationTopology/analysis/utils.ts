@@ -23,6 +23,8 @@ export interface TopologyAlertAction {
 
 export interface IBulletDescription {
   title: string
+  /** Plain-text detail displayed below an emphasized title. */
+  description?: string
   content?: string[]
   /** Optional trailing link rendered after the title (e.g. documentation). */
   link?: { label: string; url: string }

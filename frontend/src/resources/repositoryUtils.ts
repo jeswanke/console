@@ -1,6 +1,90 @@
 /* Copyright Contributors to the Open Cluster Management project */
 import { Octokit } from '@octokit/rest'
+import { useEffect, useState } from 'react'
 import { getSecret } from '.'
+
+export const REPOSITORY_YAML_MAX_DEPTH = 3
+export const REPOSITORY_YAML_MAX_FILES = 10
+
+export interface RepositorySource {
+  repoURL: string
+  path: string
+  targetRevision: string
+  chart?: string
+}
+
+export interface RepositoryRequest extends RepositorySource {
+  secretArgs?: { secretRef?: string; namespace?: string }
+  accessData?: { user?: string; accessToken?: string }
+}
+
+export const getRepositorySourceGroupId = (source: RepositorySource): string =>
+  `${source.repoURL}::${source.targetRevision}::${source.path}`
+
+export type RepositorySourceState =
+  | { status: 'loading' }
+  | { status: 'loaded'; node: GitBranchPathNode; files: Extract<GitBranchPathNode, { type: 'file' }>[] }
+  | { status: 'error'; error: unknown }
+
+/** Collect root YAML files first, then breadth-first through the configured directory depth. */
+export function collectRepositoryYamlFiles(root: GitBranchPathNode) {
+  const files: Extract<GitBranchPathNode, { type: 'file' }>[] = []
+  const pending = [{ node: root, depth: root.type === 'tree' ? -1 : 0 }]
+  while (pending.length && files.length < REPOSITORY_YAML_MAX_FILES) {
+    const entry = pending.shift()!
+    if (entry.node.type === 'file') {
+      if (/\.ya?ml$/i.test(entry.node.path)) files.push(entry.node)
+    } else if (entry.depth < REPOSITORY_YAML_MAX_DEPTH) {
+      pending.push(
+        ...[...entry.node.children]
+          .sort((a, b) => a.path.localeCompare(b.path))
+          .map((node) => ({ node, depth: entry.depth + 1 }))
+      )
+    }
+  }
+  return files
+}
+
+/** Shared by the React navigator and asynchronous topology analysis. */
+export async function loadRepositorySource(request: RepositoryRequest) {
+  const node = await getGitBranchPathDetails(
+    request.repoURL,
+    request.targetRevision,
+    request.path,
+    request.secretArgs,
+    request.accessData,
+    true
+  )
+  return { node, files: collectRepositoryYamlFiles(node) }
+}
+
+export function useRepositoryFiles(requests: RepositoryRequest[]) {
+  const [result, setResult] = useState<{
+    requests: RepositoryRequest[]
+    sources: Record<string, RepositorySourceState>
+  }>({ requests, sources: {} })
+  useEffect(() => {
+    let cancelled = false
+    setResult({ requests, sources: {} })
+    requests.forEach((request) => {
+      const id = getRepositorySourceGroupId(request)
+      const publish = (state: RepositorySourceState) => {
+        if (!cancelled) {
+          setResult((previous) => ({ requests, sources: { ...previous.sources, [id]: state } }))
+        }
+      }
+      publish({ status: 'loading' })
+      void loadRepositorySource(request).then(
+        (source) => publish({ status: 'loaded', ...source }),
+        (error: unknown) => publish({ status: 'error', error })
+      )
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [requests])
+  return result.requests === requests ? result.sources : {}
+}
 
 async function getRepoSecret(secretArgs?: { secretRef?: string; namespace?: string }) {
   const repoSecret = { user: '', accessToken: '' }
@@ -98,15 +182,18 @@ export async function getGitBranchPathDetails(
   revision: string,
   path: string,
   secretArgs?: { secretRef?: string; namespace?: string },
-  accessData?: { user?: string; accessToken?: string }
+  accessData?: { user?: string; accessToken?: string },
+  throwOnError = false
 ): Promise<GitBranchPathNode> {
   let host = ''
   try {
     host = new URL(repoURL).hostname.toLowerCase()
-  } catch {
+  } catch (error) {
+    if (throwOnError) throw error
     return { type: 'tree', path, children: [] }
   }
   if (host !== 'github.com' && host !== 'www.github.com') {
+    if (throwOnError) throw new Error('Repository browsing only supports GitHub repositories')
     return { type: 'tree', path, children: [] }
   }
   const gitInfo = getGitInformation(repoURL)
@@ -125,6 +212,7 @@ export async function getGitBranchPathDetails(
   try {
     const octokit = await getGitConnection(secretArgs, accessData)
     if (!octokit) {
+      if (throwOnError) throw new Error('Unable to connect to GitHub')
       return emptyTree()
     }
 
@@ -132,6 +220,7 @@ export async function getGitBranchPathDetails(
       revision === 'HEAD' ? (await octokit.repos.get({ ...gitInfo })).data.default_branch : revision
     const { data: branchData } = await octokit.repos.getBranch({ ...gitInfo, branch: resolvedRevision })
     if (!branchData.commit.sha) {
+      if (throwOnError) throw new Error('GitHub branch is missing its commit SHA')
       return emptyTree()
     }
 
@@ -179,6 +268,7 @@ export async function getGitBranchPathDetails(
     const children = (childrenByParent.get(normalizedPath) ?? []).map(buildNode)
     return { type: 'tree', path, children }
   } catch (error) {
+    if (throwOnError) throw error
     handleGitError(error)
     return emptyTree()
   }

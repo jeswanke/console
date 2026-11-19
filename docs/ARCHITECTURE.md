@@ -27,6 +27,16 @@ The frontend should use PatternFly components without modifying the look and fee
 
 The frontend has two builds. One for the stand alone version and one for the dynamic plugin version that is dynamically loaded into the OCP Console.
 
+### ApplicationSet repository analysis
+
+Git repository nodes start green and are analyzed asynchronously before GitOps and deployment analysis. The navigator and analysis share the loader in [repositoryUtils.ts](../frontend/src/resources/repositoryUtils.ts). GitHub sources are supported; Helm chart nodes retain their existing behavior.
+
+Analysis reads YAML files root-first, up to three directory levels and ten files per repository node. The limits are defined by `REPOSITORY_YAML_MAX_DEPTH` and `REPOSITORY_YAML_MAX_FILES`. Template expressions are masked without changing source positions, and checks requiring unresolved values are skipped. Syntax errors stop further checks for that file. All scalar fields whose names contain `port` must be integers from 0 through 32767. AnsibleJob checks use the referenced namespace's hub credential and the existing Ansible backend API to verify connectivity and job template names.
+
+Repository errors turn the node red, suppress other node statuses, and stop subsequent analysis. Errors are consolidated into one alert, grouped by file within each repository source, with sorted, unique line numbers and deduplicated messages and suggestions. The alert shows up to five entries, followed by "And more..." when additional entries exist. All errors retain source, file, and line identifiers for navigator icons and SyncEditor diagnostics. Empty sources and access failures are distinguished. The navigator still displays the complete file tree; the analysis limits do not restrict browsing.
+
+The read-only repository editor preserves the original YAML text, including object order, comments, blank lines, and document separators, so diagnostic markers use the same source line numbers as analysis. Source preservation is opt-in and does not bypass secret redaction or filtering in other SyncEditor views.
+
 ## Console Backend
 
 The public listener is a Go process (`backend/`). Hub kube-apiserver passthrough routes (`/api`, `/apis`, `/version`), managed-cluster, metrics, VirtualMachine proxy, Search proxy, and long-tail HTTP (ROSA wizard, Ansible Tower, placement-debug, upgrade-risks) are served natively in Go. The plugin and browser keep talking to the same Service and paths.

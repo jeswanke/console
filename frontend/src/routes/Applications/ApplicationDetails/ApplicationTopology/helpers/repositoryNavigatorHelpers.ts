@@ -2,13 +2,8 @@
 
 import type { GitBranchPathNode, Secret } from '~/resources'
 import type { TopologyNode } from '../types'
-
-export interface RepositorySource {
-  repoURL: string
-  path: string
-  targetRevision: string
-  chart?: string
-}
+import type { RepositorySource } from '~/resources/repositoryUtils'
+export { getRepositorySourceGroupId, type RepositorySource } from '~/resources/repositoryUtils'
 
 export interface RepositoryNavigatorFileItem {
   id: string
@@ -68,10 +63,6 @@ export function buildRepositorySources(node: TopologyNode | undefined): Reposito
   }
 
   return []
-}
-
-export function getRepositorySourceGroupId(source: RepositorySource): string {
-  return `${source.repoURL}::${source.targetRevision}::${source.path}`
 }
 
 /** Builds the SyncEditor title from the revision and last segment of a selected file id. */

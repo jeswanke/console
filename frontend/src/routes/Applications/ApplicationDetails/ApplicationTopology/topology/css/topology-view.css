@@ -27,8 +27,8 @@
 /* Clickable sync resources decorator on topology node */
 .pf-topology-sync-resource-decorator {
   cursor: pointer;
-  color: blue !important;
-  fill: blue !important;
+  color: black !important;
+  fill: black !important;
 }
 
 .pf-topology-node-action-decorator {

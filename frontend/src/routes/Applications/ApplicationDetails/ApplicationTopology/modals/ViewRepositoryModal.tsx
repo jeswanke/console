@@ -1,9 +1,9 @@
 /* Copyright Contributors to the Open Cluster Management project */
 
-import { Alert, Bullseye, EmptyState, EmptyStateBody, Spinner } from '@patternfly/react-core'
+import { Alert, Bullseye, Icon, Spinner } from '@patternfly/react-core'
 import { ModalVariant } from '@patternfly/react-core/deprecated'
 import { CodeEditor, Language } from '@patternfly/react-code-editor'
-import { FolderOpenIcon, GitAltIcon } from '@patternfly/react-icons'
+import { CheckCircleIcon, ExclamationCircleIcon } from '@patternfly/react-icons'
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { SyncEditor } from '~/components/SyncEditor/SyncEditor'
 import { useTranslation } from '~/lib/acm-i18next'
@@ -65,6 +65,7 @@ function ViewRepositoryModalContent({ close, node }: Readonly<Omit<IViewReposito
   const [selectedFile, setSelectedFile] = useState<RepositoryNavigatorFileItem | undefined>(undefined)
   const [noFilesFound, setNoFilesFound] = useState(false)
   const [isRepositoryLoading, setIsRepositoryLoading] = useState(true)
+  const [hasRepositoryLoadError, setHasRepositoryLoadError] = useState(false)
   const [fileContents, setFileContents] = useState<FileContentsState>()
   const { secretsState } = useSharedAtoms()
   const secrets = useSharedValue(secretsState)
@@ -80,6 +81,18 @@ function ViewRepositoryModalContent({ close, node }: Readonly<Omit<IViewReposito
   const isFileLoading = !!selectedFile && fileContents?.file !== selectedFile
   const modalTitle = (node.name as string) || t('Repository')
   const selectedFileLanguage = selectedFile ? getLanguageForPath(selectedFile.path) : undefined
+  const hasRepositoryErrors =
+    !!node.specs.repositoryErrors?.length || hasRepositoryLoadError || noFilesFound || fileContents?.status === 'error'
+  const validationErrors = useMemo(
+    () =>
+      (node.specs.repositoryErrors ?? [])
+        .filter((error) => error.fileId === selectedFile?.id && error.line !== undefined)
+        .map((error) => ({
+          message: error.message,
+          linePos: { start: { line: error.line!, col: 1 }, end: { line: error.line!, col: 132 } },
+        })),
+    [node.specs.repositoryErrors, selectedFile?.id]
+  )
 
   useEffect(() => {
     if (!selectedFile) return
@@ -111,7 +124,11 @@ function ViewRepositoryModalContent({ close, node }: Readonly<Omit<IViewReposito
   }, [])
 
   let content: ReactNode = null
-  if (isRepositoryLoading || isFileLoading || (!selectedFile && !noFilesFound)) {
+  if (hasRepositoryLoadError && !selectedFile) {
+    content = (
+      <Alert variant="danger" isInline title={t('Failed to load repository. Check access, URL, and revision.')} />
+    )
+  } else if (isRepositoryLoading || isFileLoading || (!selectedFile && !noFilesFound)) {
     content = (
       <Bullseye>
         <Spinner size="xl" aria-label={t('Loading')} />
@@ -128,8 +145,10 @@ function ViewRepositoryModalContent({ close, node }: Readonly<Omit<IViewReposito
           code={fileContents.contents}
           resources={null}
           readonly
+          preserveSource
           wordWrap="off"
           initialShowChanges={false}
+          validationErrors={validationErrors}
         />
       )
     } else {
@@ -163,11 +182,9 @@ function ViewRepositoryModalContent({ close, node }: Readonly<Omit<IViewReposito
     }
   } else if (noFilesFound) {
     content = (
-      <Bullseye>
-        <EmptyState titleText={t('No files found')} variant="sm" icon={FolderOpenIcon}>
-          <EmptyStateBody>{t('This repository does not contain any files to display.')}</EmptyStateBody>
-        </EmptyState>
-      </Bullseye>
+      <Alert variant="danger" isInline title={t('No files found')}>
+        {t('This repository does not contain any files to display.')}
+      </Alert>
     )
   }
 
@@ -175,8 +192,18 @@ function ViewRepositoryModalContent({ close, node }: Readonly<Omit<IViewReposito
     <AcmModal
       id="view-repository-modal"
       isOpen={true}
-      title={modalTitle}
-      titleIconVariant={GitAltIcon}
+      title={
+        <>
+          <Icon status={hasRepositoryErrors ? 'danger' : 'success'}>
+            {hasRepositoryErrors ? (
+              <ExclamationCircleIcon aria-label={t('Repository error')} />
+            ) : (
+              <CheckCircleIcon aria-label={t('Success')} />
+            )}
+          </Icon>{' '}
+          {modalTitle}
+        </>
+      }
       aria-label={t('View repository')}
       showClose={true}
       onClose={close}
@@ -193,6 +220,7 @@ function ViewRepositoryModalContent({ close, node }: Readonly<Omit<IViewReposito
               onSelectItem={handleSelectItem}
               onNoFilesFound={handleNoFilesFound}
               onLoadingChange={handleRepositoryLoadingChange}
+              onErrorChange={setHasRepositoryLoadError}
             />
           }
         >

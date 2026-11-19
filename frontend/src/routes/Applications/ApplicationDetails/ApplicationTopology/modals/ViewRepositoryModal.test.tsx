@@ -3,6 +3,7 @@
 import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { axe } from 'jest-axe'
+import { Octokit } from '@octokit/rest'
 import type { GitBranchPathNode, Secret } from '~/resources'
 import type { TopologyNode } from '../types'
 import { ViewRepositoryModal } from './ViewRepositoryModal'
@@ -12,9 +13,9 @@ const mockGetGitBlobContents = jest.fn()
 let mockSecrets: Secret[] = []
 
 jest.mock('~/resources', () => ({
-  getGitBranchPathDetails: (...args: unknown[]) => mockGetGitBranchPathDetails(...args),
   getGitBlobContents: (...args: unknown[]) => mockGetGitBlobContents(...args),
 }))
+jest.mock('@octokit/rest')
 
 jest.mock('~/shared-atoms', () => ({
   useSharedAtoms: () => ({ secretsState: {} }),
@@ -82,6 +83,22 @@ function renderModal() {
 describe('ViewRepositoryModal', () => {
   beforeEach(() => {
     jest.resetAllMocks()
+    jest.mocked(Octokit).mockImplementation(
+      () =>
+        ({
+          repos: { getBranch: jest.fn().mockResolvedValue({ data: { commit: { sha: 'commit-sha' } } }) },
+          git: {
+            getTree: async ({ owner, repo }: { owner: string; repo: string }) => {
+              const root: GitBranchPathNode = await mockGetGitBranchPathDetails(`https://github.com/${owner}/${repo}`)
+              const flatten = (node: GitBranchPathNode): { path: string; type: string; url?: string }[] =>
+                node.type === 'file'
+                  ? [{ path: node.path, type: 'blob', url: node.url }]
+                  : [{ path: node.path, type: 'tree' }, ...node.children.flatMap(flatten)]
+              return { data: { tree: flatten(root) } }
+            },
+          },
+        }) as unknown as Octokit
+    )
     mockSecrets = []
     mockGetGitBlobContents.mockImplementation((url: string) => Promise.resolve(url.endsWith('/one') ? 'One' : 'Two'))
   })

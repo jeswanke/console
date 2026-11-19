@@ -64,8 +64,9 @@ export function ApplicationTopologyPageContent() {
     toolbarControl,
   } = useApplicationDetailsContext()
   const { t } = useTranslation()
-  const { placementsState } = useSharedAtoms()
+  const { placementsState, secretsState } = useSharedAtoms()
   const placements = useSharedValue(placementsState)
+  const secrets = useSharedValue(secretsState)
   const { refreshTime, topology, statuses, application } = applicationData
   let hubClusterName = ''
   if (topology) {
@@ -179,7 +180,8 @@ export function ApplicationTopologyPageContent() {
       statuses,
       canUpdateStatuses,
       t,
-      placements
+      placements,
+      secrets
     )
 
     if (isCancelled) {

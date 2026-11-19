@@ -1,7 +1,8 @@
 /* Copyright Contributors to the Open Cluster Management project */
 import * as React from 'react'
 import { Tooltip, TooltipPosition } from '@patternfly/react-core'
-import { EyeIcon, OutlinedListAltIcon, PencilAltIcon } from '@patternfly/react-icons'
+import { OutlinedListAltIcon, PencilAltIcon } from '@patternfly/react-icons'
+import { statusToIconMap } from './nodeStatusIconMap'
 import { useTranslation } from '../../../../../../lib/acm-i18next'
 import { useTopologyRefresh } from '../contexts/TopologyRefreshContext'
 import {
@@ -274,11 +275,15 @@ const renderDecorators = ({
   const showViewRepo = showViewRepoOnNode(topologyNode.type)
   // The sync icon is treated like the other hover-revealed action buttons rather than an
   // always-visible status icon.
-  const showSyncRefresh = statusIcon?.icon === 'sync' && Boolean(refreshResources)
+  const showSyncRefresh = (showViewRepo || statusIcon?.icon === 'sync') && Boolean(refreshResources)
+  const repositoryStatusIcon = specs?.pulse === 'red' ? statusToIconMap.error : statusToIconMap.success
 
   return (
     <>
-      {showStatusAndCountDecorators &&
+      {showViewRepo &&
+        renderStatusDecorator(element, TopologyQuadrant.upperLeft, repositoryStatusIcon, getShapeDecoratorCenter)}
+      {!showViewRepo &&
+        showStatusAndCountDecorators &&
         statusIcon &&
         !showSyncRefresh &&
         renderStatusDecorator(element, TopologyQuadrant.upperLeft, statusIcon, getShapeDecoratorCenter)}
@@ -322,7 +327,7 @@ const getActionIconArtwork = (type: 'logs' | 'edit' | 'argoApp' | 'viewRepo' | '
     case 'viewRepo':
       return (
         <g transform={offset}>
-          <EyeIcon width={ACTION_ICON_SIZE} height={ACTION_ICON_SIZE} aria-hidden />
+          <PencilAltIcon width={ACTION_ICON_SIZE} height={ACTION_ICON_SIZE} aria-hidden />
         </g>
       )
     case 'argoApp':
@@ -391,7 +396,7 @@ const renderNodeActionDecorators = (
     decorators.push(
       renderActionDecorator({
         element,
-        quadrant: TopologyQuadrant.upperLeft,
+        quadrant: showViewRepo ? TopologyQuadrant.lowerLeft : TopologyQuadrant.upperLeft,
         icon: getActionIconArtwork('sync'),
         ariaLabel: translate?.('Sync resources') ?? 'Sync resources',
         onClick: () => refreshResources(),

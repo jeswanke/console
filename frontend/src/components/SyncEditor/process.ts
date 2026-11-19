@@ -55,8 +55,16 @@ export const processForm = (
   userEdits: ChangeType[],
   validators: any,
   currentEditorValue: string,
-  editableUidSiblings: boolean | undefined
+  editableUidSiblings: boolean | undefined,
+  preserveSource = false
 ) => {
+  const shouldPreserveSource =
+    preserveSource &&
+    readonly &&
+    code !== undefined &&
+    (resourceArr === null || resourceArr === undefined) &&
+    !secrets?.length &&
+    !filters?.length
   // get yaml, documents, resource, mapped
   let yaml = code || ''
   if (resourceArr) {
@@ -77,7 +85,7 @@ export const processForm = (
   const comparison = cloneDeep(parsed)
 
   // reconcile form changes with user changes
-  if (syntaxErrors.length === 0 && changeStack && userEdits) {
+  if (!shouldPreserveSource && syntaxErrors.length === 0 && changeStack && userEdits) {
     const customResources = reconcile(changeStack, userEdits, resources)
     yaml = stringify(customResources)
     documents = YAML.parseAllDocuments(yaml, { prettyErrors: true, keepCstNodes: true })
@@ -103,7 +111,8 @@ export const processForm = (
       validators,
       currentEditorValue,
       false,
-      editableUidSiblings
+      editableUidSiblings,
+      shouldPreserveSource
     ),
   }
 }
@@ -168,7 +177,8 @@ const process = (
   validators: any,
   currentEditorValue: string,
   editorHasFocus: boolean,
-  editableUidSiblings: boolean | undefined
+  editableUidSiblings: boolean | undefined,
+  preserveSource = false
 ) => {
   // restore hidden secret values
   // capture comments from the original source documents before the yaml is
@@ -234,7 +244,11 @@ const process = (
     // create redacted yaml, etc
     // when regenerating yaml from resources, restore the comments captured from
     // the original source (the editor value already carries its own comments)
-    yaml = editorHasFocus ? currentEditorValue : applyComments(sourceComments, stringify(resources))
+    if (editorHasFocus) {
+      yaml = currentEditorValue
+    } else if (!preserveSource) {
+      yaml = applyComments(sourceComments, stringify(resources))
+    }
     documents = YAML.parseAllDocuments(yaml, { keepCstNodes: true })
     ;({ mappings, parsed, resources, paths } = getMappings(documents))
   }

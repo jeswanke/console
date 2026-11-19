@@ -5,6 +5,7 @@ import { isEmpty, get, set, keyBy, cloneDeep } from 'lodash'
 import YAML from 'yaml'
 import { getPathArray } from './synchronize'
 import { MappingType } from './process'
+import { maskYamlTemplates } from '~/lib/yamlTemplates'
 
 export enum ErrorType {
   error = 'error',
@@ -131,19 +132,7 @@ export const getErrors = (documents: any[]) => {
   if (source?.includes('{{') && documents.some((document) => document?.errors.length)) {
     // Helm/Argo templates are not YAML. Mask them only for syntax validation,
     // retaining line and column positions and leaving the original documents intact.
-    const validationSource = source.replace(/{{[^{}]*}}/g, (template: string, offset: number) => {
-      const lineStart = source.lastIndexOf('\n', offset - 1) + 1
-      const nextNewline = source.indexOf('\n', offset + template.length)
-      const lineEnd = nextNewline === -1 ? source.length : nextNewline
-      const standalone =
-        !source.slice(lineStart, offset).trim() && !source.slice(offset + template.length, lineEnd).trim()
-      // Standalone actions (if, end, include, etc.) become blank lines. Inline
-      // substitutions become scalars; extra lines in an action remain blank.
-      return template
-        .split('\n')
-        .map((line, index) => line.replace(/[^\r]/g, standalone || index > 0 ? ' ' : 'x'))
-        .join('\n')
-    })
+    const validationSource = maskYamlTemplates(source)
     if (validationSource !== source) {
       documents = YAML.parseAllDocuments(validationSource, { prettyErrors: true })
     }

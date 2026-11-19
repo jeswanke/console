@@ -1,6 +1,6 @@
 /* Copyright Contributors to the Open Cluster Management project */
 import type { TFunction } from 'i18next'
-import type { ApplicationSet, AppSetGenerator, Placement } from '~/resources'
+import type { ApplicationSet, AppSetGenerator, Placement, Secret } from '~/resources'
 import type { TopologyNode } from '../types'
 import { checkOpenshiftGitops } from './checkOpenshiftGitops'
 import { analyzeTopologyApplications } from './analyzeTopologyApplications'
@@ -10,6 +10,8 @@ import type { IFilteredConditionError, IResourcesWithStatus, TopologyAlert } fro
 import { createSuggestsAppset } from './createSuggestsAppset'
 import { createSuggestsPlacement, missingPlacementAlert, PLACEMENT_MATCH_LABEL } from './createSuggestsPlacement'
 import { extractConditionsErrors, setNodePulseForTypes } from './utils'
+import { analyzeTopologyRepository } from './analyzeTopologyRepository'
+import { createSuggestsRepository } from './createSuggestsRepository'
 
 const collectReferencedPlacements = (
   generators: AppSetGenerator[] | undefined
@@ -43,7 +45,8 @@ export const analyzeTopologyAppSet = async (
   alerts: TopologyAlert[],
   t: TFunction,
   placements: Placement[] = [],
-  hubClusterName = ''
+  hubClusterName = '',
+  secrets: Secret[] = []
 ): Promise<void> => {
   let placementErrors: IFilteredConditionError[] = []
   let appsetErrors: IFilteredConditionError[] = []
@@ -90,6 +93,29 @@ export const analyzeTopologyAppSet = async (
     setNodePulseForTypes(nodes, ['placementDecision', 'applicationset', 'cluster', 'git', 'chart'], 'none')
   } else if (hasMissingPlacement) {
     setNodePulseForTypes(nodes, ['placementDecision', 'cluster', 'git', 'chart'], 'none')
+  }
+
+  /////////////////////////////////////////////
+  // Analyzing Repository
+  /////////////////////////////////////////////
+  const repositories = nodes.filter((node) => node.type === 'git')
+  const repositoryResults = await Promise.all(
+    repositories.map(async (repository) => ({
+      repository,
+      errors: await analyzeTopologyRepository(repository, t, secrets),
+    }))
+  )
+  repositoryResults.forEach(({ repository, errors }) => {
+    repository.specs.pulse = errors.length ? 'red' : 'green'
+  })
+  createSuggestsRepository(repositoryResults, alerts, t)
+  if (repositoryResults.some(({ errors }) => errors.length > 0)) {
+    nodes
+      .filter((node) => node.type !== 'git')
+      .forEach((node) => {
+        node.specs.pulse = 'none'
+      })
+    return
   }
 
   /////////////////////////////////////////////

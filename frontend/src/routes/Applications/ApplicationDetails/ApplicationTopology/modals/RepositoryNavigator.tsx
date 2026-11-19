@@ -2,11 +2,13 @@
 
 import type { FC } from 'react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Bullseye, SearchInput, Spinner, TreeView, type TreeViewDataItem } from '@patternfly/react-core'
-import { FileIcon, FolderIcon, FolderOpenIcon } from '@patternfly/react-icons'
+import { Bullseye, Icon, SearchInput, Spinner, TreeView, type TreeViewDataItem } from '@patternfly/react-core'
+import { ExclamationCircleIcon, FileIcon, FolderIcon, FolderOpenIcon } from '@patternfly/react-icons'
+import isEqual from 'lodash/isEqual'
 import { useTranslation } from '~/lib/acm-i18next'
 import { useSharedAtoms, useSharedValue } from '~/shared-atoms'
-import { getGitBranchPathDetails, type GitBranchPathNode } from '~/resources'
+import type { GitBranchPathNode } from '~/resources'
+import { useRepositoryFiles, type RepositorySourceState } from '~/resources/repositoryUtils'
 import type { TopologyNode } from '../types'
 import {
   buildRepositorySources,
@@ -36,22 +38,28 @@ export type RepositoryNavigatorProps = {
   onNoFilesFound?: () => void
   /** Called whenever the aggregate loading state of every repository source changes. */
   onLoadingChange?: (isLoading: boolean) => void
+  onErrorChange?: (hasError: boolean) => void
 }
 
-type SourceTreeState = { status: 'loading' } | { status: 'loaded'; node: GitBranchPathNode }
+const errorIcon = (
+  <Icon status="danger">
+    <ExclamationCircleIcon aria-hidden />
+  </Icon>
+)
 
 function buildFileTreeItem(
   repoURL: string,
   groupId: string,
   node: GitBranchPathNode,
   lookup: Map<string, RepositoryNavigatorFileItem>,
-  expandAll: boolean
+  expandAll: boolean,
+  errorFileIds: Set<string>
 ): TreeViewDataItem {
   const id = `${groupId}::${node.path}`
   const name = getGitPathBaseName(node.path)
   if (node.type === 'file') {
     lookup.set(id, { id, path: node.path, url: node.url, repoURL })
-    return { id, name, icon: <FileIcon aria-hidden /> }
+    return { id, name, icon: errorFileIds.has(id) ? errorIcon : <FileIcon aria-hidden /> }
   }
   return {
     id,
@@ -60,17 +68,18 @@ function buildFileTreeItem(
     expandedIcon: <FolderOpenIcon aria-hidden />,
     defaultExpanded: expandAll,
     children: sortGitBranchPathNodes(node.children).map((child) =>
-      buildFileTreeItem(repoURL, groupId, child, lookup, expandAll)
+      buildFileTreeItem(repoURL, groupId, child, lookup, expandAll, errorFileIds)
     ),
   }
 }
 
 function buildSourceTreeItem(
   source: RepositorySource,
-  state: SourceTreeState | undefined,
+  state: RepositorySourceState | undefined,
   filterQuery: string,
   lookup: Map<string, RepositoryNavigatorFileItem>,
-  expandAll: boolean
+  expandAll: boolean,
+  errorFileIds: Set<string>
 ): TreeViewDataItem | undefined {
   const groupId = getRepositorySourceGroupId(source)
   const groupTitle = getRepositorySourceGroupTitle(source)
@@ -83,6 +92,9 @@ function buildSourceTreeItem(
     }
     return { id: groupId, name: groupName, icon: <Spinner size="sm" aria-hidden /> }
   }
+  if (state.status === 'error') {
+    return { id: groupId, name: groupName, icon: errorIcon }
+  }
 
   const rootNode = matchesGroupTitle ? state.node : filterGitBranchPathNode(state.node, filterQuery)
   if (filterQuery && !matchesGroupTitle && !rootNode) {
@@ -92,7 +104,7 @@ function buildSourceTreeItem(
   if (rootNode?.type !== 'tree') {
     if (rootNode?.type === 'file') {
       lookup.set(groupId, { id: groupId, path: rootNode.path, url: rootNode.url, repoURL: source.repoURL })
-      return { id: groupId, name: groupName, icon: <FileIcon aria-hidden /> }
+      return { id: groupId, name: groupName, icon: errorFileIds.has(groupId) ? errorIcon : <FileIcon aria-hidden /> }
     }
     return { id: groupId, name: groupName, icon: <FolderIcon aria-hidden />, children: [] }
   }
@@ -104,7 +116,7 @@ function buildSourceTreeItem(
     expandedIcon: <FolderOpenIcon aria-hidden />,
     defaultExpanded: true,
     children: sortGitBranchPathNodes(rootNode.children).map((child) =>
-      buildFileTreeItem(source.repoURL, groupId, child, lookup, expandAll)
+      buildFileTreeItem(source.repoURL, groupId, child, lookup, expandAll, errorFileIds)
     ),
   }
 }
@@ -149,49 +161,32 @@ export const RepositoryNavigator: FC<RepositoryNavigatorProps> = ({
   onSelectItem,
   onNoFilesFound,
   onLoadingChange,
+  onErrorChange,
 }) => {
   const { t } = useTranslation()
   const { secretsState } = useSharedAtoms()
   const secrets = useSharedValue(secretsState)
   const [searchValue, setSearchValue] = useState('')
   const sources = useMemo(() => buildRepositorySources(node), [node])
-  const secretsRef = useRef(secrets)
-  secretsRef.current = secrets
-  const matchingSecretKey = useMemo(
-    () => JSON.stringify(sources.map((source) => findRepositorySecretAccess(source.repoURL, secrets))),
+  const requests = useMemo(
+    () => sources.map((source) => ({ ...source, ...findRepositorySecretAccess(source.repoURL, secrets) })),
     [sources, secrets]
   )
-  const [treeBySource, setTreeBySource] = useState<Record<string, SourceTreeState>>({})
-
-  useEffect(() => {
-    let cancelled = false
-    setTreeBySource({})
-    sources.forEach((source) => {
-      const groupId = getRepositorySourceGroupId(source)
-      setTreeBySource((prev) => ({ ...prev, [groupId]: { status: 'loading' } }))
-      const secretAccess = findRepositorySecretAccess(source.repoURL, secretsRef.current)
-      void getGitBranchPathDetails(
-        source.repoURL,
-        source.targetRevision,
-        source.path,
-        secretAccess?.secretArgs,
-        secretAccess?.accessData
-      ).then((treeNode) => {
-        if (!cancelled) {
-          setTreeBySource((prev) => ({ ...prev, [groupId]: { status: 'loaded', node: treeNode } }))
-        }
-      })
-    })
-    return () => {
-      cancelled = true
-    }
-  }, [sources, matchingSecretKey])
+  const requestsRef = useRef(requests)
+  if (!isEqual(requestsRef.current, requests)) requestsRef.current = requests
+  const treeBySource = useRepositoryFiles(requestsRef.current)
+  const errorFileIds = useMemo(
+    () => new Set(node.specs.repositoryErrors?.flatMap((error) => (error.fileId ? [error.fileId] : []))),
+    [node.specs.repositoryErrors]
+  )
 
   // Decide whether to auto-expand every folder only once all sources have finished loading, so the
   // file count used for the threshold check reflects the complete repository tree.
-  const allSourcesLoaded = sources.every(
-    (source) => treeBySource[getRepositorySourceGroupId(source)]?.status === 'loaded'
-  )
+  const allSourcesLoaded = sources.every((source) => {
+    const state = treeBySource[getRepositorySourceGroupId(source)]
+    return state && state.status !== 'loading'
+  })
+  const hasLoadError = Object.values(treeBySource).some((state) => state.status === 'error')
   const totalFileCount = useMemo(
     () =>
       sources.reduce((sum, source) => {
@@ -205,17 +200,27 @@ export const RepositoryNavigator: FC<RepositoryNavigatorProps> = ({
   useEffect(() => {
     onLoadingChange?.(!allSourcesLoaded)
   }, [allSourcesLoaded, onLoadingChange])
+  useEffect(() => {
+    onErrorChange?.(hasLoadError)
+  }, [hasLoadError, onErrorChange])
 
   const { treeData, itemLookup } = useMemo(() => {
     const lookup = new Map<string, RepositoryNavigatorFileItem>()
     const query = searchValue.trim().toLowerCase()
     const items = sources
       .map((source) =>
-        buildSourceTreeItem(source, treeBySource[getRepositorySourceGroupId(source)], query, lookup, expandAllFolders)
+        buildSourceTreeItem(
+          source,
+          treeBySource[getRepositorySourceGroupId(source)],
+          query,
+          lookup,
+          expandAllFolders,
+          errorFileIds
+        )
       )
       .filter((item): item is TreeViewDataItem => item !== undefined)
     return { treeData: items, itemLookup: lookup }
-  }, [sources, treeBySource, searchValue, expandAllFolders])
+  }, [sources, treeBySource, searchValue, expandAllFolders, errorFileIds])
 
   const hasAutoSelectedRef = useRef(false)
 
@@ -235,10 +240,20 @@ export const RepositoryNavigator: FC<RepositoryNavigatorProps> = ({
     if (firstFile) {
       hasAutoSelectedRef.current = true
       onSelectItem(firstFile)
-    } else {
+    } else if (!hasLoadError && totalFileCount === 0) {
       onNoFilesFound?.()
     }
-  }, [sources, treeBySource, treeData, itemLookup, selectedItemId, onSelectItem, onNoFilesFound])
+  }, [
+    sources,
+    treeBySource,
+    treeData,
+    itemLookup,
+    selectedItemId,
+    onSelectItem,
+    onNoFilesFound,
+    hasLoadError,
+    totalFileCount,
+  ])
 
   const activeItems = useMemo<TreeViewDataItem[]>(() => {
     if (!selectedItemId) {

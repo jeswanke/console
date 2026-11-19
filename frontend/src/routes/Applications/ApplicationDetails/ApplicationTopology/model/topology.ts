@@ -27,6 +27,7 @@ import type {
 import { ToolbarControl } from '../topology/components/TopologyToolbar'
 import { Service, type Placement } from '../../../../../resources'
 import { analyzeTopology } from '../analysis/analyzeTopology'
+import type { Secret } from '~/resources'
 
 /**
  * Main function to get topology data for different application types.
@@ -181,12 +182,13 @@ export const getDiagramElements = (
   resourceStatuses: ResourceStatuses | null,
   canUpdateStatuses: boolean,
   t: Translator,
-  placements: Placement[] = []
+  placements: Placement[] = [],
+  secrets: Secret[] = []
 ): GetDiagramElementsResult => {
   const diagramElements = buildDiagramElements(topology, resourceStatuses, canUpdateStatuses, t)
 
   const alertsPromise = resourceStatuses
-    ? analyzeTopology(diagramElements.nodes, t, placements, (topology.hubClusterName as string) ?? '')
+    ? analyzeTopology(diagramElements.nodes, t, placements, (topology.hubClusterName as string) ?? '', secrets)
     : undefined
 
   return { diagramElements, alertsPromise }

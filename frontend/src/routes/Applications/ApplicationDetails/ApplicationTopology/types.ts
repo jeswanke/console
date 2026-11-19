@@ -1,5 +1,6 @@
 import { Dispatch, SetStateAction } from 'react'
 import type { TopologyAlert } from './analysis/analyzeTopology'
+import type { RepositoryError } from './analysis/analyzeTopologyRepository'
 import {
   AnsibleJob,
   Application,
@@ -294,7 +295,7 @@ export interface TopologyNode {
   type: string
   id?: string
   uid?: string
-  specs: Record<string, unknown>
+  specs: Record<string, unknown> & { repositoryErrors?: RepositoryError[]; useArgoApplicationIcon?: boolean }
   // Allow additional dynamic fields used throughout helpers
   [key: string]: unknown
 }

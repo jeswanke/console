@@ -2,6 +2,7 @@
 
 import { render, screen, waitFor } from '@testing-library/react'
 import { axe } from 'jest-axe'
+import { Octokit } from '@octokit/rest'
 import type { GitBranchPathNode } from '~/resources'
 import type { TopologyNode } from '../types'
 import { RepositoryNavigator } from './RepositoryNavigator'
@@ -9,9 +10,7 @@ import { RepositoryNavigator } from './RepositoryNavigator'
 const mockGetGitBranchPathDetails = jest.fn()
 const mockSecrets: never[] = []
 
-jest.mock('~/resources', () => ({
-  getGitBranchPathDetails: (...args: unknown[]) => mockGetGitBranchPathDetails(...args),
-}))
+jest.mock('@octokit/rest')
 
 jest.mock('~/shared-atoms', () => ({
   useSharedAtoms: () => ({ secretsState: {} }),
@@ -39,6 +38,22 @@ const loadedTree: GitBranchPathNode = {
 describe('RepositoryNavigator', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    jest.mocked(Octokit).mockImplementation(
+      () =>
+        ({
+          repos: { getBranch: jest.fn().mockResolvedValue({ data: { commit: { sha: 'commit-sha' } } }) },
+          git: {
+            getTree: async ({ owner, repo }: { owner: string; repo: string }) => {
+              const root: GitBranchPathNode = await mockGetGitBranchPathDetails(`https://github.com/${owner}/${repo}`)
+              const flatten = (node: GitBranchPathNode): { path: string; type: string; url?: string }[] =>
+                node.type === 'file'
+                  ? [{ path: node.path, type: 'blob', url: node.url }]
+                  : [{ path: node.path, type: 'tree' }, ...node.children.flatMap(flatten)]
+              return { data: { tree: flatten(root) } }
+            },
+          },
+        }) as unknown as Octokit
+    )
   })
 
   it('shows a spinner instead of the tree until all sources are loaded', () => {

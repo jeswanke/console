@@ -1,6 +1,6 @@
 /* Copyright Contributors to the Open Cluster Management project */
 import type { TFunction } from 'i18next'
-import type { Placement } from '~/resources'
+import type { Placement, Secret } from '~/resources'
 import type { TopologyNode } from '../types'
 import { analyzeTopologyAppSet } from './analyzeTopologyAppSet'
 import type { TopologyAlert } from './utils'
@@ -30,14 +30,15 @@ export const analyzeTopology = async (
   nodes: TopologyNode[],
   t: TFunction,
   placements: Placement[] = [],
-  hubClusterName = ''
+  hubClusterName = '',
+  secrets: Secret[] = []
 ): Promise<TopologyAlert[]> => {
   const alerts: TopologyAlert[] = []
 
   const appSet = nodes.find((node) => node.type === 'applicationset')
 
   if (appSet) {
-    await analyzeTopologyAppSet(appSet, nodes, alerts, t, placements, hubClusterName)
+    await analyzeTopologyAppSet(appSet, nodes, alerts, t, placements, hubClusterName, secrets)
   }
 
   return alerts

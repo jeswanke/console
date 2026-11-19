@@ -72,6 +72,7 @@ const bulletMarker = css`
 
 const bulletTitle = css`
   margin: 0;
+  white-space: pre-line;
 `
 
 const bulletContent = css`
@@ -394,7 +395,7 @@ export function TopologyAlerts({
                           <div key={`${bullet.title}-${bulletIndex}`}>
                             <p className={bulletTitle}>
                               <span className={bulletMarker}>{'\u25CF'}</span>
-                              {bullet.title}
+                              {bullet.description ? <strong>{bullet.title}</strong> : bullet.title}
                               {bullet.link ? (
                                 <>
                                   {' '}
@@ -403,6 +404,12 @@ export function TopologyAlerts({
                                   </a>
                                 </>
                               ) : null}
+                              {bullet.description && (
+                                <>
+                                  <br />
+                                  {bullet.description}
+                                </>
+                              )}
                             </p>
                             {bullet.content && bullet.content.length > 0 ? (
                               <div className={bulletContent}>

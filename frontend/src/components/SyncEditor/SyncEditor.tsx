@@ -6,7 +6,7 @@ import { debounce, isEqual, cloneDeep } from 'lodash'
 import { processForm, processUser, ProcessedType, stringify, normalize } from './process'
 import { SyncEditorDiff, SyncEditorDiffHandle } from './SyncEditorDiff'
 import { SyncEditorToolbar, readShowChangesPreference } from './SyncEditorToolbar'
-import { compileAjvSchemas } from './validation'
+import { compileAjvSchemas, type ErrorMessageType } from './validation'
 import { getFormChanges, getUserChanges } from './changes'
 import { decorate, getModelDecorations } from './decorate'
 import { setFormValues, updateReferences } from './synchronize'
@@ -54,6 +54,10 @@ export interface SyncEditorProps extends HTMLProps<HTMLPreElement> {
   defaultResources?: unknown
   /** When set, overrides {@link readShowChangesPreference} for the initial Show changes toggle. */
   initialShowChanges?: boolean
+  /** Additional diagnostics with one-based source positions, displayed alongside YAML validation errors. */
+  validationErrors?: ErrorMessageType[]
+  /** Preserve raw code and source positions in read-only views without redaction or filtering. */
+  preserveSource?: boolean
 }
 
 export function SyncEditor(props: SyncEditorProps): JSX.Element {
@@ -78,6 +82,8 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
     highlightEditorPath,
     defaultResources,
     initialShowChanges,
+    validationErrors,
+    preserveSource,
   } = props
   const [editorHighlightPath, setEditorHighlightPath] = useState(() => highlightEditorPath ?? '')
   useEffect(() => {
@@ -481,14 +487,15 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
             userEdits,
             validationRef.current,
             activeModel.getValue() ?? '',
-            editableUidSiblings
+            editableUidSiblings,
+            preserveSource
           )
           setProhibited(protectedRanges)
           setFilteredRows(filteredRows)
           setLastUnredactedChange(unredactedChange)
           setXReferences(xreferences)
 
-          const allErrors = [...errors.validation, ...errors.syntax]
+          const allErrors = [...errors.validation, ...errors.syntax, ...(validationErrors ?? [])]
           const { yamlChanges, remainingEdits } = getFormChanges(
             allErrors,
             change,
@@ -548,6 +555,8 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
       // eslint-disable-next-line react-hooks/exhaustive-deps
       JSON.stringify(resources),
       code,
+      validationErrors,
+      preserveSource,
       showSecrets,
       showFiltered,
       editorHasFocus,
@@ -685,7 +694,7 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
 
           // determine what changes were made by user so we can decorate
           // and know what form changes to block
-          const allErrors = [...errors.validation, ...errors.syntax]
+          const allErrors = [...errors.validation, ...errors.syntax, ...(validationErrors ?? [])]
           let changes = getUserChanges(allErrors, change, lastUserEdits, userComparison, lastChange, lastChange?.parsed)
 
           // using cross reference created in formchange, propagate any user change to
@@ -761,6 +770,7 @@ export function SyncEditor(props: SyncEditorProps): JSX.Element {
       immutables,
       readonly,
       editableUidSiblings,
+      validationErrors,
       lastUserEdits,
       lastChange,
       xreferences,

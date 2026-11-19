@@ -131,7 +131,8 @@ const getStatus = (node: {
     }
   }
 
-  const pulse = node.specs?.pulse ?? ''
+  const isRepository = type === 'git'
+  const pulse = isRepository && (!specs?.pulse || specs.pulse === 'sync') ? 'green' : (specs?.pulse ?? '')
 
   switch (pulse) {
     case 'none':

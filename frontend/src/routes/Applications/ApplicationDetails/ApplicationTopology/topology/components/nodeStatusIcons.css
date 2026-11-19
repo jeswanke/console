@@ -22,12 +22,8 @@
 }
 
 .sync {
-  color: #0066cc !important;
+  color: black !important;
   fill: currentcolor !important;
-}
-
-:root:where(.pf-v6-theme-dark) .sync {
-  color: rgb(185, 218, 252) !important;
 }
 
 .spinner .swirly {
